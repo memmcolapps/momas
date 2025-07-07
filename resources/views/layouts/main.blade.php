@@ -490,6 +490,14 @@
                                     <li>
                                         <a class='tp-link' href='report-transaction'>Transactions</a>
                                     </li>
+
+                                    <li>
+                                        <a class='tp-link' href='report-meters'>Meters</a>
+                                    </li>
+
+                                    <li>
+                                        <a class='tp-link' href='meter-tokens'>Meter Tokens</a>
+                                    </li>
                                     {{--                                    <li>--}}
                                     {{--                                        <a class='tp-link' href='report-meter'>Meter</a>--}}
                                     {{--                                    </li>--}}

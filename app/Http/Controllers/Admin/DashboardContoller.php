@@ -41,11 +41,8 @@ class DashboardContoller extends Controller
             $data['title'] = "Admin Dashboard";
 
             return view('admin.dashboard', $data);
-
         } elseif (Auth::user()->role == 1) {
-
         } elseif (Auth::user()->role == 2) {
-
         } elseif (Auth::user()->role == 3) {
 
             $data['users'] = User::where([
@@ -72,16 +69,10 @@ class DashboardContoller extends Controller
             $data['title'] = "Dashboard | $estate_name ";
 
             return view('admin.dashboard', $data);
-
         } elseif (Auth::user()->role == 4) {
-
         } elseif (Auth::user()->role == 5) {
-
         } else {
-
         }
-
-
     }
 
 
@@ -93,11 +84,8 @@ class DashboardContoller extends Controller
             $data['users'] = User::latest()->where('status', 2)->count();
             $data['users_lists'] = User::latest()->where('role', '!=', 2)->paginate('20');
             return view('admin/user/user-list', $data);
-
         } elseif (Auth::user()->role == 1) {
-
         } elseif (Auth::user()->role == 2) {
-
         } elseif (Auth::user()->role == 3) {
 
             $data['users'] = User::where([
@@ -109,17 +97,10 @@ class DashboardContoller extends Controller
                 'estate_id' => Auth::user()->estate_id,
             ])->ORwhere('role', 4)->paginate('20');
             return view('admin/user/user-list', $data);
-
-
         } elseif (Auth::user()->role == 4) {
-
         } elseif (Auth::user()->role == 5) {
-
         } else {
-
         }
-
-
     }
 
 
@@ -134,11 +115,8 @@ class DashboardContoller extends Controller
             $data['estate'] = Estate::latest()->where('status', 2)->get();
 
             return view('admin/user/customer-list', $data);
-
         } elseif (Auth::user()->role == 1) {
-
         } elseif (Auth::user()->role == 2) {
-
         } elseif (Auth::user()->role == 3) {
 
             $data['users'] = User::latest()->where('estate_id', Auth::user()->estate_id)->where('role', 2)->count();
@@ -146,17 +124,10 @@ class DashboardContoller extends Controller
             $data['estate'] = Estate::latest()->where('status', 2)->get();
 
             return view('admin/user/customer-list', $data);
-
-
         } elseif (Auth::user()->role == 4) {
-
         } elseif (Auth::user()->role == 5) {
-
         } else {
-
         }
-
-
     }
 
 
@@ -169,30 +140,18 @@ class DashboardContoller extends Controller
             $data['estate'] = Estate::all();
             $data['meters'] = Meter::all();
             return view('admin/user/new-user', $data);
-
-
         } elseif (Auth::user()->role == 1) {
-
-
         } elseif (Auth::user()->role == 2) {
-
         } elseif (Auth::user()->role == 3) {
 
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['meters'] = Meter::all();
 
             return view('admin/user/new-user', $data);
-
-
         } elseif (Auth::user()->role == 4) {
-
         } elseif (Auth::user()->role == 5) {
-
         } else {
-
         }
-
-
     }
 
 
@@ -205,28 +164,16 @@ class DashboardContoller extends Controller
             $data['estate'] = Estate::all();
             $data['meters'] = Meter::all();
             return view('admin/user/new-customer', $data);
-
-
         } elseif (Auth::user()->role == 1) {
-
-
         } elseif (Auth::user()->role == 2) {
-
-
         } elseif (Auth::user()->role == 3) {
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['meters'] = Meter::where('id', Auth::user()->estate_id)->get();
             return view('admin/user/new-customer', $data);
-
         } elseif (Auth::user()->role == 4) {
-
         } elseif (Auth::user()->role == 5) {
-
         } else {
-
         }
-
-
     }
 
 
@@ -237,7 +184,6 @@ class DashboardContoller extends Controller
         if ($request->password != $request->password_confirmation) {
 
             return redirect('admin/customers')->with('error', "Password  does not match ");
-
         }
 
 
@@ -279,10 +225,7 @@ class DashboardContoller extends Controller
 
 
             return redirect('admin/customers')->with('error', "Customer already  exist");
-
         }
-
-
     }
 
 
@@ -293,7 +236,6 @@ class DashboardContoller extends Controller
         if ($request->password != $request->password_confirmation) {
 
             return redirect('admin/customers')->with('error', "Password  does not match ");
-
         }
 
 
@@ -329,7 +271,6 @@ class DashboardContoller extends Controller
                 User::where('id', $usr->id)->update(['meterNo' => $request->meterNo, 'meterid' => $m_id]);
 
                 Meter::where('meterNo', $request->meterNo)->update(['user_id' => $usr->id]);
-
             }
 
 
@@ -338,10 +279,7 @@ class DashboardContoller extends Controller
 
 
             return redirect('admin/users-list')->with('error', "User already  exist");
-
         }
-
-
     }
 
 
@@ -351,7 +289,6 @@ class DashboardContoller extends Controller
         Transaction::where('user_id', $request->id)->delete();
 
         return redirect('admin/users-list')->with('message', "User deleted successfully");
-
     }
 
 
@@ -364,17 +301,12 @@ class DashboardContoller extends Controller
             $data['fea'] = Feature::where('id', 1)->first();
             $data['set'] = Setting::where('id', 1)->first();
             return view('admin/settings', $data);
-
-
         } elseif (Auth::user()->role == 1) {
 
             $data['fea'] = Feature::where('id', 1)->first();
             $data['set'] = Setting::where('id', 1)->first();
             return view('admin/settings', $data);
-
-
         } elseif (Auth::user()->role == 2) {
-
         } elseif (Auth::user()->role == 3) {
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
@@ -384,17 +316,10 @@ class DashboardContoller extends Controller
             $data['utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->get() ?? null;
 
             return view('admin/settings', $data);
-
-
         } elseif (Auth::user()->role == 4) {
-
         } elseif (Auth::user()->role == 5) {
-
         } else {
-
         }
-
-
     }
 
     public function update_utility(request $request)
@@ -408,14 +333,12 @@ class DashboardContoller extends Controller
 
 
         return back()->with('message', 'Utility Updated Successfully');
-
     }
 
     public function delete_utility(request $request)
     {
         Utitlity::where('id', $request->id)->delete();
         return back()->with('message', 'Utility deleted Successfully');
-
     }
 
 
@@ -429,7 +352,6 @@ class DashboardContoller extends Controller
 
         ]);
         return redirect('admin/settings')->with('message', "Payment Keys updated successfully");
-
     }
 
 
@@ -443,7 +365,6 @@ class DashboardContoller extends Controller
         ]);
 
         return redirect('admin/settings')->with('message', "Fee has been updated");
-
     }
 
 
@@ -458,7 +379,6 @@ class DashboardContoller extends Controller
 
         ]);
         return redirect('admin/settings')->with('message', "Support data updated successfully");
-
     }
 
 
@@ -491,7 +411,6 @@ class DashboardContoller extends Controller
 
 
         return redirect('admin/settings')->with('message', "Features updated successfully");
-
     }
 
 
@@ -502,7 +421,6 @@ class DashboardContoller extends Controller
 
 
         return view('admin/organization/index', $data)->with('message', "Features updated successfully");
-
     }
 
 
@@ -558,16 +476,11 @@ class DashboardContoller extends Controller
             $sp->save();
 
             return back()->with('message', 'Percentage Updated');
-
-
         } else {
 
             SpreadPayment::where('user_id', $request->user_id)->update(['percentage' => $request->percent]);
             return back()->with('message', 'Percentage Updated');
-
         }
-
-
     }
 
 
@@ -623,7 +536,6 @@ class DashboardContoller extends Controller
             }
             $t_amount = TarrifState::where('tariff_id', $t_id)->first()->amount;
             User::where('id', $user_info->id)->update(['nepa_source_amount' => $t_amount]);
-
         }
         if ($user_info->gen_source != null) {
             $t_id = Tariff::where('estate_id', $user_info->estate_id)
@@ -636,7 +548,6 @@ class DashboardContoller extends Controller
             }
             $t_amount = TarrifState::where('tariff_id', $t_id)->first()->amount;
             User::where('id', $user_info->id)->update(['gen_source_amount' => $t_amount]);
-
         }
         return view('admin/user/view', $data);
     }
@@ -672,12 +583,11 @@ class DashboardContoller extends Controller
 
 
         return back()->with('message', "User updated successfully");
-
     }
     public function update_user_email(request $request)
     {
 
-        if($request->email  != $request->confirm_email){
+        if ($request->email  != $request->confirm_email) {
             return back()->with('error', "Email Incorrect");
         }
 
@@ -687,7 +597,6 @@ class DashboardContoller extends Controller
         ]);
 
         return back()->with('message', "User Email Updated successfully");
-
     }
 
 
@@ -697,8 +606,6 @@ class DashboardContoller extends Controller
         User::where('id', $request->id)->update(['status' => 0]);
 
         return back()->with('message', "User Deactivated successfully");
-
-
     }
 
 
@@ -708,8 +615,6 @@ class DashboardContoller extends Controller
         User::where('id', $request->id)->update(['status' => 2]);
 
         return back()->with('message', "User Activated successfully");
-
-
     }
 
 
@@ -717,8 +622,6 @@ class DashboardContoller extends Controller
     {
 
         return view('admin.estate.onboarding');
-
-
     }
 
     public function register_now(request $request)
@@ -745,32 +648,21 @@ class DashboardContoller extends Controller
 
             $data['email'] = $request->email;
             return redirect('admin/onboarding-pending');
-
-
         } else {
 
             $data['email'] = $request->email;
             return redirect('onboarding-pending');
-
-
         }
-
-
     }
 
 
     public function onboarding_email(request $request)
     {
         return view('admin.estate.onboarding-email');
-
     }
 
 
-    public function update_password_now(request $request)
-    {
-
-
-    }
+    public function update_password_now(request $request) {}
 
 
     public function resolve_account(request $request)
@@ -807,8 +699,6 @@ class DashboardContoller extends Controller
                 'error'   => $e->getMessage(),
             ], 500);
         }
-
-
     }
 
 
@@ -818,7 +708,7 @@ class DashboardContoller extends Controller
         $estate = Estate::where('id', $request->id)->first() ?? null;
 
 
-        if($estate->paystack_subaccount == null){
+        if ($estate->paystack_subaccount == null) {
             $fl = Setting::where('id', 1)->first();
             $pksecret = $fl->paystack_secret;
 
@@ -851,8 +741,6 @@ class DashboardContoller extends Controller
                     return back()->with('message', 'Paystack Subaccount has been successfully created');
                 }
                 return back()->with('error', 'Failed to create subaccount: ' . ($body['message'] ?? 'Unknown error'));
-
-
             } catch (\Exception $e) {
                 return response()->json([
                     'status'  => false,
@@ -860,9 +748,7 @@ class DashboardContoller extends Controller
                     'error'   => $e->getMessage(),
                 ], 500);
             }
-
-
-        }else{
+        } else {
 
             $fl = Setting::where('id', 1)->first();
             $pksecret = $fl->paystack_secret;
@@ -893,8 +779,6 @@ class DashboardContoller extends Controller
                 }
 
                 return back()->with('error', 'Error updating account details');
-
-
             } catch (\Exception $e) {
                 return response()->json([
                     'status'  => false,
@@ -902,18 +786,29 @@ class DashboardContoller extends Controller
                     'error'   => $e->getMessage(),
                 ], 500);
             }
-
-
-
         }
-
-
     }
 
 
+    public function filter_customers(Request $request)
+    {
+        $query = User::where('role', 2);
 
+        if ($request->has('search') && $request->search != '') {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('first_name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('email', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('meterNo', 'like', '%' . $searchTerm . '%');
+            });
+        }
 
+        $data['users_lists'] = $query->paginate(20); // final filtered, paginated users
+        $data['inactive_count'] = User::where('status', 2)->where('role', 2)->count();
+        $data['estate'] = Estate::latest()->where('status', 2)->get();
+        $data['users'] = User::latest()->where('status', 2)->where('role', 2)->count();
 
-
-
+        return view('admin/user/customer-list', $data);
+    }
 }

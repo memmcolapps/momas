@@ -135,36 +135,36 @@
 
                                         </div>
 
-                                            <div class="row my-2">
+                                        <div class="row my-2">
 
-                                                <div class="col-3">
-                                                    <label>Estate</label>
-                                                    <select class="form-control" name="estate_id">
-                                                        <option value="">Select Estate</option>
-                                                        <option value="all">All Estate</option>
-                                                        @foreach($estate as $data)
-                                                            <option value="{{$data->id}}">{{$data->title}}</option>
-                                                        @endforeach
+                                            <div class="col-3">
+                                                <label>Estate</label>
+                                                <select class="form-control" name="estate_id">
+                                                    <option value="">Select Estate</option>
+                                                    <option value="all">All Estate</option>
+                                                    @foreach($estate as $data)
+                                                        <option value="{{$data->id}}">{{$data->title}}</option>
+                                                    @endforeach
 
-                                                    </select>
+                                                </select>
 
+                                            </div>
+
+
+                                            <div class="col-3">
+                                                <label>Transaction Refrence</label>
+                                                <input type="text" class="form-control" name="rrn"
+                                                       placeholder="Enter Transaction Refrence">
+
+                                            </div>
+
+                                            <div class="col-3 mt-3 row">
+                                                <div class="col">
+                                                    <button type="submit" class="btn btn-primary w-100">Submit</button>
                                                 </div>
 
 
-                                                <div class="col-3">
-                                                    <label>Transaction Refrence</label>
-                                                    <input type="text" class="form-control" name="rrn"
-                                                           placeholder="Enter Transaction Refrence">
-
-                                                </div>
-
-                                                <div class="col-3 mt-3 row">
-                                                    <div class="col">
-                                                        <button type="submit" class="btn btn-primary w-100">Submit</button>
-                                                    </div>
-
-
-                                                </div>
+                                            </div>
 
 
 
@@ -204,84 +204,84 @@
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table mb-0">
-                                    <thead>
-                                    <tr>
-                                        <th scope="col" class="cursor-pointer">Trx ID</th>
-                                        <th scope="col" class="cursor-pointer">Trx Type</th>
-                                        <th scope="col" class="cursor-pointer">Meter No</th>
-                                        <th scope="col" class="cursor-pointer">Customer</th>
-                                        <th scope="col" class="cursor-pointer">Estate</th>
-                                        <th scope="col" class="cursor-pointer">Amount</th>
-                                        <th scope="col" class="cursor-pointer">Status</th>
-                                        <th scope="col" class="cursor-pointer desc">Date</th>
-
-
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-
-
-                                    @foreach($transactions as $data)
-
+                                        <thead>
                                         <tr>
-                                            <td><a href="#" class="" data-bs-toggle="modal"
-                                                data-bs-target="#staticBackdrop{{$data->trx_id}}">{{$data->trx_id}}</a>
+                                            <th scope="col" class="cursor-pointer">Trx ID</th>
+                                            <th scope="col" class="cursor-pointer">Trx Type</th>
+                                            <th scope="col" class="cursor-pointer">Meter No</th>
+                                            <th scope="col" class="cursor-pointer">Customer</th>
+                                            <th scope="col" class="cursor-pointer">Estate</th>
+                                            <th scope="col" class="cursor-pointer">Amount</th>
+                                            <th scope="col" class="cursor-pointer">Status</th>
+                                            <th scope="col" class="cursor-pointer desc">Date</th>
 
 
-                                                <div class="col-xl-6">
-                                                    <div class="card">
-                                                        <div class="modal fade" id="staticBackdrop{{$data->trx_id}}"
-                                                             data-bs-backdrop="static" data-bs-keyboard="false"
-                                                             tabindex="-1" aria-labelledby="staticBackdropLabel"
-                                                             aria-hidden="true">
-                                                            <div class="modal-dialog modal-dialog-centered">
-                                                                <div class="modal-content">
-                                                                    <div class="modal-header">
-                                                                        <h1 class="modal-title fs-5"
-                                                                            id="staticBackdropLabel">{{$data->trx_id}}</h1>
-                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                    </div>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
 
 
-                                                                    <div class="modal-body">
+                                        @foreach($transactions as $data)
 
-                                                                    <div class="row">
-                                                                        <div class="col-4">
+                                            <tr>
+                                                <td><a href="#" class="" data-bs-toggle="modal"
+                                                       data-bs-target="#staticBackdrop{{$data->trx_id}}">{{$data->trx_id}}</a>
 
-                                                                            <label>Transaction ID</label>
-                                                                            <div>{{$data->trx_id}}</div>
 
+                                                    <div class="col-xl-6">
+                                                        <div class="card">
+                                                            <div class="modal fade" id="staticBackdrop{{$data->trx_id}}"
+                                                                 data-bs-backdrop="static" data-bs-keyboard="false"
+                                                                 tabindex="-1" aria-labelledby="staticBackdropLabel"
+                                                                 aria-hidden="true">
+                                                                <div class="modal-dialog modal-dialog-centered">
+                                                                    <div class="modal-content">
+                                                                        <div class="modal-header">
+                                                                            <h1 class="modal-title fs-5"
+                                                                                id="staticBackdropLabel">{{$data->trx_id}}</h1>
+                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                                         </div>
 
-                                                                        @if($data->service_type == "credit_token")
-                                                                        <div class="col-4">
-                                                                            <label>Meter No</label>
-                                                                            <div>{{$data->creditToken->meterNo ?? "123456"}}</div>
-                                                                        </div>
-                                                                        @endif
 
-                                                                        <div class="col-4">
-                                                                            <label>Amount</label>
-                                                                            <div>NGN {{number_format($data->amount, 2)}}</div>
-                                                                        </div>
+                                                                        <div class="modal-body">
 
-                                                                    </div>
-
-                                                                        <hr>
-
-                                                                        <div class="row">
-
-                                                                            @if($data->pay_type == "paystack")
+                                                                            <div class="row">
                                                                                 <div class="col-4">
-                                                                                    <label>Pay Channel</label>
-                                                                                    <div>{{"Paystack"}}</div>
+
+                                                                                    <label>Transaction ID</label>
+                                                                                    <div>{{$data->trx_id}}</div>
+
                                                                                 </div>
 
+                                                                                @if($data->service_type == "credit_token")
+                                                                                    <div class="col-4">
+                                                                                        <label>Meter No</label>
+                                                                                        <div>{{$data->creditToken->meterNo ?? "123456"}}</div>
+                                                                                    </div>
+                                                                                @endif
+
                                                                                 <div class="col-4">
-                                                                                    <label>Pay Ref</label>
-                                                                                    <div>{{$data->payment_ref}}</div>
+                                                                                    <label>Amount</label>
+                                                                                    <div>NGN {{number_format($data->amount, 2)}}</div>
                                                                                 </div>
-                                                                            @endif
+
+                                                                            </div>
+
+                                                                            <hr>
+
+                                                                            <div class="row">
+
+                                                                                @if($data->pay_type == "paystack")
+                                                                                    <div class="col-4">
+                                                                                        <label>Pay Channel</label>
+                                                                                        <div>{{"Paystack"}}</div>
+                                                                                    </div>
+
+                                                                                    <div class="col-4">
+                                                                                        <label>Pay Ref</label>
+                                                                                        <div>{{$data->payment_ref}}</div>
+                                                                                    </div>
+                                                                                @endif
 
                                                                                 <div class="col-4">
 
@@ -290,89 +290,89 @@
 
                                                                                 </div>
 
-                                                                        </div>
+                                                                            </div>
 
-                                                                        <hr>
+                                                                            <hr>
 
 
 
-                                                                        <div class="row">
+                                                                            <div class="row">
 
+
+
+                                                                            </div>
 
 
                                                                         </div>
 
 
                                                                     </div>
-
-
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
 
-                                            </td>
-
-
-
-
-                                            <td>
-                                                @if($data->service_type == "credit_token")
-                                                    <span class="badge text-bg-primary">Credit Token</span>
-                                                @elseif($data->service_type == "vtu")
-                                                    <span class="badge text-bg-primary">VAS</span>
-                                                @else
-                                                @endif
-                                            </td>
-
-
-                                            <td>
-                                                <div>{{$data->creditToken->meterNo ?? "123456"}}</div>
-                                            </td>
+                                                </td>
 
 
 
-                                            <td><a href="view-user?id={{$data->user->first_name ?? "name"}}">{{$data->user->last_name ?? "name"}}</a></td>
-                                            <td>{{$data->estate->title ?? "Estate"}}</td>
-                                            <td>{{number_format($data->amount, 2)}}</td>
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <span class="badge text-bg-primary">Approved</span>
-                                                @elseif($data->status == 0)
-                                                    <span class="badge text-bg-dark">Pending</span>
-                                                @elseif($data->status == 3)
-                                                    <span class="badge text-bg-dark">Refunded</span>
-                                                @endif
-                                            </td>
-                                            <td>{{$data->created_at}}</td>
 
-                                        </tr>
-
-                                    @endforeach
+                                                <td>
+                                                    @if($data->service_type == "credit_token")
+                                                        <span class="badge text-bg-primary">Credit Token</span>
+                                                    @elseif($data->service_type == "vtu")
+                                                        <span class="badge text-bg-primary">VAS</span>
+                                                    @else
+                                                    @endif
+                                                </td>
 
 
-                                    </tbody><!-- end tbody -->
-
-                                    <tfoot>
-
-                                    {{ $transactions->links() }}
+                                                <td>
+                                                    <div>{{$data->creditToken->meterNo ?? "123456"}}</div>
+                                                </td>
 
 
-                                    </tfoot>
-                                </table><!-- end table -->
+
+                                                <td><a href="view-user?id={{$data->user->first_name ?? "name"}}">{{$data->user->last_name ?? "name"}}</a></td>
+                                                <td>{{$data->estate->title ?? "Estate"}}</td>
+                                                <td>{{number_format($data->amount, 2)}}</td>
+                                                <td>
+                                                    @if($data->status == 2)
+                                                        <span class="badge text-bg-primary">Approved</span>
+                                                    @elseif($data->status == 0)
+                                                        <span class="badge text-bg-dark">Pending</span>
+                                                    @elseif($data->status == 3)
+                                                        <span class="badge text-bg-dark">Refunded</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{$data->created_at}}</td>
+
+                                            </tr>
+
+                                        @endforeach
+
+
+                                        </tbody><!-- end tbody -->
+
+                                        <tfoot>
+
+                                        {{ $transactions->links() }}
+
+
+                                        </tfoot>
+                                    </table><!-- end table -->
+                                </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
+
+
                 </div>
 
 
-            </div>
-
-
-        </div> <!-- container-fluid -->
+            </div> <!-- container-fluid -->
 
         </div>
 
@@ -440,7 +440,7 @@
                                     </div>
 
                                     <div class="d-flex align-items-center">
-                                        <h3 class="mb-0 fs-24 text-black me-2">{{number_format($total)}}</h3>
+                                        <h3 class="mb-0 fs-24 text-black me-2">{{number_format($meters)}}</h3>
 
                                     </div>
 
@@ -471,24 +471,14 @@
 
                                         <div class="row">
                                             <div class="col-3">
-                                                <label>Date From</label>
-                                                <input type="date" class="form-control" required name="from">
-                                            </div>
-                                            <div class="col-3">
-                                                <label>Date To</label>
-                                                <input type="date" class="form-control"  required name="to">
-                                            </div>
-                                            <div class="col-3">
-                                                <label>Transaction Type</label>
-                                                <select class="form-control" name="transaction_type">
-
+                                                <label>Type</label>
+                                                <select class="form-control" name="type">
                                                     <option value="">Select type</option>
-                                                    <option value="meter">Meter Token</option>
-                                                    <option value="airtime">Airtime</option>
-                                                    <option value="data">Data</option>
-                                                    <option value="cable">Cable</option>
-
-
+                                                    <option value="MEM 3-ph">MEM 3-ph</option>
+                                                    <option value="1PH">1PH</option>
+                                                    <option value="3PH">3PH</option>
+                                                    <option value="prepaid">Prepaid</option>
+                                                    <option value="HXE310-P">HXE310-P</option>
                                                 </select>
 
 
@@ -496,27 +486,18 @@
 
 
                                             <div class="col-3">
-                                                <label>Transaction Status</label>
+                                                <label>Meter Status</label>
                                                 <select class="form-control" name="status">
                                                     <option value="">Select type</option>
-                                                    <option value="0">Pending</option>
-                                                    <option value="2">Successful</option>
-                                                    <option value="3">Failed</option>
-                                                    <option value="4">Reversed</option>
+                                                    <option value="0">Inactive</option>
+                                                    <option value="2">Active</option>
+
                                                 </select>
 
                                             </div>
                                         </div>
 
                                         <div class="row my-3">
-
-
-                                            <div class="col-4">
-                                                <label>Transaction Refrence</label>
-                                                <input type="text" class="form-control" name="rrn"
-                                                       placeholder="Enter Transaction Refrence">
-
-                                            </div>
 
                                             <div class="col-4 mt-4 row">
                                                 <div class="col">
@@ -554,8 +535,17 @@
 
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
-                                    <h5 class="card-title text-black mb-0">All Transaction</h5>
+                                    <h5 class="card-title text-black mb-0">All Meter</h5>
 
+                                </div>
+
+                                <div class="d-flex justify-content-end mb-3">
+                                    <a href="{{ route('export.meters', 'excel') }}" class="btn btn-success me-2">
+                                        Export to Excel
+                                    </a>
+                                    <a href="{{ route('export.meters', 'pdf') }}" class="btn btn-danger">
+                                        Export to PDF
+                                    </a>
                                 </div>
 
 
@@ -566,10 +556,11 @@
                                     <table class="table mb-0">
                                         <thead>
                                         <tr>
-                                            <th scope="col" class="cursor-pointer">Trx ID</th>
-                                            <th scope="col" class="cursor-pointer">Customer</th>
-                                            <th scope="col" class="cursor-pointer">Amount</th>
+                                            <th scope="col" class="cursor-pointer">Meter No</th>
+                                            <th scope="col" class="cursor-pointer">Acct No</th>
                                             <th scope="col" class="cursor-pointer">Type</th>
+                                            <th scope="col" class="cursor-pointer">Estate</th>
+                                            <th scope="col" class="cursor-pointer">Customer</th>
                                             <th scope="col" class="cursor-pointer">Status</th>
                                             <th scope="col" class="cursor-pointer desc">Date</th>
 
@@ -579,24 +570,42 @@
                                         <tbody>
 
 
-                                        @foreach($transactions as $data)
+                                        @foreach($meter_lists as $data)
 
                                             <tr>
-                                                <td>{{$data->trx_id}}</td>
-                                                <td><a href="view-user?id={{$data->user->first_name ?? "Name"}}">{{$data->user->last_name ?? "Name"}}</a></td>
-                                                <td>{{number_format($data->amount, 2)}}</td>
-                                                <td>{{$data->service}}</td>
+                                                <td><a href="view-meter?id={{$data->id}}"> {{$data->meterNo}} </a></td>
+                                                <td>{{$data->AccountNo ?? "Name"}}</td>
+
+                                                <td>
+                                                    {{strtoupper($data->meterModel)}}
+                                                </td>
+
+                                                <td>{{$data->estate->title ?? "Name"}}</td>
+                                                <td>{{$data->user->first_name ?? "No user"}} {{$data->user->last_name ?? "attached"}}</td>
+
                                                 <td>
                                                     @if($data->status == 2)
-                                                        <span class="badge text-bg-primary">Approved</span>
+                                                        <span class="badge text-bg-primary">Active</span>
                                                     @elseif($data->status == 0)
-                                                        <span class="badge text-bg-dark">Pending</span>
+                                                        <span class="badge text-bg-warning">Inactive</span>
                                                     @elseif($data->status == 3)
-                                                        <span class="badge text-bg-dark">Refunded</span>
+                                                        <span class="badge text-bg-danger">Blocked</span>
                                                     @endif
 
                                                 </td>
                                                 <td>{{$data->created_at}}</td>
+
+                                                @if(Auth::user()->role == 0)
+                                                    <td><a href="meter-delete?id={{$data->id}}"
+                                                           onclick="return confirmDelete();"
+                                                           class="btn btn-danger">Delete</a></td>
+                                                    <script>
+                                                        function confirmDelete() {
+                                                            return confirm('Are you sure you want to delete this item?');
+                                                        }
+                                                    </script>
+                                                @endif
+
 
                                             </tr>
 
@@ -607,7 +616,7 @@
 
                                         <tfoot>
 
-                                        {{ $transactions->links() }}
+                                        {{ $meter_lists->links() }}
 
 
                                         </tfoot>

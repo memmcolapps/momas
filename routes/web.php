@@ -107,6 +107,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('admin-dashboard', [DashboardContoller::class, 'index']);
     Route::get('users-list', [DashboardContoller::class, 'list_users']);
     Route::get('customers', [DashboardContoller::class, 'list_customers']);
+    Route::get('filter-customer', [DashboardContoller::class, 'filter_customers']);
+
 
 
     Route::get('user-activate', [DashboardContoller::class, 'user_activate']);
@@ -265,6 +267,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
 
     //REPORT
     Route::get('report-transaction', [TransactionController::class, 'transaction_reports']);
+    Route::get('report-meters', [MeterController::class, 'meter_report']);
     Route::post('search-trx', [TransactionController::class, 'search_trx']);
     Route::post('search-utility-trx', [TransactionController::class, 'search_utility_trx']);
     Route::get('utility-payment', [TransactionController::class, 'utility_payment']);

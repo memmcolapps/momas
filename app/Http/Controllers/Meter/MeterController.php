@@ -1481,4 +1481,41 @@ class MeterController extends Controller
     }
 
 
+    public function meter_report(request $request)
+    {
+
+        if (Auth::user()->role == 0) {
+
+            $data['meters'] = Meter::count();
+            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')->paginate('20');
+            $data['estate'] = Estate::where('status', 2)->get();
+            return view('admin/report/metersreport', $data);
+
+        } elseif (Auth::user()->role == 1) {
+
+
+        } elseif (Auth::user()->role == 2) {
+
+        } elseif (Auth::user()->role == 3) {
+
+            $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)->count();
+            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')->where('estate_id', Auth::user()->estate_id)->paginate('20');
+            $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
+
+            return view('admin/report/metersreport', $data);
+
+        } elseif (Auth::user()->role == 4) {
+
+        } elseif (Auth::user()->role == 5) {
+
+        } else {
+
+        }
+
+
+
+    }
+
+
+
 }
