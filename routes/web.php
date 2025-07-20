@@ -38,7 +38,7 @@ Route::get('/get-tariffs/{estate_id}', function ($estate_id) {
     return response()->json($tariffs);
 });
 
-Route::get('enkpay-payment', [TransactionController::class, 'enkpay_payment']);
+Route::get('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
 
 
 Route::any('verify2fa', [AuthController::class, 'verify2fa']);
