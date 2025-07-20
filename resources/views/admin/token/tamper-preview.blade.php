@@ -144,8 +144,7 @@
                                                     <div class="modal-body">
 
                                                         <div class="">
-                                                            <h5 class="card-title text-black mb-0">Clear Tamper
-                                                                Preview</h5>
+                                                            <h5 class="card-title text-black mb-0">Clear Tamper Preview</h5>
                                                         </div>
 
 
@@ -595,8 +594,7 @@
                                                     <div class="modal-body">
 
                                                         <div class="">
-                                                            <h5 class="card-title text-black mb-0">Clear Tamper
-                                                                Preview</h5>
+                                                            <h5 class="card-title text-black mb-0">Clear Tamper Preview</h5>
                                                         </div>
 
 
@@ -701,8 +699,7 @@
                                                     <div class="modal-body">
 
                                                         <div class="">
-                                                            <h5 class="card-title text-black mb-0">Clear Tamper
-                                                                Preview</h5>
+                                                            <h5 class="card-title text-black mb-0">Clear Tamper Preview</h5>
                                                         </div>
 
 

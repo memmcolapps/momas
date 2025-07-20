@@ -138,8 +138,7 @@
                                                 <div class="modal-body">
 
                                                     <div class="">
-                                                        <h5 class="card-title text-black mb-0">Clear Credit Token
-                                                            Preview</h5>
+                                                        <h5 class="card-title text-black mb-0">Clear Credit Token Preview</h5>
                                                     </div>
 
 
@@ -473,6 +472,7 @@
 
                                         </div>
 
+
                                         <div class="col-xl-6 col-sm-12">
 
                                             <form action="generate-clear-credit-meter-token" method="POST"
@@ -482,8 +482,7 @@
                                                 <div class="modal-body">
 
                                                     <div class="">
-                                                        <h5 class="card-title text-black mb-0">Clear Credit Token
-                                                            Preview</h5>
+                                                        <h5 class="card-title text-black mb-0">Clear Credit Token Preview</h5>
                                                     </div>
 
 

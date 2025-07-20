@@ -30,7 +30,38 @@ class TransactionController extends Controller
     }
 
 
-        public function flutter_payment(request $request)
+    public function pay_arrears(request $request)
+    {
+
+        if ($request->type === "single") {
+            UtilitiesPayment::where('user_id', Auth::id())->where('id', $request->id)->update(['status' => 1]);
+            Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+
+            $message = "Arrears Payment Completed";
+            return success($message);
+        }
+
+
+        if ($request->type === "all") {
+            UtilitiesPayment::where('user_id', Auth::id())->update(['status' => 2]);
+            Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+
+            $message = "Arrears Payment Completed";
+            return success($message);
+        }
+
+
+        UtilitiesPayment::where('user_id', Auth::id())->get();
+        return response()->json([
+            'status' => true,
+            'data' => $get_trx
+        ]);
+
+
+    }
+
+
+    public function flutter_payment(request $request)
     {
 
 //        $fl = Setting::where('id', 1)->first();
@@ -427,7 +458,7 @@ class TransactionController extends Controller
         }
 
 
-        if ($request->pay_type == 'paystack') {
+        if ($request->pay_type === 'paystack') {
             $fl = Setting::where('id', 1)->first();
             $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
             $flkey['flutterwave_public'] = $fl->flutterwave_public;
@@ -499,7 +530,7 @@ class TransactionController extends Controller
         }
 
 
-        if ($request->pay_type == 'remita') {
+        if ($request->pay_type === 'remita') {
             $trx_id = "TRX" . random_int(0000000, 9999999);
             $email = Auth::user()->email;
             $trx = new Transaction();
@@ -517,7 +548,7 @@ class TransactionController extends Controller
         }
 
 
-        if ($request->pay_type == 'wallet') {
+        if ($request->pay_type === 'wallet') {
             $trx_id = "TRX" . random_int(0000000, 9999999);
             $email = Auth::user()->email;
 
@@ -543,6 +574,33 @@ class TransactionController extends Controller
                 'status' => "success",
                 'ref' => $trx_id,
             ], 200);
+
+        }
+
+        if ($request->pay_type === 'enkpay') {
+
+            $trx_id = "TRXENK" . random_int(0000000, 9999999);
+            $email = Auth::user()->email;
+            $phone = Auth::user()->phone ?? "012345678";
+            $fl = Setting::where('id', 1)->first();
+            $key = $fl->enkpay_key;
+
+            $url = "https://web.sprintpay.online/pay?amount=$request->amount&key=$key&ref=$trx_id&email=$email";
+
+            $trx = new Transaction();
+            $trx->user_id = Auth::id();
+            $trx->estate_id = Auth::user()->estate_id;
+            $trx->pay_type = "enkpay";
+            $trx->service_type = $request->service;
+            $trx->amount = $request->amount;
+            $trx->trx_id = $trx_id;
+            $trx->save();
+
+            return response()->json([
+                'status' => true,
+                'url' => $url
+            ], 200);
+
 
         }
 
@@ -638,6 +696,8 @@ class TransactionController extends Controller
 
 
     }
+
+
 
 
     public function paystack_verify(request $request)
@@ -1049,7 +1109,7 @@ class TransactionController extends Controller
 
         $amount = $request->amount - 100;
 
-        if ($get_pay_type == "admin_fee" && $get_user_id != null) {
+        if ($get_pay_type === "admin_fee" && $get_user_id != null) {
 
             $update_payment = VirtualAccountTransaction::where('v_account_no', $request->account_no)->where('amount', $request->amount)->update(['status' => 2, 'session_id' => $request->session_id]);
             if ($update_payment) {
@@ -1084,7 +1144,7 @@ class TransactionController extends Controller
         }
 
 
-        if ($get_pay_type == "wallet_funding" && $get_user_id != null) {
+        if ($get_pay_type === "wallet_funding" && $get_user_id != null) {
 
             $update_payment = VirtualAccountTransaction::where('v_account_no', $request->account_no)->where('amount', $request->amount)->update(['status' => 2, 'session_id' => $request->session_id]);
             if ($update_payment) {
@@ -1103,13 +1163,15 @@ class TransactionController extends Controller
         }
 
 
-        if ($get_pay_type == null && $get_user_id == null) {
+        if ($get_pay_type === null && $get_user_id === null) {
+
+            Transaction::where('trx_id', $request->order_id)->update(['status' => 4]);
 
             $va = new VirtualAccountTransaction();
             $va->v_account_no = $request->account_no;
             $va->v_account_name = "woven";
             $va->amount = $request->amount;
-            $va->type = "wallet_funding";
+            $va->type = $request->order_id;
             $va->v_bank_name = "VFD";
             $va->session_id = $request->session_id;
             $va->status = 2;
@@ -1157,19 +1219,6 @@ class TransactionController extends Controller
     }
 
 
-    public function enkpay_payment(request $request)
-    {
-
-        $data['balance'] = get_balance();
-        $data['transaction'] = VirtualAccountTransaction::latest()->take(1000)->paginate('50');
-        $data['total_withdrawal'] = VirtualAccountTransaction::where('status', 4)->sum('amount');
-        $data['total_funded'] = VirtualAccountTransaction::where('status', 5)->sum('amount');
-        $data['customer'] = User::latest()->where('status', 2)->get();
-
-
-        return view('admin.report.enkpay-payment', $data);
-
-    }
 
 
     public function search_utility_trx(request $request)
@@ -1429,14 +1478,10 @@ class TransactionController extends Controller
         $url = "https://web.sprintpay.online/pay?amount=$amount&key=$key&ref=$trx_id&email=$email";
 
 
-
         return redirect()->away($url);
 
 
     }
-
-
-
 
 
 }

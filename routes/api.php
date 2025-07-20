@@ -93,6 +93,7 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     Route::post('pay', [TransactionController::class, 'make_payment']);
     Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
     Route::get('arrears', [TransactionController::class, 'arrears']);
+    Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
 
 
 
