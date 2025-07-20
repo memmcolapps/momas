@@ -102,6 +102,9 @@ class MeterController extends Controller
 
 
             $get_vend = vend($duration, $estate_id, $user_id);
+
+
+
             if ($get_vend == null) {
                 $minvend = "Not set";
             } else {
@@ -169,6 +172,9 @@ class MeterController extends Controller
 
     public function validate_meter(request $request)
     {
+
+
+
         $user = User::where('meterNo', $request->meterNo)->first() ?? null;
 
 
@@ -190,7 +196,6 @@ class MeterController extends Controller
 
         $data['customer_name'] = $user->first_name . " " . $user->last_name;
         $data['address'] = $user->address . ", " . $user->city . ", " . $user->state;
-        // $data['meter_type'] = $meter_type;
 
         $es_id = $request->estateId ?? null;
         $duration = Estate::where('id', $es_id)->first()->duration ?? null;
@@ -203,6 +208,8 @@ class MeterController extends Controller
         } else {
 
             $get_vend = vend($duration, $estate_id, $user_id);
+
+
             if ($get_vend == null) {
                 $minvend = "Not set";
             } else {
@@ -210,6 +217,8 @@ class MeterController extends Controller
             }
 
         }
+
+
 
         $min_pur = Estate::where('id', $request->estateId)->first()->min_pur ?? null;
         $max_pur = Estate::where('id', $request->estateId)->first()->max_pur ?? null;
@@ -233,7 +242,6 @@ class MeterController extends Controller
         if ($get_tariffs == null) {
             $tarf = new Tariff();
             $tarf->title = $title;
-            $tarf->tariff_index = $user_info->tariffid;
             $tarf->tariff_index = $user_info->tariffid;
             $tarf->estate_id = $user_info->estate_id;
             $tarf->user_id = $user_info->id;

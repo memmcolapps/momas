@@ -17,7 +17,20 @@ use Illuminate\Support\Facades\Auth;
 class TransactionController extends Controller
 {
 
-    public function flutter_payment(request $request)
+    public function arrears(request $request)
+    {
+
+        $get_trx = UtilitiesPayment::where('user_id', Auth::id())->get();
+        return response()->json([
+            'status' => true,
+            'data' => $get_trx
+        ]);
+
+
+    }
+
+
+        public function flutter_payment(request $request)
     {
 
 //        $fl = Setting::where('id', 1)->first();

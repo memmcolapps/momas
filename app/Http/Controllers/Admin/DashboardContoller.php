@@ -26,7 +26,26 @@ use Illuminate\Support\Facades\Auth;
 class DashboardContoller extends Controller
 {
 
-    public function index()
+    public function pay_utility(request $request)
+    {
+
+        UtilitiesPayment::where('id', $request->id)->update(['status' => 1]);
+        return back()->with('message', 'Utility has been updated');
+
+
+    }
+
+    public function unpay_utility(request $request)
+    {
+
+        UtilitiesPayment::where('id', $request->id)->update(['status' => 0]);
+        return back()->with('message', 'Utility has been updated');
+
+
+    }
+
+
+        public function index()
     {
         if (Auth::user()->role == 0) {
 

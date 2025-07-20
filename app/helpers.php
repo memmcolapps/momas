@@ -217,111 +217,64 @@ if (!function_exists('total_utility')) {
 
 if (!function_exists('vend')) {
 
-    function vend($duration, $estate_id, $user_id)
+    function vend($duration, int $estate_id, int $user_id)
     {
 
 
-        if ($duration == "daily") {
+        $totalDue = total_utility($estate_id);
+        $paymentsQuery = UtilitiesPayment::where([
+            'user_id'   => $user_id,
+            'estate_id' => $estate_id,
+            'type'      => 'utilities',
+            'status'    => 0,
+        ]);
 
 
-            $total = total_utility($estate_id);
-            $chk_pay = UtilitiesPayment::where([
-                'user_id' => $user_id,
-                'estate_id' => $estate_id,
-                'type' => "utilities",
-                'status' => 0
-            ])->whereDate('created_at', Carbon::today())->get() ?? null;
 
 
-            if ($chk_pay == null || $chk_pay->isEmpty()) {
-                return $total;
-            } else {
-                $totalck = 0;
-                foreach ($chk_pay as $data) {
-                    $totalck += $data->amount;
-                }
-                $ftotal = $totalck;
-                return $ftotal;
-            }
+        switch ($duration) {
+            case 'daily':
+                $paymentsQuery->whereDate('created_at', Carbon::today());
+                break;
 
+            case 'weekly':
+                $paymentsQuery->whereBetween('created_at', [
+                    Carbon::now()->startOfWeek(),
+                    Carbon::now()->endOfWeek(),
+                ]);
+                break;
+
+            case 'monthly':
+                $paymentsQuery->whereBetween('created_at', [
+                    Carbon::now()->startOfMonth(),
+                    Carbon::now()->endOfMonth(),
+                ]);
+                break;
+
+            case 'yearly':
+                $paymentsQuery->whereBetween('created_at', [
+                    Carbon::now()->startOfYear(),
+                    Carbon::now()->endOfYear(),
+                ]);
+                break;
+
+            case 'per_transaction':
+                break;
+
+            default:
+                return $totalDue;
         }
 
-        if ($duration == "weekly") {
+        $paidSoFar = $paymentsQuery->sum('amount');
 
-            $total = total_utility($estate_id);
-            $chk_pay = UtilitiesPayment::where([
-                'user_id' => $user_id,
-                'estate_id' => $estate_id,
-                'type' => "utilities",
-                'status' => 0
-            ])->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])->get() ?? null;
-
-
-            if ($chk_pay == null || $chk_pay->isEmpty()) {
-                return $total;
-            } else {
-                $totalck = 0;
-                foreach ($chk_pay as $data) {
-                    $totalck += $data->amount;
-                }
-                $ftotal = $totalck;
-
-
-
-                return $ftotal;
-
-
-            }
-
-        }
-
-        if ($duration == "monthly") {
-
-            $total = total_utility($estate_id);
-            $chk_pay = UtilitiesPayment::where([
-                'user_id' => $user_id,
-                'estate_id' => $estate_id,
-                'type' => "utilities",
-                'status' => 0
-            ])->whereBetween('created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()])->get() ?? null;
-
-            if ($chk_pay == null || $chk_pay->isEmpty()) {
-                return $total;
-            } else {
-                $totalck = 0;
-                foreach ($chk_pay as $data) {
-                    $totalck += $data->amount;
-                }
-                $ftotal = $totalck;
-
-
-                return $ftotal;
-            }
-
+        if ($duration === 'per_transaction') {
+            return $totalDue;
         }
 
 
-        if ($duration == "yearly") {
-            $total = total_utility($estate_id);
-            $chk_pay = UtilitiesPayment::where([
-                'user_id' => $user_id,
-                'estate_id' => $estate_id,
-                'type' => "utilities",
-                'status' => 0
-            ])->whereBetween('created_at', [Carbon::now()->startOfYear(), Carbon::now()->endOfYear()])->get() ?? null;
 
-            if ($chk_pay == null || $chk_pay->isEmpty()) {
-                return $total;
-            } else {
-                $totalck = 0;
-                foreach ($chk_pay as $data) {
-                    $totalck += $data->amount;
-                }
-                $ftotal = $totalck;
-                return $ftotal;
-            }
 
-        }
+        return $paidSoFar;
 
 
     }

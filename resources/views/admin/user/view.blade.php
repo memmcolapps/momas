@@ -583,6 +583,7 @@
                                                 <th scope="col" class="cursor-pointer">Amount</th>
                                                 <th scope="col" class="cursor-pointer">Status</th>
                                                 <th scope="col" class="cursor-pointer">Date/Time</th>
+                                                <th scope="col" class="cursor-pointer">Action</th>
 
 
                                             </tr>
@@ -598,16 +599,23 @@
                                                     <td>{{strtoupper($data->duration)}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
                                                     <td>
-                                                        @if($data->status == 2)
-                                                            <span class="badge text-bg-primary">Active</span>
-                                                        @elseif($data->status == 3)
-                                                            <span class="badge text-bg-dark">Banned</span>
-                                                        @elseif($data->status == 0)
-                                                            <span class="badge text-bg-warning">Pending</span>
+                                                        @if($data->status == 0)
+                                                            <span class="badge text-bg-warning">Not Paid</span>
+                                                        @else
+                                                            <span class="badge text-bg-success">Paid</span>
                                                         @endif
 
                                                     </td>
                                                     <td>{{$data->created_at}}</td>
+
+                                                    <td>
+                                                        @if($data->status == 0)
+                                                            <a href="pay-utility?id={{$data->id}}" class="badge text-bg-primary">Pay Utility</a>
+                                                        @else
+                                                            <a href="unpay-utility?id={{$data->id}}" class="badge text-bg-danger">Unpay Utility</a>
+                                                        @endif
+
+                                                    </td>
 
                                                 </tr>
 

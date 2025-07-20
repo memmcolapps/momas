@@ -382,11 +382,11 @@
                                 @csrf
 
 
-                                <h6 class="d-flex justify-content-start my-4">MIN/MAX PURCHASE Information</h6>
+                                <h6 class="d-flex justify-content-start my-4">MIN/MAX VEND Information</h6>
 
                                 <div class="row">
                                     <div class="col-xl-4 col-sm-12">
-                                        <label class="my-2">MIN Purchase</label>
+                                        <label class="my-2">MIN Vend</label>
                                         <input type="number" step="0.01" name="min_pur"
                                                value="{{$org->min_pur ?? 1000}}"
                                                class="form-control"
@@ -397,7 +397,7 @@
 
 
                                     <div class="col-xl-4 col-sm-12">
-                                        <label class="my-2">MAX Purchase</label>
+                                        <label class="my-2">MAX venc</label>
                                         <input type="number" step="0.01" name="max_pur"
                                                value="{{$org->max_pur ?? 1000000}}"
                                                class="form-control"
@@ -410,8 +410,8 @@
 
                                     </div>
 
-
                                 </div>
+
 
 
 
@@ -464,23 +464,45 @@
                                 <form action="update-duration" method="POST" class="">
                                     @csrf
 
+
                                     <div class="col-xl-4 col-sm-12">
                                         <h6 class="my-3">Add New Utility</h6>
 
                                         <label class="my-2">Set Duration</label>
                                         <select name="duration" required class="form-control">
-                                            <option value=" ">Choose Duration</option>
-                                            <option value="weekly">Weekly</option>
-                                            <option value="monthly">Monthly</option>
-                                            <option value="yearly">Yearly</option>
+                                            {{-- Placeholder, disabled so the user must pick a real one --}}
+                                            <option value="" disabled
+                                                {{ old('duration', $org->duration ?? '') === '' ? 'selected' : '' }}>
+                                                Choose Duration
+                                            </option>
 
+                                            <option value="per_transaction"
+                                                {{ old('duration', $org->duration ?? '') === 'per_transaction' ? 'selected' : '' }}>
+                                                Per Transaction
+                                            </option>
+
+                                            <option value="weekly"
+                                                {{ old('duration', $org->duration ?? '') === 'weekly' ? 'selected' : '' }}>
+                                                Weekly
+                                            </option>
+
+                                            <option value="monthly"
+                                                {{ old('duration', $org->duration ?? '') === 'monthly' ? 'selected' : '' }}>
+                                                Monthly
+                                            </option>
+
+                                            <option value="yearly"
+                                                {{ old('duration', $org->duration ?? '') === 'yearly' ? 'selected' : '' }}>
+                                                Yearly
+                                            </option>
                                         </select>
 
-                                        <input hidden name="id" value="{{$org->id ?? "id" }}"
+                                        <input type="hidden" name="id"
+                                               value="{{ $org->id ?? '' }}"
                                                class="form-control"
                                                required>
-
                                     </div>
+
 
                                     <button type="submit" class="btn btn-primary my-3">Update duration
                                     </button>

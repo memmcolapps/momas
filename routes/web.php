@@ -99,6 +99,11 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('onboarding-email', [DashboardContoller::class, 'onboarding_email']);
     Route::post('setup_paystack', [DashboardContoller::class, 'setup_paystack']);
 
+    Route::get('pay-utility', [DashboardContoller::class, 'pay_utility']);
+    Route::get('unpay-utility', [DashboardContoller::class, 'unpay_utility']);
+
+
+
 
     Route::post('import-users', [CustomerImportController::class, 'import'])->name('customers.import');
     Route::post('import-meters', [MeterImportController::class, 'import'])->name('meters.import');
@@ -108,6 +113,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('users-list', [DashboardContoller::class, 'list_users']);
     Route::get('customers', [DashboardContoller::class, 'list_customers']);
     Route::get('filter-customer', [DashboardContoller::class, 'filter_customers']);
+
 
 
 
