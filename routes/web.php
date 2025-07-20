@@ -314,6 +314,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('pay-flutter-web', [TokenController::class, 'flutter_verify_web']);
     Route::any('paystack-clear-credit', [TokenController::class, 'paystack_clear_credit']);
     Route::any('flutter-verify-clear-credit', [TokenController::class, 'flutter_verify_clear_credit']);
+    Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
+
 
 
 

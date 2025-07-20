@@ -646,9 +646,25 @@ class TransactionController extends Controller
 
     }
 
+    public function enkpay_payment_verify(request $request)
+    {
+
+        if ($request->status === 'success') {
+            Transaction::where('trx_id', $request->trans_id)->update(['status' => 4]);
+            $ref = $request->trans_id;
+            $url = url('') . "/payment?ref=$ref&status=success";
+            return redirect($url);
+        }
+
+
+    }
+
+
 
     public function flutter_verify(request $request)
     {
+
+
 
         $fl = Setting::where('id', 1)->first();
         $flsecret = $fl->flutterwave_secret;
