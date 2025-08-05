@@ -610,9 +610,9 @@
 
                                                     <td>
                                                         @if($data->status == 0)
-                                                            <a href="pay-utility?id={{$data->id}}" class="badge text-bg-primary">Pay Utility</a>
+                                                            <a href="pay-utility?id={{$data->id}}&customer_id={{$user->id}}&estate_id={{$user->estate_id}}" class="badge text-bg-primary">Pay Utility</a>
                                                         @else
-                                                            <a href="unpay-utility?id={{$data->id}}" class="badge text-bg-danger">Unpay Utility</a>
+                                                            <a href="unpay-utility?id={{$data->id}}&customer_id={{$user->id}}&estate_id={{$user->estate_id}}" class="badge text-bg-danger">Unpay Utility</a>
                                                         @endif
 
                                                     </td>
@@ -650,8 +650,6 @@
     @else
 
         <div class="content">
-
-            <!-- Start Content-->
             <div class="container-fluid">
 
                 @if ($errors->any())
@@ -698,7 +696,6 @@
                                         <div class="col-xl-3 col-sm-12">
                                             <label class="my-2">First Name</label>
                                             <input type="text" value="{{$user->first_name}}" name="first_name" class="form-control" required>
-                                            <input type="text" value="{{$user->email}}" name="email" readonly>
 
                                         </div>
 
@@ -1173,12 +1170,10 @@
                                                     <td>{{strtoupper($data->duration)}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
                                                     <td>
-                                                        @if($data->status == 2)
-                                                            <span class="badge text-bg-primary">Active</span>
-                                                        @elseif($data->status == 3)
-                                                            <span class="badge text-bg-dark">Banned</span>
-                                                        @elseif($data->status == 0)
-                                                            <span class="badge text-bg-warning">Pending</span>
+                                                        @if($data->status == 0)
+                                                            <span class="badge text-bg-warning">Not Paid</span>
+                                                        @else
+                                                            <span class="badge text-bg-success">Paid</span>
                                                         @endif
 
                                                     </td>
@@ -1212,7 +1207,6 @@
                 </div>
             </div>
         </div>
-
 
     @endif
 

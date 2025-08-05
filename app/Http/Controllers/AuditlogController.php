@@ -16,4 +16,12 @@ class AuditlogController extends Controller
         return view('admin.audit.tariffaudit', compact('tariff_logs', 'total'));
 
     }
+
+    public function utility_payment_audit(request $request)
+    {
+        $tariff_logs = Audit::latest()->where('auditable_type', 'App\Models\UtilitiesPayment')->paginate(100);
+        $total = Audit::latest()->where('auditable_type', 'App\Models\UtilitiesPayment')->count();
+        return view('admin.audit.utilitypayment', compact('tariff_logs', 'total'));
+
+    }
 }

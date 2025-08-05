@@ -322,6 +322,9 @@
                                     <li>
                                         <a class='tp-link' href='tariff_audit'>Tariff</a>
                                     </li>
+                                    <li>
+                                        <a class='tp-link' href='utility_pay_audit'>Utility Payment</a>
+                                    </li>
                                     {{--                                    <li>--}}
                                     {{--                                        <a class='tp-link' href='report-meter'>Meter</a>--}}
                                     {{--                                    </li>--}}

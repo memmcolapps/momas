@@ -28,17 +28,18 @@ class DashboardContoller extends Controller
 
     public function pay_utility(request $request)
     {
-
-        UtilitiesPayment::where('id', $request->id)->update(['status' => 1]);
+        $payment = UtilitiesPayment::find($request->id);
+        $payment->status = 1;
+        $payment->save();
         return back()->with('message', 'Utility has been updated');
-
-
     }
 
     public function unpay_utility(request $request)
     {
 
-        UtilitiesPayment::where('id', $request->id)->update(['status' => 0]);
+        $payment = UtilitiesPayment::find($request->id);
+        $payment->status = 0;
+        $payment->save();
         return back()->with('message', 'Utility has been updated');
 
 
