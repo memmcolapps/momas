@@ -59,16 +59,16 @@ class Meter extends Model
         'resolve' => 'integer',
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-
-    public function estate()
-    {
-        return $this->belongsTo(Estate::class);
-    }
+//    public function user()
+//    {
+//        return $this->belongsTo(User::class);
+//    }
+//
+//
+//    public function estate()
+//    {
+//        return $this->belongsTo(Estate::class);
+//    }
 
     public function transformer()
     {
@@ -79,4 +79,15 @@ class Meter extends Model
     {
         return $this->belongsTo(CreditToken::class);
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function estate()
+    {
+        return $this->belongsTo(Estate::class, 'estate_id', 'id');
+    }
+
 }

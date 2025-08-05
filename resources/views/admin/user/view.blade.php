@@ -572,6 +572,9 @@
                                 <div class="row">
 
                                     <h6 class="d-flex justify-content-start my-2">Utility Information</h6>
+
+                                    <a href="/export-utilities?user_id={{$user->id}}&estate_id={{$user->estate_id}}" style="width: 100px" class="btn btn-success">Export</a>
+
                                     <div class="card-body">
                                         <table id="datatable-buttons"
                                                class="table table-striped table-bordered dt-responsive nowrap">
@@ -1144,6 +1147,9 @@
                                 <div class="row">
 
                                     <h6 class="d-flex justify-content-start my-2">Utility Information</h6>
+
+                                    <a href="/export-utilities?user_id={{$user->id}}&estate_id={{$user->estate_id}}" style="width: 100px" class="btn btn-success">Export</a>
+
                                     <div class="card-body">
                                         <table id="datatable-buttons"
                                                class="table table-striped table-bordered dt-responsive nowrap">

@@ -1,5 +1,7 @@
 <?php
 
+use App\Exports\CustomerExport;
+use App\Exports\MeterExport;
 use App\Exports\MeterTransactionExport;
 use App\Http\Controllers\AccessToken\AccessTokenConroller;
 use App\Http\Controllers\Admin\AssetController;
@@ -20,9 +22,33 @@ use App\Http\Controllers\Transformer\TransformerController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\UtilitiesPaymentsExport;;
+use Illuminate\Support\Facades\Response;
 
 
 
+
+Route::get('/export-utilities', function (Illuminate\Http\Request $request) {
+    $userId = $request->input('user_id');
+    $estateId = $request->input('estate_id');
+
+    return Excel::download(new UtilitiesPaymentsExport($userId, $estateId), 'utilities.xlsx');
+});
+
+Route::get('/export-customers', function (Illuminate\Http\Request $request) {
+    $userId = $request->input('user_id');
+    $estateId = $request->input('estate_id');
+
+    return Excel::download(new CustomerExport($estateId), 'Customers.xlsx');
+});
+
+
+Route::get('/export-meters', function () {
+    $userId = request()->get('user_id');
+    $estateId = request()->get('estate_id');
+
+    return Excel::download(new MeterExport($userId, $estateId), 'meters.xlsx');
+});
 
 Route::get('/fetch-tariff', [MeterController::class, 'fetchTariff']);
 Route::get('export-metertransactions', [ExportControler::class, 'exportmetertransactions']);

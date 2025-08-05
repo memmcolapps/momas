@@ -15,6 +15,8 @@ class UtilitiesPayment extends Model implements Auditable
 
 
 
+
+
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -184,7 +184,9 @@
 
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
-                                    <h5 class="card-title text-black mb-0">Latest Transaction</h5>
+                                    <h5 class="card-title text-black mb-0">Latest Customers</h5>
+                                    <a href="/export-customers" style="width: 100px" class="btn btn-success">Export</a>
+
                                     <div class="justify-content-end">
                                         <div class="justify-content-end">
                                             <a href="#" class="btn btn-primary text-white " data-bs-toggle="modal"
