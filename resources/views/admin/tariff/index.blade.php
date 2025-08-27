@@ -246,7 +246,7 @@
                                        class="table table-striped table-bordered dt-responsive nowrap">
                                     <thead>
                                     <tr>
-                                        <th scope="col" class="cursor-pointer">TariffID</th>
+                                        <th scope="col" class="cursor-pointer">Tariff Index</th>
                                         <th scope="col" class="cursor-pointer">TariffCode</th>
                                         <th scope="col" class="cursor-pointer">Estate</th>
                                         <th scope="col" class="cursor-pointer">Status</th>

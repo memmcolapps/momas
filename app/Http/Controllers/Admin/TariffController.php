@@ -43,10 +43,11 @@ class TariffController extends Controller
 
         } elseif(Auth::user()->role == 3){
 
-            $data['tariff_list'] = Tariff::latest()->where('estate_id', Auth::user()->estate_id)->get();
+            $data['tariff_list'] = Tariff::latest()->where('estate_id', Auth::user()->estate_id)->paginate(20);
             $data['tariffis'] = Tariff::latest()->latest()->where('estate_id', Auth::user()->estate_id)->get();
             $data['tarifftariffis'] = Tariff::where('estate_id', Auth::user()->estate_id)->count();
-            $data['estate']  = Estate::all();
+            // $data['estate']  = Estate::all();
+             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get(); 
 
             return view('admin/tariff/index', $data);
 
@@ -69,8 +70,19 @@ class TariffController extends Controller
     {
 
 
-        $data['estate']  = Estate::all();
-        return view('admin.tariff.new-tariff', $data);
+        // $data['estate']  = Estate::all();
+        // return view('admin.tariff.new-tariff', $data);
+
+    if(Auth::user()->role == 0) {
+        $data['estate'] = Estate::all();
+    } elseif(Auth::user()->role == 3) {
+        // Estate admin can only create tariffs for their estate
+        $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
+    } else {
+        return redirect('admin/admin-dashboard')->with('error', 'Unauthorized access');
+    }
+    
+    return view('admin.tariff.new-tariff', $data);
 
     }
 
@@ -79,10 +91,21 @@ class TariffController extends Controller
     public function add_new_Tariff(request $request)
     {
 
+        // AUTHORIZATION CHECK - Only for estate admins (role 3)
+        if(Auth::user()->role == 3) {
+            if($request->estate_id != Auth::user()->estate_id) {
+                return back()->with('error', 'You can only create tariffs for your estate');
+            }
+        }
+
         $ck = Tariff::where('title', $request->title)->first() ?? null;
+        // DUPLICATE CHECK - Prevent duplicate tariffs for same estate
+        // $ck = Tariff::where('title', $request->title)
+        //         ->where('estate_id', $request->estate_id)
+        //         ->first() ?? null;
 
         if($ck != null){
-            return back()->with('error', 'Tariff already exist');
+            return back()->with('error', 'Tariff already exist for this exist');
         }
 
         $tr = new Tariff();
@@ -110,6 +133,18 @@ class TariffController extends Controller
 
     public function delete_tariff(request $request)
     {
+        $tariff = Tariff::where('id', $request->id)->first();
+
+        if (!$tariff) {
+            return back()->with('error', 'Tariff not found');
+        }
+    
+        // Estate admins can only delete tariffs from their estate
+        if(Auth::user()->role == 3) {
+            if($tariff->estate_id != Auth::user()->estate_id) {
+                return back()->with('error', 'You can only delete tariffs from your estate');
+            }
+        }
 
         Tariff::where('id', $request->id)->delete();
         return back()->with('messsage', 'Tariff deleted successfully');
@@ -120,6 +155,15 @@ class TariffController extends Controller
     public function view_tariff(request $request)
     {
 
+        $tr = Tariff::where('id', $request->id)->first();
+    
+        // Estate admins can only view tariffs from their estate
+        if(Auth::user()->role == 3) {
+            if($tr->estate_id != Auth::user()->estate_id) {
+                return redirect('admin/tariff-list')->with('error', 'Unauthorized access');
+            }
+        }
+
         $chk_active = TarrifState::where('tariff_id', $request->id)->where('status', 2)->count();
         if($chk_active > 1){
             TarrifState::where('tariff_id',$request->id)->update(['status' => 0]);
@@ -127,11 +171,14 @@ class TariffController extends Controller
 
         }
 
-
-        $tr = Tariff::where('id', $request->id)->first();
         $tstate = TarrifState::where('tariff_id', $request->id)->get();
         $effictive_date = TarrifState::where('tariff_id', $request->id)->where('status', 2)->first()->effective_from ?? null;
-        $estate = Estate::all();
+        
+        if(Auth::user()->role == 0) {
+            $estate = Estate::all();
+        } else {
+            $estate = Estate::where('id', Auth::user()->estate_id)->get();
+        }
 
 
         return view('admin.tariff.view', compact('tr', 'tstate','estate', 'effictive_date'));

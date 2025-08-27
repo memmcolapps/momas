@@ -187,7 +187,7 @@
                                     <div class="col-3">
                                         <label class="my-2">Tariff Title</label>
                                         <input type="text" value="TF" name="title" class="form-control" required>
-                                        <input type="text" name="estate_id" value="{{Auth::user()->estate_id}}"  hidden >
+                                        <input type="hidden" name="estate_id" value="{{Auth::user()->estate_id}}">
 
                                     </div>
 
@@ -204,6 +204,15 @@
 
                                         </select>
 
+                                    </div>
+
+                                    <div class="col-xl-6 col-sm-12">
+                                        <label class="my-2">Source</label>
+                                        <select class="form-control" name="tariff_source" required>
+                                            <option value="">--Select Source--</option>
+                                            <option value="nepa">Nepa</option>
+                                            <option value="gen">Generator</option>
+                                        </select>
                                     </div>
 
 
@@ -236,6 +245,16 @@
     @elseif(Auth::user()->role == 4)
     @elseif(Auth::user()->role == 5)
     @else
+        <div class="content">
+            <div class="container-fluid">
+                <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
+                    <div class="flex-grow-1">
+                        <h4 class="fs-18 fw-semibold m-0">Unauthorized Access</h4>
+                        <p>You don't have permission to access this page.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endif
 
 
