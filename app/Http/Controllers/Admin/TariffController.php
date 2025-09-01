@@ -185,79 +185,154 @@ class TariffController extends Controller
 
     }
 
-    public function add_state_tariff(request $request)
-    {
+    // public function add_state_tariff(request $request)
+    // {
 
+    //     $id = $request->id;
+
+
+    //     if($request->date_to == null && $request->never_expire == "yes"){
+
+
+    //         $tr = new TarrifState();
+    //         $tr->amount = $request->amount;
+    //         $tr->effective_from = $request->date_from;
+    //         $tr->effective_to = null;
+    //         $tr->t_index = $request->t_index;
+    //         $tr->estate_id = $request->estate_id;
+    //         $tr->vat = $request->vat;
+    //         $tr->tariff_id = $request->tariff_id;
+    //         $tr->save();
+
+
+
+    //         $ck_count = TarrifState::where('tariff_id', $request->tariff_id)->count();
+    //         if($ck_count == 1){
+    //             TarrifState::latest()->where('status', 0)->where('tariff_id', $request->tariff_id)->update(['status' => 2]);
+    //         }
+
+    //         return back()->with('message', 'Tariff Added Successfully');
+
+    //     }
+
+
+    //     if($request->date_to == null && $request->never_expire == "no"){
+    //         return redirect("admin/view-tariff?id=$id")->with('error', 'Please choose effective date to');
+    //     }
+
+    //     if($request->date_to != null && $request->never_expire == "no"){
+    //         return redirect("admin/view-tariff?id=$id")->with('error', 'Effective date has been set please choose NO on never expire option');
+    //     }
+
+    //     $ddfrom = new DateTime($request->date_from);
+    //     $ddto = new DateTime($request->date_to);
+
+    //     if( $ddfrom >= $ddto  ){
+    //         return redirect("admin/view-tariff?id=$id")->with('error', 'End date can not be greater than start date');
+    //     }
+
+    //     $newdate = TarrifState::latest()->where('status', 2)->where('tariff_id', $request->id)->first()->effective_to ?? null;
+    //     $nd = new DateTime($newdate) ?? null;
+
+    //     if($ddto <= $nd ){
+    //         return redirect("admin/view-tariff?id=$id")->with('error', 'you have a running tariff');
+    //     }
+
+    //     $tr = new TarrifState();
+    //     $tr->amount = $request->amount;
+    //     $tr->effective_from = $request->date_from;
+    //     $tr->effective_to = $request->date_to;
+    //     $tr->tariff_id = $request->id;
+    //     $tr->estate_id = $request->estate_id;
+    //     $tr->t_index = $request->t_index;
+    //     $tr->vat = $request->vat;
+    //     $tr->save();
+
+    //     $ck_count = TarrifState::where('tariff_id', $request->id)->count();
+
+    //     if($ck_count == 1){
+    //         TarrifState::latest()->where('status', 0)->where('tariff_id', $request->id)->update(['status' => 2]);
+    //     }
+
+
+    //     return back()->with('message', 'Tariff Added Successfully');
+
+
+    // }
+
+
+    public function add_state_tariff(request $request) {
         $id = $request->id;
 
-
-        if($request->date_to == null && $request->never_expire == "yes"){
-
+        // Case 1: Never expire = YES
+        if($request->never_expire == "yes") {
+            // Should not have an end date
+            if($request->date_to != null) {
+                return redirect("admin/view-tariff?id=$id")->with('error', 'Cannot set end date when never expire is enabled');
+            }
 
             $tr = new TarrifState();
             $tr->amount = $request->amount;
             $tr->effective_from = $request->date_from;
-            $tr->effective_to = null;
+            $tr->effective_to = null; // No end date
             $tr->t_index = $request->t_index;
             $tr->estate_id = $request->estate_id;
             $tr->vat = $request->vat;
             $tr->tariff_id = $request->tariff_id;
             $tr->save();
 
-
-
+            // Set as active if first tariff state
             $ck_count = TarrifState::where('tariff_id', $request->tariff_id)->count();
             if($ck_count == 1){
                 TarrifState::latest()->where('status', 0)->where('tariff_id', $request->tariff_id)->update(['status' => 2]);
             }
 
             return back()->with('message', 'Tariff Added Successfully');
-
         }
 
+        // Case 2: Never expire = NO
+        if($request->never_expire == "no") {
+            // Must have an end date
+            if($request->date_to == null) {
+                return redirect("admin/view-tariff?id=$id")->with('error', 'Please choose effective end date');
+            }
 
-        if($request->date_to == null && $request->never_expire == "no"){
-            return redirect("admin/view-tariff?id=$id")->with('error', 'Please choose effective date to');
+            // Validate date range
+            $ddfrom = new DateTime($request->date_from);
+            $ddto = new DateTime($request->date_to);
+
+            if($ddfrom >= $ddto) {
+                return redirect("admin/view-tariff?id=$id")->with('error', 'End date must be after start date');
+            }
+
+            // Check for overlapping tariffs
+            $newdate = TarrifState::latest()->where('status', 2)->where('tariff_id', $request->id)->first()->effective_to ?? null;
+            if($newdate) {
+                $nd = new DateTime($newdate);
+                if($ddto <= $nd) {
+                    return redirect("admin/view-tariff?id=$id")->with('error', 'You have an overlapping tariff period');
+                }
+            }
+
+            $tr = new TarrifState();
+            $tr->amount = $request->amount;
+            $tr->effective_from = $request->date_from;
+            $tr->effective_to = $request->date_to;
+            $tr->tariff_id = $request->id;
+            $tr->estate_id = $request->estate_id;
+            $tr->t_index = $request->t_index;
+            $tr->vat = $request->vat;
+            $tr->save();
+
+            $ck_count = TarrifState::where('tariff_id', $request->id)->count();
+            if($ck_count == 1){
+                TarrifState::latest()->where('status', 0)->where('tariff_id', $request->id)->update(['status' => 2]);
+            }
+
+            return back()->with('message', 'Tariff Added Successfully');
         }
 
-        if($request->date_to != null && $request->never_expire == "no"){
-            return redirect("admin/view-tariff?id=$id")->with('error', 'Effective date has been set please choose NO on never expire option');
-        }
-
-        $ddfrom = new DateTime($request->date_from);
-        $ddto = new DateTime($request->date_to);
-
-        if( $ddfrom >= $ddto  ){
-            return redirect("admin/view-tariff?id=$id")->with('error', 'End date can not be greater than start date');
-        }
-
-        $newdate = TarrifState::latest()->where('status', 2)->where('tariff_id', $request->id)->first()->effective_to ?? null;
-        $nd = new DateTime($newdate) ?? null;
-
-        if($ddto <= $nd ){
-            return redirect("admin/view-tariff?id=$id")->with('error', 'you have a running tariff');
-        }
-
-        $tr = new TarrifState();
-        $tr->amount = $request->amount;
-        $tr->effective_from = $request->date_from;
-        $tr->effective_to = $request->date_to;
-        $tr->tariff_id = $request->id;
-        $tr->estate_id = $request->estate_id;
-        $tr->t_index = $request->t_index;
-        $tr->vat = $request->vat;
-        $tr->save();
-
-        $ck_count = TarrifState::where('tariff_id', $request->id)->count();
-
-        if($ck_count == 1){
-            TarrifState::latest()->where('status', 0)->where('tariff_id', $request->id)->update(['status' => 2]);
-        }
-
-
-        return back()->with('message', 'Tariff Added Successfully');
-
-
+        return redirect("admin/view-tariff?id=$id")->with('error', 'Please select never expire option');
     }
 
 

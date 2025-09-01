@@ -2,8 +2,10 @@
 @extends('layouts.main')
 @section('content')
 
-    <div class="content">
 
+@if(Auth::user()->role == 0)
+    {{-- SUPER ADMIN VIEW --}}
+    <div class="content">
         <!-- Start Content-->
         <div class="container-fluid">
 
@@ -475,8 +477,182 @@
 
 
             </div>
+    </div>
 
+@elseif(Auth::user()->role == 1)
+    {{-- ROLE 1 PLACEHOLDER --}}
 
-        </div> <!-- container-fluid -->
+@elseif(Auth::user()->role == 2)
+    {{-- ROLE 2 PLACEHOLDER --}}
+
+@elseif(Auth::user()->role == 3)
+    {{-- ESTATE ADMIN VIEW --}}
+    <div class="content">
+        <div class="container-fluid">
+            <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
+                <div class="flex-grow-1">
+                    <h4 class="fs-18 fw-semibold m-0">{{$meter->meterNo}}</h4>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="card">
+                    <div class="card-body">
+                        <form action="update-meter-info" method="post">
+                            @csrf
+                            <div class="row">
+                                <h6 class="d-flex justify-content-start my-4">Meter Information</h6>
+                                
+                                <div class="col-3">
+                                    <label class="my-2">Meter Number</label>
+                                    <input type="number" disabled name="meterNo" value="{{$meter->meterNo}}" class="form-control" required>
+                                    <input type="text" name="id" value="{{$meter->id}}" hidden>
+                                </div>
+
+                                <div class="col-3">
+                                    <label class="my-2">Meter Model</label>
+                                    <select type="text" name="meterModel" class="form-control" required>
+                                        <option value="{{$meter->meterModel}}">{{strtoupper($meter->meterModel)}}</option>
+                                        <option value="prepaid">Prepaid</option>
+                                        <option value="postpaid">Postpaid</option>
+                                    </select>
+                                </div>
+
+                                {{-- Read-only Account No for Estate Admin --}}
+                                <div class="col-3">
+                                    <label class="my-2">Account No</label>
+                                    <input type="text" value="{{$meter->AccountNo}}" class="form-control" disabled>
+                                    <input type="hidden" name="AccountNo" value="{{$meter->AccountNo}}">
+                                </div>
+
+                                {{-- Read-only Estate for Estate Admin --}}
+                                <div class="col-3">
+                                    <label class="my-2">Estate</label>
+                                    <input type="text" value="{{$meter->estate->title}}" class="form-control" disabled>
+                                    <input type="hidden" name="estate_id" value="{{$meter->estate_id}}">
+                                </div>
+
+                                <hr class="my-4">
+
+                                <!-- <div class="col-3">
+                                    <label class="my-2">Transformer</label>
+                                    <select type="text" name="TransformerID" class="form-control" required>
+                                        <option value="{{$meter->TransformerID}}">{{strtoupper($trans_title)}}</option>
+                                        @foreach($transformer as $data)
+                                            <option value="{{$data->id}}">{{$data->Title}}</option>
+                                        @endforeach
+                                    </select>
+                                </div> -->
+
+                                {{-- Only show tariff selections for Estate Admin --}}
+                                <div class="col-2">
+                                    <label class="my-2">New Tariff</label>
+                                    <select name="NewTariffID" class="form-control">
+                                        <option value="{{$meter->NewTariffID}}">{{$new_tariff_title}}</option>
+                                        @foreach($tariff as $data)
+                                            @if($data->id != $meter->NewTariffID)
+                                                <option value="{{$data->id}}">{{$data->title}}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-2">
+                                    <label class="my-2">Old Tariff</label>
+                                    <select type="text" name="OldTariffID" class="form-control" required>
+                                        <option value="{{$meter->OldTariffID}}">{{$old_tariff_title}}</option>
+                                        @foreach($tariff as $data)
+                                            @if($data->id != $meter->OldTariffID)
+                                                <option value="{{$data->id}}">{{$data->title}}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <button type="submit" class="col-2 d-flex btn btn-primary">Update Meter</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Transaction History Section --}}
+            <div class="row">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-xl-12">
+                                <div class="card overflow-hidden">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h5 class="card-title text-black mb-0">All Transaction</h5>
+                                            <a href="/export-metertransactions?meterNo={{$meter->meterNo}}" class="btn btn-primary mb-3">Export</a>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col" class="cursor-pointer">Trx ID</th>
+                                                        <th scope="col" class="cursor-pointer">Meter No</th>
+                                                        <th scope="col" class="cursor-pointer">Customer</th>
+                                                        <th scope="col" class="cursor-pointer">Estate</th>
+                                                        <th scope="col" class="cursor-pointer">Amount</th>
+                                                        <th scope="col" class="cursor-pointer">Status</th>
+                                                        <th scope="col" class="cursor-pointer desc">Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($transactions as $data)
+                                                        <tr>
+                                                            <td><a href="#" class="" data-bs-toggle="modal" data-bs-target="#staticBackdrop{{$data->trx_id}}">{{$data->trx_id}}</a>
+                                                                {{-- Modal content here --}}
+                                                            </td>
+                                                            <td><div>{{$data->meterNo ?? "123456"}}</div></td>
+                                                            <td><a href="view-user?id={{$data->user->first_name ?? "name"}}">{{$data->user->last_name ?? "name"}}</a></td>
+                                                            <td>{{$data->estate->title ?? "Estate"}}</td>
+                                                            <td>{{number_format($data->amount, 2)}}</td>
+                                                            <td>
+                                                                @if($data->status == 2)
+                                                                    <span class="badge text-bg-primary">Approved</span>
+                                                                @elseif($data->status == 0)
+                                                                    <span class="badge text-bg-dark">Pending</span>
+                                                                @elseif($data->status == 3)
+                                                                    <span class="badge text-bg-dark">Refunded</span>
+                                                                @endif
+                                                            </td>
+                                                            <td>{{$data->created_at}}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                                <tfoot>
+                                                    {{ $transactions->links() }}
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@elseif(Auth::user()->role == 4)
+    {{-- ROLE 4 PLACEHOLDER --}}
+
+@elseif(Auth::user()->role == 5)
+    {{-- ROLE 5 PLACEHOLDER --}}
+
+@else
+    {{-- DEFAULT FALLBACK --}}
+
+@endif
 
 @endsection

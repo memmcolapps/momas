@@ -411,7 +411,7 @@
                                             <input type="text"  class="form-control mb-3" name="amount" required>
 
                                             <label class="my-1">Vat %</label>
-                                            <input type="text" value="1.075" class="form-control mb-3" name="vat" required>
+                                            <input type="text" value="{{$estate->first()->estate_vat ?? '1.075'}}" class="form-control mb-3" name="vat" required>
 
 
                                             <div class="row">
@@ -668,6 +668,53 @@
     @elseif(Auth::user()->role == 5)
     @else
     @endif
+
+
+
+<script>
+    /**
+ * Tariff Rate Date Management Script
+ * 
+ * Dynamically controls the "Effective Date To" field based on the "Never Expire" selection:
+ * - When "Never Expire" = "Yes": Disables and clears the end date field (tariffs run indefinitely)
+ * - When "Never Expire" = "No": Enables the end date field as required (tariffs have expiration)
+ * 
+ * Applies to both Super Admin (role 0) and Estate Admin (role 3) tariff creation modals.
+ * Prevents user confusion and form validation errors by enforcing proper date field behavior.
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    const neverExpireSelect = document.querySelector('select[name="never_expire"]');
+    const dateToInput = document.querySelector('input[name="date_to"]');
+
+    if (neverExpireSelect && dateToInput) {
+        neverExpireSelect.addEventListener('change', function() {
+            if(this.value === 'yes') {
+                // Clear and disable end date
+                dateToInput.value = '';
+                dateToInput.disabled = true;
+                dateToInput.required = false;
+                dateToInput.style.backgroundColor = '#f8f9fa';
+                dateToInput.style.opacity = '0.6';
+            } else if(this.value === 'no') {
+                // Enable end date
+                dateToInput.disabled = false;
+                dateToInput.required = true;
+                dateToInput.style.backgroundColor = '';
+                dateToInput.style.opacity = '1';
+            }
+        });
+
+        // Initialize on page load
+        if(neverExpireSelect.value === 'yes') {
+            dateToInput.disabled = true;
+            dateToInput.required = false;
+            dateToInput.style.backgroundColor = '#f8f9fa';
+            dateToInput.style.opacity = '0.6';
+        }
+    }
+});
+</script>    
 
 @endsection
 

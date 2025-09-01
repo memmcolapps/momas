@@ -1175,10 +1175,28 @@ class MeterController extends Controller
     public
     function view_meter(request $request)
     {
+
+        $meter = Meter::where('id', $request->id)->first();
+
+        // Estate admins can only view meters from their estate
+        if(Auth::user()->role == 3) {
+            if($meter->estate_id != Auth::user()->estate_id) {
+                return redirect('admin/meter-list')->with('error', 'Unauthorized access');
+            }
+        }
+
+
         $data['estate'] = Estate::where('status', 2)->get();
         $data['transformer'] = Transformer::latest()->where('status', 2)->get();
-        $data['tariff'] = Tariff::latest()->where('status', 2)->get();
-        $data['meter'] = Meter::where('id', $request->id)->first();
+
+        // Filter tariffs based on user role
+        if(Auth::user()->role == 0) {
+            $data['tariff'] = Tariff::latest()->where('status', 2)->get();
+        } else {
+            $data['tariff'] = Tariff::latest()->where('status', 2)->where('estate_id', Auth::user()->estate_id)->get();
+        }
+    
+        $data['meter'] = $meter;
         $data['trans_title'] = Transformer::where('id', $data['meter']->TransformerID)->first()->Title ?? null;
         $data['NewTariffID'] = Tariff::where('id', $data['meter']->NewTariffID)->first()->title ?? null;
         $data['OldTariffID'] = Tariff::where('id', $data['meter']->OldTariffID)->first()->title ?? null;
@@ -1207,6 +1225,14 @@ class MeterController extends Controller
 
 
         $meter = Meter::find($request->id);
+
+        // Estate admins can only update meters from their estate
+        if(Auth::user()->role == 3) {
+            if($meter->estate_id != Auth::user()->estate_id) {
+                return back()->with('error', 'You can only update meters from your estate');
+            }
+        }
+
         $meter->update($request->all());
 
         return redirect('admin/meter-list')->with('message', "Meter updated successfully");
@@ -1451,7 +1477,7 @@ class MeterController extends Controller
             return 2;
         }
 
-        $tariffs = Tariff::where('estate_id', $user_info->estate_id)->get(['id', 'type']);
+        $tariffs = Tariff::where('estate_id', $user_info->estate_id)->get(['id', 'title', 'type']);
         return response()->json(['tariffs' => $tariffs]);
     }
 
