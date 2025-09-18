@@ -27,9 +27,17 @@ class MeterController extends Controller
     public function get_estate_tariff(request $request)
     {
 
-        $tariff = Tariff::where('estate_id', $request->estate_id)->get();
+        // $tariff = Tariff::where('estate_id', $request->estate_id)->get();
+        // return response()->json([
+        //     'tariffs' => $tariff
+        // ]);
+
+        $tariffs = Tariff::where('estate_id', $request->estate_id)
+                    ->select('id', 'title', 'type', 'tariff_index')
+                    ->get();
+    
         return response()->json([
-            'tariffs' => $tariff
+        'tariffs' => $tariffs
         ]);
 
     }
@@ -1162,12 +1170,20 @@ class MeterController extends Controller
     function add_new_meter(request $request)
     {
 
-        $ck = Meter::where('meterNO', $request->meterNo)->first()->meterNo ?? null;
+        $ck = Meter::where('meterNo', $request->meterNo)->first()->meterNo ?? null;
         if ($ck == $request->meterNo) {
-            return back()->with('error', "Meter Already Exist");
+            return back()->with('error', "Meter Already Exists");
         }
 
-        Meter::create($request->all());
+        // Meter::create($request->all());
+        
+        // Handles the checkbox for isDualTariff and KCT fields
+        $meterData = $request->all();
+        $meterData['isDualTariff'] = $request->has('isDualTariff') ? 'on' : null;
+        $meterData['NeedKCT'] = $request->has('NeedKCT') ? 1 : 0;
+
+        Meter::create($meterData);
+
         return redirect('admin/meter-list')->with('message', "Meter added successfully");
 
     }
@@ -1198,18 +1214,107 @@ class MeterController extends Controller
     
         $data['meter'] = $meter;
         $data['trans_title'] = Transformer::where('id', $data['meter']->TransformerID)->first()->Title ?? null;
-        $data['NewTariffID'] = Tariff::where('id', $data['meter']->NewTariffID)->first()->title ?? null;
-        $data['OldTariffID'] = Tariff::where('id', $data['meter']->OldTariffID)->first()->title ?? null;
-        $data['tariffdual'] = Tariff::latest()->where('isDualTariff', "on")->get();
-        $data['new_tariff_title'] = Tariff::where('id', $data['meter']->NewTariffID)->first()->title ?? "No title set";
-        $data['old_tariff_title'] = Tariff::where('id', $data['meter']->OldTariffID)->first()->title ?? "No title set";
+        // $data['NewTariffID'] = Tariff::where('id', $data['meter']->NewTariffID)->first()->title ?? null;
+        // $data['OldTariffID'] = Tariff::where('id', $data['meter']->OldTariffID)->first()->title ?? null;
+        // $data['tariffdual'] = Tariff::latest()->where('isDualTariff', "on")->get();
+        // $data['new_tariff_title'] = Tariff::where('id', $data['meter']->NewTariffID)->first()->title ?? "No title set";
+        // $data['old_tariff_title'] = Tariff::where('id', $data['meter']->OldTariffID)->first()->title ?? "No title set";
 
+        $data['new_tariff_title'] = "No tariff set";
+        $data['old_tariff_title'] = "No tariff set"; 
+        $data['new_gen_tariff_title'] = "No Gen tariff set";
+        $data['old_gen_tariff_title'] = "No Gen tariff set";
+
+         if($meter->NewTariffID) {
+            $newTariff = Tariff::find($meter->NewTariffID);
+            $data['new_tariff_title'] = $newTariff ? $newTariff->title : "Tariff ID: " . $meter->NewTariffID;
+        }
+
+        if($meter->OldTariffID) {
+            $oldTariff = Tariff::find($meter->OldTariffID);
+            $data['old_tariff_title'] = $oldTariff ? $oldTariff->title : "Tariff ID: " . $meter->OldTariffID;
+        }
+
+        // Handle dual tariff data
+        if($meter->NewTariffDual) {
+            $newGenTariff = Tariff::find($meter->NewTariffDual);
+            $data['new_gen_tariff_title'] = $newGenTariff ? $newGenTariff->title : "Gen Tariff ID: " . $meter->NewTariffDual;
+        }
+
+        if($meter->OldTariffDual) {
+            $oldGenTariff = Tariff::find($meter->OldTariffDual);
+            $data['old_gen_tariff_title'] = $oldGenTariff ? $oldGenTariff->title : "Gen Tariff ID: " . $meter->OldTariffDual;
+        }
 
         $data['transactions'] = CreditToken::latest()->where('meterNo', $data['meter']->meterNo)->where('status', 2)->paginate(20);
 
         return view('admin/meter/view-meter', $data);
 
     }
+
+
+    public function fetchMeterTariffs(Request $request)
+        {
+            $estate_id = $request->input('estate_id');
+            $meterNo = $request->input('meterNo');
+        
+            // Find the user and meter
+            $user_info = User::where('meterNo', $meterNo)->first();
+            if (!$user_info) {
+                return 1; // User not found
+            }
+        
+            // For estate admin, use their estate_id
+            if (Auth::user()->role == 3) {
+                $estate_id = Auth::user()->estate_id;
+            } else {
+                $estate_id = $user_info->estate_id ?? $estate_id;
+            }
+        
+            if ($estate_id == null) {
+                return 1; // User not attached to any estate
+            }
+        
+            // Get the meter details
+            $meter = Meter::where('meterNo', $meterNo)->first();
+            if (!$meter) {
+                return 1; // Meter not found
+            }
+
+            // Get only the tariffs assigned to this specific meter
+            $assignedTariffIds = array_filter([
+                $meter->NewTariffID,
+                $meter->OldTariffID,
+                $meter->NewTariffDual,
+                $meter->OldTariffDual
+            ]);
+        
+            if (empty($assignedTariffIds)) {
+                return 3; // No tariffs assigned to this meter
+            }
+        
+            // Fetch only the assigned tariffs
+            $tariffs = Tariff::whereIn('id', $assignedTariffIds)
+                            ->select('id', 'title', 'type', 'tariff_index')
+                            ->get();
+        
+            if ($tariffs->isEmpty()) {
+                return 2; // Assigned tariffs not found in database
+            }
+        
+            // Return tariffs along with meter info
+            return response()->json([
+                'tariffs' => $tariffs,
+                'meter' => [
+                    'isDualTariff' => $meter->isDualTariff,
+                    'NewTariffID' => $meter->NewTariffID,
+                    'OldTariffID' => $meter->OldTariffID,
+                    'NewTariffDual' => $meter->NewTariffDual,
+                    'OldTariffDual' => $meter->OldTariffDual
+                ]
+            ]);
+        }
+    
 
     public
     function delete_meter(request $request)
@@ -1233,7 +1338,14 @@ class MeterController extends Controller
             }
         }
 
-        $meter->update($request->all());
+        // Get all request data
+        $updateData = $request->all();
+
+        // Handle checkbox: checked = "on", unchecked = null
+        $updateData['isDualTariff'] = $request->has('isDualTariff') ? 'on' : null;
+        $updateData['NeedKCT'] = $request->has('NeedKCT') ? 1 : 0;
+
+        $meter->update($updateData);
 
         return redirect('admin/meter-list')->with('message', "Meter updated successfully");
 

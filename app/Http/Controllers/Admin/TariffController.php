@@ -78,10 +78,19 @@ class TariffController extends Controller
     } elseif(Auth::user()->role == 3) {
         // Estate admin can only create tariffs for their estate
         $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
+
     } else {
         return redirect('admin/admin-dashboard')->with('error', 'Unauthorized access');
     }
     
+    // Get all used indices per estate - pass to view
+    $data['used_indices_by_estate'] = Tariff::select('estate_id', 'tariff_index')
+                                           ->get()
+                                           ->groupBy('estate_id')
+                                           ->map(function($tariffs) {
+                                               return $tariffs->pluck('tariff_index')->toArray();
+                                           });
+
     return view('admin.tariff.new-tariff', $data);
 
     }
@@ -262,7 +271,10 @@ class TariffController extends Controller
 
 
     public function add_state_tariff(request $request) {
-        $id = $request->id;
+        // Same as $tariff_id below it, but it is to handle redirection (feel free to remove it and replace with tariff_id)
+        $id = $request->tariff_id ?? $request->id;
+        // Handle both super admin and estate admin forms
+        $tariff_id = $request->tariff_id ?? $request->id;
 
         // Case 1: Never expire = YES
         if($request->never_expire == "yes") {
@@ -277,14 +289,25 @@ class TariffController extends Controller
             $tr->effective_to = null; // No end date
             $tr->t_index = $request->t_index;
             $tr->estate_id = $request->estate_id;
-            $tr->vat = $request->vat;
-            $tr->tariff_id = $request->tariff_id;
+            // Handle VAT based on user role
+            if(Auth::user()->role == 0) {
+                // Super Admin - use direct VAT input
+                $tr->vat = $request->vat;
+            } else {
+                // Estate Admin - use checkbox logic
+                if($request->has('apply_vat') && $request->apply_vat == '1') {
+                    $tr->vat = $request->estate_vat;
+                } else {
+                    $tr->vat = 0;
+                }
+            }
+            $tr->tariff_id = $tariff_id;
             $tr->save();
 
             // Set as active if first tariff state
-            $ck_count = TarrifState::where('tariff_id', $request->tariff_id)->count();
+            $ck_count = TarrifState::where('tariff_id', $tariff_id)->count();
             if($ck_count == 1){
-                TarrifState::latest()->where('status', 0)->where('tariff_id', $request->tariff_id)->update(['status' => 2]);
+                TarrifState::latest()->where('status', 0)->where('tariff_id', $tariff_id)->update(['status' => 2]);
             }
 
             return back()->with('message', 'Tariff Added Successfully');
@@ -318,15 +341,26 @@ class TariffController extends Controller
             $tr->amount = $request->amount;
             $tr->effective_from = $request->date_from;
             $tr->effective_to = $request->date_to;
-            $tr->tariff_id = $request->id;
+            $tr->tariff_id = $tariff_id;
             $tr->estate_id = $request->estate_id;
             $tr->t_index = $request->t_index;
-            $tr->vat = $request->vat;
+            // Handle VAT based on user role
+            if(Auth::user()->role == 0) {
+                // Super Admin - use direct VAT input
+                $tr->vat = $request->vat;
+            } else {
+                // Estate Admin - use checkbox logic
+                if($request->has('apply_vat') && $request->apply_vat == '1') {
+                    $tr->vat = $request->estate_vat;
+                } else {
+                    $tr->vat = 0;
+                }
+            }
             $tr->save();
 
-            $ck_count = TarrifState::where('tariff_id', $request->id)->count();
+            $ck_count = TarrifState::where('tariff_id', $tariff_id)->count();
             if($ck_count == 1){
-                TarrifState::latest()->where('status', 0)->where('tariff_id', $request->id)->update(['status' => 2]);
+                TarrifState::latest()->where('status', 0)->where('tariff_id', $tariff_id)->update(['status' => 2]);
             }
 
             return back()->with('message', 'Tariff Added Successfully');
@@ -421,6 +455,20 @@ class TariffController extends Controller
             $ttf->amount = $request->amount;
             $ttf->estate_id = $ttf->estate_id;
             $ttf->t_index = $request->t_index;
+
+            // Handle VAT based on user role
+            if(Auth::user()->role == 0) {
+                // Super Admin - use direct VAT input
+                $ttf->vat = $request->vat;
+            } else {
+                // Estate Admin - use checkbox logic
+                if($request->has('apply_vat') && $request->apply_vat == '1') {
+                    $ttf->vat = $request->estate_vat;
+                } else {
+                    $ttf->vat = 0;
+                }
+            }
+
             $ttf->save();
         }
 
@@ -431,26 +479,5 @@ class TariffController extends Controller
 
 
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }

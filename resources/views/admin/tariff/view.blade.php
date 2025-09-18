@@ -69,7 +69,7 @@
                                             </select>
 
 
-                                            <label class="my-1">Tariff Amount </label>
+                                            <label class="my-1">Tariff Rate </label>
                                             <input type="text"  class="form-control mb-3" name="amount" required>
 
                                             <label class="my-1">Vat %</label>
@@ -201,7 +201,7 @@
                                     @foreach($tstate as $data)
 
                                         <div class="col-3">
-                                            <label class="my-1">Tariff Amount</label>
+                                            <label class="my-1">Tariff Rate</label>
                                             <a href="#" data-bs-toggle="modal"
                                                data-bs-target="#updatestate{{$data->id}}">
                                                 <h6>{{$data->amount}}</h6></a>
@@ -241,7 +241,7 @@
                                                                     </select>
 
 
-                                                                <label class="my-1">Tariff Amount</label>
+                                                                <label class="my-1">Tariff Rate</label>
                                                                 <input type="number" class="form-control mb-3"
                                                                        value="{{$data->amount}}" name="amount" required>
 
@@ -407,11 +407,29 @@
 
                                         <div class="modal-body">
 
-                                            <label class="my-1">Tariff Amount</label>
+                                            <label class="my-1">Tariff Rate</label>
                                             <input type="text"  class="form-control mb-3" name="amount" required>
 
-                                            <label class="my-1">Vat %</label>
-                                            <input type="text" value="{{$estate->first()->estate_vat ?? '1.075'}}" class="form-control mb-3" name="vat" required>
+                                            <!-- <label class="my-1">Vat %</label>
+                                            <input type="text" value="{{$estate->first()->estate_vat ?? '1.075'}}" class="form-control mb-3" name="vat" readonly> -->
+                                            
+                                            <!-- <div class="form-check my-3">
+                                                <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_estate" value="1" checked>
+                                                <label class="form-check-label" for="apply_vat_estate">
+                                                    Apply VAT ({{$estate->first()->estate_vat ?? '0'}}%)
+                                                </label>
+                                            </div> -->
+                                            <div class="form-check my-3">
+                                                <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_estate" value="1" checked>
+                                                <label class="form-check-label" for="apply_vat_estate">
+                                                    Apply VAT ({{$estate->first()->estate_vat ?? '0'}}%)
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Hidden field to pass estate VAT rate -->
+                                            <input type="hidden" name="estate_vat" value="{{$estate->first()->estate_vat ?? '0'}}">
+
+
 
 
                                             <div class="row">
@@ -535,7 +553,7 @@
 
                                         <div class="col-3">
 
-                                            <label class="my-1">Tariff Amount</label>
+                                            <label class="my-1">Tariff Rate</label>
                                             <a href="#" data-bs-toggle="modal"
                                                data-bs-target="#updatestate{{$data->id}}">
                                                 <h6>{{$data->amount}}</h6></a>
@@ -560,7 +578,7 @@
 
                                                             <div class="modal-body">
 
-                                                                <label class="my-1">Tariff Amount</label>
+                                                                <label class="my-1">Tariff Rate</label>
                                                                 <input type="number" class="form-control mb-3"
                                                                        value="{{$data->amount}}" name="amount" required>
 
@@ -569,7 +587,7 @@
 
                                                                 <label class="my-1">Vat %</label>
                                                                 <input type="number" class="form-control mb-3"
-                                                                       value="{{$data->vat}}" name="vat" required>
+                                                                       value="{{$data->vat}}" name="vat" readonly>
 
 
                                                                 <div class="row">

@@ -272,7 +272,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -338,7 +338,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -408,7 +408,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -416,7 +416,7 @@ class TokenController extends Controller
                 'amountText' => $request->amount,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
-                'vat' => 7.5,
+                'vat' => $vat,
             ];
 
             $vatAmount = $calculator->calculateVatAmount($params);
@@ -466,7 +466,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -474,7 +474,7 @@ class TokenController extends Controller
                 'amountText' => $request->amount,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
-                'vat' => 7.5,
+                'vat' => $vat,
             ];
 
             $vatAmount = $calculator->calculateVatAmount($params);
@@ -630,7 +630,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('tariff_id', $request->tariff_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -727,7 +727,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -735,7 +735,7 @@ class TokenController extends Controller
                 'amountText' => $request->amount,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
-                'vat' => 7.5,
+                'vat' => $vat,
             ];
 
             $vatAmount = $calculator->calculateVatAmount($params);
@@ -808,7 +808,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -816,7 +816,7 @@ class TokenController extends Controller
                 'amountText' => $request->amount,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
-                'vat' => 7.5,
+                'vat' => $vat,
             ];
 
             $vatAmount = $calculator->calculateVatAmount($params);
@@ -898,7 +898,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -906,7 +906,7 @@ class TokenController extends Controller
                 'amountText' => $request->amount,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
-                'vat' => 7.5,
+                'vat' => $vat,
             ];
 
             $vatAmount = $calculator->calculateVatAmount($params);
@@ -979,7 +979,7 @@ class TokenController extends Controller
 
 
             $tariffAmount = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
-            $vat = TarrifState::where('estate_id', $estate_id)->first()->amount ?? 0;
+            $vat = TarrifState::where('estate_id', $estate_id)->first()->vat ?? 0;
 
 
             $calculator = new VatCalculator();
@@ -987,7 +987,7 @@ class TokenController extends Controller
                 'amountText' => $request->amount,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
-                'vat' => 7.5,
+                'vat' => $vat,
             ];
 
             $vatAmount = $calculator->calculateVatAmount($params);

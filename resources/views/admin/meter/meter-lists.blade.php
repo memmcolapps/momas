@@ -556,8 +556,8 @@
                                     @foreach($meter_lists as $data)
 
                                         <tr>
-                                            <td><a href="view-meter?id={{$data->id}}"> {{$data->meterNo}} </a></td>
-                                            <!-- <td> {{$data->meterNo}} </td> -->
+                                            <!-- <td><a href="view-meter?id={{$data->id}}"> {{$data->meterNo}} </a></td> -->
+                                            <td> {{$data->meterNo}} </td>
 
                                             <td>
                                                 {{strtoupper($data->meterModel)}}
