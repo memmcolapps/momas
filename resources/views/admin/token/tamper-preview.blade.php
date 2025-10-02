@@ -542,7 +542,7 @@
 
                                                     @else
                                                         <div class="col-xl-6 my-2 col-sm-12">
-                                                            <label class="my-2">Enter Meter No</label>
+                                                            <label class="my-2">Enter Meter No 2</label>
                                                             <input type="number" disabled class="form-control mb-3"
                                                                    value="{{$meter->meterNo}}" name="meterNo" required>
                                                         </div>
@@ -550,12 +550,12 @@
 
 
 
-                                                        <div class="col-xl-6 my-2 col-sm-12">
+                                                        <!-- <div class="col-xl-6 my-2 col-sm-12">
                                                             <label class="my-2">Amount</label>
 
                                                             <input type="number" disabled value="{{$amount}}"
                                                                    class="form-control mb-3" name="amount" required>
-                                                        </div>
+                                                        </div> -->
 
                                                     @endif
 

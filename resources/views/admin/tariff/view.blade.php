@@ -532,8 +532,8 @@
 
                         <div class="card-body">
 
-                            <form action="update-the-tariff" method="post">
-                                @csrf
+                            <!-- <form action="update-the-tariff" method="post"> -->
+                                <!-- @csrf -->
 
 
                                 <div class="row">
@@ -584,10 +584,28 @@
 
                                                                 <input name="id" hidden value="{{$data->id}}">
 
-
-                                                                <label class="my-1">Vat %</label>
+                                                                <label class="my-1">Tariff Index</label>
                                                                 <input type="number" class="form-control mb-3"
-                                                                       value="{{$data->vat}}" name="vat" readonly>
+                                                                     value="{{$tr->tariff_index}}" name="t_index" readonly hidden>
+
+
+                                                                <!-- <label class="my-1">Vat %</label> -->
+                                                                <!-- <input type="number" class="form-control mb-3" -->
+                                                                       <!-- value="{{$data->vat}}" name="vat" readonly> -->
+                                                                <div class="form-check my-3">
+                                                                    <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_update_{{$data->id}}" value="1" 
+                                                                           {{ $data->vat > 0 ? 'checked' : '' }}
+                                                                           data-original-state="{{ $data->vat > 0 ? '1' : '0' }}">
+                                                                    <label class="form-check-label" for="apply_vat_update_{{$data->id}}">
+                                                                        Apply VAT ({{$estate->first()->estate_vat ?? '0'}}%)
+                                                                    </label>
+
+                                                                    <!-- Optional: Show current VAT value for reference -->
+                                                                    <small class="text-muted">Current VAT: {{$data->vat}}%</small>
+                                                                </div>
+
+                                                                <!-- Hidden field to pass estate VAT rate -->
+                                                                <input type="hidden" name="estate_vat" value="{{$estate->first()->estate_vat ?? '0'}}">
 
 
                                                                 <div class="row">
@@ -668,7 +686,7 @@
 
                                     @endforeach
                                 </div>
-                            </form>
+                            <!-- </form> -->
 
                         </div>
                     </div>
@@ -681,6 +699,22 @@
 
         </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reset modal state when it's closed
+            const modals = document.querySelectorAll('[id^="updatestate"]');
+
+            modals.forEach(function(modal) {
+                modal.addEventListener('hidden.bs.modal', function() {
+                    const checkbox = this.querySelector('input[name="apply_vat"]');
+                    if (checkbox) {
+                        const originalState = checkbox.getAttribute('data-original-state');
+                        checkbox.checked = originalState === '1';
+                    }
+                });
+            });
+        });
+    </script>
 
     @elseif(Auth::user()->role == 4)
     @elseif(Auth::user()->role == 5)

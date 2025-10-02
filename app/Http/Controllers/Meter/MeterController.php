@@ -395,7 +395,7 @@ class MeterController extends Controller
                             $cdt->vat = $vat_amount ?? 0;
                             $cdt->estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title ?? "NAME";
                             $cdt->estate_id = $estate_id;
-                            $cdt->tariff_id = TarrifState::where('estate_id', $estate_id)->first()->tariff_id;
+                            $cdt->tariff_id = TarrifState::where('estate_id', $estate_id)->where('status', 2)->first()->tariff_id;
                             $cdt->vatAmount = $vat_amount;
                             $cdt->costOfUnit = $request->vending_amount;
                             $cdt->tariffPerKWatt = $request->vend_amount_kw_per_naira;
@@ -508,7 +508,7 @@ class MeterController extends Controller
                 if ($status == "SUCCESS") {
 
                     $no_kct_token = $no_kct_data['tokens'][0];
-                    $vat = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount ?? 0;
+                    $vat = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->amount ?? 0;
                     $met = new CreditToken();
                     $met->user_id = Auth::user()->id;
                     $met->trx_id = $trx;
@@ -520,7 +520,7 @@ class MeterController extends Controller
                     $met->unitkwh = round($unit, 2);
                     $met->estate_name = Estate::where('id', $request->estate_id)->first()->title;
                     $met->vat = 0;
-                    $met->tariff_amount = TarrifState::where('tariff_id', $tariff_id)->first()->amount ?? 0;
+                    $met->tariff_amount = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first()->amount ?? 0;
                     $met->estate_id = Auth::user()->estate_id;
                     $met->amount_charged = $total_paid;
                     $met->status = 2;
@@ -1182,6 +1182,20 @@ class MeterController extends Controller
         $meterData['isDualTariff'] = $request->has('isDualTariff') ? 'on' : null;
         $meterData['NeedKCT'] = $request->has('NeedKCT') ? 1 : 0;
 
+        // Normalize meterModel and CreditTypeID to lowercase for consistency
+        if (isset($meterData['meterModel'])) {
+            $meterData['meterModel'] = strtolower($meterData['meterModel']);
+        }
+        if (isset($meterData['CreditTypeID'])) {
+            $meterData['CreditTypeID'] = strtolower($meterData['CreditTypeID']);
+        }
+
+        // For estate admin (role == 3), force KRN1 and KRN2 to be STS6
+        if (Auth::user()->role == 3) {
+            $meterData['KRN1'] = 'STS6';
+            $meterData['KRN2'] = 'STS6';
+        }
+
         Meter::create($meterData);
 
         return redirect('admin/meter-list')->with('message', "Meter added successfully");
@@ -1345,6 +1359,14 @@ class MeterController extends Controller
         $updateData['isDualTariff'] = $request->has('isDualTariff') ? 'on' : null;
         $updateData['NeedKCT'] = $request->has('NeedKCT') ? 1 : 0;
 
+        // Normalize meterModel and CreditTypeID to lowercase for consistency
+        if (isset($updateData['meterModel'])) {
+            $updateData['meterModel'] = strtolower($updateData['meterModel']);
+        }
+        if (isset($updateData['CreditTypeID'])) {
+            $updateData['CreditTypeID'] = strtolower($updateData['CreditTypeID']);
+        }
+
         $meter->update($updateData);
 
         return redirect('admin/meter-list')->with('message', "Meter updated successfully");
@@ -1472,7 +1494,7 @@ class MeterController extends Controller
 
             if ($status == "SUCCESS") {
 
-                $vat = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount ?? 0;
+                $vat = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->amount ?? 0;
                 $met = new KctMeterToken();
                 $met->user_id = $request->user_id;
                 $met->meterNo = $request->meterNo;
@@ -1526,7 +1548,7 @@ class MeterController extends Controller
 
             if ($status == "SUCCESS") {
 
-                $vat = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount ?? 0;
+                $vat = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->amount ?? 0;
 
 
                 $met = new MeterToken ();
@@ -1662,6 +1684,82 @@ class MeterController extends Controller
 
     }
 
+    public function meter_transaction_report(request $request)
+    {
+        if (Auth::user()->role == 0) {
+            $data['total_amount'] = CreditToken::where('status', 2)->sum('amount');
+            $data['total_vat'] = CreditToken::where('status', 2)->sum('vatAmount');
+            $data['total_units'] = CreditToken::where('status', 2)->sum('unitkwh');
 
+            $data['meter_transactions'] = CreditToken::with(['user:id,first_name,last_name,email,phone'])
+                ->where('status', 2)
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+
+            return view('admin/report/meter-transaction-report', $data);
+
+        } elseif (Auth::user()->role == 1) {
+        } elseif (Auth::user()->role == 2) {
+        } elseif (Auth::user()->role == 3) {
+
+            $data['total_amount'] = CreditToken::where('estate_id', Auth::user()->estate_id)
+                ->where('status', 2)
+                ->sum('amount');
+
+            $data['total_vat'] = CreditToken::where('estate_id', Auth::user()->estate_id)
+                ->where('status', 2)
+                ->sum('vatAmount');
+
+            $data['total_units'] = CreditToken::where('estate_id', Auth::user()->estate_id)
+                ->where('status', 2)
+                ->sum('unitkwh');
+
+            $data['meter_transactions'] = CreditToken::with(['user:id,first_name,last_name,email,phone'])
+                ->where('estate_id', Auth::user()->estate_id)
+                ->where('status', 2)
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+
+            return view('admin/report/meter-transaction-report', $data);
+
+        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->role == 5) {
+        } else {
+        }
+    }
+
+    public function search_meter_transactions(request $request)
+    {
+        if (Auth::user()->role == 3) {
+            $meterNo = $request->meter_no;
+            $startofday = $request->from;
+            $endofday = $request->to;
+            $estate_id = Auth::user()->estate_id;
+
+            $query = CreditToken::with(['user:id,first_name,last_name,email,phone'])
+                ->where('estate_id', $estate_id)
+                ->where('status', 2);
+
+            if ($startofday && $endofday) {
+                $query->whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59']);
+            }
+
+            if ($meterNo) {
+                $query->where('meterNo', 'LIKE', '%' . $meterNo . '%');
+            }
+
+            $data['meter_transactions'] = $query->orderBy('created_at', 'desc')
+                ->take(50000)
+                ->paginate(50);
+
+            $data['total_amount'] = $query->sum('amount');
+            $data['total_vat'] = $query->sum('vatAmount');
+            $data['total_units'] = $query->sum('unitkwh');
+
+            return view('admin/report/meter-transaction-report', $data);
+        }
+
+        return back()->with('error', 'Unauthorized access');
+    }
 
 }

@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\MeterImportController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Bills\BillsController;
+use App\Http\Controllers\Estate\CustomerImportController as EstateCustomerImportController;
 use App\Http\Controllers\Estate\EstateController;
 use App\Http\Controllers\Feature\FeatureController;
 use App\Http\Controllers\Meter\MeterController;
@@ -53,6 +55,9 @@ Route::post('register', [RegisterController::class, 'register']);
 Route::post('validate', [MeterController::class, 'validate_mobile_meter']);
 Route::get('cable-plan', [BillsController::class, 'get_cable_plan']);
 Route::post('validate-cable', [BillsController::class, 'validate_cable']);
+
+// Client-side validation endpoints
+Route::get('get-existing-meters', [MeterImportController::class, 'get_existing_meters']);
 
 
 //POS

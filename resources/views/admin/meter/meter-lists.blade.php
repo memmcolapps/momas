@@ -201,8 +201,9 @@
 
                                     <div class="justify-content-end">
                                         <div class="justify-content-end">
-                                            <a href="#" class="btn btn-primary text-white " data-bs-toggle="modal"
-                                               data-bs-target="#staticBackdrop">Import Bulk Meter</a>
+                                            <a href="bulk-upload-preview" class="btn btn-primary text-white">
+                                                <i class="fas fa-upload"></i> Import Bulk Meter
+                                            </a>
                                             <a href="new-meter" class="btn btn-primary text-white">Add new</a>
                                         </div>
                                     </div>

@@ -202,9 +202,10 @@
                                                         if (data?.tariffs?.length) {
                                                             tariffSelects.forEach((select) => {
                                                                 data.tariffs.forEach((tariff) => {
+                                                                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
                                                                     select.insertAdjacentHTML(
                                                                         "beforeend",
-                                                                        `<option value="${tariff.id}">${tariff.title}</option>`
+                                                                        `<option value="${tariff.id}">${displayText}</option>`
                                                                     );
                                                                 });
                                                             });
@@ -304,19 +305,25 @@
 
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN1</label>
-                                        <select type="text" name="KRN1" class="form-control" required>
+                                        <!-- <select type="text" name="KRN1" class="form-control" required>
                                             <option value=" ">Select</option>
                                             <option value="STS6">STS6</option>
-                                            <!-- <option value="STS">STS</option> -->
+                                            <option value="STS">STS</option> 
+                                        </select> -->
+                                        <select type="text" name="KRN1" class="form-control" required>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN2</label>
-                                        <select type="text" name="KRN2" class="form-control" >
+                                        <!-- <select type="text" name="KRN2" class="form-control" >
                                             <option value=" ">Select</option>
                                             <option value="STS6">STS6</option>
-                                            <!-- <option value="STS">STS</option> -->
+                                            <option value="STS">STS</option> 
+                                        </select> -->
+                                        <select type="text" name="KRN2" class="form-control" required>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 
@@ -581,18 +588,14 @@
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN1</label>
                                         <select type="text" name="KRN1" class="form-control" required>
-                                            <option value=" ">Select</option>
-                                            <option value="STS6">STS6</option>
-                                            <option value="STS">STS</option>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN2</label>
                                         <select type="text" name="KRN2" class="form-control" required>
-                                            <option value=" ">Select</option>
-                                            <option value="STS6">STS6</option>
-                                            <option value="STS">STS</option>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 

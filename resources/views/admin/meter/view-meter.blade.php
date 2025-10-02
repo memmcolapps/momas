@@ -42,10 +42,8 @@
                                 <div class="col-3">
                                     <label class="my-2">Meter Model</label>
                                     <select type="text" name="meterModel" class="form-control" required>
-                                        <option
-                                            value="{{$meter->meterModel}}">{{strtoupper($meter->meterModel)}}</option>
-                                        <option value="prepaid">Prepaid</option>
-                                        <option value="postpaid">Postpaid</option>
+                                        <option value="prepaid" {{ strtolower($meter->meterModel) == 'prepaid' ? 'selected' : '' }}>Prepaid</option>
+                                        <option value="postpaid" {{ strtolower($meter->meterModel) == 'postpaid' ? 'selected' : '' }}>Postpaid</option>
                                     </select>
                                 </div>
 
@@ -72,9 +70,8 @@
                                 <div class="col-3">
                                     <label class="my-2">Transformer</label>
                                     <select type="text" name="TransformerID" class="form-control" required>
-                                        <option value="{{$meter->TransformerID}}">{{strtoupper($trans_title)}}</option>
                                         @foreach($transformer as $data)
-                                            <option value="{{$data->id}}">{{$data->Title}} </option>
+                                            <option value="{{$data->id}}" {{ $meter->TransformerID == $data->id ? 'selected' : '' }}>{{$data->Title}} </option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -91,9 +88,8 @@
                                 <div class="col-xl-3 col-sm-12">
                                     <label class="my-2">Old SGC</label>
                                     <select name="OldSGC" class="form-control" required>
-                                        <option value="{{$meter->OldSGC}}">@if($meter->OldSGC == "999962") MOMAS Default (9***2)@else MOMAS System Nig Ltd (6***9) @endif</option>
-                                        <option value="999962">MOMAS Default (9***2)</option>
-                                        <option value="600849">MOMAS System Nig Ltd (6***9)</option>
+                                        <option value="999962" {{ $meter->OldSGC == '999962' ? 'selected' : '' }}>MOMAS Default (9***2)</option>
+                                        <option value="600849" {{ $meter->OldSGC == '600849' ? 'selected' : '' }}>MOMAS System Nig Ltd (6***9)</option>
                                     </select>
                                 </div>
 
@@ -101,9 +97,8 @@
                                 <div class="col-xl-3 col-sm-12">
                                     <label class="my-2">New SGC</label>
                                     <select name="NewSGC" class="form-control" required>
-                                        <option value="{{$meter->NewSGC}}">@if($meter->NewSGC == "600849") MOMAS System Nig Ltd (6***9) @else MOMAS Default (9***2)  @endif</option>
-                                        <option value="600849">MOMAS System Nig Ltd (6***9)</option>
-                                        <option value="999962">MOMAS Default (9***2)</option>
+                                        <option value="999962" {{ $meter->NewSGC == '999962' ? 'selected' : '' }}>MOMAS Default (9***2)</option>
+                                        <option value="600849" {{ $meter->NewSGC == '600849' ? 'selected' : '' }}>MOMAS System Nig Ltd (6***9)</option>
                                     </select>
                                 </div>
 
@@ -211,11 +206,9 @@
                                 <div class="col-3">
                                     <label class="my-2">Credit Type</label>
                                     <select type="text" name="CreditTypeID" class="form-control" required>
-                                        <option
-                                            value="{{$meter->CreditTypeID}}">{{strtoupper($meter->CreditTypeID)}}</option>
-                                        <option value="water">Water</option>
-                                        <option value="gas">Gas</option>
-                                        <option value="electricity">Electricity</option>
+                                        <option value="electricity" {{ strtolower($meter->CreditTypeID) == 'electricity' ? 'selected' : '' }}>Electricity</option>
+                                        <option value="water" {{ strtolower($meter->CreditTypeID) == 'water' ? 'selected' : '' }}>Water</option>
+                                        <option value="gas" {{ strtolower($meter->CreditTypeID) == 'gas' ? 'selected' : '' }}>Gas</option>
                                     </select>
                                 </div>
 
@@ -519,11 +512,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add other options
             nepaTariffs.forEach(tariff => {
                 if (tariff.id != currentValues.nepaOld) {
-                    nepaOldSelect.innerHTML += `<option value="${tariff.id}">${tariff.title}</option>`;
+                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
+                    nepaOldSelect.innerHTML += `<option value="${tariff.id}">${displayText}</option>`;
                 }
             });
         }
-        
+
         // Clear and populate NEPA New Tariff
         if (nepaNewSelect) {
             nepaNewSelect.innerHTML = '<option value="">Select NEPA Tariff</option>';
@@ -534,7 +528,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add other options
             nepaTariffs.forEach(tariff => {
                 if (tariff.id != currentValues.nepaNew) {
-                    nepaNewSelect.innerHTML += `<option value="${tariff.id}">${tariff.title}</option>`;
+                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
+                    nepaNewSelect.innerHTML += `<option value="${tariff.id}">${displayText}</option>`;
                 }
             });
         }

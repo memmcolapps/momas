@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\TariffController;
 use App\Http\Controllers\Admin\TokenController;
 use App\Http\Controllers\AuditlogController;
 use App\Http\Controllers\Estate\EstateServiceController;
+use App\Http\Controllers\Estate\CustomerImportController as EstateCustomerImportController;
 use App\Http\Controllers\Meter\MeterController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\Transaction\TransactionController;
@@ -278,6 +279,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('tariff-delete', [TariffController::class, 'delete_tariff']);
     Route::get('view-tariff', [TariffController::class, 'view_tariff']);
     Route::post('update-the-tariff', [TariffController::class, 'update_the_tariff']);
+    Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
 
 
     Route::post('update-nepa', [TariffController::class, 'update_nepa']);
@@ -304,6 +306,18 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     //REPORT
     Route::get('report-transaction', [TransactionController::class, 'transaction_reports']);
     Route::get('report-meters', [MeterController::class, 'meter_report']);
+    Route::get('meter-transaction-report', [MeterController::class, 'meter_transaction_report']);
+    Route::get('bulk-upload-preview', [MeterImportController::class, 'bulk_upload_preview']);
+    Route::post('bulk-save-meters', [MeterImportController::class, 'bulk_save_meters']);
+
+    // Customer bulk upload routes (Estate Admin)
+    Route::get('customer-bulk-upload', [EstateCustomerImportController::class, 'bulk_upload_preview']);
+    Route::get('estate/get-existing-customers', [EstateCustomerImportController::class, 'get_existing_customers']);
+    Route::get('estate/get-available-meters', [EstateCustomerImportController::class, 'get_available_meters']);
+    Route::get('estate/get-assigned-meters', [EstateCustomerImportController::class, 'get_assigned_meters']);
+    Route::post('estate/bulk-save-customers', [EstateCustomerImportController::class, 'bulk_save_customers']);
+
+    Route::post('search-meter-transactions', [MeterController::class, 'search_meter_transactions']);
     Route::post('search-trx', [TransactionController::class, 'search_trx']);
     Route::post('search-utility-trx', [TransactionController::class, 'search_utility_trx']);
     Route::get('utility-payment', [TransactionController::class, 'utility_payment']);

@@ -447,14 +447,22 @@ class TariffController extends Controller
 
     public function update_tariffstate(request $request)
     {
-
+        // Debug: Log all request data
+        \Log::info('Update tariff state request data:', $request->all());
 
         $ttf = TarrifState::find($request->id);
         if ($ttf) {
+            // If setting this tariff state to active (status = 2)
+            if($request->status == 2) {
+                // First, set ALL other tariff states for this tariff to inactive
+                TarrifState::where('tariff_id', $ttf->tariff_id)
+                          ->where('id', '!=', $ttf->id)
+                          ->update(['status' => 0]);
+            }
+
             $ttf->status = $request->status;
             $ttf->amount = $request->amount;
             $ttf->estate_id = $ttf->estate_id;
-            $ttf->t_index = $request->t_index;
 
             // Handle VAT based on user role
             if(Auth::user()->role == 0) {
@@ -464,20 +472,18 @@ class TariffController extends Controller
                 // Estate Admin - use checkbox logic
                 if($request->has('apply_vat') && $request->apply_vat == '1') {
                     $ttf->vat = $request->estate_vat;
+
                 } else {
                     $ttf->vat = 0;
+
                 }
             }
 
             $ttf->save();
+
         }
 
-
         return back()->with('message', "Tariff state updated successful");
-
-
-
-
     }
 
 }

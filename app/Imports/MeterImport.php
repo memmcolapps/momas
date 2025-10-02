@@ -4,15 +4,12 @@ namespace App\Imports;
 
 use App\Models\Meter;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithLimit;
 
-
-class MeterImport implements ToModel, WithHeadingRow
+class MeterImport implements ToModel, WithHeadingRow, WithLimit
 {
-
     protected $id;
 
     public function __construct($id)
@@ -20,7 +17,10 @@ class MeterImport implements ToModel, WithHeadingRow
         $this->id = $id;
     }
 
-
+    public function limit(): int
+    {
+        return 100; // Limit to 100 rows
+    }
 
     /**
      * @param array $row
@@ -29,68 +29,33 @@ class MeterImport implements ToModel, WithHeadingRow
      */
     public function model(array $row)
     {
+        // This is a fallback for the old modal upload
+        // Most uploads should use the new client-side preview system
 
+        $defaults = [
+            'status' => 0,
+            'NewSGC' => '999962',
+            'OldSGC' => '999962',
+            'NewSGCDual' => '999962',
+            'OldSGCDual' => '999962',
+            'KRN1' => 'STS6',
+            'KRN2' => 'STS6',
+            'NeedKCT' => 0,
+            'CreditTypeID' => 'electricity',
+            'TransformerID' => null,
+            'NewTariffID' => null,
+            'OldTariffID' => null,
+            'NewTariffDualID' => null,
+            'OldTariffDualID' => null,
+        ];
 
-
-        if (Auth::user()->role == 3) {
-
-            return new Meter([
-                'meterNo'   => $row['meterno'],
-                'MeterSIMNo'   => $row['metersimno'],
-                'transid'   => $row['transid'],
-                'accountno'   => $row['accountno'],
-                'meterModel'    => $row['metermodel'],
-                'AccountNo'        => $row['accountno'],
-                'isDualTariff' => $row['isdualtariff'],
-                'NewSGC'      => $row['sgc'],
-                'OldSGC'         => $row['oldsgc'] ?? null,
-                'NewSGCDual'      => $row['newsgcdual'] ?? null,
-                'OldSGCDual'      => $row['oldsgcdual'] ?? null,
-                'KRN1'         => $row['krn1'],
-                'KRN2'     => $row['krn2'],
-                'NeedKCT'  => $row['needkct'],
-                'CreditTypeID'  => $row['credittypeid'],
-                'NewTariffID'      => $row['newtariffindex'] ?? null,
-                'OldTariffID'      => $row['oldtariffindex'] ?? null,
-                'NewTariffDualID'          => $row['newtariffindexdual'] ?? null,
-                'OldTariffDualID'          => $row['oldtariffindexdual'] ?? null,
-                'estate_id'    =>  Auth::user()->estate_id,
-            ]);
-
-
-        }else{
-
-
-
-            return new Meter([
-
-                'meterNo'   => $row['meterno'],
-                'MeterSIMNo'   => $row['metersimno'],
-                'TransformerID'   => $row['transid'],
-                'accountno'   => $row['accountno'],
-                'meterModel'    => $row['metermodel'],
-                'AccountNo'        => $row['accountno'],
-                'isDualTariff' => $row['isdualtariff'],
-                'NewSGC'      => $row['sgc'],
-                'OldSGC'         => $row['oldsgc'] ?? null,
-                'NewSGCDual'      => $row['newsgcdual'] ?? null,
-                'OldSGCDual'      => $row['oldsgcdual'] ?? null,
-                'KRN1'         => $row['krn1'],
-                'KRN2'     => $row['krn2'],
-                'NeedKCT'  => $row['needkct'],
-                'CreditTypeID'  => $row['credittypeid'],
-                'NewTariffID'      => $row['newtariffindex'] ?? null,
-                'OldTariffID'      => $row['oldtariffindex'] ?? null,
-                'NewTariffDualID'          => $row['newtariffindexdual'] ?? null,
-                'OldTariffDualID'          => $row['oldtariffindexdual'] ?? null,
-                'estate_id'   =>  $this->id,
-
-            ]);
-
-        }
-
-
-
-
+        return new Meter(array_merge($defaults, [
+            'meterNo' => $row['meterno'],
+            'MeterSIMNo' => $row['metersimno'] ?? null,
+            'meterModel' => $row['metermodel'],
+            'AccountNo' => $row['accountno'],
+            'isDualTariff' => $row['isdualtariff'],
+            'estate_id' => Auth::user()->role == 3 ? Auth::user()->estate_id : $this->id,
+        ]));
     }
 }

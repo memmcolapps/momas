@@ -726,7 +726,34 @@ class DashboardContoller extends Controller
     }
 
 
-    public function update_password_now(request $request) {}
+    public function update_password_now(request $request) {
+        if (Auth::user()->role != 3) {
+            return redirect('admin/admin-dashboard')->with('error', 'Unauthorized access');
+        }
+
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6',
+            'confirm_password' => 'required|same:new_password'
+        ]);
+
+        $user = Auth::user();
+
+        if (!password_verify($request->current_password, $user->password)) {
+            return back()->with('error', 'Current password is incorrect');
+        }
+
+        if ($request->new_password !== $request->confirm_password) {
+            return back()->with('error', 'New passwords do not match');
+        }
+
+        User::where('id', $user->id)->update([
+            'password' => bcrypt($request->new_password)
+        ]);
+
+        return back()->with('message', 'Password updated successfully');
+    }
+
 
 
     public function resolve_account(request $request)
