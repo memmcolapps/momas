@@ -139,7 +139,7 @@
 
 
                                     <div class="col-xl-3 col-sm-12" id="oldTariffDualContainer" style="display: none;">
-                                        <label class="my-2">Old Tariff  Dual</label>
+                                        <label class="my-2">Old Generator Tariff </label>
 
                                         <select id="tariffSelect4" name="OldTariffDual" class="form-control" >
                                             <option value=""></option>
@@ -149,7 +149,7 @@
 
 
                                     <div class="col-xl-3 col-sm-12" id="newtar" style="display: none;">
-                                        <label class="my-2">New Tariff Dual</label>
+                                        <label class="my-2">New Generator Tariff</label>
                                         <select id="tariffSelect3" name="NewTariffDual" class="form-control" >
                                             <option value=""></option>
                                         </select>
@@ -159,7 +159,7 @@
 
 
                                     <div class="col-xl-3 col-sm-12">
-                                        <label class="my-2">New Tariff</label>
+                                        <label class="my-2">New NEPA Tariff</label>
                                             <select id="tariffSelect1" name="NewTariffID" class="form-control" >
                                                 <option value=""></option>
                                             </select>
@@ -167,7 +167,7 @@
 
                                     <div class="col-xl-3 col-sm-12">
 
-                                        <label class="my-2">Old Tariff</label>
+                                        <label class="my-2">Old NEPA Tariff</label>
                                         <select id="tariffSelect2" name="OldTariffID" class="form-control" >
                                             <option value=""></option>
                                         </select>
@@ -202,9 +202,10 @@
                                                         if (data?.tariffs?.length) {
                                                             tariffSelects.forEach((select) => {
                                                                 data.tariffs.forEach((tariff) => {
+                                                                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
                                                                     select.insertAdjacentHTML(
                                                                         "beforeend",
-                                                                        `<option value="${tariff.id}">${tariff.title}</option>`
+                                                                        `<option value="${tariff.id}">${displayText}</option>`
                                                                     );
                                                                 });
                                                             });
@@ -304,19 +305,25 @@
 
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN1</label>
-                                        <select type="text" name="KRN1" class="form-control" required>
+                                        <!-- <select type="text" name="KRN1" class="form-control" required>
                                             <option value=" ">Select</option>
                                             <option value="STS6">STS6</option>
-                                            <option value="STS">STS</option>
+                                            <option value="STS">STS</option> 
+                                        </select> -->
+                                        <select type="text" name="KRN1" class="form-control" required>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN2</label>
-                                        <select type="text" name="KRN2" class="form-control" >
+                                        <!-- <select type="text" name="KRN2" class="form-control" >
                                             <option value=" ">Select</option>
                                             <option value="STS6">STS6</option>
-                                            <option value="STS">STS</option>
+                                            <option value="STS">STS</option> 
+                                        </select> -->
+                                        <select type="text" name="KRN2" class="form-control" required>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 
@@ -581,18 +588,14 @@
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN1</label>
                                         <select type="text" name="KRN1" class="form-control" required>
-                                            <option value=" ">Select</option>
-                                            <option value="STS6">STS6</option>
-                                            <option value="STS">STS</option>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">KRN2</label>
                                         <select type="text" name="KRN2" class="form-control" required>
-                                            <option value=" ">Select</option>
-                                            <option value="STS6">STS6</option>
-                                            <option value="STS">STS</option>
+                                            <option value="STS6" selected>STS6</option>
                                         </select>
                                     </div>
 

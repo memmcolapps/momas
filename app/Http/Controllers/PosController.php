@@ -278,7 +278,7 @@ class PosController extends Controller
 
         $estate = Estate::where('id', $estate_id)->first();
         $mer_id = Merchant::where('serial_no', $SerialNo)->first()->id ?? null;
-        $tariff_id = TarrifState::where('estate_id', $estate_id)->first()->tariff_id ?? null;
+        $tariff_id = TarrifState::where('estate_id', $estate_id)->where('status', 2)->first()->tariff_id ?? null;
         $meter = Meter::where('MeterNo', $meterNo)->first() ?? null;
         $user = User::where('meterNo', $meterNo)->first() ?? null;
 
@@ -523,7 +523,7 @@ class PosController extends Controller
                     if ($posstatus == "00" && $statusm == "SUCCESS") {
 
                         $no_kct_token = $no_kct_data['tokens'][0];
-                        $vat = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount ?? 0;
+                        $vat = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->amount ?? 0;
                         $met = new MeterToken ();
                         $met->user_id = $user->id;
                         $met->trx_id = $RRN;

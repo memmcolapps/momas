@@ -1,5 +1,8 @@
-meterno,metersimno,transid,status,metermodel,accountno,isamr,isdualtariff,sgc,oldsgc,oldtariffdual,krn1,krn2,needkct,credittypeid,newtariffindex
-12345678,001,1,2,demomem,demo,0,0,000001,0,0,0,STS6,STS6,gas,89
-04173210255,001,5,1PH,DEMO3,0,600849,600849,600849,STS6,1,1,,,,
-62310072192,002,5,3PH,LIO/01/001,1,600849,600849,600849,STS6,1,1,2,2,,
-62141285460,003,5,MD,DEMO,0,600849,600849,600849,STS6,1,1,,,,
+meterno,metermodel,accountno,transformer_id,isdualtariff,oldsgc,newsgc,newtariffid,oldtariffid,newtariffdual,oldtariffdual,krn1,krn2,needkct,credittype
+12345678901,prepaid,ACC001,,0,999962,999962,1,1,,,STS6,STS6,0,electricity
+12345678902,postpaid,ACC002,,1,999962,999962,2,2,1,1,STS6,STS6,0,electricity
+12345678903,prepaid,ACC003,,0,999962,999962,3,3,,,STS6,STS6,1,electricity
+12345678904,postpaid,ACC004,1,1,999962,999962,1,1,2,2,STS6,STS6,0,electricity
+12345678905,prepaid,ACC005,,0,999962,999962,2,2,,,STS6,STS6,0,electricity
+12345678906,postpaid,ACC006,2,1,999962,999962,3,3,1,1,STS6,STS6,1,electricity
+12345678907,prepaid,ACC007,,0,999962,999962,1,1,,,STS6,STS6,0,electricity

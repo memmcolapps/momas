@@ -379,6 +379,13 @@
                         </li>
 
                         <li>
+                            <a class='tp-link' href="tariff-list">
+                                <i data-feather="divide-square"></i>
+                                <span> Tariff </span>
+                            </a>
+                        </li>
+
+                        <li>
                             <a class='tp-link' href="customers">
                                 <i data-feather="users"></i>
                                 <span> Customers </span>
@@ -496,6 +503,10 @@
 
                                     <li>
                                         <a class='tp-link' href='report-meters'>Meters</a>
+                                    </li>
+
+                                    <li>
+                                        <a class='tp-link' href='meter-transaction-report'>Meter Transactions</a>
                                     </li>
 
                                     <li>

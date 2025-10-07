@@ -182,18 +182,38 @@ class DashboardContoller extends Controller
         if (Auth::user()->role == 0) {
 
             $data['estate'] = Estate::all();
-            $data['meters'] = Meter::all();
+            // $data['meters'] = Meter::all();
+            $data['meters'] = Meter::whereNull('user_id')->get(); // Only unassigned meters
             return view('admin/user/new-customer', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
         } elseif (Auth::user()->role == 3) {
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->first();
-            $data['meters'] = Meter::where('id', Auth::user()->estate_id)->get();
+            // $data['meters'] = Meter::where('id', Auth::user()->estate_id)->get();
+            $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)
+                              ->whereNull('user_id')
+                              ->get(); // Only unassigned meters for this estate
             return view('admin/user/new-customer', $data);
         } elseif (Auth::user()->role == 4) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
+    }
+
+    public function get_unassigned_meters(Request $request)
+    {
+        $estateId = $request->estate_id;
+        
+        if (!$estateId) {
+            return response()->json(['meters' => []]);
+        }
+        
+        $meters = Meter::where('estate_id', $estateId)
+                       ->whereNull('user_id')
+                       ->select('id', 'meterNo')
+                       ->get();
+        
+        return response()->json(['meters' => $meters]);
     }
 
 
@@ -207,10 +227,14 @@ class DashboardContoller extends Controller
         }
 
 
-        $usr_email = User::where('email', $request->email)->first()->email ?? null;
-        $usr_phone = User::where('email', $request->email)->first()->phone ?? null;
-
-        if ($usr_email == null && $usr_phone == null) {
+        // $usr_email = User::where('email', $request->email)->first()->email ?? null;
+        // $usr_phone = User::where('email', $request->email)->first()->phone ?? null;
+        // Check if user already exists (email OR phone)
+        $existing_user = User::where('email', $request->email)
+                        ->orWhere('phone', $request->phone)
+                        ->first();
+        
+        if (!$existing_user) {
 
 
             $estate_name = Estate::where('id', $request->estate_id)->first()->title;
@@ -222,23 +246,43 @@ class DashboardContoller extends Controller
             $usr->role = $request->role;
             $usr->estate_id = $request->estate_id;
             $usr->estate_name = $estate_name;
-            $usr->meterNo = $request->meterNo;
+            // $usr->meterNo = $request->meterNo;
             $usr->meterType = $request->meterType;
-            $usr->lga = $request->lga;
+            // $usr->lga = $request->lga;
             $usr->state = $request->state;
-            $usr->hno = $request->hno;
+            // $usr->hno = $request->hno;
             $usr->address = $request->address;
             $usr->city = $request->city;
             $usr->status = 2;
             $usr->password = bcrypt($request->password);
+            // $usr->save();
+
+            $meter = null;
+
+            // Handle meter assignment BEFORE creating user
+            if ($request->meterid && $request->meterid !== '') {
+                $meter = Meter::find($request->meterid);
+                if ($meter && !$meter->user_id) { // Ensure meter is unassigned
+                    $usr->meterNo = $meter->meterNo;
+                    $usr->meterid = $meter->id;
+                }
+            }
+
             $usr->save();
 
-
-            if ($request->meterNo !== null) {
-                $m_id = Meter::where('meterNo', $request->meterNo)->first()->id;
-                User::where('id', $usr->id)->update(['meterNo' => $request->meterNo, 'meterid' => $m_id]);
-                Meter::where('meterNo', $request->meterNo)->update(['user_id' => $usr->id]);
+            // Update meter assignment if meter was selected
+            if ($meter) {
+                $meter->user_id = $usr->id;
+                $meter->save();
             }
+
+            
+
+            // if ($request->meterNo !== null) {
+            //     $m_id = Meter::where('meterNo', $request->meterNo)->first()->id;
+            //     User::where('id', $usr->id)->update(['meterNo' => $request->meterNo, 'meterid' => $m_id]);
+            //     Meter::where('meterNo', $request->meterNo)->update(['user_id' => $usr->id]);
+            // }
 
             return redirect('admin/customers')->with('message', "Customer created successfully");
         } else {
@@ -682,7 +726,34 @@ class DashboardContoller extends Controller
     }
 
 
-    public function update_password_now(request $request) {}
+    public function update_password_now(request $request) {
+        if (Auth::user()->role != 3) {
+            return redirect('admin/admin-dashboard')->with('error', 'Unauthorized access');
+        }
+
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6',
+            'confirm_password' => 'required|same:new_password'
+        ]);
+
+        $user = Auth::user();
+
+        if (!password_verify($request->current_password, $user->password)) {
+            return back()->with('error', 'Current password is incorrect');
+        }
+
+        if ($request->new_password !== $request->confirm_password) {
+            return back()->with('error', 'New passwords do not match');
+        }
+
+        User::where('id', $user->id)->update([
+            'password' => bcrypt($request->new_password)
+        ]);
+
+        return back()->with('message', 'Password updated successfully');
+    }
+
 
 
     public function resolve_account(request $request)
@@ -831,4 +902,34 @@ class DashboardContoller extends Controller
 
         return view('admin/user/customer-list', $data);
     }
+
+    public function searchUnassignedMeters(Request $request)
+    {
+        $query = $request->input('q');
+        $estateId = $request->input('estate_id');
+        
+        if (strlen($query) < 2) {
+            return response()->json(['meters' => []]);
+        }
+
+        // Authorization check for estate admin
+        if (Auth::user()->role == 3 && $estateId != Auth::user()->estate_id) {
+            return response()->json(['meters' => []], 403);
+        }
+
+        $meters = Meter::where('estate_id', $estateId)
+                       ->where('user_id', null) // Unassigned only
+                       ->where(function($q) use ($query) {
+                           $q->where('meterNo', 'LIKE', '%' . $query . '%')
+                             ->orWhere('AccountNo', 'LIKE', '%' . $query . '%');
+                       })
+                       ->select('id', 'meterNo', 'AccountNo')
+                       ->limit(10) // Limit results for performance
+                       ->get();
+                   
+        return response()->json([
+            'meters' => $meters
+        ]);
+    }
+
 }

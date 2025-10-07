@@ -2,8 +2,10 @@
 @extends('layouts.main')
 @section('content')
 
-    <div class="content">
 
+@if(Auth::user()->role == 0)
+    {{-- SUPER ADMIN VIEW --}}
+    <div class="content">
         <!-- Start Content-->
         <div class="container-fluid">
 
@@ -40,10 +42,8 @@
                                 <div class="col-3">
                                     <label class="my-2">Meter Model</label>
                                     <select type="text" name="meterModel" class="form-control" required>
-                                        <option
-                                            value="{{$meter->meterModel}}">{{strtoupper($meter->meterModel)}}</option>
-                                        <option value="prepaid">Prepaid</option>
-                                        <option value="postpaid">Postpaid</option>
+                                        <option value="prepaid" {{ strtolower($meter->meterModel) == 'prepaid' ? 'selected' : '' }}>Prepaid</option>
+                                        <option value="postpaid" {{ strtolower($meter->meterModel) == 'postpaid' ? 'selected' : '' }}>Postpaid</option>
                                     </select>
                                 </div>
 
@@ -58,9 +58,9 @@
                                     <select type="text" name="estate_id" class="form-control" required>
                                         <option
                                             value="{{$meter->estate_id}}">{{strtoupper($meter->estate->title)}}</option>
-                                        @foreach($estate as $data)
+                                        <!-- @foreach($estate as $data)
                                             <option value="{{$data->id}}">{{$data->title}} </option>
-                                        @endforeach
+                                        @endforeach -->
                                     </select>
                                 </div>
 
@@ -70,61 +70,26 @@
                                 <div class="col-3">
                                     <label class="my-2">Transformer</label>
                                     <select type="text" name="TransformerID" class="form-control" required>
-                                        <option value="{{$meter->TransformerID}}">{{strtoupper($trans_title)}}</option>
                                         @foreach($transformer as $data)
-                                            <option value="{{$data->id}}">{{$data->Title}} </option>
+                                            <option value="{{$data->id}}" {{ $meter->TransformerID == $data->id ? 'selected' : '' }}>{{$data->Title}} </option>
                                         @endforeach
                                     </select>
                                 </div>
 
 
                                 <div class="col-3 mt-4">
-                                    @if($meter->isDualTariff == 1)
-                                        <input type="checkbox" id="isDualTariff" checked name="isDualTariff"
-                                               class="form-check-input" style="border: 10px">
-
-                                        <script>
-                                            document.getElementById('isDualTariff').addEventListener('change', function () {
-                                                var isChecked = this.checked;
-                                                document.getElementById('newtar').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('newTariffDualContainer').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('newSGCDualContainer').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('oldTariffDualContainer').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('oldSGCDualContainer').style.display = isChecked ? 'block' : 'none';
-
-
-                                            });
-                                        </script>
-
-                                    @else
-                                        <input type="checkbox" id="isDualTariff" name="isDualTariff"
-                                               class="form-check-input" style="border: 10px">
-
-                                        <script>
-                                            document.getElementById('isDualTariff').addEventListener('change', function () {
-                                                var isChecked = this.checked;
-                                                document.getElementById('newtar').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('newTariffDualContainer').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('newSGCDualContainer').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('oldTariffDualContainer').style.display = isChecked ? 'block' : 'none';
-                                                document.getElementById('oldSGCDualContainer').style.display = isChecked ? 'block' : 'none';
-
-
-                                            });
-                                        </script>
-
-                                    @endif
-                                    <label class="form-check-label">Is Dual Tariff</label>
-
+                                    <input type="checkbox" id="isDualTariff" name="isDualTariff" 
+                                           class="form-check-input" style="border: 10px"
+                                           @if($meter->isDualTariff == 'on') checked @endif>
+                                    <label class="form-check-label">Is Dual Tariff</label> 
                                 </div>
 
 
                                 <div class="col-xl-3 col-sm-12">
                                     <label class="my-2">Old SGC</label>
                                     <select name="OldSGC" class="form-control" required>
-                                        <option value="{{$meter->OldSGC}}">@if($meter->OldSGC == "999962") MOMAS Default (9***2)@else MOMAS System Nig Ltd (6***9) @endif</option>
-                                        <option value="999962">MOMAS Default (9***2)</option>
-                                        <option value="600849">MOMAS System Nig Ltd (6***9)</option>
+                                        <option value="999962" {{ $meter->OldSGC == '999962' ? 'selected' : '' }}>MOMAS Default (9***2)</option>
+                                        <option value="600849" {{ $meter->OldSGC == '600849' ? 'selected' : '' }}>MOMAS System Nig Ltd (6***9)</option>
                                     </select>
                                 </div>
 
@@ -132,9 +97,8 @@
                                 <div class="col-xl-3 col-sm-12">
                                     <label class="my-2">New SGC</label>
                                     <select name="NewSGC" class="form-control" required>
-                                        <option value="{{$meter->NewSGC}}">@if($meter->NewSGC == "600849") MOMAS System Nig Ltd (6***9) @else MOMAS Default (9***2)  @endif</option>
-                                        <option value="600849">MOMAS System Nig Ltd (6***9)</option>
-                                        <option value="999962">MOMAS Default (9***2)</option>
+                                        <option value="999962" {{ $meter->NewSGC == '999962' ? 'selected' : '' }}>MOMAS Default (9***2)</option>
+                                        <option value="600849" {{ $meter->NewSGC == '600849' ? 'selected' : '' }}>MOMAS System Nig Ltd (6***9)</option>
                                     </select>
                                 </div>
 
@@ -143,83 +107,67 @@
 
 
                                 <div class="col-2" id="oldTariffDualContainer" style="display: none;">
-                                    <label class="my-2">Old Tariff Dual</label>
+                                    <label class="my-2">Old Gen Tariff</label>
                                     <select name="OldTariffDual" class="form-control">
-                                        <option
-                                            value="{{$meter->OldTariffDualID}}">{{strtoupper($meter->OldTariffDualID)}}</option>
-                                        @foreach($tariffdual as $data)
-                                            <option value="{{$data->OldTariffDual}}">{{$data->title}}</option>
-                                        @endforeach
+                                        <option value="{{$meter->OldTariffDual}}">
+                                            {{$old_gen_tariff_title ?? 'Select Generator Tariff'}}
+                                        </option>
+                                        
                                     </select>
 
 
                                 </div>
 
 
-                                <div class="col-2" id="newtar" style="display: none;">
-                                    <label class="my-2">New Tariff Dual ID</label>
+                                <div class="col-2" id="newTariffDualContainer" style="display: none;">
+                                    <label class="my-2">New Gen Tariff </label>
                                     <select name="NewTariffDual" class="form-control">
-                                        <option
-                                            value="{{$meter->NewTariffDualID}}">{{strtoupper($meter->NewTariffDualID)}}</option>
-                                        @foreach($tariffdual as $data)
-                                            <option value="{{$data->NewTariffDual}}">{{$data->title}}</option>
-                                        @endforeach
+                                        <option value="{{$meter->NewTariffDual}}">
+                                            {{$new_gen_tariff_title ?? 'Select Generator Tariff'}}
+                                        </option>
                                     </select>
 
                                 </div>
-
-
+                                
+                                {{-- NEPA Tariffs --}}
                                 <div class="col-2">
-                                    <label class="my-2">New Tariff</label>
+                                    <label class="my-2">New NEPA Tariff</label>
                                     <select name="NewTariffID" class="form-control">
                                         <option
-                                            value="{{$meter->NewTariffID}}">{{strtoupper($new_tariff_title)}}</option>
-                                        @foreach($tariff as $data)
-                                            <option value="{{$data->id}}">{{$data->title}}</option>
-                                        @endforeach
+                                            value="{{$meter->NewTariffID}}">{{$new_tariff_title}}</option>
+                                        <!-- @foreach($tariff as $data)
+                                            @if( $data->type == 'nepa' && $data->id != $meter->NewTariffID)
+                                                <option value="{{$data->id}}">{{$data->title}}</option>
+                                            @endif
+                                        @endforeach -->
                                     </select>
                                 </div>
 
                                 <div class="col-2">
-                                    <label class="my-2">Old Tariff</label>
+                                    <label class="my-2">Old NEPA Tariff</label>
                                     <select type="text" name="OldTariffID" class="form-control" required>
                                         <option
-                                            value="{{$meter->OldTariffID}}">{{strtoupper($old_tariff_title)}}</option>
-                                        @foreach($tariff as $data)
-                                            <option value="{{$data->id}}">{{$data->title}} </option>
-                                        @endforeach
+                                            value="{{$meter->OldTariffID}}">{{$old_tariff_title}}</option>
+                                        <!-- @foreach($tariff as $data)
+                                            @if($data->type == 'nepa' && $data->id != $meter->OldTariffID)
+                                                <option value="{{$data->id}}">{{$data->title}}</option>
+                                            @endif
+                                        @endforeach -->
                                     </select>
                                 </div>
 
-                                <div class="col-2 " id="newTariffDualContainer" style="display: none;">
-                                    <label class="my-2">New SGC Dual</label>
+                                <div class="col-2 " id="newSGCDualContainer" style="display: none;">
+                                    <label class="my-2">New SGC Generator</label>
                                     <input type="text" value="{{$meter->NewSGCDual}}" name="NewSGCDual"
                                            class="form-control">
                                 </div>
 
 
-                                <div class="col-2 " id="newSGCDualContainer" style="display: none;">
-                                    <label class="my-2">OLD SGC Dual</label>
+                                <div class="col-2 " id="oldSGCDualContainer" style="display: none;">
+                                    <label class="my-2">OLD SGC Generator</label>
                                     <input type="text" value="{{$meter->OldSGCDual}}" name="OldSGCDual"
                                            class="form-control">
                                 </div>
-
-
-                                @if($meter->isDualTariff == "on")
-
-
-
-
-
-                                @else
-
-
-
-
-
-
-
-                                @endif
 
 
                                 <hr class="my-4">
@@ -258,11 +206,9 @@
                                 <div class="col-3">
                                     <label class="my-2">Credit Type</label>
                                     <select type="text" name="CreditTypeID" class="form-control" required>
-                                        <option
-                                            value="{{$meter->CreditTypeID}}">{{strtoupper($meter->CreditTypeID)}}</option>
-                                        <option value="water">Water</option>
-                                        <option value="gas">Gas</option>
-                                        <option value="electricity">Electricity</option>
+                                        <option value="electricity" {{ strtolower($meter->CreditTypeID) == 'electricity' ? 'selected' : '' }}>Electricity</option>
+                                        <option value="water" {{ strtolower($meter->CreditTypeID) == 'water' ? 'selected' : '' }}>Water</option>
+                                        <option value="gas" {{ strtolower($meter->CreditTypeID) == 'gas' ? 'selected' : '' }}>Gas</option>
                                     </select>
                                 </div>
 
@@ -475,8 +421,172 @@
 
 
             </div>
+    </div>
 
 
-        </div> <!-- container-fluid -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const estateSelect = document.querySelector('select[name="estate_id"]');
+    const nepaOldSelect = document.querySelector('select[name="OldTariffID"]');
+    const nepaNewSelect = document.querySelector('select[name="NewTariffID"]');
+    const genOldSelect = document.querySelector('select[name="OldTariffDual"]');
+    const genNewSelect = document.querySelector('select[name="NewTariffDual"]');
+    const dualTariffCheckbox = document.getElementById('isDualTariff');
+    
+    // Store current values to preserve them
+    const currentValues = {
+        nepaOld: '{{$meter->OldTariffID}}',
+        nepaNew: '{{$meter->NewTariffID}}',
+        genOld: '{{$meter->OldTariffDual}}',
+        genNew: '{{$meter->NewTariffDual}}'
+    };
+    
+    // Handle dual tariff toggle
+    if (dualTariffCheckbox) {
+        dualTariffCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            const containers = ['oldTariffDualContainer', 'newTariffDualContainer', 'newSGCDualContainer', 'oldSGCDualContainer'];
+            containers.forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) elem.style.display = isChecked ? 'block' : 'none';
+            });
+        });
+
+        // Initialize on page load - ONLY check for "on"
+        if ("{{$meter->isDualTariff}}" === "on") {
+            dualTariffCheckbox.checked = true;
+            dualTariffCheckbox.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Estate change handler
+    if (estateSelect) {
+        estateSelect.addEventListener('change', function() {
+            const estateId = this.value;
+            if (estateId) {
+                fetch(`/admin/get-estate-tariffs?estate_id=${estateId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        clearAndPopulateTariffSelects(data.tariffs);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching tariffs:', error);
+                    });
+            } else {
+                clearTariffSelects();
+            }
+        });
+
+        // Load tariffs for current estate on page load
+        if (estateSelect.value) {
+            estateSelect.dispatchEvent(new Event('change'));
+        }
+    }
+
+    function clearTariffSelects() {
+        if (nepaOldSelect) {
+            nepaOldSelect.innerHTML = '<option value="">Select NEPA Tariff</option>';
+        }
+        if (nepaNewSelect) {
+            nepaNewSelect.innerHTML = '<option value="">Select NEPA Tariff</option>';
+        }
+        if (genOldSelect) {
+            genOldSelect.innerHTML = '<option value="">Select Generator Tariff</option>';
+        }
+        if (genNewSelect) {
+            genNewSelect.innerHTML = '<option value="">Select Generator Tariff</option>';
+        }
+    }
+    
+    function clearAndPopulateTariffSelects(tariffs) {
+        const nepaTariffs = tariffs.filter(t => t.type === 'nepa');
+        const genTariffs = tariffs.filter(t => t.type === 'gen');
+        
+        // Clear and populate NEPA Old Tariff
+        if (nepaOldSelect) {
+            nepaOldSelect.innerHTML = '<option value="">Select NEPA Tariff</option>';
+            // Add current selection first if it exists
+            if (currentValues.nepaOld) {
+                nepaOldSelect.innerHTML += `<option value="${currentValues.nepaOld}" selected>{{$old_tariff_title}}</option>`;
+            }
+            // Add other options
+            nepaTariffs.forEach(tariff => {
+                if (tariff.id != currentValues.nepaOld) {
+                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
+                    nepaOldSelect.innerHTML += `<option value="${tariff.id}">${displayText}</option>`;
+                }
+            });
+        }
+
+        // Clear and populate NEPA New Tariff
+        if (nepaNewSelect) {
+            nepaNewSelect.innerHTML = '<option value="">Select NEPA Tariff</option>';
+            // Add current selection first if it exists
+            if (currentValues.nepaNew) {
+                nepaNewSelect.innerHTML += `<option value="${currentValues.nepaNew}" selected>{{$new_tariff_title}}</option>`;
+            }
+            // Add other options
+            nepaTariffs.forEach(tariff => {
+                if (tariff.id != currentValues.nepaNew) {
+                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
+                    nepaNewSelect.innerHTML += `<option value="${tariff.id}">${displayText}</option>`;
+                }
+            });
+        }
+        
+        // Clear and populate Generator Old Tariff
+        if (genOldSelect) {
+            genOldSelect.innerHTML = '<option value="">Select Generator Tariff</option>';
+            // Add current selection first if it exists
+            if (currentValues.genOld) {
+                genOldSelect.innerHTML += `<option value="${currentValues.genOld}" selected>{{$old_gen_tariff_title}}</option>`;
+            }
+            // Add other options
+            genTariffs.forEach(tariff => {
+                if (tariff.id != currentValues.genOld) {
+                    genOldSelect.innerHTML += `<option value="${tariff.id}">${tariff.title}</option>`;
+                }
+            });
+        }
+        
+        // Clear and populate Generator New Tariff
+        if (genNewSelect) {
+            genNewSelect.innerHTML = '<option value="">Select Generator Tariff</option>';
+            // Add current selection first if it exists
+            if (currentValues.genNew) {
+                genNewSelect.innerHTML += `<option value="${currentValues.genNew}" selected>{{$new_gen_tariff_title}}</option>`;
+            }
+            // Add other options
+            genTariffs.forEach(tariff => {
+                if (tariff.id != currentValues.genNew) {
+                    genNewSelect.innerHTML += `<option value="${tariff.id}">${tariff.title}</option>`;
+                }
+            });
+        }
+    }
+});
+</script>
+            
+
+@elseif(Auth::user()->role == 1)
+    {{-- ROLE 1 PLACEHOLDER --}}
+
+@elseif(Auth::user()->role == 2)
+    {{-- ROLE 2 PLACEHOLDER --}}
+
+@elseif(Auth::user()->role == 3)
+    {{-- ESTATE ADMIN VIEW --}}
+
+@elseif(Auth::user()->role == 4)
+    {{-- ROLE 4 PLACEHOLDER --}}
+
+@elseif(Auth::user()->role == 5)
+    {{-- ROLE 5 PLACEHOLDER --}}
+
+@else
+    {{-- DEFAULT FALLBACK --}}
+
+@endif
 
 @endsection
+

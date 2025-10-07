@@ -9,6 +9,8 @@ use App\Models\EstateService;
 use App\Models\Meter;
 use App\Models\MeterToken;
 use App\Models\Service;
+use App\Models\Tariff;
+use App\Models\TarrifState;
 use App\Models\Token;
 use App\Models\Transaction;
 use App\Models\User;
@@ -168,10 +170,19 @@ class EstateServiceController extends Controller
 
     public function estate_update_vat(request $request)
     {
-
+        // Update the estate VAT
         Estate::where('id', $request->estate_id)->update(['estate_vat' => $request->vat]);
-        return back()->with('message', "Estate Vat updated successfully");
 
+        // Update all non-zero tariff rates for this estate with the new VAT percentage
+        // First get all tariff IDs for this estate
+        $tariffIds = Tariff::where('estate_id', $request->estate_id)->pluck('id');
+
+        // Then update TarrifState records for those tariffs that have non-zero VAT
+        TarrifState::whereIn('tariff_id', $tariffIds)
+        ->where('vat', '!=', 0)  // Only update tariff rates that have non-zero VAT
+        ->update(['vat' => $request->vat]);
+
+        return back()->with('message', "Estate VAT updated successfully and applied to all tariff rates");
     }
 
 

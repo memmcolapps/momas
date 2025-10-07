@@ -126,60 +126,6 @@
                     <div class="col-xl-12">
                         <div class="card overflow-hidden">
 
-                            <div class="col-xl-6">
-                                <div class="card">
-                                    <!-- Modal -->
-                                    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static"
-                                        data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel"
-                                        aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Import Bulk
-                                                        Customers</h1>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                        aria-label="Close"></button>
-                                                </div>
-
-                                                <form action="{{ route('customers.import') }}" method="POST"
-                                                    enctype="multipart/form-data">
-                                                    @csrf
-
-                                                    <div class="modal-body">
-
-                                                        <p>Click here to download the sample of file to upload <a
-                                                                href="{{ url('') }}/public/asset/a.csv"
-                                                                download="importcs.csv">Download here</a></p>
-                                                        <label class="mt-3">Choose File</label>
-                                                        <input type="file" class="form-control mb-3" name="file"
-                                                            required>
-                                                        <label>Choose Estate</label>
-                                                        <select name="estate_id" required class="form-control">
-                                                            <option value=""> --Select Estate-- </option>
-                                                            @foreach ($estate as $data)
-                                                                <option value="{{ $data->id }}"> {{ $data->title }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-
-
-                                                    </div>
-
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-light"
-                                                            data-bs-dismiss="modal">Close</button>
-                                                        <button type="submit" class="btn btn-primary">Import Bulk
-                                                            Customers</button>
-                                                    </div>
-
-                                                </form>
-
-
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div> <!-- end card -->
-                            </div> <!-- end col -->
 
 
                             <div class="card-header">
@@ -189,8 +135,7 @@
 
                                     <div class="justify-content-end">
                                         <div class="justify-content-end">
-                                            <a href="#" class="btn btn-primary text-white " data-bs-toggle="modal"
-                                                data-bs-target="#staticBackdrop">Import Bulk Customers</a>
+                                            <a href="customer-bulk-upload" class="btn btn-primary text-white">Import Bulk Customers</a>
                                             <a href="new-customer" class="btn btn-primary text-white">Add new</a>
                                         </div>
                                     </div>
@@ -352,51 +297,6 @@
                     <div class="col-xl-12">
                         <div class="card overflow-hidden">
 
-                            <div class="col-xl-6">
-                                <div class="card">
-                                    <!-- Modal -->
-                                    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static"
-                                        data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel"
-                                        aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Import Bulk
-                                                        Customers</h1>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                        aria-label="Close"></button>
-                                                </div>
-
-                                                <form action="{{ route('customers.import') }}" method="POST"
-                                                    enctype="multipart/form-data">
-                                                    @csrf
-
-                                                    <div class="modal-body">
-
-                                                        <p>Click here to download the sample of file to upload <a
-                                                                href="{{ url('') }}/public/asset/a.csv"
-                                                                download="importcs.csv">Download here</a></p>
-                                                        <label class="mt-3">Choose File</label>
-                                                        <input type="file" class="form-control mb-3" name="file"
-                                                            required>
-
-                                                    </div>
-
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-light"
-                                                            data-bs-dismiss="modal">Close</button>
-                                                        <button type="submit" class="btn btn-primary">Import Bulk
-                                                            Customers</button>
-                                                    </div>
-
-                                                </form>
-
-
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div> <!-- end card -->
-                            </div> <!-- end col -->
 
 
                             <div class="card-header">
@@ -404,8 +304,7 @@
                                     <h5 class="card-title text-black mb-0">Latest Transaction</h5>
                                     <div class="justify-content-end">
                                         <div class="justify-content-end">
-                                            <a href="#" class="btn btn-primary text-white " data-bs-toggle="modal"
-                                                data-bs-target="#staticBackdrop">Import Bulk Customers</a>
+                                            <a href="customer-bulk-upload" class="btn btn-primary text-white">Import Bulk Customers</a>
                                             <a href="new-customer" class="btn btn-primary text-white">Add new</a>
                                         </div>
                                     </div>

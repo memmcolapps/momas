@@ -69,7 +69,7 @@
                                             </select>
 
 
-                                            <label class="my-1">Tariff Amount </label>
+                                            <label class="my-1">Tariff Rate </label>
                                             <input type="text"  class="form-control mb-3" name="amount" required>
 
                                             <label class="my-1">Vat %</label>
@@ -201,7 +201,7 @@
                                     @foreach($tstate as $data)
 
                                         <div class="col-3">
-                                            <label class="my-1">Tariff Amount</label>
+                                            <label class="my-1">Tariff Rate</label>
                                             <a href="#" data-bs-toggle="modal"
                                                data-bs-target="#updatestate{{$data->id}}">
                                                 <h6>{{$data->amount}}</h6></a>
@@ -241,7 +241,7 @@
                                                                     </select>
 
 
-                                                                <label class="my-1">Tariff Amount</label>
+                                                                <label class="my-1">Tariff Rate</label>
                                                                 <input type="number" class="form-control mb-3"
                                                                        value="{{$data->amount}}" name="amount" required>
 
@@ -407,11 +407,29 @@
 
                                         <div class="modal-body">
 
-                                            <label class="my-1">Tariff Amount</label>
+                                            <label class="my-1">Tariff Rate</label>
                                             <input type="text"  class="form-control mb-3" name="amount" required>
 
-                                            <label class="my-1">Vat %</label>
-                                            <input type="text" value="1.075" class="form-control mb-3" name="vat" required>
+                                            <!-- <label class="my-1">Vat %</label>
+                                            <input type="text" value="{{$estate->first()->estate_vat ?? '1.075'}}" class="form-control mb-3" name="vat" readonly> -->
+                                            
+                                            <!-- <div class="form-check my-3">
+                                                <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_estate" value="1" checked>
+                                                <label class="form-check-label" for="apply_vat_estate">
+                                                    Apply VAT ({{$estate->first()->estate_vat ?? '0'}}%)
+                                                </label>
+                                            </div> -->
+                                            <div class="form-check my-3">
+                                                <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_estate" value="1" checked>
+                                                <label class="form-check-label" for="apply_vat_estate">
+                                                    Apply VAT ({{$estate->first()->estate_vat ?? '0'}}%)
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Hidden field to pass estate VAT rate -->
+                                            <input type="hidden" name="estate_vat" value="{{$estate->first()->estate_vat ?? '0'}}">
+
+
 
 
                                             <div class="row">
@@ -514,8 +532,8 @@
 
                         <div class="card-body">
 
-                            <form action="update-the-tariff" method="post">
-                                @csrf
+                            <!-- <form action="update-the-tariff" method="post"> -->
+                                <!-- @csrf -->
 
 
                                 <div class="row">
@@ -535,7 +553,7 @@
 
                                         <div class="col-3">
 
-                                            <label class="my-1">Tariff Amount</label>
+                                            <label class="my-1">Tariff Rate</label>
                                             <a href="#" data-bs-toggle="modal"
                                                data-bs-target="#updatestate{{$data->id}}">
                                                 <h6>{{$data->amount}}</h6></a>
@@ -560,16 +578,34 @@
 
                                                             <div class="modal-body">
 
-                                                                <label class="my-1">Tariff Amount</label>
+                                                                <label class="my-1">Tariff Rate</label>
                                                                 <input type="number" class="form-control mb-3"
                                                                        value="{{$data->amount}}" name="amount" required>
 
                                                                 <input name="id" hidden value="{{$data->id}}">
 
-
-                                                                <label class="my-1">Vat %</label>
+                                                                <label class="my-1">Tariff Index</label>
                                                                 <input type="number" class="form-control mb-3"
-                                                                       value="{{$data->vat}}" name="vat" required>
+                                                                     value="{{$tr->tariff_index}}" name="t_index" readonly hidden>
+
+
+                                                                <!-- <label class="my-1">Vat %</label> -->
+                                                                <!-- <input type="number" class="form-control mb-3" -->
+                                                                       <!-- value="{{$data->vat}}" name="vat" readonly> -->
+                                                                <div class="form-check my-3">
+                                                                    <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_update_{{$data->id}}" value="1" 
+                                                                           {{ $data->vat > 0 ? 'checked' : '' }}
+                                                                           data-original-state="{{ $data->vat > 0 ? '1' : '0' }}">
+                                                                    <label class="form-check-label" for="apply_vat_update_{{$data->id}}">
+                                                                        Apply VAT ({{$estate->first()->estate_vat ?? '0'}}%)
+                                                                    </label>
+
+                                                                    <!-- Optional: Show current VAT value for reference -->
+                                                                    <small class="text-muted">Current VAT: {{$data->vat}}%</small>
+                                                                </div>
+
+                                                                <!-- Hidden field to pass estate VAT rate -->
+                                                                <input type="hidden" name="estate_vat" value="{{$estate->first()->estate_vat ?? '0'}}">
 
 
                                                                 <div class="row">
@@ -650,7 +686,7 @@
 
                                     @endforeach
                                 </div>
-                            </form>
+                            <!-- </form> -->
 
                         </div>
                     </div>
@@ -663,11 +699,74 @@
 
         </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reset modal state when it's closed
+            const modals = document.querySelectorAll('[id^="updatestate"]');
+
+            modals.forEach(function(modal) {
+                modal.addEventListener('hidden.bs.modal', function() {
+                    const checkbox = this.querySelector('input[name="apply_vat"]');
+                    if (checkbox) {
+                        const originalState = checkbox.getAttribute('data-original-state');
+                        checkbox.checked = originalState === '1';
+                    }
+                });
+            });
+        });
+    </script>
 
     @elseif(Auth::user()->role == 4)
     @elseif(Auth::user()->role == 5)
     @else
     @endif
+
+
+
+<script>
+    /**
+ * Tariff Rate Date Management Script
+ * 
+ * Dynamically controls the "Effective Date To" field based on the "Never Expire" selection:
+ * - When "Never Expire" = "Yes": Disables and clears the end date field (tariffs run indefinitely)
+ * - When "Never Expire" = "No": Enables the end date field as required (tariffs have expiration)
+ * 
+ * Applies to both Super Admin (role 0) and Estate Admin (role 3) tariff creation modals.
+ * Prevents user confusion and form validation errors by enforcing proper date field behavior.
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    const neverExpireSelect = document.querySelector('select[name="never_expire"]');
+    const dateToInput = document.querySelector('input[name="date_to"]');
+
+    if (neverExpireSelect && dateToInput) {
+        neverExpireSelect.addEventListener('change', function() {
+            if(this.value === 'yes') {
+                // Clear and disable end date
+                dateToInput.value = '';
+                dateToInput.disabled = true;
+                dateToInput.required = false;
+                dateToInput.style.backgroundColor = '#f8f9fa';
+                dateToInput.style.opacity = '0.6';
+            } else if(this.value === 'no') {
+                // Enable end date
+                dateToInput.disabled = false;
+                dateToInput.required = true;
+                dateToInput.style.backgroundColor = '';
+                dateToInput.style.opacity = '1';
+            }
+        });
+
+        // Initialize on page load
+        if(neverExpireSelect.value === 'yes') {
+            dateToInput.disabled = true;
+            dateToInput.required = false;
+            dateToInput.style.backgroundColor = '#f8f9fa';
+            dateToInput.style.opacity = '0.6';
+        }
+    }
+});
+</script>    
 
 @endsection
 

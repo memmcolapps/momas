@@ -530,54 +530,162 @@
                                                                     var meterNo = $('#meterNo').val();
 
                                                                     if (estate_id && (meterNo.length === 11 || meterNo.length === 13)) {
-                                                                        $.ajax({
-                                                                            url: '/fetch-tariff',
-                                                                            method: 'GET',
-                                                                            data: {
-                                                                                estate_id: estate_id,
-                                                                                meterNo: meterNo
-                                                                            },
-                                                                            success: function (response) {
-                                                                                // Check if response is 1, 2, or 3
-                                                                                if (response == 1) {
-                                                                                    alert("Error: User is not attached to any estate.");
-                                                                                    return;
-                                                                                }
-                                                                                if(response == 2){
-                                                                                    alert("Error: Estate does not have any tariff");
-                                                                                    return;
-                                                                                }
-                                                                                if(response == 3){
-                                                                                    alert("Error: Tariff index not set for customer.");
-                                                                                    return;
-                                                                                }
+                                                                        // $.ajax({
+                                                                            // url: '/fetch-tariff',
+                                                                            // method: 'GET',
+                                                                            // data: {
+                                                                                // estate_id: estate_id,
+                                                                                // meterNo: meterNo
+                                                                            // },
+                                                                            // success: function (response) {
+                                                                                // if (response == 1) {
+                                                                                    // alert("Error: User is not attached to any estate.");
+                                                                                    // return;
+                                                                                // }
+                                                                                // if(response == 2){
+                                                                                    // alert("Error: Estate does not have any tariff");
+                                                                                    // return;
+                                                                                // }
+                                                                                // if(response == 3){
+                                                                                    // alert("Error: Tariff index not set for customer.");
+                                                                                    // return;
+                                                                                // }
+// 
+                                                                                // if (response && response.tariffs) {
+                                                                                    // console.log(response);
+                                                                                    // var tariffSelect = $('#tariff_id');
+                                                                                    // tariffSelect.empty();
+                                                                                    // tariffSelect.append('<option value="">--Select Tariff--</option>');
+// 
+                                                                                    // response.tariffs.forEach(function (tariff) {
+                                                                                        // tariffSelect.append('<option value="' + tariff.id + '">' + tariff.type + '</option>');
+                                                                                    // });
+// 
+                                                                                    // tariffSelect.prop('disabled', false);
+                                                                                // } else {
+                                                                                    // $('#tariff_id').prop('disabled', true).empty();
+                                                                                // }
+                                                                            // },
+                                                                            // error: function () {
+                                                                                // $('#tariff_id').prop('disabled', true).empty();
+                                                                                // alert("Error fetching tariff data. Please try again.");
+                                                                            // }
+                                                                        // });
 
-                                                                                if (response && response.tariffs) {
-                                                                                    console.log(response);
-                                                                                    var tariffSelect = $('#tariff_id');
-                                                                                    tariffSelect.empty();
-                                                                                    tariffSelect.append('<option value="">--Select Tariff--</option>');
+                                                                         
+                                                                                $.ajax({
+                                                                                    url: '/admin/fetch-meter-tariffs', // New endpoint
+                                                                                    method: 'GET',
+                                                                                    data: {
+                                                                                        estate_id: estate_id,
+                                                                                        meterNo: meterNo
+                                                                                    },
+                                                                                    success: function (response) {
+                                                                                        // Handle error responses
+                                                                                        if (response == 1) {
+                                                                                            alert("Error: Meter is not assigned to any User yet.");
+                                                                                            return;
+                                                                                        }
+                                                                                        if (response == 2) {
+                                                                                            alert("Error: Estate meter does not have any tariff");
+                                                                                            return;
+                                                                                        }
+                                                                                        if (response == 3) {
+                                                                                            alert("Error: Tariff index not set for customer.");
+                                                                                            return;
+                                                                                        }
+                                                                                    
+                                                                                        if (response && response.tariffs) {
+                                                                                            console.log('Meter tariffs:', response);
+                                                                                            populateTariffOptions(response.tariffs, response.meter);
+                                                                                        } else {
+                                                                                            $('#tariff_id').prop('disabled', true).empty();
+                                                                                        }
+                                                                                    },
+                                                                                    error: function () {
+                                                                                        $('#tariff_id').prop('disabled', true).empty();
+                                                                                        alert("Error fetching tariff data. Please try again.");
+                                                                                    }
+                                                                                });
 
-                                                                                    response.tariffs.forEach(function (tariff) {
-                                                                                        tariffSelect.append('<option value="' + tariff.id + '">' + tariff.type + '</option>');
-                                                                                    });
 
-                                                                                    tariffSelect.prop('disabled', false);
-                                                                                } else {
-                                                                                    $('#tariff_id').prop('disabled', true).empty();
+                                                                                    } else {
+                                                                                        $('#tariff_id').prop('disabled', true).empty();
+                                                                                    }
+                                                                                });
+                                                                            });
+
+
+                                                                            function populateTariffOptions(tariffs, meter) {
+                                                                                var tariffSelect = $('#tariff_id');
+                                                                                tariffSelect.empty();
+                                                                                tariffSelect.append('<option value="">--Select Tariff--</option>');
+
+                                                                                // Check if meter has dual tariff enabled
+                                                                                    var isDualTariff = meter.isDualTariff === 'on';
+
+                                                                                    // Separate tariffs by type
+                                                                                    var nepaTariffs = tariffs.filter(t => t.type === 'nepa');
+                                                                                    var genTariffs = tariffs.filter(t => t.type === 'gen');
+
+                                                                                    if (isDualTariff) {
+                                                                                        // Show both NEPA and Generator tariffs for dual tariff meters
+                                                                                        if (nepaTariffs.length > 0) {
+                                                                                            tariffSelect.append('<optgroup label="NEPA Tariffs">');
+                                                                                            nepaTariffs.forEach(function (tariff) {
+                                                                                                var label = getActiveTariffLabel(tariff, meter, 'nepa');
+                                                                                                tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
+                                                                                            });
+                                                                                            tariffSelect.append('</optgroup>');
+                                                                                        }
+                                                                                    
+                                                                                        if (genTariffs.length > 0) {
+                                                                                            tariffSelect.append('<optgroup label="Generator Tariffs">');
+                                                                                            genTariffs.forEach(function (tariff) {
+                                                                                                var label = getActiveTariffLabel(tariff, meter, 'gen');
+                                                                                                tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
+                                                                                            });
+                                                                                            tariffSelect.append('</optgroup>');
+                                                                                        }
+                                                                                    } else {
+                                                                                        // Show only NEPA tariffs for single tariff meters
+                                                                                        nepaTariffs.forEach(function (tariff) {
+                                                                                            var label = getActiveTariffLabel(tariff, meter, 'nepa');
+                                                                                            tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
+                                                                                        });
+                                                                                    }
+                                                                                
+                                                                                    tariffSelect.prop('disabled', false);           
+                                                                                
                                                                                 }
-                                                                            },
-                                                                            error: function () {
-                                                                                $('#tariff_id').prop('disabled', true).empty();
-                                                                                alert("Error fetching tariff data. Please try again.");
-                                                                            }
-                                                                        });
-                                                                    } else {
-                                                                        $('#tariff_id').prop('disabled', true).empty();
-                                                                    }
-                                                                });
-                                                            });
+                                                                            
+                                                                                function getActiveTariffLabel(tariff, meter, type) {
+                                                                                       var label = tariff.title;
+                                                                                       var isCurrentlyActive = false;
+                                                                                       var tariffStatus = '';
 
+                                                                                       // Check if this tariff is currently active for the meter
+                                                                                       if (type === 'nepa') {
+                                                                                           if (meter.NewTariffID == tariff.id) {
+                                                                                               isCurrentlyActive = true;
+                                                                                               tariffStatus = ' (New NEPA)';
+                                                                                           } else if (meter.OldTariffID == tariff.id) {
+                                                                                               isCurrentlyActive = true;
+                                                                                               tariffStatus = ' (Old NEPA)';
+                                                                                           }
+                                                                                       } else if (type === 'gen') {
+                                                                                           if (meter.NewTariffDual == tariff.id) {
+                                                                                               isCurrentlyActive = true;
+                                                                                               tariffStatus = ' (New Gen)';
+                                                                                           } else if (meter.OldTariffDual == tariff.id) {
+                                                                                               isCurrentlyActive = true;
+                                                                                               tariffStatus = ' (Old Gen)';
+                                                                                           }
+                                                                                       }
+
+                                                                                       return label + tariffStatus;
+                                                                                }
+                                                                    
                                                         </script>
 
 
