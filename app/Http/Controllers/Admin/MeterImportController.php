@@ -78,17 +78,58 @@ class MeterImportController extends Controller
                         'estate_id' => $request->estate_id,
                     ];
 
+                    // Map tariff INDICES to tariff IDs
+                    $newTariffId = null;
+                    $oldTariffId = null;
+                    $newTariffDualId = null;
+                    $oldTariffDualId = null;
+
+                    if (!empty($meterData['newtariffid'])) {
+                        $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
+                            ->where('tariff_index', $meterData['newtariffid'])
+                            ->where('type', 'nepa')
+                            ->first();
+                        $newTariffId = $tariff ? $tariff->id : null;
+                    }
+
+                    if (!empty($meterData['oldtariffid'])) {
+                        $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
+                            ->where('tariff_index', $meterData['oldtariffid'])
+                            ->where('type', 'nepa')
+                            ->first();
+                        $oldTariffId = $tariff ? $tariff->id : null;
+                    }
+
+                    // Validate and map transformer ID - must belong to the estate
+                    $transformerId = null;
+                    if (!empty($meterData['transformer_id'])) {
+                        $transformer = \App\Models\Transformer::where('id', $meterData['transformer_id'])
+                            ->where('estate_id', $request->estate_id)
+                            ->first();
+
+                        if ($transformer) {
+                            // Transformer exists and belongs to this estate
+                            $transformerId = $transformer->id;
+                        } else {
+                            // Transformer doesn't belong to this estate, use first available transformer
+                            $firstTransformer = \App\Models\Transformer::where('estate_id', $request->estate_id)
+                                ->where('status', 2)
+                                ->first();
+                            $transformerId = $firstTransformer ? $firstTransformer->id : null;
+                        }
+                    }
+
                     // Map CSV fields to database columns
                     $meterRecord = array_merge($defaults, [
                         'meterNo' => $meterData['meterno'],
                         'meterModel' => isset($meterData['metermodel']) ? strtolower($meterData['metermodel']) : null,
                         'AccountNo' => $meterData['accountno'],
-                        'TransformerID' => !empty($meterData['transformer_id']) ? $meterData['transformer_id'] : null,
+                        'TransformerID' => $transformerId,
                         'isDualTariff' => (int) $meterData['isdualtariff'],
                         'OldSGC' => $meterData['oldsgc'] ?? '999962',
                         'NewSGC' => $meterData['newsgc'] ?? '999962',
-                        'NewTariffID' => !empty($meterData['newtariffid']) ? $meterData['newtariffid'] : null,
-                        'OldTariffID' => !empty($meterData['oldtariffid']) ? $meterData['oldtariffid'] : null,
+                        'NewTariffID' => $newTariffId,
+                        'OldTariffID' => $oldTariffId,
                         'KRN1' => $meterData['krn1'] ?? 'STS6',
                         'KRN2' => $meterData['krn2'] ?? 'STS6',
                         'NeedKCT' => (int) ($meterData['needkct'] ?? 0),
@@ -97,14 +138,32 @@ class MeterImportController extends Controller
 
                     // Handle dual tariff fields only if isDualTariff is 1
                     if ($meterData['isdualtariff'] == 1) {
-                        $meterRecord['NewSGCDual'] = $meterData['newsgc'] ?? '999962';
-                        $meterRecord['OldSGCDual'] = $meterData['oldsgc'] ?? '999962';
-                        $meterRecord['NewTariffDualID'] = !empty($meterData['newtariffdual']) ? $meterData['newtariffdual'] : null;
-                        $meterRecord['OldTariffDualID'] = !empty($meterData['oldtariffdual']) ? $meterData['oldtariffdual'] : null;
+                        // Map generator tariff indices to IDs
+                        if (!empty($meterData['newtariffdual'])) {
+                            $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
+                                ->where('tariff_index', $meterData['newtariffdual'])
+                                ->where('type', 'gen')
+                                ->first();
+                            $newTariffDualId = $tariff ? $tariff->id : null;
+                        }
+
+                        if (!empty($meterData['oldtariffdual'])) {
+                            $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
+                                ->where('tariff_index', $meterData['oldtariffdual'])
+                                ->where('type', 'gen')
+                                ->first();
+                            $oldTariffDualId = $tariff ? $tariff->id : null;
+                        }
+
+                        // Use separate Generator SGC fields for dual tariff meters
+                        $meterRecord['NewSGCDual'] = $meterData['newsgcdual'] ?? '999962';
+                        $meterRecord['OldSGCDual'] = $meterData['oldsgcdual'] ?? '999962';
+                        $meterRecord['NewTariffDualID'] = $newTariffDualId;
+                        $meterRecord['OldTariffDualID'] = $oldTariffDualId;
                     } else {
-                        // Set dual tariff fields to same as single tariff when not dual
-                        $meterRecord['NewSGCDual'] = $meterData['newsgc'] ?? '999962';
-                        $meterRecord['OldSGCDual'] = $meterData['oldsgc'] ?? '999962';
+                        // Set dual tariff fields to defaults when not dual
+                        $meterRecord['NewSGCDual'] = '999962';
+                        $meterRecord['OldSGCDual'] = '999962';
                         $meterRecord['NewTariffDualID'] = null;
                         $meterRecord['OldTariffDualID'] = null;
                     }

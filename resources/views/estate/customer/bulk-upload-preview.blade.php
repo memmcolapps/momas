@@ -45,7 +45,7 @@
                             <input type="file" id="csvFile" class="form-control" accept=".csv,.xlsx" />
                             <small class="form-text text-muted">
                                 Required columns: first_name, last_name, email, phone, meterno
-                                <br>Optional columns: address, city, state, house_no, account_no
+                                <br>Optional columns: address, city, state, house_no
                                 <br><strong>Note:</strong> Meters will be automatically assigned if they exist and are unassigned in your estate.
                                 <a href="/asset/customer_upload_sample.csv" download class="ms-2">Download Sample</a>
                             </small>
@@ -101,7 +101,6 @@
                                         <th>City</th>
                                         <th>State</th>
                                         <th>House No</th>
-                                        <th>Account No</th>
                                         <th>Errors</th>
                                         <th>Actions</th>
                                     </tr>
@@ -212,7 +211,6 @@ function displayPreview() {
             <td><input type="text" class="form-control form-control-sm" value="${row.city || ''}" onchange="updateRow(${index}, 'city', this.value)" placeholder="Optional"></td>
             <td><input type="text" class="form-control form-control-sm" value="${row.state || ''}" onchange="updateRow(${index}, 'state', this.value)" placeholder="Optional"></td>
             <td><input type="text" class="form-control form-control-sm" value="${row.house_no || ''}" onchange="updateRow(${index}, 'house_no', this.value)" placeholder="Optional"></td>
-            <td><input type="text" class="form-control form-control-sm" value="${row.account_no || ''}" onchange="updateRow(${index}, 'account_no', this.value)" placeholder="Optional"></td>
             <td><span id="errors-${index}" class="text-danger small"></span></td>
             <td><button class="btn btn-sm btn-danger" onclick="deleteRow(${index})">Delete</button></td>
         `;

@@ -1235,29 +1235,85 @@ class MeterController extends Controller
         // $data['old_tariff_title'] = Tariff::where('id', $data['meter']->OldTariffID)->first()->title ?? "No title set";
 
         $data['new_tariff_title'] = "No tariff set";
-        $data['old_tariff_title'] = "No tariff set"; 
+        $data['old_tariff_title'] = "No tariff set";
         $data['new_gen_tariff_title'] = "No Gen tariff set";
         $data['old_gen_tariff_title'] = "No Gen tariff set";
 
          if($meter->NewTariffID) {
+            // Try to find by ID first
             $newTariff = Tariff::find($meter->NewTariffID);
-            $data['new_tariff_title'] = $newTariff ? $newTariff->title : "Tariff ID: " . $meter->NewTariffID;
+
+            // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
+            if(!$newTariff || $newTariff->estate_id != $meter->estate_id) {
+                $newTariff = Tariff::where('estate_id', $meter->estate_id)
+                    ->where('tariff_index', $meter->NewTariffID)
+                    ->where('type', 'nepa')
+                    ->first(); // Get first match if multiple tariffs have same index
+            }
+
+            $data['new_tariff_title'] = $newTariff
+                ? $newTariff->title . " (Index: " . $newTariff->tariff_index . ")"
+                : "Tariff ID: " . $meter->NewTariffID;
         }
 
         if($meter->OldTariffID) {
+            // Try to find by ID first
             $oldTariff = Tariff::find($meter->OldTariffID);
-            $data['old_tariff_title'] = $oldTariff ? $oldTariff->title : "Tariff ID: " . $meter->OldTariffID;
+
+            // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
+            if(!$oldTariff || $oldTariff->estate_id != $meter->estate_id) {
+                $oldTariff = Tariff::where('estate_id', $meter->estate_id)
+                    ->where('tariff_index', $meter->OldTariffID)
+                    ->where('type', 'nepa')
+                    ->first(); // Get first match if multiple tariffs have same index
+            }
+
+            $data['old_tariff_title'] = $oldTariff
+                ? $oldTariff->title . " (Index: " . $oldTariff->tariff_index . ")"
+                : "Tariff ID: " . $meter->OldTariffID;
         }
 
-        // Handle dual tariff data
-        if($meter->NewTariffDual) {
-            $newGenTariff = Tariff::find($meter->NewTariffDual);
-            $data['new_gen_tariff_title'] = $newGenTariff ? $newGenTariff->title : "Gen Tariff ID: " . $meter->NewTariffDual;
+        // Handle dual tariff data - use correct column name with ID suffix
+        if($meter->NewTariffDualID) {
+            // Try to find by ID first
+            $newGenTariff = Tariff::find($meter->NewTariffDualID);
+
+            // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
+            if(!$newGenTariff || $newGenTariff->estate_id != $meter->estate_id) {
+                $newGenTariff = Tariff::where('estate_id', $meter->estate_id)
+                    ->where('tariff_index', $meter->NewTariffDualID)
+                    ->where('type', 'gen')
+                    ->first(); // Get first match if multiple tariffs have same index
+            }
+
+            if($newGenTariff) {
+                $title = $newGenTariff->title ?? 'Untitled Tariff';
+                $index = $newGenTariff->tariff_index ?? 'N/A';
+                $data['new_gen_tariff_title'] = $title . " (Index: " . $index . ")";
+            } else {
+                $data['new_gen_tariff_title'] = "Gen Tariff ID: " . $meter->NewTariffDualID . " (Not Found)";
+            }
         }
 
-        if($meter->OldTariffDual) {
-            $oldGenTariff = Tariff::find($meter->OldTariffDual);
-            $data['old_gen_tariff_title'] = $oldGenTariff ? $oldGenTariff->title : "Gen Tariff ID: " . $meter->OldTariffDual;
+        if($meter->OldTariffDualID) {
+            // Try to find by ID first
+            $oldGenTariff = Tariff::find($meter->OldTariffDualID);
+
+            // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
+            if(!$oldGenTariff || $oldGenTariff->estate_id != $meter->estate_id) {
+                $oldGenTariff = Tariff::where('estate_id', $meter->estate_id)
+                    ->where('tariff_index', $meter->OldTariffDualID)
+                    ->where('type', 'gen')
+                    ->first(); // Get first match if multiple tariffs have same index
+            }
+
+            if($oldGenTariff) {
+                $title = $oldGenTariff->title ?? 'Untitled Tariff';
+                $index = $oldGenTariff->tariff_index ?? 'N/A';
+                $data['old_gen_tariff_title'] = $title . " (Index: " . $index . ")";
+            } else {
+                $data['old_gen_tariff_title'] = "Gen Tariff ID: " . $meter->OldTariffDualID . " (Not Found)";
+            }
         }
 
         $data['transactions'] = CreditToken::latest()->where('meterNo', $data['meter']->meterNo)->where('status', 2)->paginate(20);
@@ -1403,11 +1459,30 @@ class MeterController extends Controller
     public
     function meter_deactivate(request $request)
     {
+        $meter = Meter::where('id', $request->id)->first();
 
-        Meter::where('id', $request->id)->update(['status' => 0]);
+        if (!$meter) {
+            return back()->with('error', "Meter not found");
+        }
 
-        return back()->with('message', "Meter Deactivated successfully");
+        // Get the user_id before nullifying
+        $user_id = $meter->user_id;
 
+        // Update meter: set status to blocked (3), remove user assignment and account number
+        Meter::where('id', $request->id)->update([
+            'status' => 3,  // 3 = Blocked status
+            'user_id' => null,
+            'AccountNo' => null
+        ]);
+
+        // If meter was assigned to a customer, remove meter reference from customer
+        if ($user_id) {
+            User::where('id', $user_id)->update([
+                'meterNo' => null
+            ]);
+        }
+
+        return back()->with('message', "Meter deactivated and unassigned successfully");
 
     }
 
@@ -1421,6 +1496,14 @@ class MeterController extends Controller
         return back()->with('message', "Meter Activated successfully");
 
 
+    }
+
+
+    public function meter_block(request $request)
+    {
+        Meter::where('id', $request->id)->update(['status' => 0]);
+
+        return back()->with('message', "Meter blocked successfully");
     }
 
     public
