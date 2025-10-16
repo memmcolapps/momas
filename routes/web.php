@@ -249,6 +249,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
 
     Route::get('meter-activate', [MeterController::class, 'meter_activate']);
     Route::get('meter-deactivate', [MeterController::class, 'meter_deactivate']);
+    Route::get('meter-block', [MeterController::class, 'meter_block']);
 
 
     Route::get('transformer-list', [TransformerController::class, 'list_transformer']);

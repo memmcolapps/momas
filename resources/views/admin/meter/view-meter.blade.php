@@ -78,10 +78,10 @@
 
 
                                 <div class="col-3 mt-4">
-                                    <input type="checkbox" id="isDualTariff" name="isDualTariff" 
+                                    <input type="checkbox" id="isDualTariff" name="isDualTariff"
                                            class="form-check-input" style="border: 10px"
-                                           @if($meter->isDualTariff == 'on') checked @endif>
-                                    <label class="form-check-label">Is Dual Tariff</label> 
+                                           @if($meter->isDualTariff == 'on' || $meter->isDualTariff == 1) checked @endif>
+                                    <label class="form-check-label">Is Dual Tariff</label>
                                 </div>
 
 
@@ -108,11 +108,11 @@
 
                                 <div class="col-2" id="oldTariffDualContainer" style="display: none;">
                                     <label class="my-2">Old Gen Tariff</label>
-                                    <select name="OldTariffDual" class="form-control">
-                                        <option value="{{$meter->OldTariffDual}}">
+                                    <select name="OldTariffDualID" class="form-control">
+                                        <option value="{{$meter->OldTariffDualID}}">
                                             {{$old_gen_tariff_title ?? 'Select Generator Tariff'}}
                                         </option>
-                                        
+
                                     </select>
 
 
@@ -121,8 +121,8 @@
 
                                 <div class="col-2" id="newTariffDualContainer" style="display: none;">
                                     <label class="my-2">New Gen Tariff </label>
-                                    <select name="NewTariffDual" class="form-control">
-                                        <option value="{{$meter->NewTariffDual}}">
+                                    <select name="NewTariffDualID" class="form-control">
+                                        <option value="{{$meter->NewTariffDualID}}">
                                             {{$new_gen_tariff_title ?? 'Select Generator Tariff'}}
                                         </option>
                                     </select>
@@ -429,16 +429,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const estateSelect = document.querySelector('select[name="estate_id"]');
     const nepaOldSelect = document.querySelector('select[name="OldTariffID"]');
     const nepaNewSelect = document.querySelector('select[name="NewTariffID"]');
-    const genOldSelect = document.querySelector('select[name="OldTariffDual"]');
-    const genNewSelect = document.querySelector('select[name="NewTariffDual"]');
+    const genOldSelect = document.querySelector('select[name="OldTariffDualID"]');
+    const genNewSelect = document.querySelector('select[name="NewTariffDualID"]');
     const dualTariffCheckbox = document.getElementById('isDualTariff');
-    
+
     // Store current values to preserve them
     const currentValues = {
         nepaOld: '{{$meter->OldTariffID}}',
         nepaNew: '{{$meter->NewTariffID}}',
-        genOld: '{{$meter->OldTariffDual}}',
-        genNew: '{{$meter->NewTariffDual}}'
+        genOld: '{{$meter->OldTariffDualID}}',
+        genNew: '{{$meter->NewTariffDualID}}'
     };
     
     // Handle dual tariff toggle
@@ -452,8 +452,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Initialize on page load - ONLY check for "on"
-        if ("{{$meter->isDualTariff}}" === "on") {
+        // Initialize on page load - check for "on" or 1
+        if ("{{$meter->isDualTariff}}" === "on" || "{{$meter->isDualTariff}}" === "1") {
             dualTariffCheckbox.checked = true;
             dualTariffCheckbox.dispatchEvent(new Event('change'));
         }
@@ -544,11 +544,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add other options
             genTariffs.forEach(tariff => {
                 if (tariff.id != currentValues.genOld) {
-                    genOldSelect.innerHTML += `<option value="${tariff.id}">${tariff.title}</option>`;
+                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
+                    genOldSelect.innerHTML += `<option value="${tariff.id}">${displayText}</option>`;
                 }
             });
         }
-        
+
         // Clear and populate Generator New Tariff
         if (genNewSelect) {
             genNewSelect.innerHTML = '<option value="">Select Generator Tariff</option>';
@@ -559,7 +560,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add other options
             genTariffs.forEach(tariff => {
                 if (tariff.id != currentValues.genNew) {
-                    genNewSelect.innerHTML += `<option value="${tariff.id}">${tariff.title}</option>`;
+                    const displayText = tariff.tariff_index ? `${tariff.title} (Index: ${tariff.tariff_index})` : tariff.title;
+                    genNewSelect.innerHTML += `<option value="${tariff.id}">${displayText}</option>`;
                 }
             });
         }

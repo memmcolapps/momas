@@ -274,34 +274,44 @@
                                                 </script>
                                             @endif
 
-                                            @if($data->status == 2)
-                                                <td><a href="meter-deactivate?id={{$data->id}}"
-                                                       onclick="return confirmupdate();" class="btn btn-warning">Deactivate
-                                                        Meter</a>
+                                            <td>
+                                                @if($data->status == 2)
+                                                    <a href="meter-deactivate?id={{$data->id}}"
+                                                       onclick="return confirmDeactivate();" class="btn btn-warning btn-sm mb-1">Deactivate</a>
+                                                    <a href="meter-block?id={{$data->id}}"
+                                                       onclick="return confirmBlock();" class="btn btn-dark btn-sm mb-1">Block Meter</a>
 
                                                     <script>
-                                                        function confirmupdate() {
-                                                            return confirm('Are you sure you want to deactivate this meter?');
+                                                        function confirmDeactivate() {
+                                                            return confirm('Are you sure you want to deactivate this meter? This will unassign the customer and set meter to blocked status.');
+                                                        }
+                                                        function confirmBlock() {
+                                                            return confirm('Are you sure you want to BLOCK this meter?');
                                                         }
                                                     </script>
-
-
-                                                </td>
-                                            @else
-
-                                                <td><a href="meter-activate?id={{$data->id}}"
-                                                       onclick="return confirmupdate();" class="btn btn-primary">Activate
-                                                        Meter</a>
+                                                @elseif($data->status == 3)
+                                                    <a href="meter-activate?id={{$data->id}}"
+                                                       onclick="return confirmActivate();" class="btn btn-primary btn-sm mb-1">Activate</a>
+                                                    <span class="text-muted small d-block">Meter is deactivated</span>
 
                                                     <script>
-                                                        function confirmupdate() {
+                                                        function confirmActivate() {
                                                             return confirm('Are you sure you want to activate this meter?');
                                                         }
                                                     </script>
+                                                @else
+                                                    {{-- status 0 = blocked --}}
+                                                    <a href="meter-activate?id={{$data->id}}"
+                                                       onclick="return confirmActivate();" class="btn btn-primary btn-sm mb-1">Unblock</a>
+                                                    <span class="text-muted small d-block">Meter is blocked</span>
 
-
-                                                </td>
-                                            @endif
+                                                    <script>
+                                                        function confirmActivate() {
+                                                            return confirm('Are you sure you want to unblock this meter?');
+                                                        }
+                                                    </script>
+                                                @endif
+                                            </td>
 
 
                                         </tr>
@@ -591,26 +601,38 @@
 
                                             @if($data->status == 2)
                                                 <td><a href="meter-deactivate?id={{$data->id}}"
-                                                       onclick="return confirmupdate();" class="btn btn-warning">Deactivate
+                                                       onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate
                                                         Meter</a>
 
                                                     <script>
-                                                        function confirmupdate() {
-                                                            return confirm('Are you sure you want to deactivate this meter?');
+                                                        function confirmDeactivate() {
+                                                            return confirm('Are you sure you want to deactivate this meter? This will unassign the customer.');
                                                         }
                                                     </script>
 
 
                                                 </td>
-                                            @else
+                                            @elseif($data->status == 3)
 
                                                 <td><a href="meter-activate?id={{$data->id}}"
-                                                       onclick="return confirmupdate();" class="btn btn-primary">Activate
+                                                       onclick="return confirmActivate();" class="btn btn-primary">Activate
                                                         Meter</a>
 
                                                     <script>
-                                                        function confirmupdate() {
+                                                        function confirmActivate() {
                                                             return confirm('Are you sure you want to activate this meter?');
+                                                        }
+                                                    </script>
+                                                </td>
+                                            @else
+                                                {{-- status 0 = blocked --}}
+                                                <td><a href="meter-activate?id={{$data->id}}"
+                                                       onclick="return confirmUnblock();" class="btn btn-primary">Unblock
+                                                        Meter</a>
+
+                                                    <script>
+                                                        function confirmUnblock() {
+                                                            return confirm('Are you sure you want to unblock this meter?');
                                                         }
                                                     </script>
                                                 </td>

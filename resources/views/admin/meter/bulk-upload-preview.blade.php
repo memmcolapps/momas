@@ -32,11 +32,10 @@
                             <label class="form-label">Select CSV File (Max 100 rows)</label>
                             <input type="file" id="csvFile" class="form-control" accept=".csv,.xlsx" />
                             <small class="form-text text-muted">
-                                Required columns: meterno, metermodel, accountno, transformer_id, isdualtariff, oldsgc, newsgc, newtariffid, oldtariffid, newtariffdual, oldtariffdual, krn1, krn2, needkct, credittype
-                                <br><strong>Note:</strong> Dual tariff settings (isdualtariff, newtariffdual, oldtariffdual) must be configured in the spreadsheet and cannot be modified during preview.
+                                Required columns: meterno, metermodel, accountno, transformer_id, isdualtariff, oldsgc, newsgc, newtariffid, oldtariffid, newtariffdual, oldtariffdual, newsgcdual, oldsgcdual, krn1, krn2, needkct, credittype
+                                <br><strong>Note:</strong> Dual tariff settings (isdualtariff, newtariffdual, oldtariffdual, newsgcdual, oldsgcdual) must be configured in the spreadsheet and cannot be modified during preview.
                                 <a href="/asset/meter_upload_sample.csv" download class="ms-2">Download Sample</a>
-                            </small>
-                        </div>
+                            </small>                        </div>
 
                         @if(Auth::user()->role == 0)
                         <div class="mb-3">
@@ -100,6 +99,7 @@
                                         <th>New SGC</th>
                                         <th>NEPA Tariffs<br><small class="text-muted">Top: New     Bottom: Old</small></th>
                                         <th>Generator Tariffs<br><small class="text-muted">Top: New     Bottom: Old</small></th>
+                                        <th>Generator SGC<br><small class="text-muted">Top: New     Bottom: Old</small></th>
                                         <th>KRN Keys<br><small class="text-muted">Top: KRN1     Bottom: KRN2</small></th>
                                         <th>Need KCT</th>
                                         <th>Credit Type</th>
@@ -250,8 +250,21 @@ function displayPreview() {
             </td>
             <td>
                 <div class="d-flex flex-column gap-1">
-                    <input type="text" class="form-control form-control-sm" value="${row.newtariffdual || ''}" placeholder="New Gen" disabled>
-                    <input type="text" class="form-control form-control-sm" value="${row.oldtariffdual || ''}" placeholder="Old Gen" disabled>
+                    <input type="text" class="form-control form-control-sm" value="${row.newtariffdual || ''}" placeholder="New Gen" readonly style="background-color: #f8f9fa;">
+                    <input type="text" class="form-control form-control-sm" value="${row.oldtariffdual || ''}" placeholder="Old Gen" readonly style="background-color: #f8f9fa;">
+                </div>
+                ${row.isdualtariff == '1' ? '<small class="text-muted">Set in spreadsheet</small>' : ''}
+            </td>
+            <td>
+                <div class="d-flex flex-column gap-1">
+                    <select class="form-control form-control-sm" readonly style="background-color: #f8f9fa;">
+                        <option value="999962" ${(row.newsgcdual || '999962') == '999962' ? 'selected' : ''}>MOMAS Default</option>
+                        <option value="600849" ${row.newsgcdual == '600849' ? 'selected' : ''}>MOMAS System</option>
+                    </select>
+                    <select class="form-control form-control-sm" readonly style="background-color: #f8f9fa;">
+                        <option value="999962" ${(row.oldsgcdual || '999962') == '999962' ? 'selected' : ''}>MOMAS Default</option>
+                        <option value="600849" ${row.oldsgcdual == '600849' ? 'selected' : ''}>MOMAS System</option>
+                    </select>
                 </div>
                 ${row.isdualtariff == '1' ? '<small class="text-muted">Set in spreadsheet</small>' : ''}
             </td>
@@ -433,6 +446,22 @@ function validateRow(row, index, usedMeterNumbers) {
         }
         if (row.oldtariffdual && row.oldtariffdual.trim() !== '') {
             errors.push('Old generator tariff should be empty when dual tariff is disabled');
+        }
+        if (row.newsgcdual && row.newsgcdual.trim() !== '') {
+            errors.push('New generator SGC should be empty when dual tariff is disabled');
+        }
+        if (row.oldsgcdual && row.oldsgcdual.trim() !== '') {
+            errors.push('Old generator SGC should be empty when dual tariff is disabled');
+        }
+    }
+
+    // Generator SGC validation for dual tariff meters
+    if (row.isdualtariff === '1') {
+        if (row.newsgcdual && !['999962', '600849'].includes(row.newsgcdual)) {
+            errors.push('New generator SGC must be 999962 or 600849');
+        }
+        if (row.oldsgcdual && !['999962', '600849'].includes(row.oldsgcdual)) {
+            errors.push('Old generator SGC must be 999962 or 600849');
         }
     }
 

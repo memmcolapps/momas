@@ -628,29 +628,29 @@
                                                         <div class="row">
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
-                                                                <label class="my-2">Unit</label>
+                                                                <!-- <label class="my-2">Unit</label> -->
                                                                 @php
                                                                     $unnit = $costOfUnit / $tarrif_amount;
                                                                 @endphp
                                                                 <input required name="unit"
                                                                        value="{{number_format($unnit,2)}}" hidden="">
-                                                                <h6>{{number_format($unnit, 2)}}kw/h</h6>
+                                                                <!-- <h6>{{number_format($unnit, 2)}}kw/h</h6> -->
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
-                                                                <label class="my-2">Vat Amount</label>
+                                                                <!-- <label class="my-2">Vat Amount</label> -->
                                                                 <input required name="vatAmount"
                                                                        value="{{number_format($vatAmount,2)}}"
                                                                        hidden="">
-                                                                <h6>{{number_format($vatAmount, 2)}}</h6>
+                                                                <!-- <h6>{{number_format($vatAmount, 2)}}</h6> -->
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
-                                                                <label class="my-2">Cost Of Unit</label>
+                                                                <!-- <label class="my-2">Cost Of Unit</label> -->
                                                                 <input required name="costOfUnit"
                                                                        value="{{number_format($costOfUnit,2)}}"
                                                                        hidden="">
-                                                                <h6>{{number_format($costOfUnit, 2)}}</h6>
+                                                                <!-- <h6>{{number_format($costOfUnit, 2)}}</h6> -->
                                                             </div>
 
                                                             <input required name="vat" value="{{$vat}}" hidden="">
@@ -728,34 +728,33 @@
                                                         </div>
 
 
-                                                        <hr>
 
                                                         <div class="row">
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
-                                                                <label class="my-2">Unit</label>
+                                                                <!-- <label class="my-2">Unit</label> -->
                                                                 @php
                                                                     $unnit = $costOfUnit / $tarrif_amount;
                                                                 @endphp
                                                                 <input required name="unit"
                                                                        value="{{number_format($unnit,2)}}" hidden="">
-                                                                <h6>{{number_format($unnit, 2)}}kw/h</h6>
+                                                                <!-- <h6>{{number_format($unnit, 2)}}kw/h</h6> -->
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
-                                                                <label class="my-2">Vat Amount</label>
+                                                                <!-- <label class="my-2">Vat Amount</label> -->
                                                                 <input required name="vatAmount"
                                                                        value="{{number_format($vatAmount,2)}}"
                                                                        hidden="">
-                                                                <h6>{{number_format($vatAmount, 2)}}</h6>
+                                                                <!-- <h6>{{number_format($vatAmount, 2)}}</h6> -->
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
-                                                                <label class="my-2">Cost Of Unit</label>
+                                                                <!-- <label class="my-2">Cost Of Unit</label> -->
                                                                 <input required name="costOfUnit"
                                                                        value="{{number_format($costOfUnit,2)}}"
                                                                        hidden="">
-                                                                <h6>{{number_format($costOfUnit, 2)}}</h6>
+                                                                <!-- <h6>{{number_format($costOfUnit, 2)}}</h6> -->
                                                             </div>
 
                                                             <input required name="vat" value="{{$vat}}" hidden="">

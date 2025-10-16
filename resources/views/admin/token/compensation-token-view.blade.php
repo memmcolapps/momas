@@ -773,26 +773,26 @@
 
 
 
-                                                                <hr>
+                                                                
 
                                                                 <div class="row">
 
                                                                     <div class="col-xl-4 my-2 col-sm-12">
-                                                                        <label class="my-2">Tariff/KW </label>
+                                                                        <!-- <label class="my-2">Tariff/KW </label> -->
                                                                         <input required name="tariffPerKWatt" value="{{number_format($tariffPerKWatt,2)}}" hidden="">
-                                                                        <h6>{{number_format($tariffPerKWatt, 2)}}</h6>
+                                                                        <!-- <h6>{{number_format($tariffPerKWatt, 2)}}</h6> -->
                                                                     </div>
 
                                                                     <div class="col-xl-4 my-2 col-sm-12">
-                                                                        <label class="my-2">Vat Amount</label>
+                                                                        <!-- <label class="my-2">Vat Amount</label> -->
                                                                         <input required name="vatAmount" value="{{number_format($vatAmount,2)}}" hidden="">
-                                                                        <h6>{{number_format($vatAmount, 2)}}</h6>
+                                                                        <!-- <h6>{{number_format($vatAmount, 2)}}</h6> -->
                                                                     </div>
 
                                                                     <div class="col-xl-4 my-2 col-sm-12">
-                                                                        <label class="my-2">Cost Of Unit</label>
+                                                                        <!-- <label class="my-2">Cost Of Unit</label> -->
                                                                         <input required name="costOfUnit" value="{{number_format($costOfUnit,2)}}" hidden="">
-                                                                        <h6>{{number_format($costOfUnit, 2)}} Kw/h</h6>
+                                                                        <!-- <h6>{{number_format($costOfUnit, 2)}} Kw/h</h6> -->
                                                                     </div>
 
                                                                     <input required name="vat" value="{{$vat}}" hidden="">

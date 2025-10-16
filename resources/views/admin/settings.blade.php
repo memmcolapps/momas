@@ -360,6 +360,41 @@
 
                 </div>
 
+                <div class="row">
+                    <div class="card" style="background: #fff3cd">
+                        <div class="card-body">
+                            <form action="update-passsword-now" method="post">
+                                @csrf
+
+                                <h6 class="d-flex justify-content-start my-4">Change Password</h6>
+
+                                <div class="row">
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Current Password</label>
+                                        <input type="password" name="current_password" class="form-control" required>
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">New Password</label>
+                                        <input type="password" name="new_password" class="form-control" required minlength="6">
+                                        <small class="form-text text-muted">Minimum 6 characters</small>
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Confirm New Password</label>
+                                        <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update Password
+                                </button>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
 
             </div>
 
