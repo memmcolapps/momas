@@ -30,11 +30,12 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">Select CSV File (Max 100 rows)</label>
-                            <input type="file" id="csvFile" class="form-control" accept=".csv,.xlsx" />
+                            <input type="file" id="csvFile" class="form-control" accept=".csv" />
                             <small class="form-text text-muted">
-                                Required columns: meterno, metermodel, accountno, transformer_id, isdualtariff, oldsgc, newsgc, newtariffid, oldtariffid, newtariffdual, oldtariffdual, newsgcdual, oldsgcdual, krn1, krn2, needkct, credittype
+                                <strong class="text-danger">⚠️ Only CSV files (.csv) are accepted.</strong> Excel files (.xlsx, .xls) and other formats will be rejected.<br>
+                                <strong>Required columns:</strong> meterno, metermodel, accountno, transformer_id, isdualtariff, oldsgc, newsgc, newtariffid, oldtariffid, newtariffdual, oldtariffdual, newsgcdual, oldsgcdual, krn1, krn2, needkct, credittype
                                 <br><strong>Note:</strong> Dual tariff settings (isdualtariff, newtariffdual, oldtariffdual, newsgcdual, oldsgcdual) must be configured in the spreadsheet and cannot be modified during preview.
-                                <a href="/asset/meter_upload_sample.csv" download class="ms-2">Download Sample</a>
+                                <a href="/asset/meter_upload_sample.csv" download class="btn btn-sm btn-outline-primary ms-2"><i class="mdi mdi-download"></i> Download Sample CSV</a>
                             </small>                        </div>
 
                         @if(Auth::user()->role == 0)
@@ -118,8 +119,8 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+// CSV-only bulk meter upload script
 let csvData = [];
 let validatedData = [];
 let existingMeterNumbers = [];
@@ -128,6 +129,24 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    const fileName = file.name.toLowerCase();
+    const fileExtension = fileName.split('.').pop();
+
+    // Validate file type - only CSV allowed
+    if (fileExtension !== 'csv') {
+        alert('❌ Invalid File Type\n\nOnly CSV files are allowed.\n\nYou uploaded: .' + fileExtension + '\nRequired: .csv\n\nPlease select a valid CSV file.');
+        e.target.value = ''; // Clear the file input
+        return;
+    }
+
+    // Additional MIME type check
+    const validMimeTypes = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
+    if (file.type && !validMimeTypes.includes(file.type)) {
+        alert('❌ Invalid File Type\n\nThe selected file does not appear to be a valid CSV file.\n\nMIME Type: ' + file.type + '\n\nPlease ensure you are uploading a proper CSV file.');
+        e.target.value = ''; // Clear the file input
+        return;
+    }
+
     // Show processing status
     document.getElementById('processingStatus').style.display = 'block';
     document.getElementById('previewSection').style.display = 'none';
@@ -135,24 +154,13 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            let data;
-            const fileName = file.name.toLowerCase();
-
-            if (fileName.endsWith('.csv')) {
-                // Parse CSV
-                data = parseCSV(e.target.result);
-            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-                // Parse Excel
-                const workbook = XLSX.read(e.target.result, { type: 'binary' });
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                data = XLSX.utils.sheet_to_json(sheet);
-            }
+            // Parse CSV only
+            const data = parseCSV(e.target.result);
 
             // Limit to 100 rows
             if (data.length > 100) {
                 data = data.slice(0, 100);
-                alert('File limited to first 100 rows for performance.');
+                alert('⚠️ File Size Limit\n\nYour file contains more than 100 rows.\nOnly the first 100 rows will be processed for optimal performance.');
             }
 
             // Normalize metermodel and credittype to lowercase for consistency
@@ -170,16 +178,13 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             displayPreview();
 
         } catch (error) {
-            alert('Error reading file: ' + error.message);
+            alert('❌ Error Reading File\n\n' + error.message + '\n\nPlease ensure your CSV file is properly formatted.');
             document.getElementById('processingStatus').style.display = 'none';
         }
     };
 
-    if (file.name.toLowerCase().endsWith('.csv')) {
-        reader.readAsText(file);
-    } else {
-        reader.readAsBinaryString(file);
-    }
+    // Read CSV file as text
+    reader.readAsText(file);
 });
 
 function parseCSV(text) {

@@ -19,9 +19,25 @@ class MeterImportController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:csv,xlsx|max:2048', // Max 2MB file
+            'file' => 'required|file|max:2048', // Max 2MB
             'estate_id' => 'nullable|exists:estates,id'
         ]);
+
+        // Additional CSV file validation
+        $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if ($extension !== 'csv') {
+            return back()->with('error', 'Only CSV files are allowed. Please upload a file with .csv extension.');
+        }
+
+        // Validate MIME type (CSV files can have text/csv or text/plain)
+        $mimeType = $file->getMimeType();
+        $allowedMimeTypes = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
+
+        if (!in_array($mimeType, $allowedMimeTypes)) {
+            return back()->with('error', 'Invalid file type. Only CSV files are accepted.');
+        }
 
         if ($request->estate_id == null) {
             $id = Auth::user()->estate_id;
