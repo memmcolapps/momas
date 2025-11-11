@@ -284,17 +284,17 @@
                                         <select type="text" name="ptype" class="form-control" required>
                                             @if($org->ptype == null)
                                                 <option value="">--select type---</option>
-                                                <option value="1">APP Only</option>
+                                                {{-- <option value="1">APP Only</option> --}}
                                                 <option value="2">Web Only</option>
                                                 <option value="3">App & Web</option>
-                                           @elseif($org->ptype == 1)<option value="1">APP Only</option>
+                                           @elseif($org->ptype == 1){{-- <option value="1">APP Only</option> --}}
                                             <option value="2">Web Only</option>
                                             <option value="3">App & Web</option>
                                             @elseif($org->ptype == 2)<option value="2">Web Only</option>
-                                            <option value="1">App Only</option>
+                                            {{-- <option value="1">App Only</option> --}}
                                             <option value="3">App & Web</option>
                                             @elseif($org->ptype == 3)<option value="3">App & Web</option>
-                                            <option value="1">App Only</option>
+                                            {{-- <option value="1">App Only</option> --}}
                                             <option value="2">Web Only</option>
                                             @endif
 

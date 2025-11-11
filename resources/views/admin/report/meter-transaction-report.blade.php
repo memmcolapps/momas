@@ -94,6 +94,9 @@
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
                                     <h5 class="card-title text-black mb-0">All Meter Transactions</h5>
+                                    <a href="export-metertransactions" class="btn btn-success btn-sm">
+                                        <i class="fas fa-file-excel me-1"></i> Export to Excel
+                                    </a>
                                 </div>
                             </div>
 
@@ -279,6 +282,9 @@
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
                                     <h5 class="card-title text-black mb-0">Meter Transactions</h5>
+                                    <a href="export-metertransactions" class="btn btn-success btn-sm">
+                                        <i class="fas fa-file-excel me-1"></i> Export to Excel
+                                    </a>
                                 </div>
                             </div>
 

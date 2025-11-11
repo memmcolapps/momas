@@ -52,7 +52,6 @@ Route::get('/export-meters', function () {
 });
 
 Route::get('/fetch-tariff', [MeterController::class, 'fetchTariff']);
-Route::get('export-metertransactions', [ExportControler::class, 'exportmetertransactions']);
 
 
 Route::get('/clear', function(){
@@ -308,6 +307,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('report-transaction', [TransactionController::class, 'transaction_reports']);
     Route::get('report-meters', [MeterController::class, 'meter_report']);
     Route::get('meter-transaction-report', [MeterController::class, 'meter_transaction_report']);
+    Route::get('export-metertransactions', [ExportControler::class, 'exportmetertransactions']);
     Route::get('bulk-upload-preview', [MeterImportController::class, 'bulk_upload_preview']);
     Route::post('bulk-save-meters', [MeterImportController::class, 'bulk_save_meters']);
 

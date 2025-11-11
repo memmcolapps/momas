@@ -12,12 +12,13 @@ class TarrifState extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
 
     protected $fillable = [
-        'status', 'estate_id', 't_index',
+        'status', 'estate_id', 't_index', 'fixed_charge',
     ];
 
     protected $casts = [
         'amount' => 'double',
         'vat' => 'double',
+        'fixed_charge' => 'double',
     ];
 
     public function customAudit()

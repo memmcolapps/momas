@@ -533,20 +533,34 @@ class TokenController extends Controller
             }
 
 
-            $tariffAmount = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->amount ?? 0;
-            $vat = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->vat ?? 0;
+            $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
+            $tariffAmount = $tariffState->amount ?? 0;
+            $vat = $tariffState->vat ?? 0;
+            $fixedCharge = $tariffState->fixed_charge ?? 0;
 
-
-
-
-
+            // NEW CALCULATION FLOW:
+            // [1] 2.5% Service Fee
             $percn = (2.5 / 100) * (int)$request->amount;
-            $perc_amount = $request->amount - $percn;
+            $afterServiceFee = $request->amount - $percn;
 
+            // [2] Estate Service Charge
+            $est = Estate::where('id', $estate_id)->first();
+            if ($est->charge_fee_flat != null) {
+                $estateFee = $est->charge_fee_flat;
+            } else if ($est->charge_fee_precent != null) {
+                $estateFee = ($est->charge_fee_precent / 100) * (int)$request->amount;
+            } else {
+                $estateFee = 0;
+            }
+            $afterEstateFee = $afterServiceFee - $estateFee;
 
+            // [3] Tariff Fixed Charge
+            $afterFixedCharge = $afterEstateFee - $fixedCharge;
+
+            // [4] VAT Calculation on remaining amount
             $calculator = new VatCalculator();
             $params = [
-                'amountText' => $perc_amount,
+                'amountText' => $afterFixedCharge,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
                 'vat' => $vat,
@@ -557,29 +571,23 @@ class TokenController extends Controller
             $tariffPerKWatt = $calculator->calculateTariffAmountPerKWatt($params);
 
 
-            $est = Estate::where('id', $estate_id)->first();
-            if ($est->charge_fee < 0) {
-                $fee_in_percent = $est->charge_fee_percent;
-                $fee = ($fee_in_percent / $request->amount) * 100;
-            } else {
-                $fee = $est->charge_fee;
-            }
-
-
             $data['vatAmount'] = $vatAmount;
             $data['costOfUnit'] = $costOfUnit;
             $data['tariffPerKWatt'] = $tariffPerKWatt;
             $data['user'] = $user;
             $data['meter'] = $meter;
-            $data['estate'] = Estate::where('id', $estate_id)->first();
+            $data['estate'] = $est;
             $data['preview'] = "on";
-            $data['amount'] = $request->amount + $fee;
+            $data['amount'] = $request->amount;
             $data['vat'] = $vat;
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $request->estate_id;
-            $data['tarrif_amount'] = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount;
-            $data['tarrif_index'] = TarrifState::where('tariff_id', $request->tariff_id)->first()->t_index;
+            $data['tarrif_amount'] = $tariffAmount;
+            $data['tarrif_index'] = $tariffState->t_index ?? null;
             $data['credit_tokens'] = CreditToken::latest()->paginate('50');
+            $data['estateFee'] = $estateFee;
+            $data['fixedCharge'] = $fixedCharge;
+            $data['serviceFee'] = $percn;
 
             return view('admin.token.credit-token-preview', $data);
 
@@ -629,15 +637,34 @@ class TokenController extends Controller
             }
 
 
-            $tariffAmount = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->amount ?? 0;
-            $vat = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->vat ?? 0;
+            $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
+            $tariffAmount = $tariffState->amount ?? 0;
+            $vat = $tariffState->vat ?? 0;
+            $fixedCharge = $tariffState->fixed_charge ?? 0;
 
+            // NEW CALCULATION FLOW:
+            // [1] 2.5% Service Fee
             $percn = (2.5 / 100) * (int)$request->amount;
-            $perc_amount = $request->amount - $percn;
+            $afterServiceFee = $request->amount - $percn;
 
+            // [2] Estate Service Charge
+            $est = Estate::where('id', $estate_id)->first();
+            if ($est->charge_fee_flat != null) {
+                $estateFee = $est->charge_fee_flat;
+            } else if ($est->charge_fee_precent != null) {
+                $estateFee = ($est->charge_fee_precent / 100) * (int)$request->amount;
+            } else {
+                $estateFee = 0;
+            }
+            $afterEstateFee = $afterServiceFee - $estateFee;
+
+            // [3] Tariff Fixed Charge
+            $afterFixedCharge = $afterEstateFee - $fixedCharge;
+
+            // [4] VAT Calculation on remaining amount
             $calculator = new VatCalculator();
             $params = [
-                'amountText' => $perc_amount,
+                'amountText' => $afterFixedCharge,
                 'tariffAmount' => $tariffAmount,
                 'utilitiesAmount' => 0,
                 'vat' => $vat,
@@ -647,30 +674,24 @@ class TokenController extends Controller
             $costOfUnit = $calculator->calculateCostOfUnit($params);
             $tariffPerKWatt = $calculator->calculateTariffAmountPerKWatt($params);
 
-            $est = Estate::where('id', $estate_id)->first();
-            if ($est->charge_fee < 0) {
-
-                $fee_in_percent = $est->charge_fee_percent;
-                $fee = ($fee_in_percent / $request->amount) * 100;
-            } else {
-                $fee = $est->charge_fee;
-            }
-
 
             $data['vatAmount'] = $vatAmount;
             $data['costOfUnit'] = $costOfUnit;
             $data['tariffPerKWatt'] = $tariffPerKWatt;
             $data['user'] = $user;
             $data['meter'] = $meter;
-            $data['estate'] = Estate::where('id', $estate_id)->first();
+            $data['estate'] = $est;
             $data['preview'] = "on";
-            $data['amount'] = $request->amount + $fee;
+            $data['amount'] = $request->amount;
             $data['vat'] = $vat;
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $request->estate_id;
-            $data['tarrif_amount'] = TarrifState::where('tariff_id', $request->tariff_id)->first()->amount;
+            $data['tarrif_amount'] = $tariffAmount;
             $data['credit_tokens'] = CreditToken::latest()->paginate('50');
-            $data['tarrif_index'] = TarrifState::where('tariff_id', $request->tariff_id)->first()->t_index;
+            $data['tarrif_index'] = $tariffState->t_index ?? null;
+            $data['estateFee'] = $estateFee;
+            $data['fixedCharge'] = $fixedCharge;
+            $data['serviceFee'] = $percn;
 
 
 

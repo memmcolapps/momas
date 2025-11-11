@@ -293,6 +293,7 @@ class TariffController extends Controller
             if(Auth::user()->role == 0) {
                 // Super Admin - use direct VAT input
                 $tr->vat = $request->vat;
+                $tr->fixed_charge = 0; // Super Admin doesn't set fixed charge
             } else {
                 // Estate Admin - use checkbox logic
                 if($request->has('apply_vat') && $request->apply_vat == '1') {
@@ -300,6 +301,7 @@ class TariffController extends Controller
                 } else {
                     $tr->vat = 0;
                 }
+                $tr->fixed_charge = $request->fixed_charge ?? 0;
             }
             $tr->tariff_id = $tariff_id;
             $tr->save();
@@ -348,6 +350,7 @@ class TariffController extends Controller
             if(Auth::user()->role == 0) {
                 // Super Admin - use direct VAT input
                 $tr->vat = $request->vat;
+                $tr->fixed_charge = 0; // Super Admin doesn't set fixed charge
             } else {
                 // Estate Admin - use checkbox logic
                 if($request->has('apply_vat') && $request->apply_vat == '1') {
@@ -355,6 +358,7 @@ class TariffController extends Controller
                 } else {
                     $tr->vat = 0;
                 }
+                $tr->fixed_charge = $request->fixed_charge ?? 0;
             }
             $tr->save();
 
@@ -468,6 +472,7 @@ class TariffController extends Controller
             if(Auth::user()->role == 0) {
                 // Super Admin - use direct VAT input
                 $ttf->vat = $request->vat;
+                // Super Admin doesn't update fixed charge (keep existing value)
             } else {
                 // Estate Admin - use checkbox logic
                 if($request->has('apply_vat') && $request->apply_vat == '1') {
@@ -477,6 +482,7 @@ class TariffController extends Controller
                     $ttf->vat = 0;
 
                 }
+                $ttf->fixed_charge = $request->fixed_charge ?? 0;
             }
 
             $ttf->save();
