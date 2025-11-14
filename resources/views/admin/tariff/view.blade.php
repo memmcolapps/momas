@@ -425,11 +425,12 @@
                                                     Apply VAT ({{$estate->first()->estate_vat ?? '0'}}%)
                                                 </label>
                                             </div>
-                                            
+
                                             <!-- Hidden field to pass estate VAT rate -->
                                             <input type="hidden" name="estate_vat" value="{{$estate->first()->estate_vat ?? '0'}}">
 
-
+                                            <label class="my-1">Fixed Charge (NGN)</label>
+                                            <input type="number" step="0.01" value="0.00" class="form-control mb-3" name="fixed_charge" placeholder="Enter fixed charge amount">
 
 
                                             <div class="row">
@@ -607,6 +608,9 @@
                                                                 <!-- Hidden field to pass estate VAT rate -->
                                                                 <input type="hidden" name="estate_vat" value="{{$estate->first()->estate_vat ?? '0'}}">
 
+                                                                <label class="my-1">Fixed Charge (NGN)</label>
+                                                                <input type="number" step="0.01" class="form-control mb-3"
+                                                                       value="{{$data->fixed_charge ?? 0.00}}" name="fixed_charge" placeholder="Enter fixed charge amount">
 
                                                                 <div class="row">
                                                                     <div class="col-6">

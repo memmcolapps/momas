@@ -141,7 +141,7 @@
                                                                                     tariffSelect.append('<option value="">--Select Tariff--</option>');
 
                                                                                     response.tariffs.forEach(function (tariff) {
-                                                                                        tariffSelect.append('<option value="' + tariff.id + '">' + tariff.type + '</option>');
+                                                                                        tariffSelect.append('<option value="' + tariff.id + '">' + tariff.title + ' (' + tariff.type + ')' + '</option>');
                                                                                     });
 
                                                                                     tariffSelect.prop('disabled', false);
@@ -687,7 +687,7 @@
                                                                                     tariffSelect.append('<option value="">--Select Tariff--</option>');
 
                                                                                     response.tariffs.forEach(function (tariff) {
-                                                                                        tariffSelect.append('<option value="' + tariff.id + '">' + tariff.type + '</option>');
+                                                                                        tariffSelect.append('<option value="' + tariff.id + '">' + tariff.title + ' (' + tariff.type + ')' + '</option>');
                                                                                     });
 
                                                                                     tariffSelect.prop('disabled', false);

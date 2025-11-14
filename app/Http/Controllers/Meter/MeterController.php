@@ -1352,11 +1352,14 @@ class MeterController extends Controller
             }
 
             // Get only the tariffs assigned to this specific meter
+            // Check both column variations (with and without ID suffix)
             $assignedTariffIds = array_filter([
                 $meter->NewTariffID,
                 $meter->OldTariffID,
                 $meter->NewTariffDual,
-                $meter->OldTariffDual
+                $meter->OldTariffDual,
+                $meter->NewTariffDualID,
+                $meter->OldTariffDualID
             ]);
         
             if (empty($assignedTariffIds)) {
@@ -1380,7 +1383,9 @@ class MeterController extends Controller
                     'NewTariffID' => $meter->NewTariffID,
                     'OldTariffID' => $meter->OldTariffID,
                     'NewTariffDual' => $meter->NewTariffDual,
-                    'OldTariffDual' => $meter->OldTariffDual
+                    'OldTariffDual' => $meter->OldTariffDual,
+                    'NewTariffDualID' => $meter->NewTariffDualID,
+                    'OldTariffDualID' => $meter->OldTariffDualID
                 ]
             ]);
         }

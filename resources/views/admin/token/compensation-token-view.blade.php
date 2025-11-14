@@ -149,7 +149,7 @@
                                                                                             tariffSelect.append('<option value="">--Select Tariff--</option>');
 
                                                                                             response.tariffs.forEach(function (tariff) {
-                                                                                                tariffSelect.append('<option value="' + tariff.id + '">' + tariff.type + '</option>');
+                                                                                                tariffSelect.append('<option value="' + tariff.id + '">' + tariff.title + ' (' + tariff.type + ')' + '</option>');
                                                                                             });
 
                                                                                             tariffSelect.prop('disabled', false);
@@ -620,8 +620,8 @@
                                                                             tariffSelect.empty();
                                                                             tariffSelect.append('<option value="">--Select Tariff--</option>');
 
-                                                                            // Check if meter has dual tariff enabled
-                                                                            var isDualTariff = meter.isDualTariff === 'on';
+                                                                            // Check if meter has dual tariff enabled (handle various truthy values)
+                                                                            var isDualTariff = meter.isDualTariff === 'on' || meter.isDualTariff === '1' || meter.isDualTariff === 1 || meter.isDualTariff === true;
 
                                                                             // Separate tariffs by type
                                                                             var nepaTariffs = tariffs.filter(t => t.type === 'nepa');

@@ -488,9 +488,8 @@
                                                                                     alert("Error: Tariff index not set for customer.");
                                                                                     return;
                                                                                 }
-                                                                            
+
                                                                                 if (response && response.tariffs) {
-                                                                                    console.log('Meter tariffs:', response);
                                                                                     populateTariffOptions(response.tariffs, response.meter);
                                                                                 } else {
                                                                                     $('#tariff_id').prop('disabled', true).empty();
@@ -515,8 +514,8 @@
                                                             tariffSelect.empty();
                                                             tariffSelect.append('<option value="">--Select Tariff--</option>');
 
-                                                            // Check if meter has dual tariff enabled
-                                                            var isDualTariff = meter.isDualTariff === 'on';
+                                                            // Check if meter has dual tariff enabled (handle various truthy values)
+                                                            var isDualTariff = meter.isDualTariff === 'on' || meter.isDualTariff === '1' || meter.isDualTariff === 1 || meter.isDualTariff === true;
 
                                                             // Separate tariffs by type
                                                             var nepaTariffs = tariffs.filter(t => t.type === 'nepa');
