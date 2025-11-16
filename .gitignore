@@ -1,2 +1,10 @@
 .env
 /vendor
+CLAUDE.md
+.claude
+test_export.sql
+momas_production.sql
+database_backup
+output_db.sh
+momas_production_backup.sql
+.vscode/
