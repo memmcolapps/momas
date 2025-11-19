@@ -151,16 +151,13 @@ class MeterController extends Controller
         $data['customer_name'] = $user->first_name . " " . $user->last_name;
         $data['address'] = $user->address . ", " . $user->city . ", " . $user->state;
         $data['tariffs'] = $tariffs;
-        $tariffAmounts = TarrifState::whereIn('tariff_id', $tariffs->pluck('id'))->where('status', 2)
-            ->pluck('amount', 'tariff_id', 'vat');
-        $tariffVats = TarrifState::whereIn('tariff_id', $tariffs->pluck('id'))->where('status', 2)
-            ->pluck('tariff_id', 'vat');
 
-        $tariffs->transform(function ($tariffs) use ($tariffAmounts, $tariffVats) {
-            $tariffs->amount = $tariffAmounts[$tariffs->id] ?? null;
-            $tariffs->vat = 0.75;
-            return $tariffs;
-        });
+        // Properly retrieve amount and VAT from TarrifState for each tariff
+        foreach ($tariffs as $tariff) {
+            $tariffState = TarrifState::where('tariff_id', $tariff->id)->where('status', 2)->first();
+            $tariff->amount = $tariffState ? $tariffState->amount : null;
+            $tariff->vat = $tariffState ? $tariffState->vat : null;
+        }
 
 
         $pur['min_purchase'] = (int)$min_pur;
