@@ -318,7 +318,7 @@
 
                                     <div class="col-3">
                                         <label class="my-2">Charge</label>
-                                        <input type="text" name="admin_fee" class="form-control" value="{{$set->admin_fee}}">
+                                        <input type="number" name="admin_fee" class="form-control" value="{{$set->admin_fee}}">
                                     </div>
 
                                     <div class="col-3">
