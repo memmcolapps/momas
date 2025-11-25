@@ -1,6 +1,9 @@
 @extends('layouts.main')
 @section('content')
 
+<!-- PapaParse Library for robust CSV parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
 <div class="content">
     <div class="container-fluid">
         <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
@@ -32,7 +35,7 @@
                             <label class="form-label">Select CSV File (Max 100 rows)</label>
                             <input type="file" id="csvFile" class="form-control" accept=".csv" />
                             <small class="form-text text-muted">
-                                <strong class="text-danger">⚠️ Only CSV files (.csv) are accepted.</strong> Excel files (.xlsx, .xls) and other formats will be rejected.<br>
+                                <strong class="text-success">✓ CSV files with comma, tab, or semicolon delimiters are supported.</strong> Excel files (.xlsx, .xls) must be saved as CSV first.<br>
                                 <strong>Required columns:</strong> meterno, metermodel, accountno, transformer_id, isdualtariff, oldsgc, newsgc, newtariffid, oldtariffid, newtariffdual, oldtariffdual, newsgcdual, oldsgcdual, krn1, krn2, needkct, credittype
                                 <br><strong>Note:</strong> Dual tariff settings (isdualtariff, newtariffdual, oldtariffdual, newsgcdual, oldsgcdual) must be configured in the spreadsheet and cannot be modified during preview.
                                 <a href="/asset/meter_upload_sample.csv" download class="btn btn-sm btn-outline-primary ms-2"><i class="mdi mdi-download"></i> Download Sample CSV</a>
@@ -151,62 +154,60 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     document.getElementById('processingStatus').style.display = 'block';
     document.getElementById('previewSection').style.display = 'none';
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            // Parse CSV only
-            const data = parseCSV(e.target.result);
+    // Use PapaParse for robust CSV parsing
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: function(header) {
+            // Normalize headers to lowercase and trim whitespace
+            return header.trim().toLowerCase();
+        },
+        delimitersToGuess: [',', '\t', '|', ';', Papa.RECORD_SEP, Papa.UNIT_SEP],
+        complete: function(results) {
+            try {
+                let data = results.data;
 
-            // Limit to 100 rows
-            if (data.length > 100) {
-                data = data.slice(0, 100);
-                alert('⚠️ File Size Limit\n\nYour file contains more than 100 rows.\nOnly the first 100 rows will be processed for optimal performance.');
+                // Check for parsing errors
+                if (results.errors.length > 0) {
+                    console.warn('PapaParse warnings:', results.errors);
+                    // Only show critical errors, not warnings
+                    const criticalErrors = results.errors.filter(err => err.type === 'Delimiter' || err.type === 'FieldMismatch');
+                    if (criticalErrors.length > 0) {
+                        alert('⚠️ CSV Parsing Issues\n\n' + criticalErrors.map(e => e.message).join('\n'));
+                    }
+                }
+
+                // Limit to 100 rows
+                if (data.length > 100) {
+                    data = data.slice(0, 100);
+                    alert('⚠️ File Size Limit\n\nYour file contains more than 100 rows.\nOnly the first 100 rows will be processed for optimal performance.');
+                }
+
+                // Normalize metermodel and credittype to lowercase for consistency
+                data = data.map(row => {
+                    if (row.metermodel) {
+                        row.metermodel = row.metermodel.toLowerCase();
+                    }
+                    if (row.credittype) {
+                        row.credittype = row.credittype.toLowerCase();
+                    }
+                    return row;
+                });
+
+                csvData = data;
+                displayPreview();
+
+            } catch (error) {
+                alert('❌ Error Processing File\n\n' + error.message + '\n\nPlease ensure your CSV file is properly formatted.');
+                document.getElementById('processingStatus').style.display = 'none';
             }
-
-            // Normalize metermodel and credittype to lowercase for consistency
-            data = data.map(row => {
-                if (row.metermodel) {
-                    row.metermodel = row.metermodel.toLowerCase();
-                }
-                if (row.credittype) {
-                    row.credittype = row.credittype.toLowerCase();
-                }
-                return row;
-            });
-
-            csvData = data;
-            displayPreview();
-
-        } catch (error) {
+        },
+        error: function(error) {
             alert('❌ Error Reading File\n\n' + error.message + '\n\nPlease ensure your CSV file is properly formatted.');
             document.getElementById('processingStatus').style.display = 'none';
         }
-    };
-
-    // Read CSV file as text
-    reader.readAsText(file);
+    });
 });
-
-function parseCSV(text) {
-    const lines = text.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const data = [];
-
-    for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim() === '') continue;
-
-        const values = lines[i].split(',');
-        const row = {};
-
-        headers.forEach((header, index) => {
-            row[header] = values[index] ? values[index].trim() : '';
-        });
-
-        data.push(row);
-    }
-
-    return data;
-}
 
 function displayPreview() {
     const tbody = document.getElementById('previewTableBody');
