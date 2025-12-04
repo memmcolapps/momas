@@ -336,9 +336,9 @@ class MeterController extends Controller
 
         if ($meter != null && $meter->NeedKCT == "on" || $meter->NeedKCT == 1) {
             $databody = [
-                'meterType' => $meter->KRN1,
-                'meterNo' => Auth::user()->meterNo,
-                'sgc' => (int)$meter->OldSGC,
+                'meterType' => $meter->KRN2,
+                'meterNo' => $meter->meterNo,
+                'sgc' => (int)$meter->NewSGC,
                 'ti' => $tariff_index, //TRARRRIF INDEX
                 'amount' => $unit,
             ];
@@ -485,11 +485,11 @@ class MeterController extends Controller
 
 
             $databody = [
-                'meterType' => $meter->KRN1,
-                'meterNo' => Auth::user()->meterNo,
-                'sgc' => (int)$meter->OldSGC,
-                'ti' => 1,
-                'amount' => $request->amount,
+                'meterType' => $meter->KRN2,
+                'meterNo' => $meter->meterNo,
+                'sgc' => (int)$meter->NewSGC,
+                'ti' => $tariff_index,
+                'amount' => $unit,
             ];
             $no_kct_response = Http::withOptions([
                 'verify' => false,
@@ -633,9 +633,9 @@ class MeterController extends Controller
 
         if ($meter != null && $meter->NeedKCT == "on") {
             $databody = [
-                'meterType' => $meter->KRN1,
+                'meterType' => $meter->KRN2,
                 'meterNo' => $meter->meterNo,
-                'sgc' => (int)$meter->OldSGC,
+                'sgc' => (int)$meter->NewSGC,
                 'ti' => $tariff_index, //TRARRRIF INDEX
                 'amount' => $trx->unit_amount,
             ];
@@ -760,10 +760,10 @@ class MeterController extends Controller
         if ($meter != null && $meter->NeedKCT == null) {
 
             $databody = [
-                'meterType' => $meter->KRN1,
+                'meterType' => $meter->KRN2,
                 'meterNo' => $meter->meterNo,
-                'sgc' => (int)$meter->OldSGC,
-                'ti' => 1,
+                'sgc' => (int)$meter->NewSGC,
+                'ti' => $tariff_index,
                 'amount' => $trx->unit_amount,
             ];
             $no_kct_response = Http::withOptions([
