@@ -14,6 +14,9 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('app:check-utility')->monthlyOn(1, '12:00');
+
+        // Generate monthly arrears daily (checks for 5-day grace period internally)
+        $schedule->command('arrears:generate')->daily();
     }
 
     /**

@@ -69,7 +69,7 @@ class LoginController extends Controller
                 ->latest('created_at')
                 ->first();
 
-            if($admin_fee_get){
+            if($admin_fee_get && $admin_fee_get->status == 2){
                 $admin_fee =  "1";
             }else{
                 $admin_fee = "0";
@@ -325,7 +325,7 @@ class LoginController extends Controller
                 ->latest('created_at')
                 ->first();
 
-            if($admin_fee_get){
+            if($admin_fee_get && $admin_fee_get->status == 2){
                 $admin_fee =  "1";
             }else{
                 $admin_fee = "0";
@@ -569,7 +569,7 @@ class LoginController extends Controller
             ->latest('created_at')
             ->first();
 
-        if($admin_fee_get){
+        if($admin_fee_get && $admin_fee_get->status == 2){
             $admin_fee =  "1";
         }else{
             $admin_fee = "0";
