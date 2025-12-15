@@ -81,12 +81,7 @@
                                                                    name="meterNo" required>
                                                         </div>
 
-
-                                                        <div class="col-xl-6 my-2 col-sm-12">
-                                                            <label class="my-2">Amount</label>
-                                                            <input type="number" class="form-control mb-3" name="amount"
-                                                                   required>
-                                                        </div>
+                                                        <input type="hidden" name="amount" value="0">
 
                                                     @else
                                                         <div class="col-xl-6 my-2 col-sm-12">
@@ -533,12 +528,7 @@
                                                                    name="meterNo" required>
                                                         </div>
 
-
-                                                        <div class="col-xl-6 my-2 col-sm-12">
-                                                            <label class="my-2">Amount</label>
-                                                            <input type="number" class="form-control mb-3" name="amount"
-                                                                   required>
-                                                        </div>
+                                                        <input type="hidden" name="amount" value="0">
 
                                                     @else
                                                         <div class="col-xl-6 my-2 col-sm-12">

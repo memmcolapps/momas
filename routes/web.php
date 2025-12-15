@@ -308,6 +308,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('report-meters', [MeterController::class, 'meter_report']);
     Route::get('meter-transaction-report', [MeterController::class, 'meter_transaction_report']);
     Route::get('export-metertransactions', [ExportControler::class, 'exportmetertransactions']);
+    Route::get('export-transactions', [ExportControler::class, 'exporttransactions']);
     Route::get('bulk-upload-preview', [MeterImportController::class, 'bulk_upload_preview']);
     Route::post('bulk-save-meters', [MeterImportController::class, 'bulk_save_meters']);
 
@@ -334,8 +335,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('kct-token', [TokenController::class, 'kct_token_index']);
     Route::get('clear-credit-token', [TokenController::class, 'clear_credit_token_index']);
 
-    Route::post('validate-meter', [TokenController::class, 'validate_meter']);
-    Route::post('validate-kct-meter', [TokenController::class, 'validate_kct_meter']);
+    Route::match(['GET', 'POST'], 'validate-meter', [TokenController::class, 'validate_meter']);
+    Route::match(['GET', 'POST'], 'validate-kct-meter', [TokenController::class, 'validate_kct_meter']);
     Route::post('validate-tamper-meter', [TokenController::class, 'validate_tamper_meter']);
     Route::post('validate-compensation-meter', [TokenController::class, 'validate_compensation_meter']);
     Route::post('validate-clear-credit-meter', [TokenController::class, 'validate_clear_credit_meter']);
@@ -367,6 +368,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('recepit', [TokenController::class, 'recepit']);
     Route::any('retry-generate-tamper-token', [TokenController::class, 'retry_generate_tamper-token']);
     Route::any('retry-generate-credit-token', [TokenController::class, 'retry_generate_credit_token']);
+    Route::get('view-logs', [TokenController::class, 'view_logs']);
 
 
 

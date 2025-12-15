@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Lcobucci\JWT\Exception;
+use Illuminate\Support\Facades\Log;
 
 
 class TokenController extends Controller
@@ -1183,6 +1184,77 @@ class TokenController extends Controller
         }
 
 
+        // --- PAYMENT BYPASS / TEST MODE ---
+        if ($request->pay_type == 'test_bypass') {
+
+            // 1. Create a successful transaction record
+            $trx = new Transaction();
+            $trx->user_id = Auth::id();
+            $trx->estate_id = $estate_id;
+            $trx->pay_type = "bypass_test";
+            $trx->service_type = $request->service ?? 'credit_token';
+            $trx->amount = $request->amount;
+            $trx->fee = $fee;
+            $trx->trx_id = $trx_id;
+            $trx->status = 2; // 2 = Successful
+            $trx->save();
+
+            // 2. Get meter details
+            $meter = Meter::where('meterNo', $request->meterNo)->first();
+
+            if (!$meter) {
+                return back()->with('error', 'Meter not found');
+            }
+
+            // 3. Prepare token generation API payload using UNITS (not costOfUnit)
+            $unitsKwh = $request->unit ?? 0;
+
+            $databody = [
+                'meterType' => $meter->KRN1,
+                'meterNo'   => $meter->meterNo,
+                'sgc'       => (int)$meter->OldSGC,
+                'ti'        => $request->t_index,
+                'amount'    => (float)$unitsKwh, // USING UNITS HERE - with decimals
+            ];
+
+            try {
+                // 4. Call Token Generation API
+                $response = Http::withOptions([
+                    'verify' => false,
+                    'timeout' => 15,
+                ])->post('http://169.239.189.91:19071/tokenGen', $databody);
+
+                if ($response->successful()) {
+                    $json_response = $response->json();
+                    $decoded_data = json_decode($json_response, true);
+                    $status = $decoded_data['code'] ?? null;
+
+                    if ($status == "SUCCESS") {
+                        $generated_token = $decoded_data['tokens'][0];
+
+                        // 5. Update Credit Token Record
+                        CreditToken::where('trx_id', $trx_id)->update([
+                            'token' => $generated_token,
+                            'status' => 2
+                        ]);
+
+                        // 6. Redirect to Receipt
+                        $type = "credit_token";
+                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+
+                    } else {
+                        return back()->with('error', "Payment Bypass Failed: " . ($decoded_data['msg'] ?? 'Token generation failed'));
+                    }
+                } else {
+                    return back()->with('error', "Payment Bypass: Failed to connect to Token Server");
+                }
+            } catch (\Exception $e) {
+                return back()->with('error', "Payment Bypass Exception: " . $e->getMessage());
+            }
+        }
+        // --- END PAYMENT BYPASS ---
+
+
         if ($request->pay_type == 'paystack') {
 
 //            try {
@@ -1621,12 +1693,12 @@ class TokenController extends Controller
 
 
                 $databody = [
-                    'meterType' => $meter->KRN1,
+                    'meterType' => $meter->KRN2,
                     'meterNo' => $meter->meterNo,
-                    'sgc' => (int)$meter->OldSGC,
+                    'sgc' => (int)$meter->NewSGC,
                     'ti' => $trx->tariff_id,
                     'sbc' => 5,
-                    'amount' => (int)$trx->tariffPerKWatt,
+                    'amount' => 10, // Amount not needed for tamper tokens
                 ];
 
 
@@ -1738,6 +1810,109 @@ class TokenController extends Controller
         $chk_kct = Meter::where('meterNo', $request->meterNo)->first()->NeedKCT;
         if ($chk_kct == 0) {
             return back()->with('error', "Meter is not configured to vend KCT");
+        }
+
+
+        // --- PAYMENT BYPASS / TEST MODE FOR KCT ---
+        if ($request->pay_type == 'test_bypass') {
+
+            // 1. Create a successful transaction record
+            $trx = new Transaction();
+            $trx->user_id = Auth::id();
+            $trx->estate_id = $estate_id;
+            $trx->pay_type = "bypass_test";
+            $trx->service_type = "kct_token";
+            $trx->amount = $request->amount;
+            $trx->fee = $fee ?? 0;
+            $trx->trx_id = $trx_id;
+            $trx->status = 2; // 2 = Successful
+            $trx->save();
+
+            // 2. Get meter details
+            $meter = Meter::where('meterNo', $request->meterNo)->first();
+
+            if (!$meter) {
+                return back()->with('error', 'Meter not found');
+            }
+            
+                Log::info("Old : {$request->tariff_amount}" );
+                Log::info("Meter SGC Data Types", [
+    'OldSGC_Value' => $meter->OldSGC,
+    'OldSGC_Type'  => gettype((int)$meter->OldSGC),
+    'NewSGC_Value' => $meter->NewSGC,
+    'NewSGC_Type'  => gettype((int)$meter->NewSGC),
+]);
+
+
+            // 3. Prepare KCT token generation payload
+            $kctdatabody = [
+                'meterType' => $meter->KRN1,
+                'tometerType' => $meter->KRN2,
+                'meterNo' => $request->meterNo,
+                'sgc' => (int)$meter->OldSGC,
+                'tosgc' => (int)$meter->NewSGC,
+                // 'ti' => $request->tariff_amount ?? 0,
+                'ti' => 7,
+                'toti' => 1,
+                'allow' => false,
+                'allowkrn' => true,
+            ];
+
+            // 4. Generate KCT token
+            $kct_response = Http::withOptions([
+                'verify' => false,
+                'timeout' => 10,
+            ])->post('http://169.239.189.91:19071/kcttokenGen', $kctdatabody);
+
+            if ($kct_response->successful()) {
+                $kct = $kct_response->json();
+                $kct_data = json_decode($kct, true);
+                $status = $kct_data['code'] ?? null;
+
+                Log::info('KCT Request Body:', $kct_data);
+
+
+                if ($status == "SUCCESS") {
+                    // 5. Update KCT token record with generated tokens
+                    KctToken::where('trx_id', $trx_id)->update([
+                        'kct_token1' => $kct_data['tokens'][0],
+                        'kct_token2' => $kct_data['tokens'][1],
+                        'status' => 2
+                    ]);
+
+                    Transaction::where('trx_id', $trx_id)->update([
+                        'status' => 2,
+                    ]);
+
+                    // 6. Redirect to receipt page
+                    $token = "kct_token";
+                    return redirect("admin/recepit?trx_id=$trx_id&type=$token");
+
+                } else {
+                    // Token generation failed
+                    Transaction::where('trx_id', $trx_id)->update([
+                        'status' => 3,
+                        'note' => json_encode($kct_data) . "|" . json_encode($kctdatabody)
+                    ]);
+
+                    KctToken::where('trx_id', $trx_id)->update([
+                        'status' => 3
+                    ]);
+
+                    return back()->with('error', 'KCT Token generation failed: ' . ($kct_data['message'] ?? 'Unknown error'));
+                }
+            } else {
+                // API call failed
+                Transaction::where('trx_id', $trx_id)->update([
+                    'status' => 3,
+                ]);
+
+                KctToken::where('trx_id', $trx_id)->update([
+                    'status' => 3
+                ]);
+
+                return back()->with('error', 'Failed to connect to token generation service');
+            }
         }
 
 
@@ -2099,12 +2274,12 @@ class TokenController extends Controller
 
 
                     $databody = [
-                        'meterType' => $meter->KRN1,
+                        'meterType' => $meter->KRN2,
                         'meterNo' => $meter->meterNo,
-                        'sgc' => (int)$meter->OldSGC,
+                        'sgc' => (int)$meter->NewSGC,
                         'ti' => $trx->tariff_id,
                         'sbc' => 1,
-                        'amount' => $amount,
+                        'amount' => 10, // Amount not needed for clear credit tokens
                     ];
 
 
@@ -2587,7 +2762,7 @@ class TokenController extends Controller
                     'meterNo' => $meter->meterNo,
                     'sgc' => (int)$meter->NewSGC,
                     'ti' => $trx->tariff_id,
-                    'amount' => (int)$trx->costOfUnit,
+                    'amount' => (float)$trx->unitkwh,
                 ];
 
 
@@ -2684,7 +2859,7 @@ class TokenController extends Controller
                     'meterNo' => $meter->meterNo,
                     'sgc' => (int)$meter->OldSGC,
                     'ti' => $trx->tariff_id,
-                    'amount' => $trx->costOfUnit,
+                    'amount' => (float)$trx->unitkwh,
                 ];
                 $no_kct_response = Http::withOptions([
                     'verify' => false,
@@ -2814,7 +2989,7 @@ class TokenController extends Controller
                             'meterNo' => $meter->meterNo,
                             'sgc' => (int)$meter->NewSGC,
                             'ti' => $trx->tariff_id,
-                            'amount' => (int)$trx->costOfUnit,
+                            'amount' => (float)$trx->unitkwh,
                         ];
 
 
@@ -4241,8 +4416,7 @@ class TokenController extends Controller
 
                                 if ($status == "SUCCESS") {
 
-                                    TamperToken::where('trx_id', $ref)->update([
-                                        'token' => $token,
+                                    KctToken::where('trx_id', $ref)->update([
                                         'kct_token1' => $kct_data['tokens'][0],
                                         'kct_token2' => $kct_data['tokens'][1],
                                         'status' => 2
@@ -4432,7 +4606,7 @@ class TokenController extends Controller
         if ($request->type == "kct_token") {
             $trx = KctToken::where('trx_id', $request->trx_id)->first() ?? null;
             $user = User::where('id', $trx->user_id)->first() ?? null;
-            $user = User::where('id', $trx->user_id)->first() ?? null;
+
             $data['full_name'] = $user->first_name . " " . $user->last_name;
             $data['address'] = $user->address . "," . $user->city . "," . $user->state;
             $data['phone'] = $user->phone;
@@ -4440,14 +4614,10 @@ class TokenController extends Controller
             $data['token1'] = $trx->kct_token1;
             $data['token2'] = $trx->kct_token2;
             $data['amount'] = $trx->amount;
-            $data['vat_amount'] = $trx->vatAmount;
-            $data['vend_amount_kw_per_naira'] = $trx->costOfUnit;
-            $data['tariff_amount'] = $trx->tariff_amount;
             $data['meter_no'] = $trx->meterNo;
-            $data['unit'] = $trx->unitkwh;
-            $data['title'] = "KCT TOKEN";
+            $data['title'] = "kct_token";
             $data['date'] = date('d-m-y h:i:s');
-            return view('admin/recepit.recepit', $data);
+            return view('admin/recepit.kct-recepit', $data);
         }
 
 

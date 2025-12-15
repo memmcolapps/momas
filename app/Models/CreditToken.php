@@ -9,6 +9,13 @@ class CreditToken extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'amount' => 'float',
+        'vatAmount' => 'float',
+        'unitkwh' => 'float',
+        'fee' => 'float',
+    ];
+
     public function estate()
     {
         return $this->belongsTo(Estate::class);

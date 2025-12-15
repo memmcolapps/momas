@@ -412,7 +412,7 @@ class MeterController extends Controller
                             $met->status = 2;
                             $met->save();
 
-                            Transaction::where('trx_id', $trx)->update(['service' => "METER PURCHASE", 'service_type' => "meter", 'unit_amount' => $vendong_amount, 'vat' => $vat_amount, 'tariff_id' => $request->tariff_id,
+                            Transaction::where('trx_id', $trx)->update(['service' => "METER PURCHASE", 'service_type' => "meter", 'unit_amount' => $vendong_amount, 'tariff_id' => $request->tariff_id,
                             ]);
 
 
@@ -1772,9 +1772,9 @@ class MeterController extends Controller
     public function meter_transaction_report(request $request)
     {
         if (Auth::user()->role == 0) {
-            $data['total_amount'] = CreditToken::where('status', 2)->sum('amount');
-            $data['total_vat'] = CreditToken::where('status', 2)->sum('vatAmount');
-            $data['total_units'] = CreditToken::where('status', 2)->sum('unitkwh');
+            $data['total_amount'] = (float) CreditToken::where('status', 2)->sum('amount');
+            $data['total_vat'] = (float) CreditToken::where('status', 2)->sum('vatAmount');
+            $data['total_units'] = (float) CreditToken::where('status', 2)->sum('unitkwh');
 
             $data['meter_transactions'] = CreditToken::with(['user:id,first_name,last_name,email,phone'])
                 ->where('status', 2)
@@ -1787,15 +1787,15 @@ class MeterController extends Controller
         } elseif (Auth::user()->role == 2) {
         } elseif (Auth::user()->role == 3) {
 
-            $data['total_amount'] = CreditToken::where('estate_id', Auth::user()->estate_id)
+            $data['total_amount'] = (float) CreditToken::where('estate_id', Auth::user()->estate_id)
                 ->where('status', 2)
                 ->sum('amount');
 
-            $data['total_vat'] = CreditToken::where('estate_id', Auth::user()->estate_id)
+            $data['total_vat'] = (float) CreditToken::where('estate_id', Auth::user()->estate_id)
                 ->where('status', 2)
                 ->sum('vatAmount');
 
-            $data['total_units'] = CreditToken::where('estate_id', Auth::user()->estate_id)
+            $data['total_units'] = (float) CreditToken::where('estate_id', Auth::user()->estate_id)
                 ->where('status', 2)
                 ->sum('unitkwh');
 

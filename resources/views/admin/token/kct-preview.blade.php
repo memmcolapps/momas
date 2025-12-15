@@ -58,7 +58,7 @@
                                         </div>
 
                                         <div class="col-xl-6 col-sm-12" >
-                                            <form action="validate-meter" method="POST"
+                                            <form action="validate-kct-meter" method="POST"
                                                   enctype="multipart/form-data">
                                                 @csrf
 
@@ -176,24 +176,24 @@
                                                             <div class="row">
 
                                                                 <div class="col-xl-4 my-2 col-sm-12">
-                                                                    <label class="my-2">Unit</label>
+                                                                    <!-- <label class="my-2">Unit</label> -->
                                                                     @php
                                                                         $unnit = $costOfUnit / $tarrif_amount;
                                                                     @endphp
                                                                     <input required name="unit" value="{{number_format($unnit,2)}}" hidden="">
-                                                                    <h6>{{number_format($unnit, 2)}}kw/h</h6>
+                                                                    <!-- <h6>{{number_format($unnit, 2)}}kw/h</h6> -->
                                                                 </div>
 
                                                                 <div class="col-xl-4 my-2 col-sm-12">
-                                                                    <label class="my-2">Vat Amount</label>
+                                                                    <!-- <label class="my-2">Vat Amount</label> -->
                                                                     <input required name="vatAmount" value="{{number_format($vatAmount,2)}}" hidden="">
-                                                                    <h6>{{number_format($vatAmount, 2)}}</h6>
+                                                                    <!-- <h6>{{number_format($vatAmount, 2)}}</h6> -->
                                                                 </div>
 
                                                                 <div class="col-xl-4 my-2 col-sm-12">
-                                                                    <label class="my-2">Cost Of Unit</label>
+                                                                    <!-- <label class="my-2">Cost Of Unit</label> -->
                                                                     <input required name="costOfUnit" value="{{number_format($costOfUnit,2)}}" hidden="">
-                                                                    <h6>{{number_format($costOfUnit, 2)}}</h6>
+                                                                    <!-- <h6>{{number_format($costOfUnit, 2)}}</h6> -->
                                                                 </div>
 
                                                                 <input required name="vat" value="{{$vat}}" hidden="">
@@ -216,6 +216,7 @@
                                                                     <option value="paystack">Pay with Paystack</option>
                                                                     <option value="flutterwave">Pay with Flutterwave</option>
                                                                     <option value="enkpay">Pay with Enkpay</option>
+                                                                    <option value="test_bypass">Payment Bypass (Testing Only)</option>
                                                                 </select>
                                                             </div>
 
@@ -366,8 +367,8 @@
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
-                                                <th scope="col" class="cursor-pointer">Tariff Index</th>
-                                                <th scope="col" class="cursor-pointer desc">Unit</th>
+                                                <th scope="col" class="cursor-pointer">KCT Token 1</th>
+                                                <th scope="col" class="cursor-pointer desc">KCT Token 2</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
@@ -385,8 +386,8 @@
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
-                                                    <td>{{$data->tariff_id}}</td>
-                                                    <td>{{$data->tariffPerKWatt}}kw/N</td>
+                                                    <td>{{$data->kct_token1 ?? "N/A"}}</td>
+                                                    <td>{{$data->kct_token2 ?? "N/A"}}</td>
                                                     <td>
                                                         @if($data->status == 2)
                                                             <span class="badge text-bg-primary">Successful</span>
@@ -402,7 +403,7 @@
 
                                                     <td>
                                                         @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}"  onclick="return confirmreprint();" class="btn btn-primary">Reprint</a>
+                                                            <a href="recepit?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmreprint();" class="btn btn-primary">Reprint</a>
                                                             <script>
 
                                                                 function confirmreprint() {
@@ -412,7 +413,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
+                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
                                                             <script>
 
                                                                 function confirmgenertetoken() {
@@ -519,7 +520,7 @@
                                         </div>
 
                                         <div class="col-xl-6 col-sm-12" >
-                                            <form action="validate-meter" method="POST"
+                                            <form action="validate-kct-meter" method="POST"
                                                   enctype="multipart/form-data">
                                                 @csrf
 
@@ -675,6 +676,7 @@
                                                                     <option value="paystack">Pay with Paystack</option>
                                                                     <option value="flutterwave">Pay with Flutterwave</option>
                                                                     <option value="enkpay">Pay with Enkpay</option>
+                                                                    <option value="test_bypass">Payment Bypass (Testing Only)</option>
                                                                 </select>
                                                             </div>
 
@@ -830,8 +832,8 @@
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
-                                                <th scope="col" class="cursor-pointer">Tariff Index</th>
-                                                <th scope="col" class="cursor-pointer desc">Unit</th>
+                                                <th scope="col" class="cursor-pointer">KCT Token 1</th>
+                                                <th scope="col" class="cursor-pointer desc">KCT Token 2</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
@@ -849,8 +851,8 @@
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
-                                                    <td>{{$data->tariff_id}}</td>
-                                                    <td>{{$data->unitkwh}}kw/N</td>
+                                                    <td>{{$data->kct_token1 ?? "N/A"}}</td>
+                                                    <td>{{$data->kct_token2 ?? "N/A"}}</td>
                                                     <td>
                                                         @if($data->status == 2)
                                                             <span class="badge text-bg-primary">Successful</span>
@@ -866,7 +868,7 @@
 
                                                     <td>
                                                         @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}"  onclick="return confirmreprint();" class="btn btn-primary">Reprint</a>
+                                                            <a href="recepit?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmreprint();" class="btn btn-primary">Reprint</a>
                                                             <script>
 
                                                                 function confirmreprint() {
@@ -876,7 +878,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
+                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
                                                             <script>
 
                                                                 function confirmgenertetoken() {

@@ -404,10 +404,9 @@
 
                                 <div class="info mt-4">
                                     <p>
-                                        Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
-                                        Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                        Unit :  <b>{{$vend_amount_kw_per_naira ?? "0.00"}}Kw/N</b></br><br>
-                                        Token : <b>{{$token ?? "12345678"}}</b></br><br>
+                                        Meter NO : <b>{{$meter_no}}</b></br><br>
+                                        KCT 1 : <b>{{$token1 ?? "12345678"}}</b></br><br>
+                                        KCT 2 : <b>{{$token2 ?? "12345678"}}</b></br><br>
 
 
                                     </p>

@@ -11,9 +11,15 @@
             <div class="container-fluid">
 
 
-                <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
+                <div class="py-3 d-flex align-items-sm-center flex-sm-row 
+                flex-column">
                     <div class="flex-grow-1">
-                        <h4 class="fs-18 fw-semibold m-0">Transaction Report | {{Auth::user()->estate_name}}</h4>
+                        <h4 class="fs-18 fw-semibold m-0">All Transactions Report </h4>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="export-transactions" class="btn btn-success btn-sm">
+                            <i class="fas fa-file-excel me-1"></i> Export to Excel
+                        </a>
                     </div>
                 </div>
 
@@ -109,10 +115,13 @@
                                                 <select class="form-control" name="transaction_type">
 
                                                     <option value="">Select type</option>
-                                                    <option value="meter">Meter Token</option>
-                                                    <option value="airtime">Airtime</option>
-                                                    <option value="data">Data</option>
-                                                    <option value="cable">Cable</option>
+                                                    <option value="credit_token">Credit Token</option>
+                                                    <option value="compensation_token">Compensation Token</option>
+                                                    <option value="kct_token">KCT Token</option>
+                                                    <option value="tamper_token">Tamper Token</option>
+                                                    <option value="clear_credit_token">Clear Credit Token</option>
+                                                    <option value="arrears">Arrears</option>
+                                                    <option value="utility_payment">Utility Payment</option>
 
 
                                                 </select>
@@ -124,11 +133,11 @@
                                             <div class="col-3">
                                                 <label>Transaction Status</label>
                                                 <select class="form-control" name="status">
-                                                    <option value="">Select type</option>
+                                                    <option value="">Select Status</option>
                                                     <option value="0">Pending</option>
-                                                    <option value="2">Successful</option>
+                                                    <option value="2">Approved</option>
                                                     <option value="3">Failed</option>
-                                                    <option value="4">Reversed</option>
+                                                    <option value="4">Completed</option>
                                                 </select>
 
                                             </div>
@@ -389,6 +398,11 @@
                     <div class="flex-grow-1">
                         <h4 class="fs-18 fw-semibold m-0">Transaction Report | {{Auth::user()->estate_name}}</h4>
                     </div>
+                    <div class="d-flex gap-2">
+                        <a href="export-transactions" class="btn btn-success btn-sm">
+                            <i class="fas fa-file-excel me-1"></i> Export to Excel
+                        </a>
+                    </div>
                 </div>
 
                 @if ($errors->any())
@@ -472,21 +486,24 @@
                                         <div class="row">
                                             <div class="col-3">
                                                 <label>Date From</label>
-                                                <input type="date" class="form-control" required name="from">
+                                                <input type="date" class="form-control" name="from">
                                             </div>
                                             <div class="col-3">
                                                 <label>Date To</label>
-                                                <input type="date" class="form-control"  required name="to">
+                                                <input type="date" class="form-control" name="to">
                                             </div>
                                             <div class="col-3">
                                                 <label>Transaction Type</label>
                                                 <select class="form-control" name="transaction_type">
 
                                                     <option value="">Select type</option>
-                                                    <option value="meter">Meter Token</option>
-                                                    <option value="airtime">Airtime</option>
-                                                    <option value="data">Data</option>
-                                                    <option value="cable">Cable</option>
+                                                    <option value="credit_token">Credit Token</option>
+                                                    <option value="compensation_token">Compensation Token</option>
+                                                    <option value="kct_token">KCT Token</option>
+                                                    <option value="tamper_token">Tamper Token</option>
+                                                    <option value="clear_credit_token">Clear Credit Token</option>
+                                                    <option value="arrears">Arrears</option>
+                                                    <option value="utility_payment">Utility Payment</option>
 
 
                                                 </select>
@@ -498,11 +515,11 @@
                                             <div class="col-3">
                                                 <label>Transaction Status</label>
                                                 <select class="form-control" name="status">
-                                                    <option value="">Select type</option>
+                                                    <option value="">Select Status</option>
                                                     <option value="0">Pending</option>
-                                                    <option value="2">Successful</option>
+                                                    <option value="2">Approved</option>
                                                     <option value="3">Failed</option>
-                                                    <option value="4">Reversed</option>
+                                                    <option value="4">Completed</option>
                                                 </select>
 
                                             </div>

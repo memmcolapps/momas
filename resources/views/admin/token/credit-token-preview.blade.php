@@ -177,7 +177,7 @@
                                                                                     $unnit = $costOfUnit / $tarrif_amount;
                                                                                 @endphp
                                                                                 <input required name="unit"
-                                                                                       value="{{number_format($unnit,2)}}"
+                                                                                       value="{{$unnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($unnit, 2)}}kw/h</h6>
                                                                             </div>
@@ -185,7 +185,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Vat Amount</label>
                                                                                 <input required name="vatAmount"
-                                                                                       value="{{number_format($vatAmount,2)}}"
+                                                                                       value="{{$vatAmount}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($vatAmount, 2)}}</h6>
                                                                             </div>
@@ -193,7 +193,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Cost Of Unit</label>
                                                                                 <input required name="costOfUnit"
-                                                                                       value="{{number_format($costOfUnit,2)}}"
+                                                                                       value="{{$costOfUnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
                                                                             </div>
@@ -231,6 +231,7 @@
                                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                                 </option>
                                                                                 <option value="enkpay">Pay with Enkpay</option>
+                                                                                <option value="test_bypass">Payment Bypass (Testing Only)</option>
                                                                             </select>
                                                                         </div>
 
@@ -551,7 +552,7 @@
                                                                                     $unnit = $costOfUnit / $tarrif_amount;
                                                                                 @endphp
                                                                                 <input required name="unit"
-                                                                                       value="{{number_format($unnit,2)}}"
+                                                                                       value="{{$unnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($unnit, 2)}}kw/h</h6>
                                                                             </div>
@@ -559,7 +560,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Vat Amount</label>
                                                                                 <input required name="vatAmount"
-                                                                                       value="{{number_format($vatAmount,2)}}"
+                                                                                       value="{{$vatAmount}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($vatAmount, 2)}}</h6>
                                                                             </div>
@@ -567,7 +568,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Cost Of Unit</label>
                                                                                 <input required name="costOfUnit"
-                                                                                       value="{{number_format($costOfUnit,2)}}"
+                                                                                       value="{{$costOfUnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
                                                                             </div>
@@ -606,6 +607,7 @@
                                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                                 </option>
                                                                                 <option value="enkpay">Pay with Enkpay</option>
+                                                                                <option value="test_bypass">Payment Bypass (Testing Only)</option>
                                                                             </select>
                                                                         </div>
 
