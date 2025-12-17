@@ -281,7 +281,7 @@
                                                                    hidden="">
                                                             <input required name="estate_name" value="{{$estate_name}}"
                                                                    hidden="">
-                                                            <input required name="amount" value="{{$amount}}" hidden="">
+                                                            <input required name="amount" value="{{$amount}}">
 
 
                                                         </div>
@@ -297,6 +297,8 @@
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
                                                                 <option value="enkpay">Pay with Enkpay</option>
+                                                                
+
                                                             </select>
                                                         </div>
 

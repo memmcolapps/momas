@@ -280,6 +280,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('view-tariff', [TariffController::class, 'view_tariff']);
     Route::post('update-the-tariff', [TariffController::class, 'update_the_tariff']);
     Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
+    Route::post('update-tariff-index', [TariffController::class, 'update_tariff_index']);
 
 
     Route::post('update-nepa', [TariffController::class, 'update_nepa']);
@@ -337,9 +338,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
 
     Route::match(['GET', 'POST'], 'validate-meter', [TokenController::class, 'validate_meter']);
     Route::match(['GET', 'POST'], 'validate-kct-meter', [TokenController::class, 'validate_kct_meter']);
-    Route::post('validate-tamper-meter', [TokenController::class, 'validate_tamper_meter']);
-    Route::post('validate-compensation-meter', [TokenController::class, 'validate_compensation_meter']);
-    Route::post('validate-clear-credit-meter', [TokenController::class, 'validate_clear_credit_meter']);
+    Route::get('check-meter-dual-tariff', [TokenController::class, 'check_meter_dual_tariff']);
+    Route::match(['GET', 'POST'], 'validate-tamper-meter', [TokenController::class, 'validate_tamper_meter']);
+    Route::match(['GET', 'POST'], 'validate-compensation-meter', [TokenController::class, 'validate_compensation_meter']);
+    Route::match(['GET', 'POST'], 'validate-clear-credit-meter', [TokenController::class, 'validate_clear_credit_meter']);
 
 
 

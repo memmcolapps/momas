@@ -217,6 +217,7 @@
                                                     <input required name="amount" value="{{$amount}}" hidden="">
                                                     <input required name="tariff_amount" value="{{$tarrif_amount}}"
                                                            hidden="">
+                                                    <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
                                                     <div class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
                                                         <select class="form-control" required name="pay_type">
@@ -665,7 +666,8 @@
                                                                 <option value="paystack">Pay with Paystack</option>
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
+                                                                <option value="enkpay">Pay with Enkpay1</option>
+                                                                
                                                             </select>
                                                         </div>
 
@@ -755,6 +757,7 @@
                                                             <input required name="amount" value="{{$amount}}" hidden="">
                                                             <input required name="tariff_amount"
                                                                    value="{{$tarrif_amount}}" hidden="">
+                                                            <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
 
                                                         </div>
@@ -769,7 +772,9 @@
                                                                 <option value="paystack">Pay with Paystack</option>
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
+                                                                <option value="enkpay">Pay with Enkpay2</option>
+                                                                <option value="vend">Bypass</option>
+
                                                             </select>
                                                         </div>
 

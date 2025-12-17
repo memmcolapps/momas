@@ -4,16 +4,13 @@
 
 
     @if(Auth::user()->role == 0)
-        <div class="content">
-
+             <div class="content">
             <!-- Start Content-->
             <div class="container-fluid">
 
-
-
                 <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
                     <div class="flex-grow-1">
-                        <h4 class="fs-18 fw-semibold m-0">Compensation Token</h4>
+                        <h4 class="fs-18 fw-semibold m-0">Compensation Token (Super Admin)</h4>
                     </div>
                 </div>
 
@@ -37,129 +34,96 @@
                     </div>
                 @endif
 
-
-
                 <div class="row">
                     <div class="col-xl-12">
                         <div class="card overflow-hidden">
-
                             <div class="card">
-
                                 <div class="card-header">
                                     <h5 class="card-title mb-0">Vending Information</h5>
-                                </div><!-- end card header -->
+                                </div>
 
                                 <div class="card-body">
-
                                     <div class="tab-content p-3 text-muted">
-
-                                        {{-- TOKENS--}}
                                         <div class="tab-pane active show" id="navpills2-home" role="tabpanel">
                                             <div class="row">
-
-
                                                 <div class="d-flex justify-content-between my-4">
                                                     <h5 class="card-title text-black mb-0">Generate compensation Token</h5>
                                                 </div>
 
-                                                <div class="col-xl-6 col-sm-12" >
-                                                    <form action="validate-compensation-meter" method="POST"
-                                                          enctype="multipart/form-data">
+                                                <div class="col-xl-6 col-sm-12">
+                                                    <form action="validate-compensation-meter" method="POST" enctype="multipart/form-data">
                                                         @csrf
-
                                                         <div class="modal-body">
-
                                                             @if($preview == null)
                                                                 <div class="row">
                                                                     <div class="col-xl-6 my-2 col-sm-12">
                                                                         <label class="my-2">Estate</label>
-                                                                        <select class="form-control" required name="estate_id"
-                                                                                id="estate_id">
+                                                                        <select class="form-control" required name="estate_id" id="estate_id">
                                                                             <option value="">--Select Estate--</option>
                                                                             @foreach($estate as $data)
-                                                                                <option
-                                                                                    value="{{$data->id}}">{{$data->title}}</option>
+                                                                                <option value="{{$data->id}}">{{$data->title}}</option>
                                                                             @endforeach
                                                                         </select>
                                                                     </div>
 
-
                                                                     <div class="col-xl-6 my-2 col-sm-12">
                                                                         <label class="my-2">Enter Meter No</label>
-                                                                        <input type="number" class="form-control mb-3"
-                                                                               name="meterNo" id="meterNo" required>
+                                                                        <input type="number" class="form-control mb-3" name="meterNo" id="meterNo" required>
                                                                     </div>
-
-
 
                                                                     <div class="col-xl-6 my-2 col-sm-12">
                                                                         <label class="my-2">Power Source</label>
-                                                                        <select class="form-control" required
-                                                                                name="tariff_id"
-                                                                                id="tariff_id" disabled>
+                                                                        <select class="form-control" required name="tariff_id" id="tariff_id" disabled>
                                                                             <option value="">--Select Tariff--</option>
                                                                         </select>
                                                                     </div>
 
-
                                                                     <div class="col-xl-6 my-2 col-sm-12">
                                                                         <label class="my-2">Amount</label>
-                                                                        <input type="number" class="form-control mb-3" name="amount"
-                                                                               required>
+                                                                        <input type="number" class="form-control mb-3" name="amount" required>
                                                                     </div>
-
-
                                                                 </div>
 
-
-
                                                                 <script>
-                                                                    $(document).ready(function () {
-                                                                        $('#estate_id, #meterNo').on('change input', function () {
+                                                                    $(document).ready(function() {
+                                                                        $('#estate_id, #meterNo').on('change input', function() {
                                                                             var estate_id = $('#estate_id').val();
                                                                             var meterNo = $('#meterNo').val();
 
                                                                             if (estate_id && (meterNo.length === 11 || meterNo.length === 13)) {
+                                                                                // UPDATED: Using the same endpoint as Role 3 for consistency
                                                                                 $.ajax({
-                                                                                    url: '/fetch-tariff', // Change this to your endpoint
+                                                                                    url: '/admin/fetch-meter-tariffs',
                                                                                     method: 'GET',
                                                                                     data: {
                                                                                         estate_id: estate_id,
                                                                                         meterNo: meterNo
                                                                                     },
-                                                                                    success: function (response) {
-                                                                                        // Check if response is 1, 2, or 3
+                                                                                    success: function(response) {
                                                                                         if (response == 1) {
                                                                                             alert("Error: User is not attached to any estate.");
                                                                                             return;
                                                                                         }
-                                                                                        if(response == 2){
+                                                                                        if (response == 2) {
                                                                                             alert("Error: Estate does not have any tariff");
                                                                                             return;
                                                                                         }
-                                                                                        if(response == 3){
+                                                                                        if (response == 3) {
                                                                                             alert("Error: Tariff index not set for customer.");
                                                                                             return;
                                                                                         }
 
                                                                                         if (response && response.tariffs) {
-                                                                                            console.log(response);
-                                                                                            var tariffSelect = $('#tariff_id');
-                                                                                            tariffSelect.empty();
-                                                                                            tariffSelect.append('<option value="">--Select Tariff--</option>');
-
-                                                                                            response.tariffs.forEach(function (tariff) {
-                                                                                                tariffSelect.append('<option value="' + tariff.id + '">' + tariff.title + ' (' + tariff.type + ')' + '</option>');
-                                                                                            });
-
-                                                                                            tariffSelect.prop('disabled', false);
+                                                                                            // UPDATED: Using the helper function to handle Dual Tariffs
+                                                                                            populateTariffOptions(response.tariffs, response.meter);
                                                                                         } else {
                                                                                             $('#tariff_id').prop('disabled', true).empty();
                                                                                         }
                                                                                     },
-                                                                                    error: function () {
+                                                                                    error: function() {
                                                                                         $('#tariff_id').prop('disabled', true).empty();
-                                                                                        alert("Error fetching tariff data. Please try again.");
+                                                                                        // Only alert if we really expected data
+                                                                                        // alert("Error fetching tariff data.");
                                                                                     }
                                                                                 });
                                                                             } else {
@@ -168,292 +132,194 @@
                                                                         });
                                                                     });
 
+                                                                    // Helper function copied from Role 3 logic
+                                                                    function populateTariffOptions(tariffs, meter) {
+                                                                        var tariffSelect = $('#tariff_id');
+                                                                        tariffSelect.empty();
+                                                                        tariffSelect.append('<option value="">--Select Tariff--</option>');
+
+                                                                        var isDualTariff = meter.isDualTariff === 'on' || meter.isDualTariff === '1' || meter.isDualTariff === 1 || meter.isDualTariff === true;
+                                                                        var nepaTariffs = tariffs.filter(t => t.type === 'nepa');
+                                                                        var genTariffs = tariffs.filter(t => t.type === 'gen');
+
+                                                                        if (isDualTariff) {
+                                                                            if (nepaTariffs.length > 0) {
+                                                                                tariffSelect.append('<optgroup label="NEPA Tariffs">');
+                                                                                nepaTariffs.forEach(function(tariff) {
+                                                                                    var label = getActiveTariffLabel(tariff, meter, 'nepa');
+                                                                                    tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
+                                                                                });
+                                                                                tariffSelect.append('</optgroup>');
+                                                                            }
+                                                                            if (genTariffs.length > 0) {
+                                                                                tariffSelect.append('<optgroup label="Generator Tariffs">');
+                                                                                genTariffs.forEach(function(tariff) {
+                                                                                    var label = getActiveTariffLabel(tariff, meter, 'gen');
+                                                                                    tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
+                                                                                });
+                                                                                tariffSelect.append('</optgroup>');
+                                                                            }
+                                                                        } else {
+                                                                            nepaTariffs.forEach(function(tariff) {
+                                                                                var label = getActiveTariffLabel(tariff, meter, 'nepa');
+                                                                                tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
+                                                                            });
+                                                                        }
+                                                                        tariffSelect.prop('disabled', false);
+                                                                    }
+
+                                                                    function getActiveTariffLabel(tariff, meter, type) {
+                                                                        var label = tariff.title;
+                                                                        if (type === 'nepa') {
+                                                                            if (meter.NewTariffID == tariff.id) label += ' (New NEPA)';
+                                                                            else if (meter.OldTariffID == tariff.id) label += ' (Old NEPA)';
+                                                                        } else if (type === 'gen') {
+                                                                            if (meter.NewTariffDual == tariff.id) label += ' (New Gen)';
+                                                                            else if (meter.OldTariffDual == tariff.id) label += ' (Old Gen)';
+                                                                        }
+                                                                        return label;
+                                                                    }
                                                                 </script>
 
-
-
-
                                                             @else
+                                                                <!-- PREVIEW MODE -->
                                                                 <div class="col-xl-6 my-2 col-sm-12">
                                                                     <label class="my-2">Enter Meter No</label>
-                                                                    <input type="number" disabled class="form-control mb-3"
-                                                                           value="{{$meter->meterNo}}" name="meterNo" required>
+                                                                    <input type="number" disabled class="form-control mb-3" value="{{$meter->meterNo}}" name="meterNo" required>
                                                                 </div>
-
-
-
-
                                                                 <div class="col-xl-6 my-2 col-sm-12">
                                                                     <label class="my-2">Amount</label>
-                                                                    <input type="number" disabled value="{{$amount}}"
-                                                                           class="form-control mb-3" name="amount" required>
+                                                                    <input type="number" disabled value="{{$amount}}" class="form-control mb-3" name="amount" required>
                                                                 </div>
-
                                                             @endif
-
-
-
 
                                                             @if($preview == null)
-
                                                                 <div class="col-xl-6 my-2 col-sm-12">
-                                                                    <button type="submit" class="btn btn-primary">Continue
-                                                                    </button>
+                                                                    <button type="submit" class="btn btn-primary">Continue</button>
                                                                 </div>
-
-                                                            @else
-
-
-
                                                             @endif
-
-
                                                         </div>
-
-
-
                                                     </form>
                                                 </div>
 
-                                                <div class="col-xl-6 col-sm-12" >
-
-
-
-
-
-                                                    @if($preview == null)
-
-
-                                                    @else
-
-
-
-                                                        <form action="generate-compensation-meter-token" method="POST"
-                                                              enctype="multipart/form-data">
+                                                <!-- PREVIEW FORM SECTION -->
+                                                <div class="col-xl-6 col-sm-12">
+                                                    @if($preview != null)
+                                                        <form action="generate-compensation-meter-token" method="POST" enctype="multipart/form-data">
                                                             @csrf
-
                                                             <div class="modal-body">
-
                                                                 <div class="">
                                                                     <h5 class="card-title text-black mb-0">Compensation Token Preview</h5>
                                                                 </div>
-
-
                                                                 <div class="row">
                                                                     <div class="col-xl-4 my-2 col-sm-12">
                                                                         <label class="my-2">Estate</label>
-                                                                        <input required  name="estate_id" value="{{$estate->title}}" hidden="">
+                                                                        <input required name="estate_id" value="{{$estate->id}}" hidden=""> <!-- FIXED: Passing ID, not Title -->
                                                                         <h6>{{$estate->title}}</h6>
                                                                     </div>
-
                                                                     <div class="col-xl-4 my-2 col-sm-12">
                                                                         <label class="my-2">Customer</label>
                                                                         <input required name="user_id" value="{{$user->id}}" hidden="">
                                                                         <h6>{{$user->first_name}} {{$user->last_name}}</h6>
                                                                     </div>
-
                                                                     <div class="col-xl-4 my-2 col-sm-12">
                                                                         <label class="my-2">Meter No</label>
                                                                         <input required name="meterNo" value="{{$meter->meterNo}}" hidden="">
-
                                                                         <h6>{{$meter->meterNo}}</h6>
                                                                     </div>
-
-
                                                                     <input type="text" name="t_index" value="{{$tarrif_index}}" hidden>
-
-
                                                                 </div>
-
-
-
                                                                 <hr>
-
-                                                                <div class="row">
-
+                                                                <!-- <div class="row">
                                                                     <div class="col-xl-4 my-2 col-sm-12">
                                                                         <label class="my-2">Tariff/KW </label>
                                                                         <input required name="tariffPerKWatt" value="{{number_format($tariffPerKWatt,2)}}" hidden="">
                                                                         <h6>{{number_format($tariffPerKWatt, 2)}}</h6>
                                                                     </div>
-
                                                                     <div class="col-xl-4 my-2 col-sm-12">
                                                                         <label class="my-2">Vat Amount</label>
                                                                         <input required name="vatAmount" value="{{number_format($vatAmount,2)}}" hidden="">
                                                                         <h6>{{number_format($vatAmount, 2)}}</h6>
                                                                     </div>
-
                                                                     <div class="col-xl-4 my-2 col-sm-12">
                                                                         <label class="my-2">Cost Of Unit</label>
                                                                         <input required name="costOfUnit" value="{{number_format($costOfUnit,2)}}" hidden="">
                                                                         <h6>{{number_format($costOfUnit, 2)}} Kw/h</h6>
-                                                                    </div>
+                                                                    </div> -->
 
                                                                     <input required name="vat" value="{{$vat}}" hidden="">
-                                                                    <input required name="estate_id" value="{{$estate_id}}" hidden="">
+                                                                    <!-- FIXED: estate_id is handled in the div above, removed redundancy that might cause array issues -->
                                                                     <input required name="estate_name" value="{{$estate_name}}" hidden="">
                                                                     <input required name="amount" value="{{$amount}}" hidden="">
-
-
-
-
+                                                                    <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
                                                                 </div>
-
                                                                 <hr>
-
-
-
-
-
                                                                 <div class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
                                                                     <button type="submit" class="btn btn-primary">Generate Now</button>
                                                                 </div>
-
-
-
                                                             </div>
-
-
                                                         </form>
-
                                                     @endif
                                                 </div>
-
-
-
                                             </div>
-
-
 
                                             <hr>
-
-
+                                            
+                                            <!-- TABLE SECTION -->
                                             <div class="card-body">
-                                                <table id="datatable-buttons"
-                                                       class="table table-striped table-bordered dt-responsive nowrap">
+                                                <table id="datatable-buttons" class="table table-striped table-bordered dt-responsive nowrap">
                                                     <thead>
-                                                    <tr>
-                                                        <th scope="col" class="cursor-pointer">Customer Name</th>
-                                                        <th scope="col" class="cursor-pointer">Meter Number</th>
-                                                        <th scope="col" class="cursor-pointer">Estate</th>
-                                                        <th scope="col" class="cursor-pointer">Amount</th>
-                                                        <th scope="col" class="cursor-pointer">Tariff Index</th>
-                                                        <th scope="col" class="cursor-pointer desc">Unit</th>
-                                                        <th scope="col" class="cursor-pointer desc">Status</th>
-                                                        <th scope="col" class="cursor-pointer desc">Date/Time</th>
-                                                        <th scope="col" class="cursor-pointer desc">Action</th>
-
-
-                                                    </tr>
+                                                        <tr>
+                                                            <th scope="col" class="cursor-pointer">Customer Name</th>
+                                                            <th scope="col" class="cursor-pointer">Meter Number</th>
+                                                            <th scope="col" class="cursor-pointer">Estate</th>
+                                                            <th scope="col" class="cursor-pointer">Amount</th>
+                                                            <th scope="col" class="cursor-pointer">Tariff Index</th>
+                                                            <th scope="col" class="cursor-pointer desc">Unit</th>
+                                                            <th scope="col" class="cursor-pointer desc">Status</th>
+                                                            <th scope="col" class="cursor-pointer desc">Date/Time</th>
+                                                            <th scope="col" class="cursor-pointer desc">Action</th>
+                                                        </tr>
                                                     </thead>
                                                     <tbody>
-
-
-                                                    @foreach($credit_tokens as $data)
-
-                                                        <tr>
-                                                            <td><a href="view-user?id={{$data->id}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a></td>
-                                                            <td>{{$data->meterNo}}</a> </td>
-                                                            <td>{{$data->estate->title ?? "name"}}</td>
-                                                            <td>{{number_format($data->amount, 2)}}</td>
-                                                            <td>{{$data->tariff_id}}</td>
-                                                            <td>{{$data->tariffPerKWatt}}kw/N</td>
-                                                            <td>
-                                                                @if($data->status == 2)
-                                                                    <span class="badge text-bg-primary">Successful</span>
-                                                                @elseif($data->status == 0)
-                                                                    <span class="badge text-bg-warning">Pending</span>
-                                                                @elseif($data->status == 3)
-                                                                    <span class="badge text-bg-danger">Declined</span>
-                                                                @endif
-
-                                                            </td>
-                                                            <td>{{$data->created_at}}</td>
-
-
-                                                            <td>
-                                                                @if($data->status == 2)
-                                                                    <a href="recepit?trx_id={{$data->trx_id}}&type=compensation"  onclick="return confirmreprint();" class="btn btn-primary">Reprint</a>
-                                                                    <script>
-
-                                                                        function confirmreprint() {
-                                                                            return confirm('Are you sure you want to reprint');
-                                                                        }
-                                                                    </script>
-
-                                                                @elseif($data->status == 0)
-
-                                                                    <a href="retry-generate-token?trx_id={{$data->trx_id}}"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
-                                                                    <script>
-
-                                                                        function confirmgenertetoken() {
-                                                                            return confirm('Are you sure you want to generate token');
-                                                                        }
-                                                                    </script>
-
-                                                                @elseif($data->status == 3)
-                                                                    <span class="badge text-bg-danger">Declined</span>
-                                                                @endif
-
-                                                            </td>
-
-
-
-
-                                                        </tr>
-
-                                                    @endforeach
-
-
-                                                    </tbody><!-- end tbody -->
-
-                                                    <tfoot>
-
-
-
-                                                    </tfoot>
-                                                </table><!-- end table -->
+                                                        @foreach($credit_tokens as $data)
+                                                            <tr>
+                                                                <td><a href="view-user?id={{$data->id}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a></td>
+                                                                <td>{{$data->meterNo}}</td>
+                                                                <td>{{$data->estate->title ?? "name"}}</td>
+                                                                <td>{{number_format($data->amount, 2)}}</td>
+                                                                <td>{{$data->tariff_id}}</td>
+                                                                <td>{{$data->tariffPerKWatt}}kw/N</td>
+                                                                <td>
+                                                                    @if($data->status == 2) <span class="badge text-bg-primary">Successful</span>
+                                                                    @elseif($data->status == 0) <span class="badge text-bg-warning">Pending</span>
+                                                                    @elseif($data->status == 3) <span class="badge text-bg-danger">Declined</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td>{{$data->created_at}}</td>
+                                                                <td>
+                                                                    @if($data->status == 2)
+                                                                        <a href="recepit?trx_id={{$data->trx_id}}&type=compensation" onclick="return confirm('Are you sure you want to reprint');" class="btn btn-primary">Reprint</a>
+                                                                    @elseif($data->status == 0)
+                                                                        <a href="retry-generate-token?trx_id={{$data->trx_id}}" onclick="return confirm('Are you sure you want to generate token');" class="btn btn-secondary">Generate Token</a>
+                                                                    @elseif($data->status == 3)
+                                                                        <span class="badge text-bg-danger">Declined</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
                                             </div>
-
-
+                                            
                                         </div>
-
-
-                                        {{-- KCT TOKENS--}}
-                                        <div class="tab-pane" id="navpills2-messages" role="tabpanel">
-                                            <div class="row">
-                                                <div class="d-flex justify-content-between my-4">
-                                                </div>
-                                        </div>
-
-
-                                        <div class="tab-pane" id="navpills2-settings" role="tabpanel">
-
-                                            <div class="row">
-
-
-                                            </div>
-
-
-                                        </div>
-
-
                                     </div>
                                 </div>
-
-
                             </div>
                         </div>
-
                     </div>
                 </div>
-
-
-            </div>
-
-
-        </div> <!-- container-fluid -->
-
+            </div> <!-- container-fluid -->
         </div>
 
     @elseif(Auth::user()->role == 1)
@@ -753,7 +619,6 @@
                                                                 <div class="row">
                                                                     <div class="col-xl-4 my-2 col-sm-12">
                                                                         <label class="my-2">Estate</label>
-                                                                        <input required  name="estate_id" value="{{$estate->title}}" hidden="">
                                                                         <h6>{{$estate->title}}</h6>
                                                                     </div>
 
@@ -801,6 +666,7 @@
                                                                     <input required name="amount" value="{{$amount}}" hidden="">
 
                                                                     <input type="text" name="t_index" value="{{$tarrif_index}}" hidden>
+                                                                    <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
 
 

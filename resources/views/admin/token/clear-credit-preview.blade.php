@@ -522,6 +522,8 @@
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
                                                                 <option value="enkpay">Pay with Enkpay</option>
+        
+
                                                             </select>
                                                         </div>
 

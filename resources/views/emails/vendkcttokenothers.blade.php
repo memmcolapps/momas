@@ -480,11 +480,6 @@
                                         <ul>
                                             <li><b>Meter No:</b> {{$data1['meterNo']}}</li>
                                             <li><b>Token:</b> {{$data1['token']}}</li>
-                                            <li><b>KCT Token 1:</b> {{$data1['kct_token1']}}</li>
-                                            <li><b>KCT Token 2:</b> {{$data1['kct_token2']}}</li>
-
-
-
                                         </ul>
 
                                         <br><br>

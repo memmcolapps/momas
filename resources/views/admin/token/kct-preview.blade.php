@@ -201,6 +201,7 @@
                                                                 <input required name="estate_name" value="{{$estate_name}}" hidden="">
                                                                 <input required name="amount" value="{{$amount}}" hidden="">
                                                                 <input required name="tariff_amount" value="{{$tarrif_amount}}" hidden="">
+                                                                <input required name="tariff_type" value="{{$tariff_type ?? 'nepa'}}" hidden="">
 
 
 
@@ -231,6 +232,7 @@
                                                             <input required name="estate_name" value="{{$estate_name}}" hidden="">
                                                             <input required name="amount" value="{{$amount}}" hidden="">
                                                             <input required name="tariff_amount" value="{{$tarrif_amount}}" hidden="">
+                                                            <input required name="tariff_type" value="{{$tariff_type ?? 'nepa'}}" hidden="">
                                                             <input required name="pay_type" value="vend" hidden="">
 
 
@@ -661,6 +663,7 @@
                                                                 <input required name="estate_name" value="{{$estate_name}}" hidden="">
                                                                 <input required name="amount" value="{{$amount}}" hidden="">
                                                                 <input required name="tariff_amount" value="{{$tarrif_amount}}" hidden="">
+                                                                <input required name="tariff_type" value="{{$tariff_type ?? 'nepa'}}" hidden="">
 
 
 
@@ -691,6 +694,7 @@
                                                             <input required name="estate_name" value="{{$estate_name}}" hidden="">
                                                             <input required name="amount" value="{{$amount}}" hidden="">
                                                             <input required name="tariff_amount" value="{{$tarrif_amount}}" hidden="">
+                                                            <input required name="tariff_type" value="{{$tariff_type ?? 'nepa'}}" hidden="">
                                                             <input required name="pay_type" value="vend" hidden="">
 
 
