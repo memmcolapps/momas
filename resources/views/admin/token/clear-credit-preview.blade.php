@@ -545,7 +545,7 @@
                                                             <option value="paystack">Pay with Paystack</option>
                                                             <option value="flutterwave">Pay with Flutterwave</option>
                                                             <option value="enkpay">Pay with Enkpay</option>
-                                                            <option value="vend">Bypass</option>
+                                                            <!-- <option value="vend">Bypass</option> -->
                                                         </select>
                                                     </div>
 

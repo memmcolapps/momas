@@ -668,7 +668,7 @@
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
                                                                 <option value="enkpay">Pay with Enkpay</option>
-                                                                <option value="vend">Bypass</option>
+                                                                <!-- <option value="vend">Bypass</option> -->
 
                                                             </select>
                                                         </div>
@@ -775,7 +775,7 @@
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
                                                                 <option value="enkpay">Pay with Enkpay2</option>
-                                                                <option value="vend">Bypass</option>
+                                                                <!-- <option value="vend">Bypass</option> -->
 
                                                             </select>
                                                         </div>
