@@ -421,11 +421,12 @@ class DashboardContoller extends Controller
 
             $estateName = Estate::find($request->estate_id)->title;
 
-            // Clear all outstanding payments for this estate
+            // Clear all outstanding payments for this estate and set status to paid
             foreach ($payments as $payment) {
                 $payment->update([
                     'amount' => 0,
-                    'total_amount' => 0
+                    'total_amount' => 0,
+                    'status' => 2
                 ]);
             }
 
@@ -456,10 +457,11 @@ class DashboardContoller extends Controller
             $oldTotalAmount = $payment->total_amount;
             $estateName = $payment->estate->title ?? 'Unknown';
 
-            // Update both to zero
+            // Update both to zero and set status to paid (2)
             $payment->update([
                 'amount' => 0,
-                'total_amount' => 0
+                'total_amount' => 0,
+                'status' => 2
             ]);
 
             return redirect('admin/settings#utilities-section')
