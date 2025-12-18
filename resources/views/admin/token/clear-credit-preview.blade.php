@@ -501,7 +501,29 @@
                                                     </div>
 
 
-                                                    @if($amount > 0)
+                                                    <hr>
+
+                                                    <div class="row">
+                                                        <!-- Hidden fields for calculations -->
+                                                        <div class="col-xl-4 my-2 col-sm-12">
+                                                            @php
+                                                                $unnit = $costOfUnit / $tarrif_amount;
+                                                            @endphp
+                                                            <input required name="unit"
+                                                                   value="{{number_format($unnit,2)}}" hidden="">
+                                                        </div>
+
+                                                        <div class="col-xl-4 my-2 col-sm-12">
+                                                            <input required name="vatAmount"
+                                                                   value="{{number_format($vatAmount,2)}}"
+                                                                   hidden="">
+                                                        </div>
+
+                                                        <div class="col-xl-4 my-2 col-sm-12">
+                                                            <input required name="costOfUnit"
+                                                                   value="{{number_format($costOfUnit,2)}}"
+                                                                   hidden="">
+                                                        </div>
 
                                                         <input required name="vat" value="{{$vat}}" hidden="">
                                                         <input required name="estate_id" value="{{$estate_id}}"
@@ -509,49 +531,27 @@
                                                         <input required name="estate_name" value="{{$estate_name}}"
                                                                hidden="">
                                                         <input required name="amount" value="{{$amount}}" hidden="">
+                                                        <input required name="tariff_amount"
+                                                               value="{{$tarrif_amount}}" hidden="">
+                                                        <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
+                                                    </div>
 
-                                                        <hr>
+                                                    <hr>
 
+                                                    <div class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
+                                                        <select class="form-control" required name="pay_type">
+                                                            <option value=" ">--Choose Payment Gateway---</option>
+                                                            <option value="paystack">Pay with Paystack</option>
+                                                            <option value="flutterwave">Pay with Flutterwave</option>
+                                                            <option value="enkpay">Pay with Enkpay</option>
+                                                            <option value="vend">Bypass</option>
+                                                        </select>
+                                                    </div>
 
-                                                        <div
-                                                            class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                            <select class="form-control" required name="pay_type">
-                                                                <option value=" ">--Choose Payment Gateway---</option>
-                                                                <option value="paystack">Pay with Paystack</option>
-                                                                <option value="flutterwave">Pay with Flutterwave
-                                                                </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
-        
-
-                                                            </select>
-                                                        </div>
-
-
-                                                        <div
-                                                            class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
-                                                            <button type="submit" class="btn btn-primary">Pay Now
-                                                            </button>
-                                                        </div>
-
-                                                    @else
-
-                                                        <input required name="vat" value="{{$vat}}" hidden="">
-                                                        <input required name="estate_id" value="{{$estate_id}}"
-                                                               hidden="">
-                                                        <input required name="estate_name" value="{{$estate_name}}"
-                                                               hidden="">
-                                                        <input required name="amount" value="{{$amount}}" hidden="">
-                                                        <input required name="pay_type" value="vend" hidden="">
-
-                                                        <hr>
-                                                        <div
-                                                            class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
-                                                            <button type="submit" class="btn btn-primary">Vend Now
-                                                            </button>
-                                                        </div>
-
-                                                    @endif
+                                                    <div class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
+                                                        <button type="submit" class="btn btn-primary">Pay Now</button>
+                                                    </div>
 
 
                                                 </div>

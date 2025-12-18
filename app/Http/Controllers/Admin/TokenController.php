@@ -522,12 +522,14 @@ class TokenController extends Controller
             $data['vatAmount'] = $vatAmount;
             $data['costOfUnit'] = $costOfUnit;
             $data['tariffPerKWatt'] = $tariffPerKWatt;
+            $data['tarrif_amount'] = $tariffAmount;
             $data['user'] = $user;
             $data['meter'] = $meter;
             $data['estate'] = Estate::where('id', $estate_id)->first();
             $data['amount'] = $request->amount;
             $data['vat'] = $vat;
             $data['estate_name'] = $request->estate_id;
+            $data['tariff_id'] = $request->tariff_id;
             $data['credit_tokens'] = ClearcreditToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
             $data['estate_id'] = Auth::user()->estate_id;
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
@@ -2443,6 +2445,7 @@ class TokenController extends Controller
         $cdt->vat = $request->vat;
         $cdt->estate_name = $request->estate_name;
         $cdt->estate_id = $request->estate_name;
+        $cdt->tariff_id = $request->tariff_id; // UPDATED: Save tariff_id
         $cdt->vatAmount = $request->vatAmount;
         $cdt->costOfUnit = $request->costOfUnit;
         $cdt->tariffPerKWatt = $request->tariffPerKWatt;
@@ -2460,12 +2463,22 @@ class TokenController extends Controller
                     $traff_id = ClearcreditToken::where('trx_id', $trx_id)->first();
                     $amount = (float)number_format((float)$trx->tariffPerKWatt, 2, '.', '');
 
+                    // UPDATED: Get tariff_index from Tariff model using helper method
+                    try {
+                        $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+                    } catch (\Exception $e) {
+                        ClearcreditToken::where('trx_id', $trx_id)->update(['status' => 3]);
+                        Transaction::where('trx_id', $trx_id)->update(['status' => 3]);
+                        return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+                    }
+                    Log::info("Clear credit Tariff index: $tariff_index");
+                    Log::info("Clear credit SGC: $meter->NewSGC");
 
                     $databody = [
                         'meterType' => $meter->KRN2,
                         'meterNo' => $meter->meterNo,
                         'sgc' => (int)$meter->NewSGC,
-                        'ti' => $trx->tariff_id,
+                        'ti' => $tariff_index, // UPDATED: Use tariff_index instead of tariff_id
                         'sbc' => 1,
                         'amount' => 10, // Amount not needed for clear credit tokens
                     ];
@@ -3866,16 +3879,25 @@ class TokenController extends Controller
                 $meter = Meter::where('meterNo', $meterNo)->first();
                 $trx = ClearcreditToken::where('trx_id', $var->data->metadata->ref)->first();
                 $traff_id = ClearcreditToken::where('trx_id', $var->data->metadata->ref)->first();
-                $amount = (float)number_format((float)$trx->tariffPerKWatt, 2, '.', '');
 
+                // UPDATED: Get tariff_index from Tariff model using helper method
+                try {
+                    $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+                } catch (\Exception $e) {
+                    ClearcreditToken::where('trx_id', $var->data->metadata->ref)->update(['status' => 3]);
+                    Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 3]);
+                    return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+                }
+                Log::info("Paystack clear credit - Tariff index: $tariff_index");
+                Log::info("Paystack clear credit - SGC: " . $meter->NewSGC);
 
                 $databody = [
-                    'meterType' => $meter->KRN1,
+                    'meterType' => $meter->KRN2, // UPDATED: Use KRN2 for clear credit
                     'meterNo' => $meter->meterNo,
-                    'sgc' => (int)$meter->OldSGC,
-                    'ti' => $trx->tariff_id,
+                    'sgc' => (int)$meter->NewSGC, // UPDATED: Use NewSGC
+                    'ti' => $tariff_index, // UPDATED: Use tariff_index instead of tariff_id
                     'sbc' => 1,
-                    'amount' => $amount,
+                    'amount' => 10, // UPDATED: Amount not needed for clear credit tokens
                 ];
 
 
@@ -4458,14 +4480,24 @@ class TokenController extends Controller
                 $trx = ClearcreditToken::where('trx_id', $ref)->first();
                 $traff_id = ClearcreditToken::where('trx_id', $ref)->first();
 
+                // UPDATED: Get tariff_index from Tariff model using helper method
+                try {
+                    $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+                } catch (\Exception $e) {
+                    ClearcreditToken::where('trx_id', $ref)->update(['status' => 3]);
+                    Transaction::where('trx_id', $ref)->update(['status' => 3]);
+                    return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+                }
+                Log::info("Flutterwave clear credit - Tariff index: $tariff_index");
+                Log::info("Flutterwave clear credit - SGC: " . $meter->NewSGC);
 
                 $databody = [
                     'meterType' => $meter->KRN2,
                     'meterNo' => $meter->meterNo,
-                    'sgc' => (int)$meter->OldSGC,
-                    'ti' => $trx->tariff_id,
-                    'amount' => (float)number_format((float)$trx->costOfUnit, 2, '.', ''),
-                    "sbc" => 1,
+                    'sgc' => (int)$meter->NewSGC, // UPDATED: Use NewSGC
+                    'ti' => $tariff_index, // UPDATED: Use tariff_index instead of tariff_id
+                    'sbc' => 1,
+                    'amount' => 10, // UPDATED: Amount not needed for clear credit tokens
                 ];
 
 
@@ -4772,10 +4804,11 @@ class TokenController extends Controller
                 $data['phone'] = $user_comp->phone;
                 $data['ref'] = $trx_comp->trx_id;
                 $data['token'] = $trx_comp->token;
-                $data['amount'] = $trx_comp->amount;
-                $data['vat_amount'] = $trx_comp->vatAmount;
-                $data['tariff_amount'] = $trx_comp->tariff_amount;
-                $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
+                // UPDATED: Don't pass VAT, tariff amount, or unit for clear credit receipts
+                // $data['amount'] = $trx_comp->amount;
+                // $data['vat_amount'] = $trx_comp->vatAmount;
+                // $data['tariff_amount'] = $trx_comp->tariff_amount;
+                // $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
                 $data['title'] = "Clear Credit Token";
                 $data['date'] = date('d-m-y h:i:s');
                 $data['meter_no'] = $trx_comp->meterNo;
