@@ -360,6 +360,191 @@
 
                 </div>
 
+                <!-- Utilities Payment Management Section -->
+                <div class="row" id="utilities-section">
+                    <div class="card" style="background: #d1fff1">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center my-4">
+                                <h6 class="mb-0">Utilities Payment Management</h6>
+                                <span class="badge text-bg-warning">{{$outstanding_utilities_count ?? 0}} Outstanding</span>
+                            </div>
+
+                            <!-- Estate Selector and Bulk Clear -->
+                            <div class="row mb-4">
+                                <div class="col-xl-6 col-sm-12">
+                                    <form action="clear-utility-payment-by-estate" method="post" id="clearByEstateForm">
+                                        @csrf
+                                        <label class="my-2">Select Estate to Clear All Outstanding Payments</label>
+                                        <div class="d-flex gap-2">
+                                            <select name="estate_id" class="form-control" required>
+                                                <option value="">-- Select Estate --</option>
+                                                @foreach($estates as $estate)
+                                                <option value="{{$estate->id}}">{{$estate->title}}</option>
+                                                @endforeach
+                                            </select>
+                                            <button type="submit" class="btn btn-danger"
+                                                    onclick="return confirmClearByEstate();">
+                                                Clear All
+                                            </button>
+                                        </div>
+                                        <small class="form-text text-muted">Only clears unpaid/outstanding payments</small>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Filter Section -->
+                            <div class="row mb-3">
+                                <div class="col-xl-4 col-sm-12">
+                                    <label class="my-2">Filter by Estate</label>
+                                    <select id="estateFilter" class="form-control">
+                                        <option value="">All Estates</option>
+                                        @foreach($estates as $estate)
+                                        <option value="{{$estate->title}}">{{$estate->title}}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-xl-4 col-sm-12">
+                                    <label class="my-2">Filter by Status</label>
+                                    <select id="statusFilter" class="form-control">
+                                        <option value="">All Statuses</option>
+                                        <option value="Unpaid">Unpaid</option>
+                                        <option value="Partial">Partial</option>
+                                        <option value="Paid">Paid</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Utilities Payments Table -->
+                            <div class="table-responsive">
+                                <table class="table table-striped utilities-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>User</th>
+                                            <th>Estate</th>
+                                            <th>Type</th>
+                                            <th>Amount</th>
+                                            <th>Total Amount</th>
+                                            <th>Duration</th>
+                                            <th>Next Due Date</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($utilities_payments as $payment)
+                                        <tr>
+                                            <td>{{$payment->id}}</td>
+                                            <td>
+                                                @if($payment->user)
+                                                <a href="view-user?id={{$payment->user_id}}">
+                                                    {{$payment->user->first_name ?? 'N/A'}} {{$payment->user->last_name ?? ''}}
+                                                </a>
+                                                @else
+                                                N/A
+                                                @endif
+                                            </td>
+                                            <td>{{$payment->estate->title ?? 'N/A'}}</td>
+                                            <td>{{$payment->type ?? 'N/A'}}</td>
+                                            <td>
+                                                <span class="badge text-bg-primary">
+                                                    NGN {{number_format($payment->amount, 2)}}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge text-bg-info">
+                                                    NGN {{number_format($payment->total_amount, 2)}}
+                                                </span>
+                                            </td>
+                                            <td>{{$payment->duration ?? 'N/A'}}</td>
+                                            <td>{{$payment->next_due_date ?? 'N/A'}}</td>
+                                            <td>
+                                                @if($payment->status == 0)
+                                                    <span class="badge text-bg-danger">Unpaid</span>
+                                                @elseif($payment->status == 1)
+                                                    <span class="badge text-bg-warning">Partial</span>
+                                                @elseif($payment->status == 2)
+                                                    <span class="badge text-bg-success">Paid</span>
+                                                @else
+                                                    <span class="badge text-bg-secondary">Unknown</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($payment->status != 2)
+                                                <form action="clear-single-utility-payment" method="post" style="display: inline;">
+                                                    @csrf
+                                                    <input type="hidden" name="payment_id" value="{{$payment->id}}">
+                                                    <button type="submit" class="btn btn-warning btn-sm"
+                                                            onclick="return confirmClearSingle('{{$payment->estate->title ?? 'Unknown'}}', '{{number_format($payment->amount, 2)}}');">
+                                                        Clear
+                                                    </button>
+                                                </form>
+                                                @else
+                                                <span class="text-muted small">Paid</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                function confirmClearByEstate() {
+                    var estateSelect = document.querySelector('#clearByEstateForm select[name="estate_id"]');
+                    var selectedOption = estateSelect.options[estateSelect.selectedIndex];
+
+                    if (!estateSelect.value) {
+                        alert('Please select an estate first');
+                        return false;
+                    }
+
+                    var estateName = selectedOption.text;
+                    return confirm(
+                        'Are you sure you want to clear ALL outstanding utilities payments for ' + estateName + '?\n\n' +
+                        'This will set both amount and total_amount to zero for all unpaid/outstanding payments.\n\n' +
+                        'This action cannot be undone.'
+                    );
+                }
+
+                function confirmClearSingle(estateName, amount) {
+                    return confirm(
+                        'Are you sure you want to clear this utilities payment?\n\n' +
+                        'Estate: ' + estateName + '\n' +
+                        'Amount to zero: NGN ' + amount + '\n\n' +
+                        'This action cannot be undone.'
+                    );
+                }
+
+                // Initialize DataTables for utilities
+                $(document).ready(function() {
+                    var table = $('.utilities-table').DataTable({
+                        pageLength: 20,
+                        order: [[0, 'desc']], // Sort by ID descending
+                        language: {
+                            search: "Search utilities payments:"
+                        }
+                    });
+
+                    // Estate filter
+                    $('#estateFilter').on('change', function() {
+                        var estateValue = this.value;
+                        table.column(2).search(estateValue).draw(); // Column 2 is Estate
+                    });
+
+                    // Status filter
+                    $('#statusFilter').on('change', function() {
+                        var statusValue = this.value;
+                        table.column(8).search(statusValue).draw(); // Column 8 is Status
+                    });
+                });
+                </script>
+
                 <div class="row">
                     <div class="card" style="background: #fff3cd">
                         <div class="card-body">

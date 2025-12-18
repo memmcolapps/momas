@@ -266,6 +266,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('support-set', [DashboardContoller::class, 'support_set']);
     Route::get('update-utility', [DashboardContoller::class, 'update_utility']);
     Route::get('delete-utility', [DashboardContoller::class, 'delete_utility']);
+    Route::post('clear-utility-payment-by-estate', [DashboardContoller::class, 'clearUtilityPaymentByEstate']);
+    Route::post('clear-single-utility-payment', [DashboardContoller::class, 'clearSingleUtilityPayment']);
 
 
     Route::get('tariff-list', [TariffController::class, 'tariff_list']);
