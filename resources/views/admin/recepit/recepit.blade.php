@@ -189,6 +189,7 @@
                                             TRX ID : <b>{{$ref}}</b></br><br>
                                             Meter NO : <b>{{$meter_no}}</b></br><br>
                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
+                                            <!-- VAT, Tariff Amount, and Unit hidden for Clear Credit -->
 
                                         @elseif($title == "Compensation Token")
                                             Meter NO : <b>{{$meter_no}}</b></br><br>
@@ -422,14 +423,14 @@
                                             Meter NO : <b>{{$meter_no}}</b></br><br>
                                             KCT 1 : <b>{{$token1 ?? "12345678"}}</b></br><br>
                                             KCT 2 : <b>{{$token2 ?? "12345678"}}</b></br><br>
-                                        @elseif($title == "tamper")
+                                        @elseif($title == "Clear Tamper Token")
+                                            TRX ID : <b>{{$ref}}</b></br><br>
                                             Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Unit :  <b>{{$unitkwh ?? "0.00"}}KWH</b></br><br>
                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                        @elseif($title == "clear_credit_token")
+                                        @elseif($title == "Clear Credit Token")
                                             Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Unit :  <b>{{$unitkwh ?? "0.00"}}KWH</b></br><br>
                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
+                                            <!-- VAT, Tariff Amount, and Unit hidden for Clear Credit -->
 
 
 
@@ -439,7 +440,7 @@
                                             Tariff Amt : <b>₦ {{number_format($tariff_amount, 2)  }} </b></br><br>
                                             Meter NO : <b>{{$meter_no}}</b></br><br>
                                             Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                            Unit :  <b>{{$unitkwh ?? "0.00"}}KWH</b></br><br>
+                                            Unit :  <b>{{$unit ?? "0.00"}}KWH</b></br><br>
                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
                                         @endif
 

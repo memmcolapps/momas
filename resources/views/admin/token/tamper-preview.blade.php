@@ -81,12 +81,7 @@
                                                                    name="meterNo" required>
                                                         </div>
 
-
-                                                        <div class="col-xl-6 my-2 col-sm-12">
-                                                            <label class="my-2">Amount</label>
-                                                            <input type="number" class="form-control mb-3" name="amount"
-                                                                   required>
-                                                        </div>
+                                                        <input type="hidden" name="amount" value="0">
 
                                                     @else
                                                         <div class="col-xl-6 my-2 col-sm-12">
@@ -222,6 +217,7 @@
                                                     <input required name="amount" value="{{$amount}}" hidden="">
                                                     <input required name="tariff_amount" value="{{$tarrif_amount}}"
                                                            hidden="">
+                                                    <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
                                                     <div class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
                                                         <select class="form-control" required name="pay_type">
@@ -533,12 +529,7 @@
                                                                    name="meterNo" required>
                                                         </div>
 
-
-                                                        <div class="col-xl-6 my-2 col-sm-12">
-                                                            <label class="my-2">Amount</label>
-                                                            <input type="number" class="form-control mb-3" name="amount"
-                                                                   required>
-                                                        </div>
+                                                        <input type="hidden" name="amount" value="0">
 
                                                     @else
                                                         <div class="col-xl-6 my-2 col-sm-12">
@@ -661,6 +652,7 @@
                                                             <input required name="amount" value="{{$amount}}" hidden="">
                                                             <input required name="tariff_amount"
                                                                    value="{{$tarrif_amount}}" hidden="">
+                                                            <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
 
                                                         </div>
@@ -676,6 +668,8 @@
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
                                                                 <option value="enkpay">Pay with Enkpay</option>
+                                                                <!-- <option value="vend">Bypass</option> -->
+
                                                             </select>
                                                         </div>
 
@@ -765,6 +759,7 @@
                                                             <input required name="amount" value="{{$amount}}" hidden="">
                                                             <input required name="tariff_amount"
                                                                    value="{{$tarrif_amount}}" hidden="">
+                                                            <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
 
                                                         </div>
@@ -779,7 +774,9 @@
                                                                 <option value="paystack">Pay with Paystack</option>
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
+                                                                <option value="enkpay">Pay with Enkpay2</option>
+                                                                <!-- <option value="vend">Bypass</option> -->
+
                                                             </select>
                                                         </div>
 

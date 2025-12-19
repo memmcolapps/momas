@@ -54,24 +54,22 @@
                                         </div>
 
                                         <div class="col-xl-12 col-sm-12">
-                                            <form action="generate-credit-meter-token" method="POST"
-                                                  enctype="multipart/form-data">
-                                                @csrf
 
                                                 <div class="modal-body">
 
                                                     @if($preview == null)
+                                                        <form action="validate-meter" method="POST"
+                                                              enctype="multipart/form-data">
+                                                            @csrf
                                                         <div class="row">
                                                             <div class="col-xl-6 my-2 col-sm-12">
                                                                 <label class="my-2">Estate</label>
-                                                                <input class="form-control" required name="estate_id"
-                                                                       list="datalistOptions" id="exampleDataList"
-                                                                       placeholder="Type to search...">
-                                                                <datalist id="datalistOptions">
+                                                                <select class="form-control" required name="estate_id">
+                                                                    <option value="">-- Select Estate --</option>
                                                                     @foreach($estate as $data)
-                                                                        <option value="{{$data->title}}">
+                                                                        <option value="{{$data->id}}">{{$data->title}}</option>
                                                                     @endforeach
-                                                                </datalist>
+                                                                </select>
                                                             </div>
 
 
@@ -88,8 +86,9 @@
                                                                        name="amount" required>
                                                             </div>
 
-
                                                         </div>
+                                                        <button type="submit" class="btn btn-primary">Continue</button>
+                                                        </form>
 
                                                     @else
 
@@ -144,8 +143,6 @@
                                                                         <div class="row">
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Estate</label>
-                                                                                <input required name="estate_id"
-                                                                                       value="{{$estate->title}}" hidden="">
                                                                                 <h6>{{$estate->title}}</h6>
                                                                             </div>
 
@@ -177,7 +174,7 @@
                                                                                     $unnit = $costOfUnit / $tarrif_amount;
                                                                                 @endphp
                                                                                 <input required name="unit"
-                                                                                       value="{{number_format($unnit,2)}}"
+                                                                                       value="{{$unnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($unnit, 2)}}kw/h</h6>
                                                                             </div>
@@ -185,7 +182,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Vat Amount</label>
                                                                                 <input required name="vatAmount"
-                                                                                       value="{{number_format($vatAmount,2)}}"
+                                                                                       value="{{$vatAmount}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($vatAmount, 2)}}</h6>
                                                                             </div>
@@ -193,7 +190,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Cost Of Unit</label>
                                                                                 <input required name="costOfUnit"
-                                                                                       value="{{number_format($costOfUnit,2)}}"
+                                                                                       value="{{$costOfUnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
                                                                             </div>
@@ -213,7 +210,8 @@
 
                                                                             <input required name="t_index"
                                                                                    value="{{$tarrif_index}}" hidden="">
-
+                                                                            <input required name="tariff_id"
+                                                                                   value="{{$tariff_id}}" hidden="">
 
                                                                         </div>
 
@@ -231,6 +229,7 @@
                                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                                 </option>
                                                                                 <option value="enkpay">Pay with Enkpay</option>
+                                                                                <!-- <option value="test_bypass">Payment Bypass (Testing Only)</option> -->
                                                                             </select>
                                                                         </div>
 
@@ -258,8 +257,6 @@
 
                                                 </div>
 
-
-                                            </form>
                                         </div>
 
 
@@ -428,27 +425,14 @@
                                         </div>
 
                                         <div class="col-xl-12 col-sm-12">
-                                            <form action="generate-credit-meter-token" method="POST"
-                                                  enctype="multipart/form-data">
-                                                @csrf
 
                                                 <div class="modal-body">
 
                                                     @if($preview == null)
+                                                        <form action="validate-meter" method="POST"
+                                                              enctype="multipart/form-data">
+                                                            @csrf
                                                         <div class="row">
-                                                            <div class="col-xl-6 my-2 col-sm-12">
-                                                                <label class="my-2">Estate</label>
-                                                                <input class="form-control" required name="estate_id"
-                                                                       list="datalistOptions" id="exampleDataList"
-                                                                       placeholder="Type to search...">
-                                                                <datalist id="datalistOptions">
-                                                                    @foreach($estate as $data)
-                                                                        <option value="{{$data->title}}">
-                                                                    @endforeach
-                                                                </datalist>
-                                                            </div>
-
-
                                                             <div class="col-xl-6 my-2 col-sm-12">
                                                                 <label class="my-2">Enter Meter No</label>
                                                                 <input type="number" class="form-control mb-3"
@@ -462,8 +446,9 @@
                                                                        name="amount" required>
                                                             </div>
 
-
                                                         </div>
+                                                        <button type="submit" class="btn btn-primary">Continue</button>
+                                                        </form>
 
                                                     @else
 
@@ -518,8 +503,6 @@
                                                                         <div class="row">
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Estate</label>
-                                                                                <input required name="estate_id"
-                                                                                       value="{{$estate->title}}" hidden="">
                                                                                 <h6>{{$estate->title}}</h6>
                                                                             </div>
 
@@ -551,7 +534,7 @@
                                                                                     $unnit = $costOfUnit / $tarrif_amount;
                                                                                 @endphp
                                                                                 <input required name="unit"
-                                                                                       value="{{number_format($unnit,2)}}"
+                                                                                       value="{{$unnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($unnit, 2)}}kw/h</h6>
                                                                             </div>
@@ -559,7 +542,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Vat Amount</label>
                                                                                 <input required name="vatAmount"
-                                                                                       value="{{number_format($vatAmount,2)}}"
+                                                                                       value="{{$vatAmount}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($vatAmount, 2)}}</h6>
                                                                             </div>
@@ -567,7 +550,7 @@
                                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Cost Of Unit</label>
                                                                                 <input required name="costOfUnit"
-                                                                                       value="{{number_format($costOfUnit,2)}}"
+                                                                                       value="{{$costOfUnit}}"
                                                                                        hidden="">
                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
                                                                             </div>
@@ -587,8 +570,8 @@
 
                                                                             <input required name="t_index"
                                                                                    value="{{$tarrif_index}}" hidden="">
-
-
+                                                                            <input required name="tariff_id"
+                                                                                   value="{{$tariff_id}}" hidden="">
 
                                                                         </div>
 
@@ -606,6 +589,7 @@
                                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                                 </option>
                                                                                 <option value="enkpay">Pay with Enkpay</option>
+                                                                                <!-- <option value="test_bypass">Payment Bypass (Testing Only)</option> -->
                                                                             </select>
                                                                         </div>
 
@@ -633,8 +617,6 @@
 
                                                 </div>
 
-
-                                            </form>
                                         </div>
 
                                     </div>

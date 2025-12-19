@@ -156,8 +156,35 @@
                                         <input type="text" value="{{$tr->title ?? "name"}}" name="title"
                                                class="form-control" required>
                                         <input type="text" name="id" value="{{$tr->id}}" hidden>
+                                    </div>
 
-
+                                    <div class="col-3">
+                                        <label class="my-2">Tariff Index (1-99)
+                                            @if($tr->tariff_index == null)
+                                                <span class="badge bg-danger">Required</span>
+                                            @else
+                                                <span class="badge bg-success">Set</span>
+                                            @endif
+                                        </label>
+                                        @if($tr->tariff_index == null)
+                                            <form action="update-tariff-index" method="post" id="tariffIndexForm">
+                                                @csrf
+                                                <input type="hidden" name="tariff_id" value="{{$tr->id}}">
+                                                <select name="tariff_index" class="form-control"
+                                                        onchange="document.getElementById('tariffIndexForm').submit()">
+                                                    <option value="">-- Select Index --</option>
+                                                    @for($i = 1; $i <= 99; $i++)
+                                                        @if(!in_array($i, $usedIndices))
+                                                            <option value="{{$i}}">{{$i}}</option>
+                                                        @endif
+                                                    @endfor
+                                                </select>
+                                            </form>
+                                        @else
+                                            <input type="text" value="{{$tr->tariff_index}}" class="form-control" readonly
+                                                   style="background-color: #e9ecef; cursor: not-allowed;">
+                                            <small class="text-muted">Tariff index cannot be changed once set</small>
+                                        @endif
                                     </div>
 
 
@@ -507,8 +534,35 @@
                                                class="form-control" required>
                                         <input type="text" name="estate_id" value="{{Auth::user()->estate_id}}" hidden>
                                         <input type="text" name="id" value="{{$tr->id}}" hidden>
+                                    </div>
 
-
+                                    <div class="col-3">
+                                        <label class="my-2">Tariff Index (1-99)
+                                            @if($tr->tariff_index == null)
+                                                <span class="badge bg-danger">Required</span>
+                                            @else
+                                                <span class="badge bg-success">Set</span>
+                                            @endif
+                                        </label>
+                                        @if($tr->tariff_index == null)
+                                            <form action="update-tariff-index" method="post" id="tariffIndexFormEstate">
+                                                @csrf
+                                                <input type="hidden" name="tariff_id" value="{{$tr->id}}">
+                                                <select name="tariff_index" class="form-control"
+                                                        onchange="document.getElementById('tariffIndexFormEstate').submit()">
+                                                    <option value="">-- Select Index --</option>
+                                                    @for($i = 1; $i <= 99; $i++)
+                                                        @if(!in_array($i, $usedIndices))
+                                                            <option value="{{$i}}">{{$i}}</option>
+                                                        @endif
+                                                    @endfor
+                                                </select>
+                                            </form>
+                                        @else
+                                            <input type="text" value="{{$tr->tariff_index}}" class="form-control" readonly
+                                                   style="background-color: #e9ecef; cursor: not-allowed;">
+                                            <small class="text-muted">Tariff index cannot be changed once set</small>
+                                        @endif
                                     </div>
 
 

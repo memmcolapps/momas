@@ -364,6 +364,14 @@ class DashboardContoller extends Controller
 
             $data['fea'] = Feature::where('id', 1)->first();
             $data['set'] = Setting::where('id', 1)->first();
+
+            // Load utilities payments data for super admin
+            $data['utilities_payments'] = UtilitiesPayment::with(['user', 'estate'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+            $data['estates'] = Estate::orderBy('title', 'asc')->get();
+            $data['outstanding_utilities_count'] = UtilitiesPayment::where('status', '!=', 2)->count();
+
             return view('admin/settings', $data);
         } elseif (Auth::user()->role == 1) {
 
@@ -383,6 +391,83 @@ class DashboardContoller extends Controller
         } elseif (Auth::user()->role == 4) {
         } elseif (Auth::user()->role == 5) {
         } else {
+        }
+    }
+
+    public function clearUtilityPaymentByEstate(Request $request)
+    {
+        // Super admin only check
+        if (Auth::user()->role != 0) {
+            return redirect('admin/settings')->with('error', 'Unauthorized access');
+        }
+
+        try {
+            $request->validate([
+                'estate_id' => 'required|exists:estates,id'
+            ]);
+
+            // Get all outstanding utilities payments for this estate
+            $payments = UtilitiesPayment::where('estate_id', $request->estate_id)
+                ->where('status', '!=', 2)
+                ->get();
+
+            $count = $payments->count();
+            $totalAmount = $payments->sum('amount');
+
+            if ($count == 0) {
+                return redirect('admin/settings#utilities-section')
+                    ->with('error', 'No outstanding utilities payments found for this estate');
+            }
+
+            $estateName = Estate::find($request->estate_id)->title;
+
+            // Clear all outstanding payments for this estate and set status to paid
+            foreach ($payments as $payment) {
+                $payment->update([
+                    'amount' => 0,
+                    'total_amount' => 0,
+                    'status' => 2
+                ]);
+            }
+
+            return redirect('admin/settings#utilities-section')
+                ->with('message', "Cleared {$count} outstanding utilities payments for {$estateName}. Total zeroed: NGN " . number_format($totalAmount, 2));
+        } catch (\Exception $e) {
+            return redirect('admin/settings')->with('error', 'Failed to clear: ' . $e->getMessage());
+        }
+    }
+
+    public function clearSingleUtilityPayment(Request $request)
+    {
+        // Super admin only check
+        if (Auth::user()->role != 0) {
+            return redirect('admin/settings')->with('error', 'Unauthorized access');
+        }
+
+        try {
+            $payment = UtilitiesPayment::findOrFail($request->payment_id);
+
+            // Only clear if not fully paid
+            if ($payment->status == 2) {
+                return redirect('admin/settings#utilities-section')
+                    ->with('error', 'Cannot clear a fully paid utilities payment');
+            }
+
+            $oldAmount = $payment->amount;
+            $oldTotalAmount = $payment->total_amount;
+            $estateName = $payment->estate->title ?? 'Unknown';
+
+            // Update both to zero and set status to paid (2)
+            $payment->update([
+                'amount' => 0,
+                'total_amount' => 0,
+                'status' => 2
+            ]);
+
+            return redirect('admin/settings#utilities-section')
+                ->with('message', "Utilities payment cleared for {$estateName}. Amount zeroed: NGN " . number_format($oldAmount, 2));
+        } catch (\Exception $e) {
+            return redirect('admin/settings')->with('error', 'Failed to clear payment: ' . $e->getMessage());
         }
     }
 
