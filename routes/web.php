@@ -102,6 +102,7 @@ Route::get('/search-meter', [MeterController::class, 'searchMeter']);
 Route::any('pay-flutter', [TransactionController::class, 'flutter_payment']);
 Route::any('payment-check', [TransactionController::class, 'flutter_verify']);
 Route::any('paystack-check', [TransactionController::class, 'paystack_verify']);
+Route::any('payment', [TokenController::class, 'payment']);
 Route::any('fund_wallet', [TransactionController::class, 'fund_wallet']);
 
 
@@ -268,6 +269,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('delete-utility', [DashboardContoller::class, 'delete_utility']);
     Route::post('clear-utility-payment-by-estate', [DashboardContoller::class, 'clearUtilityPaymentByEstate']);
     Route::post('clear-single-utility-payment', [DashboardContoller::class, 'clearSingleUtilityPayment']);
+    Route::post('edit-utility-payment', [DashboardContoller::class, 'editUtilityPayment']);
 
 
     Route::get('tariff-list', [TariffController::class, 'tariff_list']);

@@ -471,6 +471,52 @@ class DashboardContoller extends Controller
         }
     }
 
+    public function editUtilityPayment(Request $request)
+    {
+        // Super admin only check
+        if (Auth::user()->role != 0) {
+            return redirect('admin/settings')->with('error', 'Unauthorized access');
+        }
+
+        try {
+            // Validate the incoming data
+            $validated = $request->validate([
+                'payment_id' => 'required|exists:utilities_payments,id',
+                'amount' => 'required|numeric|min:0',
+                'total_amount' => 'required|numeric|min:0',
+                'status' => 'required|in:0,1,2',
+                'next_due_date' => 'required|date'
+            ]);
+
+            $payment = UtilitiesPayment::findOrFail($request->payment_id);
+            $estateName = $payment->estate->title ?? 'Unknown';
+
+            // Store old values for audit message
+            $oldAmount = $payment->amount;
+            $oldTotalAmount = $payment->total_amount;
+            $oldStatus = $payment->status;
+
+            // Update the payment
+            $payment->update([
+                'amount' => $validated['amount'],
+                'total_amount' => $validated['total_amount'],
+                'status' => $validated['status'],
+                'next_due_date' => $validated['next_due_date']
+            ]);
+
+            $statusLabels = [0 => 'Unpaid', 1 => 'Partial', 2 => 'Paid'];
+            $newStatusLabel = $statusLabels[$validated['status']] ?? 'Unknown';
+
+            return redirect('admin/settings#utilities-section')
+                ->with('message', "Utilities payment updated successfully for {$estateName}. New Amount: NGN " . number_format($validated['amount'], 2) . ", Status: {$newStatusLabel}");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect('admin/settings#utilities-section')
+                ->with('error', 'Validation failed: ' . implode(', ', $e->validator->errors()->all()));
+        } catch (\Exception $e) {
+            return redirect('admin/settings')->with('error', 'Failed to update payment: ' . $e->getMessage());
+        }
+    }
+
     public function update_utility(request $request)
     {
 

@@ -596,6 +596,17 @@ class TokenController extends Controller
             // [3] Tariff Fixed Charge
             $afterFixedCharge = $afterEstateFee - $fixedCharge;
 
+            // Validate that amount after deductions is not negative or too small
+            if ($afterFixedCharge <= 0) {
+                $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+                return back()->with('error',
+                    'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
+                    '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
+                    '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
+                    '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
+            }
+
             // [4] VAT Calculation on remaining amount
             $calculator = new VatCalculator();
             $params = [
@@ -706,6 +717,17 @@ class TokenController extends Controller
 
             // [3] Tariff Fixed Charge
             $afterFixedCharge = $afterEstateFee - $fixedCharge;
+
+            // Validate that amount after deductions is not negative or too small
+            if ($afterFixedCharge <= 0) {
+                $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+                return back()->with('error',
+                    'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
+                    '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
+                    '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
+                    '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
+            }
 
             // [4] VAT Calculation on remaining amount
             $calculator = new VatCalculator();
@@ -2945,6 +2967,7 @@ class TokenController extends Controller
         $var = json_decode($var);
         $status = $var->status ?? null;
         $ref = $var->data->reference ?? null;
+        $ref_from_meta = $var->data->metadata->ref ?? null;
 
         $ck_transaction = Transaction::where('trx_id', $var->data->reference)->first()->status ?? null;
         if ($ck_transaction == null) {
@@ -2958,13 +2981,15 @@ class TokenController extends Controller
                 $meter = Meter::where('meterNo', $meterNo)->first();
                 $trx = CreditToken::where('trx_id', $var->data->metadata->ref)->first();
                 $traff_id = CreditToken::where('trx_id', $var->data->metadata->ref)->first();
+                
+
 
                 // Get tariff_index from Tariff model
                 try {
                     $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
                 } catch (\Exception $e) {
                     CreditToken::where('trx_id', $var->data->metadata->ref)->update(['status' => 3]);
-                    Transaction::where('trx_id', $trx_id)->update(['status' => 3]);
+                    Transaction::where('trx_id', $trx->id)->update(['status' => 3]);
                     return redirect()->back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
                 }
 
@@ -3010,7 +3035,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3020,7 +3045,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3111,7 +3136,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3119,7 +3144,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3711,7 +3736,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3720,7 +3745,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'service' => "TAMPER TOKEN PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3802,7 +3827,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3810,7 +3835,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'service' => "CLEAR TAMPER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4718,6 +4743,50 @@ class TokenController extends Controller
                 }
             }
         }
+    }
+
+    public function payment(Request $request)
+    {
+        // Handle payment callback from payment gateways
+        $ref = $request->ref;
+        $status = $request->status;
+
+        if (!$ref) {
+            return redirect('admin/dashboard')->with('error', 'Payment reference is missing');
+        }
+
+        // Find the transaction
+        $trx = Transaction::where('trx_id', $ref)->first();
+
+        if (!$trx) {
+            return redirect('admin/dashboard')->with('error', 'Transaction not found');
+        }
+
+        // Handle declined/failed payments
+        if ($status == 'failure' || $status == 'declined') {
+            // Update transaction status to declined/failed
+            $trx->update(['status' => 3, 'action' => 'declined']); // 3 = failed
+
+            return redirect('admin/dashboard')->with('error', 'Payment was declined or failed. Reference: ' . $ref);
+        }
+
+        // Handle successful payments
+        if ($status == 'success' && $trx->status == 4) {
+            // Transaction is already marked as successful (status=4) by payment verification
+            // Get the credit token if it exists
+            $creditToken = CreditToken::where('trx_id', $ref)->first();
+
+            if ($creditToken && $creditToken->token) {
+                // Token already generated, redirect to receipt
+                return redirect()->to(url('') . "/admin/recepit?trx_id=$ref&type=credit_token");
+            }
+
+            // If token doesn't exist yet, redirect to dashboard with success message
+            return redirect('admin/dashboard')->with('message', 'Payment successful! Token is being processed. Reference: ' . $ref);
+        }
+
+        // Handle other statuses - redirect to dashboard
+        return redirect('admin/dashboard')->with('message', 'Payment processing. Reference: ' . $ref);
     }
 
 
