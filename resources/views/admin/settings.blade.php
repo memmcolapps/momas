@@ -472,12 +472,23 @@
                                                 @endif
                                             </td>
                                             <td>
+                                                <button type="button" class="btn btn-info btn-sm"
+                                                        onclick="openEditModal({{ json_encode($payment->id) }},
+                                                        {{ json_encode($payment->amount) }},
+                                                        {{ json_encode($payment->total_amount) }},
+                                                        {{ json_encode($payment->status) }},
+                                                        {{ json_encode($payment->next_due_date) }},
+                                                        {{ json_encode($payment->estate?->title ?? 'Unknown') }})">
+                                                    Edit
+                                                </button>
                                                 @if($payment->status != 2)
                                                 <form action="clear-single-utility-payment" method="post" style="display: inline;">
                                                     @csrf
                                                     <input type="hidden" name="payment_id" value="{{$payment->id}}">
                                                     <button type="submit" class="btn btn-warning btn-sm"
-                                                            onclick="return confirmClearSingle('{{$payment->estate->title ?? 'Unknown'}}', '{{number_format($payment->amount, 2)}}');">
+                                                            onclick="return confirmClearSingle(
+                                                            {{ json_encode($payment->estate?->title ?? 'Unknown') }},
+                                                            {{ json_encode(number_format($payment->amount, 2)) }});">
                                                         Clear
                                                     </button>
                                                 </form>
@@ -543,6 +554,75 @@
                         table.column(8).search(statusValue).draw(); // Column 8 is Status
                     });
                 });
+                </script>
+
+                <!-- Edit Utilities Payment Modal -->
+                <div class="modal fade" id="editUtilityModal" tabindex="-1" aria-labelledby="editUtilityModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editUtilityModalLabel">Edit Utilities Payment</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form action="edit-utility-payment" method="post" id="editUtilityForm">
+                                @csrf
+                                <div class="modal-body">
+                                    <input type="hidden" name="payment_id" id="edit_payment_id">
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Estate</label>
+                                        <input type="text" class="form-control" id="edit_estate_name" readonly>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Amount (Current Period)</label>
+                                        <input type="number" step="0.01" name="amount" class="form-control" id="edit_amount" required>
+                                        <small class="form-text text-muted">The utility fee for the current billing period</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Total Amount (Accumulated)</label>
+                                        <input type="number" step="0.01" name="total_amount" class="form-control" id="edit_total_amount" required>
+                                        <small class="form-text text-muted">Total including current period + arrears</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Status</label>
+                                        <select name="status" class="form-control" id="edit_status" required>
+                                            <option value="0">Unpaid</option>
+                                            <option value="1">Partial</option>
+                                            <option value="2">Paid</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Next Due Date</label>
+                                        <input type="date" name="next_due_date" class="form-control" id="edit_next_due_date" required>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function openEditModal(paymentId, amount, totalAmount, status, nextDueDate, estateName) {
+                        // Populate the form fields
+                        document.getElementById('edit_payment_id').value = paymentId;
+                        document.getElementById('edit_amount').value = amount;
+                        document.getElementById('edit_total_amount').value = totalAmount;
+                        document.getElementById('edit_status').value = status;
+                        document.getElementById('edit_next_due_date').value = nextDueDate;
+                        document.getElementById('edit_estate_name').value = estateName;
+
+                        // Show the modal
+                        var modal = new bootstrap.Modal(document.getElementById('editUtilityModal'));
+                        modal.show();
+                    }
                 </script>
 
                 <div class="row">
@@ -804,7 +884,7 @@
 
 
 
-
+                                        </div>
                                         <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
                                             Update
                                         </button>
