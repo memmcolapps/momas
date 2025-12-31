@@ -2989,7 +2989,7 @@ class TokenController extends Controller
                     $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
                 } catch (\Exception $e) {
                     CreditToken::where('trx_id', $var->data->metadata->ref)->update(['status' => 3]);
-                    Transaction::where('trx_id', $trx->id)->update(['status' => 3]);
+                    Transaction::where('trx_id', $trx->trx_id)->update(['status' => 3]);
                     return redirect()->back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
                 }
 
