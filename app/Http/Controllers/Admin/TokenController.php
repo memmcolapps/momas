@@ -3055,7 +3055,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -3154,7 +3154,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -3292,7 +3292,7 @@ class TokenController extends Controller
 
                                 ]);
 
-                                User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                                User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                                 return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -3381,7 +3381,7 @@ class TokenController extends Controller
 
                                 ]);
 
-                                User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                                User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                                 return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                             }
@@ -3540,7 +3540,7 @@ class TokenController extends Controller
 
                                     ]);
 
-                                    User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                                    User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                                     return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $kct_response->json() . " | " . json_encode($kctdatabody));
@@ -3634,7 +3634,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -3753,7 +3753,7 @@ class TokenController extends Controller
                             'note' => json_encode($no_kct_data) . "|" . json_encode($databody)
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/tamper-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -3845,7 +3845,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -3979,7 +3979,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/clear-credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4116,7 +4116,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4206,7 +4206,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -4342,7 +4342,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/tamper-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4434,7 +4434,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -4578,7 +4578,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/clear-credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4730,7 +4730,7 @@ class TokenController extends Controller
                                 'note' => json_encode($kct_data) . "|" . json_encode($kctdatabody)
                             ]);
 
-                            User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                            User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
                             return redirect('admin/kct-token')->with('error', 'KCT Token generation failed: ' . ($kct_data['message'] ?? 'Unknown error'));
 
