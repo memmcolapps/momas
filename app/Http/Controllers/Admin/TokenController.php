@@ -1890,7 +1890,7 @@ class TokenController extends Controller
                         send_email_kct_token($email, $token, $meterNo);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -1899,7 +1899,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "TAMPER TOKEN PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -2549,7 +2549,7 @@ class TokenController extends Controller
 
                         } else {
 
-                            Transaction::where('trx_id', $trx)->update([
+                            Transaction::where('trx_id', $trx_id)->update([
                                 'service' => "CLEAR CREDIT TOKEN PURCHASE",
                                 'service_type' => "meter",
                                 'status' => 3,
@@ -2914,7 +2914,7 @@ class TokenController extends Controller
                 $trx->unit_amount = $request->costOfUnit;
                 $trx->save();
 
-                Transaction::where('trx_id', $trx)->update([
+                Transaction::where('trx_id', $trx->trx_id)->update([
                     'service' => "METER PURCHASE",
                     'service_type' => "meter",
                     'status' => 3,
@@ -3045,7 +3045,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx->trx_id)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3055,7 +3055,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
+                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -3136,7 +3136,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx->trx_id)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3272,7 +3272,7 @@ class TokenController extends Controller
                                 send_email_token($email, $token, $amount);
 
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'status' => 2,
                                 ]);
 
@@ -3282,7 +3282,7 @@ class TokenController extends Controller
 
                             } else {
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'service' => "METER PURCHASE",
                                     'service_type' => "meter",
                                     'status' => 3,
@@ -3363,7 +3363,7 @@ class TokenController extends Controller
                                 send_email_token($email, $token, $amount);
 
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'status' => 2,
                                 ]);
 
@@ -3371,7 +3371,7 @@ class TokenController extends Controller
 
                             } else {
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'service' => "METER PURCHASE",
                                     'service_type' => "meter",
                                     'status' => 3,
@@ -3530,7 +3530,7 @@ class TokenController extends Controller
 
                                 } else {
 
-                                    Transaction::where('trx_id', $trx)->update([
+                                    Transaction::where('trx_id', $ref)->update([
                                         'service' => "METER PURCHASE",
                                         'service_type' => "meter",
                                         'status' => 3,
@@ -3616,7 +3616,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3624,7 +3624,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3969,7 +3969,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "CLEAR CREDIT TOKEN PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4096,7 +4096,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4106,7 +4106,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4188,7 +4188,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4196,7 +4196,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4322,7 +4322,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4332,7 +4332,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4416,7 +4416,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4424,7 +4424,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4559,7 +4559,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4568,7 +4568,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4722,7 +4722,7 @@ class TokenController extends Controller
 
                         } else {
 
-                            Transaction::where('trx_id', $trx)->update([
+                            Transaction::where('trx_id', $ref)->update([
                                 'service' => "KCT TOKEN PURCHASE",
                                 'service_type' => "kct_token",
                                 'status' => 3,
