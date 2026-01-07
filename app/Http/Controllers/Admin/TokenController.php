@@ -1890,7 +1890,7 @@ class TokenController extends Controller
                         send_email_kct_token($email, $token, $meterNo);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -1899,7 +1899,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "TAMPER TOKEN PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -2549,7 +2549,7 @@ class TokenController extends Controller
 
                         } else {
 
-                            Transaction::where('trx_id', $trx)->update([
+                            Transaction::where('trx_id', $trx_id)->update([
                                 'service' => "CLEAR CREDIT TOKEN PURCHASE",
                                 'service_type' => "meter",
                                 'status' => 3,
@@ -2914,7 +2914,7 @@ class TokenController extends Controller
                 $trx->unit_amount = $request->costOfUnit;
                 $trx->save();
 
-                Transaction::where('trx_id', $trx)->update([
+                Transaction::where('trx_id', $trx->trx_id)->update([
                     'service' => "METER PURCHASE",
                     'service_type' => "meter",
                     'status' => 3,
@@ -2989,7 +2989,7 @@ class TokenController extends Controller
                     $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
                 } catch (\Exception $e) {
                     CreditToken::where('trx_id', $var->data->metadata->ref)->update(['status' => 3]);
-                    Transaction::where('trx_id', $trx->id)->update(['status' => 3]);
+                    Transaction::where('trx_id', $trx->trx_id)->update(['status' => 3]);
                     return redirect()->back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
                 }
 
@@ -3045,7 +3045,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx->trx_id)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3136,7 +3136,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx->trx_id)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3154,7 +3154,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -3272,7 +3272,7 @@ class TokenController extends Controller
                                 send_email_token($email, $token, $amount);
 
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'status' => 2,
                                 ]);
 
@@ -3282,7 +3282,7 @@ class TokenController extends Controller
 
                             } else {
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'service' => "METER PURCHASE",
                                     'service_type' => "meter",
                                     'status' => 3,
@@ -3292,7 +3292,7 @@ class TokenController extends Controller
 
                                 ]);
 
-                                User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                                User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                                 return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -3363,7 +3363,7 @@ class TokenController extends Controller
                                 send_email_token($email, $token, $amount);
 
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'status' => 2,
                                 ]);
 
@@ -3371,7 +3371,7 @@ class TokenController extends Controller
 
                             } else {
 
-                                Transaction::where('trx_id', $trx)->update([
+                                Transaction::where('trx_id', $trx_id)->update([
                                     'service' => "METER PURCHASE",
                                     'service_type' => "meter",
                                     'status' => 3,
@@ -3381,7 +3381,7 @@ class TokenController extends Controller
 
                                 ]);
 
-                                User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                                User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                                 return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                             }
@@ -3530,7 +3530,7 @@ class TokenController extends Controller
 
                                 } else {
 
-                                    Transaction::where('trx_id', $trx)->update([
+                                    Transaction::where('trx_id', $ref)->update([
                                         'service' => "METER PURCHASE",
                                         'service_type' => "meter",
                                         'status' => 3,
@@ -3540,7 +3540,7 @@ class TokenController extends Controller
 
                                     ]);
 
-                                    User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                                    User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                                     return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $kct_response->json() . " | " . json_encode($kctdatabody));
@@ -3616,7 +3616,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -3624,7 +3624,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3634,7 +3634,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -3753,7 +3753,7 @@ class TokenController extends Controller
                             'note' => json_encode($no_kct_data) . "|" . json_encode($databody)
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/tamper-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -3845,7 +3845,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -3969,7 +3969,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "CLEAR CREDIT TOKEN PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -3979,7 +3979,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/clear-credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4096,7 +4096,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4106,7 +4106,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4116,7 +4116,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4188,7 +4188,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4196,7 +4196,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4206,7 +4206,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -4322,7 +4322,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4332,7 +4332,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4342,7 +4342,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/tamper-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4416,7 +4416,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4424,7 +4424,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4434,7 +4434,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
                         return redirect('admin/credit-token')->with('error', json_encode($no_kct_data) . " | " . json_encode($databody));
 
                     }
@@ -4559,7 +4559,7 @@ class TokenController extends Controller
                         send_email_token($email, $token, $amount);
 
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'status' => 2,
                         ]);
 
@@ -4568,7 +4568,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4578,7 +4578,7 @@ class TokenController extends Controller
 
                         ]);
 
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                        User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
 
                         return redirect('admin/clear-credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
@@ -4722,7 +4722,7 @@ class TokenController extends Controller
 
                         } else {
 
-                            Transaction::where('trx_id', $trx)->update([
+                            Transaction::where('trx_id', $ref)->update([
                                 'service' => "KCT TOKEN PURCHASE",
                                 'service_type' => "kct_token",
                                 'status' => 3,
@@ -4730,7 +4730,7 @@ class TokenController extends Controller
                                 'note' => json_encode($kct_data) . "|" . json_encode($kctdatabody)
                             ]);
 
-                            User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+                            User::where('id', $trx->user_id)->increment('main_wallet', $trx->amount);
 
                             return redirect('admin/kct-token')->with('error', 'KCT Token generation failed: ' . ($kct_data['message'] ?? 'Unknown error'));
 
