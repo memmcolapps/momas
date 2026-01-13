@@ -1716,8 +1716,6 @@ class TokenController extends Controller
                     return redirect()->away($var->data->link);
 
                 }
-
-
             }
 
         } catch (Exception $e) {
@@ -3281,7 +3279,8 @@ class TokenController extends Controller
                             'status' => 2,
                         ]);
 
-                        return redirect("admin/recepit?trx_id=$trx_id");
+                        $type = "credit_token";
+                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
 
                     } else {
 
@@ -3357,7 +3356,7 @@ class TokenController extends Controller
                 $var = json_decode($var);
                 Log::info('Paystack verify response', ['response' => $var]);
 
-                $status = $var->status ?? null;
+                $status = $var->data->status ?? null;
 
                 $ref =  $var->data->reference ?? null;
                 $trx_id = $var->data->metadata->ref ?? null;
@@ -3368,11 +3367,7 @@ class TokenController extends Controller
 
 
                 if ($ck_transaction === null) {
-
-
-                    if ($status == 'success') {
-
-
+                    if ($status === 'success') {
                         Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'payment_ref' => $ref]);
                         $meterNo = CreditToken::where('trx_id', $trx_id)->first()->meterNo;
                         $meter = Meter::where('meterNo', $meterNo)->first();
@@ -3522,7 +3517,8 @@ class TokenController extends Controller
                                     'status' => 2,
                                 ]);
 
-                                return redirect("admin/recepit?trx_id=$trx_id");
+                                $type = "credit_token";
+                                return redirect("admin/recepit?trx_id=$trx_id&type=$type");
 
                             } else {
 
@@ -3544,7 +3540,6 @@ class TokenController extends Controller
 
                         }
 
-
                     } else {
                         $ref = Transaction::where('trx_id', $var->data->metadata->ref)->first()->trx_id;
                         $url = url('') . "/payment?ref=$ref&status=failure";
@@ -3553,17 +3548,18 @@ class TokenController extends Controller
 
                 }
 
+                if ($ck_transaction === 3) {
+                    return back()->with('error', "Payment not found or failed on Paystack, Please initiate a new purchase");    
+                } else {
+                    return back()->with('error', "Payment not found or failed on Paystack, Please initiate a new purchase");    
+                }
             }
-
-
         }
-
            } catch (Exception $e) {
             //    return back()->with('error', $e); 
                 Log::error('retry_generate_credit_token error: ', ['exception' => $e]);
-                return redirect('/admin/credit-token')->with('error', $e->getMessage());
+                return back()->with('error', $e->getMessage());
            }
-
     }
 
     public function paystack_verify_kct(request $request)
@@ -3595,6 +3591,7 @@ class TokenController extends Controller
         $status = $var->status ?? null;
         $reff = $var->data->reference ?? null;
         $ref = $var->data->metadata->ref ?? null;
+        $trx_id = $var->data->metadata->ref ?? null;
 
 
         $ck_transaction = Transaction::where('trx_id', $ref)->first()->status ?? null;
@@ -3746,7 +3743,7 @@ class TokenController extends Controller
                             'status' => 2,
                         ]);
 
-                        return redirect("admin/recepit?trx_id=$trx_id");
+                        return redirect("admin/recepit?trx_id=$ref&type=kct_token");
 
                     } else {
 
@@ -3957,7 +3954,8 @@ class TokenController extends Controller
                             'status' => 2,
                         ]);
 
-                        return redirect("admin/recepit?trx_id=$trx_id");
+                        $type = "tamper";
+                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
 
                     } else {
 
@@ -4018,6 +4016,7 @@ class TokenController extends Controller
         $var = json_decode($var);
         $status = $var->status ?? null;
         $ref = $var->data->reference ?? null;
+        $trx_id = $var->data->metadata->ref ?? null;
 
 
         $ck_transaction = Transaction::where('trx_id', $var->data->reference)->first()->status ?? null;
@@ -4161,6 +4160,7 @@ class TokenController extends Controller
 
         $status = $var->status ?? null;
         $ref = $var->data->tx_ref ?? null;
+    
 
         if ($status == null) {
             return redirect("admin/credit-token")->with('error', "something went wrong");
@@ -4232,7 +4232,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx_id)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4318,11 +4318,12 @@ class TokenController extends Controller
                             'status' => 2,
                         ]);
 
-                        return redirect("admin/recepit?trx_id=$trx_id");
+                        $type = "credit_token";
+                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
 
                     } else {
 
-                        Transaction::where('trx_id', $trx_id)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4403,6 +4404,7 @@ class TokenController extends Controller
                 $trx = TamperToken::where('trx_id', $ref)->first();
                 $traff_id = TamperToken::where('trx_id', $ref)->first();
                 $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+                $trx_id = $trx->trx_id;
 
 
                 $databody = [
@@ -4458,7 +4460,7 @@ class TokenController extends Controller
 
                     } else {
 
-                        Transaction::where('trx_id', $trx_id)->update([
+                        Transaction::where('trx_id', $trx->trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -4501,6 +4503,7 @@ class TokenController extends Controller
                 $trx = TamperToken::where('trx_id', $var->data->metadata->ref)->first();
                 $traff_id = TamperToken::where('trx_id', $var->data->metadata->ref)->first();
                 $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+                $trx_id = $trx->trx_id;
 
 
                 $databody = [
@@ -4546,7 +4549,8 @@ class TokenController extends Controller
                             'status' => 2,
                         ]);
 
-                        return redirect("admin/recepit?trx_id=$trx_id");
+                        $type = "tamper";
+                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
 
                     } else {
 
@@ -4630,6 +4634,7 @@ class TokenController extends Controller
                 $meter = Meter::where('meterNo', $meterNo)->first();
                 $trx = ClearcreditToken::where('trx_id', $ref)->first();
                 $traff_id = ClearcreditToken::where('trx_id', $ref)->first();
+                $trx_id = $trx->trx_id;
 
                 // UPDATED: Get tariff_index from Tariff model using helper method
                 try {
@@ -4689,7 +4694,8 @@ class TokenController extends Controller
                             'status' => 2,
                         ]);
 
-                        return redirect("admin/recepit?trx_id=$trx_id");
+                        $type = "clear_credit";
+                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
 
 
                     } else {
@@ -4873,27 +4879,31 @@ class TokenController extends Controller
 
     public function payment(Request $request)
     {
-        // Handle payment callback from payment gateways
+        Log::info('payment', [
+            'request' => $request->all(),
+        ]);
+
+    // Handle payment callback from payment gateways
         $ref = $request->ref;
         $status = $request->status;
 
         if (!$ref) {
-            return redirect('admin/dashboard')->with('error', 'Payment reference is missing');
+            return redirect('admin/credit-token')->with('error', 'Payment reference is missing');
         }
 
         // Find the transaction
         $trx = Transaction::where('trx_id', $ref)->first();
 
         if (!$trx) {
-            return redirect('admin/dashboard')->with('error', 'Transaction not found');
+            return redirect('admin/credit-token')->with('error', 'Transaction not found');
         }
 
         // Handle declined/failed payments
         if ($status == 'failure' || $status == 'declined') {
             // Update transaction status to declined/failed
-            $trx->update(['status' => 3, 'action' => 'declined']); // 3 = failed
+            $trx->update(['status' => 3]); // 3 = failed
 
-            return redirect('admin/dashboard')->with('error', 'Payment was declined or failed. Reference: ' . $ref);
+            return redirect('admin/credit-token')->with('error', 'Payment was declined or failed. Reference: ' . $ref);
         }
 
         // Handle successful payments
@@ -4908,19 +4918,20 @@ class TokenController extends Controller
             }
 
             // If token doesn't exist yet, redirect to dashboard with success message
-            return redirect('admin/dashboard')->with('message', 'Payment successful! Token is being processed. Reference: ' . $ref);
+            return redirect('admin/credit-token')->with('message', 'Payment successful! Token is being processed. Reference: ' . $ref);
         }
 
         // Handle other statuses - redirect to dashboard
-        return redirect('admin/dashboard')->with('message', 'Payment processing. Reference: ' . $ref);
+        return redirect('admin/credit-token')->with('message', 'Payment processing. Reference: ' . $ref);
     }
 
 
-    public
-    function recepit(request $request)
+    public function recepit(request $request)
     {
 
-        
+        Log::info('recepit', [
+            'request' => $request->all(),
+        ]);
 
         if ($request->trx_id == null) {
             return back()->with('error', "Ref can not be empty");
