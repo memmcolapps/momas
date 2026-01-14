@@ -285,9 +285,11 @@ if (!function_exists('send_login_code')) {
 
     function send_login_code($email, $code)
     {
+        $email = strtolower(trim($email));
         $first_name = User::where('email', $email)->first()->first_name;
         $data = array(
-            'fromsender' => env('MAIL_FROM_ADDRESS'), 'MOMASPAY',
+            'fromsender' => env('MAIL_FROM_ADDRESS'), 
+            'from_name'  => 'MOMASPAY',
             'subject' => "One Time Password",
             'toreceiver' => $email,
             'code' => $code,
@@ -295,7 +297,7 @@ if (!function_exists('send_login_code')) {
         );
 
         Mail::send('emails.loginotp', ["data1" => $data], function ($message) use ($data) {
-            $message->from($data['fromsender']);
+            $message->from($data['fromsender'], $data['from_name']); // ✅ key fix
             $message->to($data['toreceiver']);
             $message->subject($data['subject']);
         });
@@ -306,6 +308,7 @@ if (!function_exists('send_login_code')) {
     }
 }
 
+if (!function_exists('payment_email')) {
 
 function payment_email($email, $type, $amount, $duration)
 {
@@ -332,7 +335,7 @@ function payment_email($email, $type, $amount, $duration)
 
 
 }
-
+}
 
 if (!function_exists('send_reset_email_notification')) {
 
@@ -415,8 +418,10 @@ if (!function_exists('send_email_token')) {
     function send_email_token($email, $token, $amount)
     {
         $first_name = User::where('email', $email)->first()->first_name;
+        $email = strtolower(trim($email));
         $data = array(
-            'fromsender' => env('MAIL_FROM_ADDRESS'), 'MOMASPAY',
+            'fromsender' => env('MAIL_FROM_ADDRESS'), 
+            'from_name' => 'MOMASPAY',
             'subject' => "token Purchase",
             'toreceiver' => $email,
             'token' => $token,
@@ -425,7 +430,7 @@ if (!function_exists('send_email_token')) {
         );
 
         Mail::send('emails.vendtoken', ["data1" => $data], function ($message) use ($data) {
-            $message->from($data['fromsender']);
+            $message->from($data['fromsender'], $data['from_name']); // ✅ key fix
             $message->to($data['toreceiver']);
             $message->subject($data['subject']);
         });

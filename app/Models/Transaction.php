@@ -9,6 +9,24 @@ class Transaction extends Model
 {
     use HasFactory;
 
+        protected $fillable = [
+        'user_id',
+        'estate_id',
+        'pay_type',
+        'service_type',
+        'service',
+        'utility_id',
+        'utility_amount',
+        'trx_id',
+        'tariff_id',
+        'payment_ref',
+        'amount',
+        'fee',
+        'unit_amount',
+        'status',
+        'note',
+    ];
+
 
     protected $casts = [
         'user_id'=> 'integer',
