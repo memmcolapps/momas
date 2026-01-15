@@ -4960,11 +4960,7 @@ class TokenController extends Controller
                 $data['meter_no'] = $trx_comp->meterNo;
 
                 return view('admin/recepit.recepit', $data);
-
-
             }
-
-
         }
 
         if ($request->type == "tamper") {
