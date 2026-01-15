@@ -1,0 +1,60 @@
+name: Deploy Momaspay
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH for Staging
+        if: github.ref_name == 'staging'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.MOMASPAY_STAGING_SSH_KEY }}
+
+     
+      - name: Setup SSH for Production
+        if: github.ref_name == 'main'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.MOMASPAY_PROD_SSH_KEY }}
+
+  
+      - name: Deploy to Staging
+        if: github.ref_name == 'staging'
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.MOMASPAY_STAGING_USER }}@${{ secrets.MOMASPAY_STAGING_HOST }} << 'EOF'
+            cd ${{ secrets.MOMASPAY_STAGING_PATH }}
+            git fetch origin
+            git checkout staging
+            git pull origin staging
+           
+            find resources/views -type f -name "*.blade.php" -exec sed -i \
+              -E "s#\{\{\s*url\(''\)\s*\}\}/public/asset/ass/([^\"']+)#\{\{ asset('asset/ass/\1') \}\}#g" {} \;
+      
+
+           sudo systemctl restart apache2
+
+          EOF
+
+    
+      - name: Deploy to Production
+        if: github.ref_name == 'main'
+        run: |
+          ssh -p ${{ secrets.MOMASPAY_PROD_SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.MOMASPAY_PROD_USER }}@${{ secrets.MOMASPAY_PROD_HOST }} << 'EOF'
+            cd ${{ secrets.MOMASPAY_PROD_PATH }}
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+        
+            sudo systemctl restart apache2
+          EOF
