@@ -33,6 +33,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.MOMASPAY_STAGING_USER }}@${{ secrets.MOMASPAY_STAGING_HOST }} << 'EOF'
             cd ${{ secrets.MOMASPAY_STAGING_PATH }}
+            git stash push -m "Auto-deploy stash" || echo "No local changes to stash"
             git fetch origin
             git checkout staging
             git pull origin staging
