@@ -22,6 +22,7 @@ use App\Models\Utitlity;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class DashboardContoller extends Controller
 {
@@ -48,6 +49,9 @@ class DashboardContoller extends Controller
 
         public function index()
     {
+        Log::info('Upadate of 2026-01-16 15:23:00');
+        Log::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
+
         if (Auth::user()->role == 0) {
 
             $data['users'] = User::where('status', 2)->count();
