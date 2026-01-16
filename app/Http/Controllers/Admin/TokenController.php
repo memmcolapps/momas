@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Lcobucci\JWT\Exception;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 
 class TokenController extends Controller
@@ -1330,6 +1331,10 @@ class TokenController extends Controller
         }
 
 
+        if ($request->pay_type === 'test_bypass' && !app()->environment('staging')) {
+            abort(403, 'Payment bypass is not allowed. Bypass can only be used in staging environment.');
+        }
+
         // --- PAYMENT BYPASS / TEST MODE ---
         if ($request->pay_type == 'test_bypass') {
 
@@ -1342,6 +1347,7 @@ class TokenController extends Controller
             $trx->amount = $request->amount;
             $trx->fee = $fee;
             $trx->trx_id = $trx_id;
+            $trx->payment_ref = $this->generateBypassReference();
             $trx->status = 2; // 2 = Successful
             $trx->save();
 
@@ -1353,11 +1359,13 @@ class TokenController extends Controller
             }
 
             // 3. Get tariff_index from the selected tariff
-            try {
-                $tariff_index = $this->getTariffIndexWithValidation($request->tariff_id);
-            } catch (\Exception $e) {
-                return back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
-            }
+            // try {
+            //     $tariff_index = $this->getTariffIndexWithValidation($request->tariff_id);
+            // } catch (\Exception $e) {
+            //     return back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
+            // }
+
+            $tariff_index = $request->t_index;
 
             // 4. Prepare token generation API payload using UNITS (not costOfUnit)
             $unitsKwh = $request->unit ?? 0;
@@ -1367,8 +1375,10 @@ class TokenController extends Controller
                 'meterNo'   => $meter->meterNo,
                 'sgc'       => (int)$meter->NewSGC,
                 'ti'        => $tariff_index,
-                'amount'    => (float)$unitsKwh, // USING UNITS HERE - with decimals
+                'amount'    => (float)1.00, // USING UNITS HERE - with decimals
             ];
+
+            Log::info('Credit token data body', ['request body' => $databody]);
 
             try {
                 // 4. Call Token Generation API
@@ -1755,10 +1765,11 @@ class TokenController extends Controller
 
                 $databody = array(
                     "amount" => $request->amount * 100,
-                    "email" => $email,
+                    "email" => strtolower(trim($email)),
                     "ref" => $trx_id,
                     'callback_url' => url('') . "/admin/paystack-check-web-tamper",
-                    'subaccount' => $est->paystack_subaccount,
+                    // 'subaccount' => $est->paystack_subaccount,
+                    'subaccount' => 'ACCT_nd2zcvugcv5zfqp',   //Hardcoded MEMMCOL subaccount for tamper payments
                     'metadata' => ["ref" => $trx_id],
                 );
 
@@ -1802,7 +1813,7 @@ class TokenController extends Controller
                     $trx->amount = $request->amount;
                     $trx->fee = $fee;
                     $trx->trx_id = $trx_id;
-                    $trx->payment_ref = $var->data->access_code ?? null;
+                    $trx->payment_ref = $var->data->reference ?? null;
                     $trx->service_type = "tamper_token";
                     $trx->save();
 
@@ -1884,8 +1895,6 @@ class TokenController extends Controller
         } catch (Exception $e) {
             return back()->with('error', $e);
         }
-
-
 
 
         if ($request->pay_type == 'vend') {
@@ -1988,6 +1997,126 @@ class TokenController extends Controller
                 return back()->with('error', $e->getMessage());
             }
         }
+
+        if ($request->pay_type === 'test_bypass' && !app()->environment('staging')) {
+            abort(403, 'Payment bypass is not allowed. Bypass can only be used in staging environment.');
+        }
+
+        if ($request->pay_type == 'test_bypass') {
+
+
+            try {
+
+                // 1. Create a successful transaction record
+                $trx = new Transaction();
+                $trx->user_id = Auth::id();
+                $trx->estate_id = $estate_id;
+                $trx->pay_type = "bypass_test";
+                $trx->service_type = $request->service ?? 'tamper_token';
+                $trx->amount = $request->amount;
+                $trx->fee = $fee;
+                $trx->trx_id = $trx_id;
+                $trx->payment_ref = $this->generateBypassReference();
+                $trx->status = 2; // 2 = Successful
+                $trx->save();
+
+
+                $meterNo = $request->meterNo;
+                $meter = Meter::where('meterNo', $meterNo)->first();
+                $trx = TamperToken::where('trx_id', $trx_id)->first();
+                $traff_id = TamperToken::where('trx_id', $trx_id)->first();
+
+                
+
+                // Get tariff_index from Tariff model
+                // try {
+                //     $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+                // } catch (\Exception $e) {
+                //     return redirect('admin/tamper-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+                // }
+
+                    $tariff_index = $request->t_index;
+                    Log::info("Clear tamper Tariff index: $tariff_index");
+                    Log::info("Clear tamper SGC: $meter->NewSGC");
+
+                $databody = [
+                    'meterType' => $meter->KRN2,
+                    'meterNo' => $meter->meterNo,
+                    'sgc' => (int)$meter->NewSGC,
+                    'ti' => $tariff_index,
+                    'sbc' => 5,
+                    'amount' => 10, // Amount not needed for tamper tokens
+                ];
+
+                Log::info('Tamper Token data body', ['request body' => $databody]);
+
+                $no_kct_response = Http::withOptions([
+                    'verify' => false,
+                    'timeout' => 10,
+                ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
+                $error = $no_kct_response->json() ?? null;
+
+
+                if ($no_kct_response->successful()) {
+                    $no_kct = $no_kct_response->json();
+                    $no_kct_data = json_decode($no_kct, true);
+                    $status = $no_kct_data['code'] ?? null;
+                    
+                    Log::info('Clear tamper response Body:', $no_kct_data);
+                    
+
+                    if ($status == "SUCCESS") {
+
+                        $no_kct_token = $no_kct_data['tokens'][0];
+                        TamperToken::where('trx_id', $trx_id)->update([
+                            'token' => $no_kct_token,
+                            'status' => 2
+                        ]);
+
+                        $trx_id = $trx_id;
+                        $user = User::where('id', $trx->user_id)->first();
+                        $email = $user->email;
+                        $token = $no_kct_token;
+
+                        send_email_kct_token($email, $token, $meterNo);
+
+
+                        Transaction::where('trx_id', $trx_id)->update([
+                            'status' => 2,
+                        ]);
+
+                        $type = "tamper";
+                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+
+                    } else {
+
+                        Transaction::where('trx_id', $trx_id)->update([
+                            'service' => "TAMPER TOKEN PURCHASE",
+                            'service_type' => "meter",
+                            'status' => 3,
+                            'tariff_id' => $request->t_index,
+                            'note' => json_encode($no_kct_data) . "|" . json_encode($databody)
+                        ]);
+
+                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+
+
+                        return redirect('admin/tamper-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
+                    }
+
+
+                    $code = 422;
+                    $message = "Payment not available at the moment, Kindly select other payment option";
+                    return error($message, $code);
+
+
+                }
+            } catch (Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
+        }
+
+
     }
 
     public function generate_kctclear_token(request $request)
@@ -2064,6 +2193,7 @@ class TokenController extends Controller
             $trx->amount = $request->amount;
             $trx->fee = $fee ?? 0;
             $trx->trx_id = $trx_id;
+            $trx->payment_ref = $this->generateBypassReference();
             $trx->status = 2; // 2 = Successful
             $trx->save();
 
@@ -2138,6 +2268,8 @@ class TokenController extends Controller
                 'allowkrn' => true,
             ];
 
+            Log::info('KCT Data body (Bye-pass)', ['request body' => $kctdatabody]);
+
             // 4. Generate KCT token
             $kct_response = Http::withOptions([
                 'verify' => false,
@@ -2171,12 +2303,12 @@ class TokenController extends Controller
                 } else {
                     // Token generation failed
                     Transaction::where('trx_id', $trx_id)->update([
-                        'status' => 3,
+                        'status' => 0,
                         'note' => json_encode($kct_data) . "|" . json_encode($kctdatabody)
                     ]);
 
                     KctToken::where('trx_id', $trx_id)->update([
-                        'status' => 3
+                        'status' => 0
                     ]);
 
                     return back()->with('error', 'KCT Token generation failed: ' . ($kct_data['message'] ?? 'Unknown error'));
@@ -2318,10 +2450,11 @@ class TokenController extends Controller
 
                 $databody = array(
                     "amount" => $request->amount * 100,
-                    "email" => $email,
+                    "email" => strtolower(trim($email)),
                     "ref" => $trx_id,
                     'callback_url' => url('') . "/admin/paystack-check-kct",
-                    'subaccount' => $est->paystack_subaccount,
+                    // 'subaccount' => $est->paystack_subaccount,
+                    'subaccount' => 'ACCT_nd2zcvugcv5zfqp',
                     'metadata' => ["ref" => $trx_id],
                 );
 
@@ -2357,7 +2490,7 @@ class TokenController extends Controller
                     $trx->amount = $request->amount;
                     $trx->fee = $fee;
                     $trx->trx_id = $trx_id;
-                    $trx->payment_ref = $var->data->access_code ?? null;
+                    $trx->payment_ref = $var->data->reference ?? null;
                     $trx->service_type = "kct_token";
                     $trx->status = 0; // 0 = Pending payment verification
                     $trx->save();
@@ -2583,6 +2716,7 @@ class TokenController extends Controller
                         'amount' => 10, // Amount not needed for clear credit tokens
                     ];
 
+                    Log::info('Clear Credit Token data body (Bye-pass)', ['request body' => $databody]);
 
                     $no_kct_response = Http::withOptions([
                         'verify' => false,
@@ -2653,7 +2787,7 @@ class TokenController extends Controller
 
         }catch (Exception $e) {
                 return back()->with('error', $e);
-            }
+        }
 
 
             try {
@@ -2741,6 +2875,130 @@ class TokenController extends Controller
             return back()->with('error', $e);
         }
 
+        if ($request->pay_type === 'test_bypass' && !app()->environment('staging')) {
+            abort(403, 'Payment bypass is not allowed. Bypass can only be used in staging environment.');
+        }
+
+        // --- PAYMENT BYPASS / TEST MODE ---       
+        try {
+
+            if ($request->pay_type == 'test_bypass') {
+                            // 1. Create a successful transaction record
+            $trx = new Transaction();
+            $trx->user_id = Auth::id();
+            $trx->estate_id = $estate_id;
+            $trx->pay_type = "bypass_test";
+            $trx->service_type = $request->service ?? 'clear_credit_token'; 
+            $trx->amount = $request->amount;
+            $trx->fee = $fee;
+            $trx->trx_id = $trx_id;
+            $trx->payment_ref = $this->generateBypassReference();
+            $trx->status = 2; // 2 = Successful
+            $trx->save();
+            
+
+                    Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+                    $meterNo = ClearcreditToken::where('trx_id', $trx_id)->first()->meterNo;
+                    $meter = Meter::where('meterNo', $meterNo)->first();
+                    $trx = ClearcreditToken::where('trx_id', $trx_id)->first();
+                    $traff_id = ClearcreditToken::where('trx_id', $trx_id)->first();
+                    $amount = (float)number_format((float)$trx->tariffPerKWatt, 2, '.', '');
+
+                    // UPDATED: Get tariff_index from Tariff model using helper method
+                    // try {
+                    //     $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+                    // } catch (\Exception $e) {
+                    //     ClearcreditToken::where('trx_id', $trx_id)->update(['status' => 0]);
+                    //     Transaction::where('trx_id', $trx_id)->update(['status' => 0]);
+                    //     return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+                    // }
+
+                    $tariff_index = $request->t_index;
+                    Log::info("Clear credit Tariff index: $tariff_index");
+                    Log::info("Clear credit SGC: $meter->NewSGC");
+
+                    $databody = [
+                        'meterType' => $meter->KRN2,
+                        'meterNo' => $meter->meterNo,
+                        'sgc' => (int)$meter->NewSGC,
+                        'ti' => $tariff_index, // UPDATED: Use tariff_index instead of tariff_id
+                        'sbc' => 1,
+                        'amount' => 10, // Amount not needed for clear credit tokens
+                    ];
+
+                    Log::info('Clear Credit Token data body (Bye-pass)', ['request body' => $databody]);
+
+                    $no_kct_response = Http::withOptions([
+                        'verify' => false,
+                        'timeout' => 10,
+                    ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
+                    $error = $no_kct_response->json() ?? null;
+
+
+                    if ($no_kct_response->successful()) {
+                        $no_kct = $no_kct_response->json();
+                        $no_kct_data = json_decode($no_kct, true);
+                        $status = $no_kct_data['code'] ?? null;
+
+
+                        if ($status == "SUCCESS") {
+
+                            $no_kct_token = $no_kct_data['tokens'][0];
+                            ClearcreditToken::where('trx_id', $trx_id)->update([
+
+                                'token' => $no_kct_token,
+                                'status' => 2
+
+                            ]);
+
+                            $trx_id = $trx_id;
+                            $user = User::where('id', $trx->user_id)->first();
+                            $email = $user->email;
+                            $token = $no_kct_token;
+                            $title = "Clear Credit Token";
+
+
+                            send_email_token_others($email, $token, $meterNo, $title);
+
+
+                            Transaction::where('trx_id', $trx_id)->update([
+                                'status' => 2,
+                            ]);
+
+                            $type = "clear_credit";
+                            return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+
+
+                        } else {
+
+                            Transaction::where('trx_id', $trx_id)->update([
+                                'service' => "CLEAR CREDIT TOKEN PURCHASE",
+                                'service_type' => "meter",
+                                'status' => 0,
+                                'tariff_id' => $request->t_index,
+                                'note' => json_encode($no_kct_data) . "|" . json_encode($databody)
+                            ]);
+
+                            User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+
+
+                            return redirect('admin/clear-credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
+
+                        }
+
+
+                    }
+
+
+                    return redirect('admin/clear-credit-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
+
+
+            }
+
+        }catch (Exception $e) {
+                return back()->with('error', $e);
+        }        
+
 
         if ($request->pay_type == 'paystack') {
 
@@ -2771,10 +3029,11 @@ class TokenController extends Controller
 
                 $databody = array(
                     "amount" => $request->amount * 100,
-                    "email" => $email,
+                    "email" => strtolower(trim($email)),
                     "ref" => $trx_id,
                     'callback_url' => url('') . "/admin/paystack-clear-credit",
-                    'subaccount' => $est->paystack_subaccount,
+                    // 'subaccount' => $est->paystack_subaccount,
+                    'subaccount' => 'ACCT_nd2zcvugcv5zfqp',
                     'metadata' => ["ref" => $trx_id],
                 );
 
@@ -2811,7 +3070,7 @@ class TokenController extends Controller
                     $trx->amount = $request->amount;
                     $trx->fee = $fee;
                     $trx->trx_id = $trx_id;
-                    $trx->payment_ref = $var->data->access_code ?? null;
+                    $trx->payment_ref = $var->data->reference ?? null;
                     $trx->service_type = "clear_credit_token";
                     $trx->save();
 
@@ -5113,5 +5372,10 @@ class TokenController extends Controller
         return (int) $tariff->tariff_index;
     }
 
+    //Generate 10-letter lowercase reference
+    private function generateBypassReference(): string
+    {
+        return Str::lower(Str::random(10));
+    }
 
 }
