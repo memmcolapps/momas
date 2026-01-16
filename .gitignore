@@ -7,4 +7,5 @@ momas_production.sql
 database_backup
 output_db.sh
 momas_production_backup.sql
+*.sql
 .vscode/
