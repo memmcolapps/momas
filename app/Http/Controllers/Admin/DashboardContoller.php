@@ -49,7 +49,7 @@ class DashboardContoller extends Controller
 
         public function index()
     {
-        Log::info('Upadate of 2026-01-16 15:23:00');
+        Log::info('Upadate of 2026-01-16 16:41:00');
         Log::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
 
         if (Auth::user()->role == 0) {
