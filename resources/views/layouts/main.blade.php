@@ -243,13 +243,13 @@
                                 </ul>
                             </div>
 
-                            <div class="collapse" id="sidebar1">
+                            {{-- <div class="collapse" id="sidebar1">
                                 <ul class="nav-second-level">
                                     <li>
                                         <a class='tp-link' href='compensation-token'> Compensation Token  </a>
                                     </li>
                                 </ul>
-                            </div>
+                            </div> --}}
                         </li>
 
 
