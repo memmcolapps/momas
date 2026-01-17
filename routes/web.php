@@ -372,9 +372,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('add-new-tariffstate', [TariffController::class, 'add_state_tariff']);
     Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
 
-
-
-
     //POS
 
     Route::get('pos-index', [PosController::class, 'index']);
