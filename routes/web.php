@@ -347,9 +347,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::match(['GET', 'POST'], 'validate-compensation-meter', [TokenController::class, 'validate_compensation_meter']);
     Route::match(['GET', 'POST'], 'validate-clear-credit-meter', [TokenController::class, 'validate_clear_credit_meter']);
 
-
-
-
     Route::post('generate-credit-meter-token', [TokenController::class, 'generate_credit_meter_token']);
     Route::post('generate-compensation-meter-token', [TokenController::class, 'generate_compensation_meter_token']);
     Route::post('generate-tamper-meter-token', [TokenController::class, 'generate_tamper_meter_token']);
@@ -367,23 +364,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('flutter-verify-clear-credit', [TokenController::class, 'flutter_verify_clear_credit']);
     Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
 
-
-
-
-
     Route::any('recepit', [TokenController::class, 'recepit']);
     Route::any('retry-generate-tamper-token', [TokenController::class, 'retry_generate_tamper-token']);
     Route::any('retry-generate-credit-token', [TokenController::class, 'retry_generate_credit_token']);
     Route::get('view-logs', [TokenController::class, 'view_logs']);
 
-
-
-
     Route::post('add-new-tariffstate', [TariffController::class, 'add_state_tariff']);
     Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
-
-
-
 
     //POS
 

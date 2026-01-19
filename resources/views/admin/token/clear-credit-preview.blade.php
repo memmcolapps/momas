@@ -183,6 +183,9 @@
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
                                                                 <option value="enkpay">Pay with Enkpay</option>
+                                                                @if (app()->environment('staging'))
+                                                                    <option value="test_bypass">Payment Bypass (Testing Only)</option>
+                                                                @endif                                                                
                                                             </select>
                                                         </div>
 
@@ -546,6 +549,9 @@
                                                             <option value="flutterwave">Pay with Flutterwave</option>
                                                             <option value="enkpay">Pay with Enkpay</option>
                                                             <!-- <option value="vend">Bypass</option> -->
+                                                            @if (app()->environment('staging'))
+                                                                <option value="test_bypass">Payment Bypass (Testing Only)</option>
+                                                            @endif                                                            
                                                         </select>
                                                     </div>
 
