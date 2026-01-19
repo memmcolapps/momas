@@ -49,10 +49,12 @@ class DashboardContoller extends Controller
 
         public function index()
     {
+          
         Log::info('Upadate of 2026-01-16 16:41:00');
         Log::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
 
         if (Auth::user()->role == 0) {
+        Log::info('main-branch dummy Update of 2026-01-16 15:27:00');
 
             $data['users'] = User::where('status', 2)->count();
             $data['meter'] = Meter::count();
