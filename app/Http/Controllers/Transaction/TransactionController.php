@@ -30,11 +30,22 @@ class TransactionController extends Controller
     }
 
 
+    /**
+     * All payment endpoints must explicitly validate request intent (type) and reject undefined flows.
+     * update status to 2 for all or single arrears payment for consistency.
+     */
     public function pay_arrears(request $request)
     {
 
+        if (!in_array($request->type, ['single', 'all'])) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Invalid arrears payment type'
+            ], 422);
+        }
+
         if ($request->type === "single") {
-            UtilitiesPayment::where('user_id', Auth::id())->where('id', $request->id)->update(['status' => 1]);
+            UtilitiesPayment::where('user_id', Auth::id())->where('id', $request->id)->update(['status' => 2]);
             Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
 
             $message = "Arrears Payment Completed";
@@ -51,11 +62,11 @@ class TransactionController extends Controller
         }
 
 
-        UtilitiesPayment::where('user_id', Auth::id())->get();
-        return response()->json([
-            'status' => true,
-            'data' => $get_trx
-        ]);
+        // UtilitiesPayment::where('user_id', Auth::id())->get();
+        // return response()->json([
+        //     'status' => true,
+        //     'data' => $get_trx
+        // ]);
 
 
     }
@@ -1208,6 +1219,10 @@ class TransactionController extends Controller
     }
 
 
+    // Check if user has paid admin fee for the month
+    // Return true or false for status flag
+    // true = paid
+    // false = not paid
     public function check_admin_fee(request $request)
     {
         $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
@@ -1227,7 +1242,7 @@ class TransactionController extends Controller
         } else {
 
             return response()->json([
-                'status' => true,
+                'status' => false,
                 'monthly_admin_fee' => "0"
             ]);
         }
