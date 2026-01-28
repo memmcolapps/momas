@@ -20,7 +20,7 @@ class TransactionController extends Controller
     public function arrears(request $request)
     {
         // Only get unpaid arrears (status not equal to 2)
-        
+
         $unpaidTrx = UtilitiesPayment::where('user_id', Auth::id())
         ->where('status', '!=', 2) // 2 = paid
         ->get();
@@ -636,15 +636,48 @@ class TransactionController extends Controller
     }
 
 
+    // public function all_transactions(request $request)
+    // {
+
+    //     $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get()->makeHidden('note');
+    //     return response()->json([
+    //         'status' => true,
+    //         'data' => $trx,
+    //     ], 200);
+
+    // }
+
     public function all_transactions(request $request)
     {
 
-        $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get()->makeHidden('note');
+       return $this->electricityTokens($request);
+
+    }
+
+     //Added newly -tokens endpoint
+    public function electricityTokens(Request $request)
+    {
+
+        $tokens = CreditToken::select(
+                'amount',
+                'trx_id as pay_type',
+                'status',
+                'created_at'
+            )
+            ->where('user_id', Auth::id())
+            ->where('status', 2)
+            ->latest()
+            ->take(20)
+            ->get();
+
+        if ($tokens->isEmpty()) {
+            return error("No electricity tokens found", 404);
+        }
+
         return response()->json([
             'status' => true,
-            'data' => $trx,
+            'data' => $tokens
         ], 200);
-
     }
 
     public function get_trx(request $request)
