@@ -19,12 +19,29 @@ class TransactionController extends Controller
 
     public function arrears(request $request)
     {
+        // Only get unpaid arrears (status not equal to 2)
+        
+        $unpaidTrx = UtilitiesPayment::where('user_id', Auth::id())
+        ->where('status', '!=', 2) // 2 = paid
+        ->get();
 
-        $get_trx = UtilitiesPayment::where('user_id', Auth::id())->get();
+        if ($unpaidTrx->isEmpty()) {
+            $message = "No unpaid arrears";
+            $code = 401;
+
+            return error($message, $code);
+        }
+
         return response()->json([
             'status' => true,
-            'data' => $get_trx
+            'data' => $unpaidTrx
         ]);
+
+        // $get_trx = UtilitiesPayment::where('user_id', Auth::id())->get();
+        // return response()->json([
+        //     'status' => true,
+        //     'data' => $get_trx
+        // ]);
 
 
     }
@@ -36,13 +53,6 @@ class TransactionController extends Controller
      */
     public function pay_arrears(request $request)
     {
-
-        if (!in_array($request->type, ['single', 'all'])) {
-        return response()->json([
-            'status' => false,
-            'message' => 'Invalid arrears payment type'
-            ], 422);
-        }
 
         if ($request->type === "single") {
             UtilitiesPayment::where('user_id', Auth::id())->where('id', $request->id)->update(['status' => 2]);
@@ -60,6 +70,13 @@ class TransactionController extends Controller
             $message = "Arrears Payment Completed";
             return success($message);
         }
+
+        if (!in_array($request->type, ['single', 'all'])) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Invalid arrears payment type'
+            ], 422);
+        }        
 
 
         // UtilitiesPayment::where('user_id', Auth::id())->get();
@@ -1219,33 +1236,51 @@ class TransactionController extends Controller
     }
 
 
-    // Check if user has paid admin fee for the month
-    // Return true or false for status flag
-    // true = paid
-    // false = not paid
+    // Check if user has paid admin fee and utility fee are unpaid for any month
     public function check_admin_fee(request $request)
     {
-        $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
-            ->where('type', 'admin_fee')
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
+        // Get the latest unpaid utility payment for the user
+        $latest_unpaid = UtilitiesPayment::where('user_id', Auth::id())
+            ->where('status', '!=', 2) // status not paid
             ->latest('created_at')
-            ->first()->status;
+            ->first();
 
-        if ($admin_fee_get == 2) {
-
+        if ($latest_unpaid) {
+            // There is at least one unpaid arrear
+            return response()->json([
+                'status' => true,
+                'monthly_admin_fee' => "0"
+            ]);
+        } else {
+            // No unpaid arrears
             return response()->json([
                 'status' => true,
                 'monthly_admin_fee' => "1"
             ]);
-
-        } else {
-
-            return response()->json([
-                'status' => false,
-                'monthly_admin_fee' => "0"
-            ]);
         }
+
+
+        // $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
+        //     ->where('type', 'admin_fee')
+        //     ->whereMonth('created_at', Carbon::now()->month)
+        //     ->whereYear('created_at', Carbon::now()->year)
+        //     ->latest('created_at')
+        //     ->first()->status;
+
+        // if ($admin_fee_get == 2) {
+
+        //     return response()->json([
+        //         'status' => true,
+        //         'monthly_admin_fee' => "1"
+        //     ]);
+
+        // } else {
+
+        //     return response()->json([
+        //         'status' => false,
+        //         'monthly_admin_fee' => "0"
+        //     ]);
+        // }
     }
 
     public function enkpay_webhook(request $request)
