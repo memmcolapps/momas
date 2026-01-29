@@ -636,17 +636,18 @@ class TransactionController extends Controller
     }
 
 
-    // public function all_transactions(request $request)
-    // {
+    public function all_transactions_v1(request $request)
+    {
 
-    //     $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get()->makeHidden('note');
-    //     return response()->json([
-    //         'status' => true,
-    //         'data' => $trx,
-    //     ], 200);
+        $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get()->makeHidden('note');
+        return response()->json([
+            'status' => true,
+            'data' => $trx,
+        ], 200);
 
-    // }
+    }
 
+    //Created to modify the backend logic (not mobile) to call same query for credittoken transction history.
     public function all_transactions(request $request)
     {
 
@@ -658,17 +659,19 @@ class TransactionController extends Controller
     public function electricityTokens(Request $request)
     {
 
-        $tokens = CreditToken::select(
-                'amount',
-                'trx_id as pay_type',
-                'status',
-                'created_at'
-            )
-            ->where('user_id', Auth::id())
-            ->where('status', 2)
-            ->latest()
-            ->take(20)
-            ->get();
+        $tokens = CreditToken::where('user_id', Auth::id())
+        ->where('status', 2)
+        ->latest()
+        ->take(20)
+        ->get()
+        ->map(function ($token) {
+            return [
+                'amount'     => (string) $token->amount, // cast to string
+                'pay_type'   => $token->trx_id,
+                'status'     => $token->status,
+                'created_at' => $token->created_at->toDateTimeString(),
+            ];
+        });
 
         if ($tokens->isEmpty()) {
             return error("No electricity tokens found", 404);
