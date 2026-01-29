@@ -26,10 +26,10 @@ class TransactionController extends Controller
         ->get();
 
         if ($unpaidTrx->isEmpty()) {
-            $message = "No unpaid arrears";
-            $code = 401;
-
-            return error($message, $code);
+            return response()->json([
+                'status' => true,
+                'data' => []
+            ]);
         }
 
         return response()->json([
