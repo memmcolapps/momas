@@ -19,7 +19,7 @@ class TransactionController extends Controller
 
     public function arrears(request $request)
     {
-        // Only get unpaid arrears (status not equal to 2)
+        //Only get unpaid arrears (status not equal to 2)
 
         $unpaidTrx = UtilitiesPayment::where('user_id', Auth::id())
         ->where('status', '!=', 2) // 2 = paid
