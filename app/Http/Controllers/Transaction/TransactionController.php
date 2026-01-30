@@ -23,7 +23,13 @@ class TransactionController extends Controller
 
         $unpaidTrx = UtilitiesPayment::where('user_id', Auth::id())
         ->where('status', '!=', 2) // 2 = paid
+        ->where('amount', '>', 0) // ignore zero amounts
         ->get();
+
+        // Optional: if you want to auto-clear zero amounts
+        UtilitiesPayment::where('user_id', Auth::id())
+            ->where('amount', 0)
+            ->update(['status' => 2]);
 
         if ($unpaidTrx->isEmpty()) {
             return response()->json([
@@ -1278,6 +1284,7 @@ class TransactionController extends Controller
         // Get the latest unpaid utility payment for the user
         $latest_unpaid = UtilitiesPayment::where('user_id', Auth::id())
             ->where('status', '!=', 2) // status not paid
+            ->where('amount', '>', 0)
             ->latest('created_at')
             ->first();
 
