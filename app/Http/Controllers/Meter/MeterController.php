@@ -290,43 +290,43 @@ class MeterController extends Controller
         $duration = Estate::where('id', Auth::user()->estate_id)->first()->duration ?? null;
         if ($duration == "weekly" && $utility_amount > 0) {
             UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->decrement('amount', $utility_amount);
-            $trx = new Transaction();
-            $trx->user_id = Auth::id();
-            $trx->pay_type = "utility";
-            $trx->amount = $request->utility_amount;
-            $trx->fee = 0;
-            $trx->status = 2;
-            $trx->trx_id = "UTL" . random_int(0000, 9999);
-            $trx->payment_ref = 0 ?? null;
-            $trx->service_type = "utility_payment";
-            $trx->save();
+            $trx1 = new Transaction();
+            $trx1->user_id = Auth::id();
+            $trx1->pay_type = "utility";
+            $trx1->amount = $request->utility_amount;
+            $trx1->fee = 0;
+            $trx1->status = 2;
+            $trx1->trx_id = "UTL" . random_int(0000, 9999);
+            $trx1->payment_ref = 0 ?? null;
+            $trx1->service_type = "utility_payment";
+            $trx1->save();
         } elseif ($duration == "monthly" && $utility_amount > 0) {
 
             UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->decrement('amount', $utility_amount);
-            $trx = new Transaction();
-            $trx->user_id = Auth::id();
-            $trx->pay_type = "utility";
-            $trx->amount = $request->utility_amount;
-            $trx->fee = 0;
-            $trx->status = 2;
-            $trx->trx_id = "UTL" . random_int(0000, 9999);
-            $trx->payment_ref = 0 ?? null;
-            $trx->service_type = "utility_payment";
-            $trx->save();
+            $trx2 = new Transaction();
+            $trx2->user_id = Auth::id();
+            $trx2->pay_type = "utility";
+            $trx2->amount = $request->utility_amount;
+            $trx2->fee = 0;
+            $trx2->status = 2;
+            $trx2->trx_id = "UTL" . random_int(0000, 9999);
+            $trx2->payment_ref = 0 ?? null;
+            $trx2->service_type = "utility_payment";
+            $trx2->save();
 
         } elseif ($duration == "yearly" && $utility_amount > 0) {
 
             UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->decrement('amount', $utility_amount);
-            $trx = new Transaction();
-            $trx->user_id = Auth::id();
-            $trx->pay_type = "utility";
-            $trx->amount = $request->utility_amount;
-            $trx->fee = 0;
-            $trx->status = 2;
-            $trx->trx_id = "UTL" . random_int(0000, 9999);
-            $trx->payment_ref = 0 ?? null;
-            $trx->service_type = "utility_payment";
-            $trx->save();
+            $trx3 = new Transaction();
+            $trx3->user_id = Auth::id();
+            $trx3->pay_type = "utility";
+            $trx3->amount = $request->utility_amount;
+            $trx3->fee = 0;
+            $trx3->status = 2;
+            $trx3->trx_id = "UTL" . random_int(0000, 9999);
+            $trx3->payment_ref = 0 ?? null;
+            $trx3->service_type = "utility_payment";
+            $trx3->save();
 
 
         }
@@ -382,11 +382,12 @@ class MeterController extends Controller
                         if ($status == "SUCCESS") {
 
 
-                            $trx_id = "TRX" . random_int(00000, 999999);
+                            // $trx_id = "TRX" . random_int(00000, 999999);
                             $estate_id = Auth::user()->estate_id;
                             $cdt = new CreditToken();
                             $cdt->user_id = Auth::user()->id;
-                            $cdt->trx_id = $trx_id;
+                            // $cdt->trx_id = $trx_id;
+                            $cdt->trx_id = $trx;
                             $cdt->meterNo = $meterNo;
                             $cdt->amount = $total_paid ?? 0;
                             $cdt->vat = $vat_amount ?? 0;
