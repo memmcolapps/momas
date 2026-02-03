@@ -577,8 +577,6 @@ class MeterController extends Controller
 
 
             }
-
-
         }
 
         return response()->json([

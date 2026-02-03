@@ -642,19 +642,17 @@ class TransactionController extends Controller
     }
 
 
-    public function all_transactions_v1(request $request)
+    public function all_transactions(request $request)
     {
-
         $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get()->makeHidden('note');
         return response()->json([
             'status' => true,
             'data' => $trx,
         ], 200);
-
     }
 
     //Created to modify the backend logic (not mobile) to call same query for credittoken transction history.
-    public function all_transactions(request $request)
+    public function all_transactions_v2(request $request)
     {
 
        return $this->electricityTokens($request);
