@@ -493,6 +493,7 @@ class TransactionController extends Controller
 
 
         if ($request->pay_type === 'paystack') {
+            $est = Estate::where('id', Auth::user()->estate_id)->first();
             $fl = Setting::where('id', 1)->first();
             $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
             $flkey['flutterwave_public'] = $fl->flutterwave_public;
@@ -504,14 +505,38 @@ class TransactionController extends Controller
             $email = Auth::user()->email;
 
 
-            $databody = array(
-                "amount" => $request->amount * 100,
-                "email" => $email,
-                "ref" => $trx_id,
-                'callback_url' => url('') . "/paystack-check",
-                'metadata' => ["ref" => $trx_id],
+            // $databody = array(
+            //     "amount" => $request->amount * 100,
+            //     // "email" => $email,
+            //     "email" => strtolower(trim($$email)),
+            //     "ref" => $trx_id,
+            //     'callback_url' => url('') . "/paystack-check",
+            //     'subaccount' => $est->paystack_subaccount,
+            //     'metadata' => ["ref" => $trx_id],
+            // );
 
-            );
+            if ($request->service === 'admin_fee') {
+
+                $databody = [
+                    "amount" => $request->amount * 100,
+                    "email" => strtolower(trim($email)),
+                    "ref" => $trx_id,
+                    "callback_url" => url('') . "/paystack-check",
+                    "subaccount" => 'ACCT_nd2zcvugcv5zfqp', // MEMMCOL admin_fee subaccount
+                    "metadata" => ["ref" => $trx_id],
+                ];
+
+            } else {
+
+                $databody = [
+                    "amount" => $request->amount * 100,
+                    "email" => strtolower(trim($email)),
+                    "ref" => $trx_id,
+                    "callback_url" => url('') . "/paystack-check",
+                    "subaccount" => $est->paystack_subaccount,
+                    "metadata" => ["ref" => $trx_id],
+                ];
+            }            
 
             $body = json_encode($databody);
             $curl = curl_init();
@@ -546,7 +571,8 @@ class TransactionController extends Controller
                 $trx->estate_id = Auth::user()->estate_id;
                 $trx->amount = $request->amount;
                 $trx->trx_id = $trx_id;
-                $trx->payment_ref = $var->data->access_code ?? null;
+                // $trx->payment_ref = $var->data->access_code ?? null;
+                $trx->payment_ref = $var->data->reference ?? null;
                 $trx->service_type = $request->service;
                 $trx->save();
 
@@ -558,7 +584,8 @@ class TransactionController extends Controller
             }
 
             $code = 422;
-            $message = "Payment not available at the moment, Kindly select other payment option";
+            $message = $var->message ?? "Payment not available at the moment, kindly select another payment option";
+            // $message = "Payment not available at the moment, Kindly select other payment option";
             return error($message, $code);
 
         }
