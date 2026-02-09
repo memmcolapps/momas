@@ -84,8 +84,7 @@
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
                                     <h5 class="card-title text-black mb-0">Estates Service List</h5>
-                                    <a href="#" data-bs-toggle="modal"
-                                       data-bs-target="#staticBackdrop"
+                                    <a href="new-service"
                                        class="btn btn-primary text-white justify-content-end">Add new</a>
                                 </div>
 

@@ -190,23 +190,19 @@ class EstateServiceController extends Controller
     {
         // Estate::where('id', $request->estate_id)->update(['min_pur' => $request->min_pur,  'max_pur' => $request->max_pur, 'vend_duration' => $request->vend_duration]);
         // Note: vend_duration commented out - column doesn't exist in DB and no form input for it
-        Estate::where('id', $request->estate_id)->update(['min_pur' => $request->min_pur,  'max_pur' => $request->max_pur]); 
-        
+        Estate::where('id', $request->estate_id)->update(['min_pur' => $request->min_pur,  'max_pur' => $request->max_pur]);
+
         return back()->with('message', "Estate MIN/MAX VEND updated successfully");
 
     }
 
+    public function create_service(request $request) {
+        $estates = Estate::get(['title', 'id']);
+        $services = Service::get(['service_title', 'id']);
 
-
-
-
-
-
-
-
-
-
-
-
-
+        return view('admin.estate.create-service', [
+            'estates' => $estates,
+            'all_services' => $services,
+        ]);
+    }
 }

@@ -2,31 +2,55 @@
 
 namespace App\Http\Controllers\Service;
 
-use App\Http\Controllers\Controller;
-use App\Models\Comment;
-use App\Models\Estate;
-use App\Models\EstateService;
 use App\Models\Job;
+use App\Models\Estate;
 use App\Models\Rating;
+use App\Models\Comment;
 use App\Models\Service;
 use Illuminate\Http\Request;
+use App\Models\EstateService;
+use App\Http\Controllers\Controller;
+use App\Services\StandardResponse;
+use Exception;
 use Illuminate\Support\Facades\Auth;
 use function PHPUnit\Framework\isEmpty;
+use Illuminate\Support\Facades\Validator;
 
 class ServiceController extends Controller
 {
     public function service_properties(request $request)
     {
+        try {
+            $validator = Validator::make($request->all(), [
+                'service_id' => 'required|integer|exists:estate_services,id'
+            ]);
 
-        $data['estate'] = Estate::where('status', 2)->where('id', Auth::user()->estate_id)->get()->makeHidden(['created_at', 'updated_at']);
-        $data['service'] = EstateService::latest()->where('status', 2)->where('estate_id', Auth::user()->estate_id)->get()->makeHidden(['created_at', 'updated_at']);
+            if ($validator->fails()) {
+                return StandardResponse::error(code: 422, message: 'Validation Error', data: [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
 
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ], 200);
+            $data['service'] = EstateService::where('status', 2)
+                ->where('estate_id', Auth::user()->estate_id)
+                ->where('id', $request->service_id)
+                ->first();
 
+            if ($data['service'] === null) {
+                return StandardResponse::error(code: 404, message: 'Resouce not found');
+            }
 
+            return response()->json([
+                'status' => true,
+                'data' => $data
+            ], 200);
+        } catch (Exception $e) {
+            return StandardResponse::error(code: 501, message: 'An Error Occurred', debug: [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
     }
 
     public function service_search(request $request)
