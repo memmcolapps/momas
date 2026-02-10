@@ -214,7 +214,7 @@ class LoginController extends Controller
 
         }else{
 
-                $duration = "monthly";
+                $duration = "per_minute";
                 $nextDueDate =  Carbon::now();
                 switch ($duration) {
                     case 'weekly':
@@ -225,6 +225,9 @@ class LoginController extends Controller
                         break;
                     case 'yearly':
                         $nextDueDate->addYear();
+                        break;
+                    case 'per_minute':
+                        $nextDueDate->addMinute();
                         break;
                     default:
                         $mssage = "Unknown duration '{$duration}'";
@@ -241,8 +244,6 @@ class LoginController extends Controller
                 $utli->total_amount = $admin_fee_amount;
                 $utli->type = "admin_fee";
                 $utli->save();
-
-
             }
 
 

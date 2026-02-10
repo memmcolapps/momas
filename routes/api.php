@@ -66,8 +66,6 @@ Route::any('pos/buy-token', [PosController::class, 'buy_meter_token']);
 Route::any('pos/retry-meter-token', [PosController::class, 'retry_meter_token']);
 Route::any('pos/eod', [PosController::class, 'get_all_transaction']);
 
-Route::post('get-trx', [TransactionController::class, 'get_trx']);
-
 
 
 Route::group(['middleware' => ['auth:api', 'acess']], function () {
@@ -89,7 +87,9 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
 
     //Services
     Route::get('service-properties', [ServiceController::class, 'service_properties']);
-    Route::post('service-search', [ServiceController::class, 'service_search']);
+    Route::get('get-artisan-by-id', [ServiceController::class, 'get_artisan_by_id']);
+    Route::get('fetch-services', [ServiceController::class, 'fetch_services']);
+    Route::get('get-artisans-by-service', [ServiceController::class, 'get_artisans_by_service']);
     Route::post('get-comment', [ServiceController::class, 'get_comment']);
     Route::post('save-comment', [ServiceController::class, 'save_comment']);
 
@@ -133,6 +133,9 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
 
     //Services
     Route::get('get-service', [ServiceController::class, 'get_estate']);
+
+    //Transactions
+    Route::get('get-trx', [TransactionController::class, 'get_trx']);
 
 
 });

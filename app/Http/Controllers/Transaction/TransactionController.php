@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers\Transaction;
 
-use App\Http\Controllers\Controller;
-use App\Models\CreditToken;
+use Exception;
+use Carbon\Carbon;
+use App\Models\User;
 use App\Models\Estate;
 use App\Models\Setting;
+use App\Models\CreditToken;
 use App\Models\Transaction;
-use App\Models\User;
-use App\Models\UtilitiesPayment;
-use App\Models\VirtualAccountTransaction;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
+use App\Models\UtilitiesPayment;
+use App\Services\StandardResponse;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use App\Models\VirtualAccountTransaction;
+use Illuminate\Support\Facades\Validator;
 
 class TransactionController extends Controller
 {
@@ -25,39 +29,46 @@ class TransactionController extends Controller
             'status' => true,
             'data' => $get_trx
         ]);
-
-
     }
 
 
     public function pay_arrears(request $request)
     {
+        try{
+            $validator = Validator::make($request->all(), [
+                'id' => 'required|string|exists:utility_payments,id',
+            ]);
 
-        if ($request->type === "single") {
-            UtilitiesPayment::where('user_id', Auth::id())->where('id', $request->id)->update(['status' => 1]);
-            Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+            if ($validator->fails()) {
+                return StandardResponse::error(code: 422, message: 'Valiation error', data: [
+                    'validation_error' => $validator->fail(),
+                ]);
+            }
 
-            $message = "Arrears Payment Completed";
-            return success($message);
-        }
+            DB::beginTransaction();
 
-
-        if ($request->type === "all") {
             UtilitiesPayment::where('user_id', Auth::id())->update(['status' => 2]);
             Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
 
             $message = "Arrears Payment Completed";
             return success($message);
+
+
+            DB::commit();
+            $arrears = UtilitiesPayment::where('user_id', Auth::id())->get();
+            return response()->json([
+                'status' => true,
+                'data' => $arrears
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
         }
-
-
-        UtilitiesPayment::where('user_id', Auth::id())->get();
-        return response()->json([
-            'status' => true,
-            'data' => $get_trx
-        ]);
-
-
     }
 
 
@@ -611,7 +622,7 @@ class TransactionController extends Controller
     public function all_transactions(request $request)
     {
 
-        $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get()->makeHidden('note');
+        $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get();
         return response()->json([
             'status' => true,
             'data' => $trx,
@@ -621,23 +632,70 @@ class TransactionController extends Controller
 
     public function get_trx(request $request)
     {
-        $get_trx = Transaction::where('id', $request->id)->first();
-        $meterNo = CreditToken::where('trx_id', $get_trx->trx_id)->first()->meterNo ?? null;
-        $token = CreditToken::where('trx_id', $get_trx->trx_id)->first()->token ?? null;
-        $get_trx['token'] = $token;
-        $get_trx['meterNo'] = $meterNo;
+        // $get_trx = Transaction::where('id', $request->id)->first();
+        // $meterNo = CreditToken::where('trx_id', $get_trx->trx_id)->first()->meterNo ?? null;
+        // $token = CreditToken::where('trx_id', $get_trx->trx_id)->first()->token ?? null;
+        // $get_trx['token'] = $token;
+        // $get_trx['meterNo'] = $meterNo;
+        try {
+            $validator = Validator::make($request->all(), [
+                'transaction_id' => 'required|integer|exists:transactions,id'
+            ]);
 
-        return response()->json([
-            'status' => true,
-            'data' => $get_trx,
-        ], 200);
+            if ($validator->fails()) {
+                return StandardResponse::error(code: 422, message: 'Validation error', data: [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
+
+            $transaction = Transaction::firstWhere('id', $request->transaction_id);
+
+            $trx_x_token = DB::table('transactions')
+                ->join('credit_tokens', 'credit_tokens.trx_id', '=', 'transactions.trx_id')
+                ->select([
+                    'credit_tokens.meterNo',
+                    'transactions.created_at',
+                    'transactions.trx_id',
+                    'transactions.amount',
+                    'credit_tokens.unitkwh',
+                    'credit_tokens.token',
+                    'credit_tokens.vat',
+                    'transactions.user_id'
+                ])
+                ->where('transactions.id', '=', $request->transaction_id)
+                ->first();
+
+            $user_x_estate = DB::table('users')
+                ->join('estates', 'estates.id', '=', 'users.estate_id')
+                ->select([
+                    'users.email',
+                    'users.address',
+                    'estates.title',
+                ])
+                ->where('users.id', $trx_x_token->user_id)
+                ->first();
+
+            $reciept = array_merge((array) $trx_x_token, (array) $user_x_estate);
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'reciept' => $reciept,
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            return StandardResponse::error(code: 501, message: 'An Error Occurred', debug: [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
 
     }
 
 
     public function estate_transactions(request $request)
     {
-
         $trx = Transaction::where('user_id', Auth::id())->take(1000)->get();
         return response()->json([
             'status' => true,
@@ -648,15 +706,12 @@ class TransactionController extends Controller
 
     public function enkpay_payment_verify(request $request)
     {
-
         if ($request->status === 'success') {
             Transaction::where('trx_id', $request->trans_id)->update(['status' => 4]);
             $ref = $request->trans_id;
             $url = url('') . "/payment?ref=$ref&status=success";
             return redirect($url);
         }
-
-
     }
 
 

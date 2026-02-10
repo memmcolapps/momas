@@ -35,7 +35,7 @@ class MeterController extends Controller
         $tariffs = Tariff::where('estate_id', $request->estate_id)
                     ->select('id', 'title', 'type', 'tariff_index')
                     ->get();
-    
+
         return response()->json([
         'tariffs' => $tariffs
         ]);
@@ -276,7 +276,7 @@ class MeterController extends Controller
     {
 
         $amount = $request->amount;
-        $meterNo = $request->meterNo;
+        $meterNo = $request->meter_no;
         $trx = $request->trxref ?? $request->ref;
         $utility_amount = $request->utility_amount;
         $total_paid = $request->total_paid_amount;
@@ -284,6 +284,7 @@ class MeterController extends Controller
         $vendong_amount = $request->vending_amount;
         $vat_amount = $request->vat_amount;
         $tariff_id = $request->tariff_id;
+        $trx_id = "TRX" . random_int(0000, 9999);
 
 
         $tariff_index = Tariff::where('id', $request->tariff_id)->first()->tariff_index ?? null;
@@ -296,9 +297,9 @@ class MeterController extends Controller
             $trx->amount = $request->utility_amount;
             $trx->fee = 0;
             $trx->status = 2;
-            $trx->trx_id = "UTL" . random_int(0000, 9999);
             $trx->payment_ref = 0 ?? null;
             $trx->service_type = "utility_payment";
+            $trx->trx_id = $trx_id;
             $trx->save();
         } elseif ($duration == "monthly" && $utility_amount > 0) {
 
@@ -309,9 +310,9 @@ class MeterController extends Controller
             $trx->amount = $request->utility_amount;
             $trx->fee = 0;
             $trx->status = 2;
-            $trx->trx_id = "UTL" . random_int(0000, 9999);
             $trx->payment_ref = 0 ?? null;
             $trx->service_type = "utility_payment";
+            $trx->trx_id = $trx_id;
             $trx->save();
 
         } elseif ($duration == "yearly" && $utility_amount > 0) {
@@ -323,9 +324,9 @@ class MeterController extends Controller
             $trx->amount = $request->utility_amount;
             $trx->fee = 0;
             $trx->status = 2;
-            $trx->trx_id = "UTL" . random_int(0000, 9999);
             $trx->payment_ref = 0 ?? null;
             $trx->service_type = "utility_payment";
+            $trx->trx_id = $trx_id;
             $trx->save();
 
 
@@ -382,7 +383,6 @@ class MeterController extends Controller
                         if ($status == "SUCCESS") {
 
 
-                            $trx_id = "TRX" . random_int(00000, 999999);
                             $estate_id = Auth::user()->estate_id;
                             $cdt = new CreditToken();
                             $cdt->user_id = Auth::user()->id;
@@ -401,7 +401,7 @@ class MeterController extends Controller
 
                             $met = new MeterToken();
                             $met->user_id = Auth::user()->id;
-                            $met->trx_id = $trx;
+                            $met->trx_id = $trx_id;
                             $met->meterNo = $meterNo;
                             $met->token = $token;
                             $met->amount = $total_paid ?? 0;
@@ -412,14 +412,14 @@ class MeterController extends Controller
                             $met->status = 2;
                             $met->save();
 
-                            Transaction::where('trx_id', $trx)->update(['service' => "METER PURCHASE", 'service_type' => "meter", 'unit_amount' => $vendong_amount, 'tariff_id' => $request->tariff_id,
+                            Transaction::where('trx_id', $trx_id)->update(['service' => "METER PURCHASE", 'service_type' => "meter", 'unit_amount' => $vendong_amount, 'tariff_id' => $request->tariff_id,
                             ]);
 
 
                             $data2['full_name'] = Auth::user()->first_name . " " . Auth::user()->last_name;
                             $data2['address'] = Auth::user()->address . "," . Auth::user()->city . "," . Auth::user()->state;
                             $data2['service'] = "MOMAS METER";
-                            $data2['trx_id'] = $trx;
+                            $data2['trx_id'] = $trx_id;
                             $data2['token'] = $token;
                             $data2['amount'] = $total_paid;
                             $data2['vending_amount'] = $vendong_amount;
@@ -445,7 +445,7 @@ class MeterController extends Controller
                         }
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
+                        Transaction::where('trx_id', $trx_id)->update([
                             'service' => "METER PURCHASE",
                             'service_type' => "meter",
                             'status' => 3,
@@ -508,7 +508,7 @@ class MeterController extends Controller
                     $vat = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first()->amount ?? 0;
                     $met = new CreditToken();
                     $met->user_id = Auth::user()->id;
-                    $met->trx_id = $trx;
+                    $met->trx_id = $trx_id;
                     $met->meterNo = $meterNo;
                     $met->token = $no_kct_token;
                     $met->amount = $total_paid;
@@ -523,12 +523,12 @@ class MeterController extends Controller
                     $met->status = 2;
                     $met->save();
 
-                    Transaction::where('trx_id', $trx)->update(['service' => "METER PURCHASE", 'service_type' => "credit_token", 'unit_amount' => $vendong_amount]);
+                    Transaction::where('trx_id', $trx_id)->update(['service' => "METER PURCHASE", 'service_type' => "credit_token", 'unit_amount' => $vendong_amount]);
 
                     $data['full_name'] = Auth::user()->first_name . " " . Auth::user()->last_name;
                     $data['address'] = Auth::user()->address . "," . Auth::user()->city . "," . Auth::user()->state;
                     $data['service'] = "MOMAS METER";
-                    $data['trx_id'] = $trx;
+                    $data['trx_id'] = $trx_id;
                     $data['token'] = $no_kct_data['tokens'][0];
                     $data['amount'] = $total_paid;
                     $data['meterNo'] = $request->meterNo;
@@ -554,7 +554,7 @@ class MeterController extends Controller
                 } else {
 
 
-                    Transaction::where('trx_id', $trx)->update([
+                    Transaction::where('trx_id', $trx_id)->update([
                         'service' => "METER PURCHASE",
                         'service_type' => "meter",
                         'status' => 3,
@@ -1173,7 +1173,7 @@ class MeterController extends Controller
         }
 
         // Meter::create($request->all());
-        
+
         // Handles the checkbox for isDualTariff and KCT fields
         $meterData = $request->all();
         $meterData['isDualTariff'] = $request->has('isDualTariff') ? 'on' : null;
@@ -1222,7 +1222,7 @@ class MeterController extends Controller
         } else {
             $data['tariff'] = Tariff::latest()->where('status', 2)->where('estate_id', Auth::user()->estate_id)->get();
         }
-    
+
         $data['meter'] = $meter;
         $data['trans_title'] = Transformer::where('id', $data['meter']->TransformerID)->first()->Title ?? null;
         // $data['NewTariffID'] = Tariff::where('id', $data['meter']->NewTariffID)->first()->title ?? null;
@@ -1324,24 +1324,24 @@ class MeterController extends Controller
         {
             $estate_id = $request->input('estate_id');
             $meterNo = $request->input('meterNo');
-        
+
             // Find the user and meter
             $user_info = User::where('meterNo', $meterNo)->first();
             if (!$user_info) {
                 return 1; // User not found
             }
-        
+
             // For estate admin, use their estate_id
             if (Auth::user()->role == 3) {
                 $estate_id = Auth::user()->estate_id;
             } else {
                 $estate_id = $user_info->estate_id ?? $estate_id;
             }
-        
+
             if ($estate_id == null) {
                 return 1; // User not attached to any estate
             }
-        
+
             // Get the meter details
             $meter = Meter::where('meterNo', $meterNo)->first();
             if (!$meter) {
@@ -1358,20 +1358,20 @@ class MeterController extends Controller
                 $meter->NewTariffDualID,
                 $meter->OldTariffDualID
             ]);
-        
+
             if (empty($assignedTariffIds)) {
                 return 3; // No tariffs assigned to this meter
             }
-        
+
             // Fetch only the assigned tariffs
             $tariffs = Tariff::whereIn('id', $assignedTariffIds)
                             ->select('id', 'title', 'type', 'tariff_index')
                             ->get();
-        
+
             if ($tariffs->isEmpty()) {
                 return 2; // Assigned tariffs not found in database
             }
-        
+
             // Return tariffs along with meter info
             return response()->json([
                 'tariffs' => $tariffs,
@@ -1386,7 +1386,7 @@ class MeterController extends Controller
                 ]
             ]);
         }
-    
+
 
     public
     function delete_meter(request $request)

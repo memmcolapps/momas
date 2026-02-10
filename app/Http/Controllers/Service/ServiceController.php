@@ -15,10 +15,11 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use function PHPUnit\Framework\isEmpty;
 use Illuminate\Support\Facades\Validator;
+use PhpParser\PrettyPrinter\Standard;
 
 class ServiceController extends Controller
 {
-    public function service_properties(request $request)
+    public function get_estate_by_id(request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -42,6 +43,7 @@ class ServiceController extends Controller
 
             return response()->json([
                 'status' => true,
+                'message' => 'Fetched service successfully',
                 'data' => $data
             ], 200);
         } catch (Exception $e) {
@@ -53,23 +55,59 @@ class ServiceController extends Controller
         }
     }
 
-    public function service_search(request $request)
-    {
-      $jobs =   EstateService::latest()->where('estate_id', $request->estate_id)->where('service_id', $request->service_id)->get()->makeHidden(['created_at', 'updated_at']) ?? null;
-
-      if($jobs == null){
-          $code = 401;
-          $message = "Service Nor Available";
-          return error($message, $code);
-      }
+    public function service_properties(request $request) {
+        $data['estate'] = Estate::where('status', 2)->where('id', Auth::user()->estate_id)->get()->makeHidden(['created_at', 'updated_at']);
+        $data['service'] = EstateService::latest()->where('status', 2)->where('estate_id', Auth::user()->estate_id)->get()->makeHidden(['created_at', 'updated_at']);
 
         return response()->json([
             'status' => true,
+            'data' => $data
+        ], 200);
+    }
+
+    public function fetch_services(request $request)
+    {
+        $jobs = Service::get([
+            'service_title',
+            'id',
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Fetched services successfully',
             'data' => $jobs
 
         ], 200);
+    }
 
+    public function get_artisans_by_service(request $request) {
+        try {
+            $validator = Validator::make($request->all(), [
+                'service_id' => 'required|integer|exists:services,id'
+            ]);
 
+            if ($validator->fails()) {
+                return StandardResponse::error(code: 422, message: 'Validation Error', data: [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
+
+            $service_id = $request->service_id;
+            $estate_id = Auth::user()->estate_id;
+            $artisans = EstateService::where('service_id', $service_id)
+                ->where('estate_id', $estate_id)
+                ->get();
+
+            return StandardResponse::success(code: 200, message: 'Fetch Estate Artisans Successfully', data: [
+                'artisans' => $artisans,
+            ]);
+        } catch (Exception $e) {
+            return StandardResponse::error(code: 500, message: 'An Error Occurred', debug: [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
     }
 
 
