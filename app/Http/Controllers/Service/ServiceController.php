@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Service;
 
+use Exception;
 use App\Models\Job;
 use App\Models\Estate;
 use App\Models\Rating;
@@ -9,17 +10,17 @@ use App\Models\Comment;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use App\Models\EstateService;
-use App\Http\Controllers\Controller;
 use App\Services\StandardResponse;
-use Exception;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use PhpParser\PrettyPrinter\Standard;
 use function PHPUnit\Framework\isEmpty;
 use Illuminate\Support\Facades\Validator;
-use PhpParser\PrettyPrinter\Standard;
 
 class ServiceController extends Controller
 {
-    public function get_estate_by_id(request $request)
+    public function get_artisan_by_id(request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -132,21 +133,47 @@ class ServiceController extends Controller
 
     public function save_comment(request $request)
     {
-        $rate = new Comment();
-        $rate->user_id = Auth::id();
-        $rate->user_name = Auth::user()->first_name;
-        $rate->comment = $request->comment;
-        $rate->job_id = $request->job_id;
-        $rate->estate_service_id = $request->job_id;
-        $rate->rate = $request->rate;
-        $rate->save();
+        try {
+            $validator = Validator::make($request->all(), [
+                'job_id' => 'required|integer|exists:estate_services,id',
+                'rate' => 'required|integer|min:1|max:5',
+                'comment' => 'required|string'
+            ]);
 
+            if ($validator->fails()) {
+                return StandardResponse::error(code: 422, message: 'Validation error', data: [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
 
-        return response()->json([
-            'status' => true,
-            'message' => "Comment successfully saved"
-        ], 200);
+            DB::beginTransaction();
 
+            $rate = new Comment();
+            $rate->user_id = Auth::id();
+            $rate->user_name = Auth::user()->first_name;
+            $rate->comment = $request->comment;
+            $rate->job_id = $request->job_id;
+            $rate->estate_service_id = $request->job_id;
+            $rate->rate = $request->rate;
+            $rate->save();
 
+            $artisan = EstateService::firstWhere('id', $request->job_id);
+            $artisan->updateRating();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => "Comment successfully saved"
+            ], 200);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return StandardResponse::error(code: 500, message: 'An Error Occurred', debug: [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
     }
 }

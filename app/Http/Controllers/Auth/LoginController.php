@@ -214,7 +214,7 @@ class LoginController extends Controller
 
         }else{
 
-                $duration = "per_minute";
+                $duration = "monthly";
                 $nextDueDate =  Carbon::now();
                 switch ($duration) {
                     case 'weekly':

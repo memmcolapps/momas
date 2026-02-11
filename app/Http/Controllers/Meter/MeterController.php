@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers\Meter;
 
-use App\Http\Controllers\Controller;
-use App\Models\CreditToken;
-use App\Models\Estate;
-use App\Models\KctMeterToken;
+use App\Models\User;
 use App\Models\Meter;
-use App\Models\MeterRequest;
-use App\Models\MeterToken;
+use App\Models\Estate;
 use App\Models\Tariff;
+use App\Models\Utitlity;
+use App\Models\MeterToken;
+use App\Models\CreditToken;
 use App\Models\TarrifState;
 use App\Models\Transaction;
 use App\Models\Transformer;
-use App\Models\User;
-use App\Models\UtilitiesPayment;
-use App\Models\Utitlity;
+use App\Models\MeterRequest;
 use Illuminate\Http\Request;
+use App\Models\KctMeterToken;
+use App\Models\UtilitiesPayment;
+use App\Services\StandardResponse;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 
@@ -288,9 +289,10 @@ class MeterController extends Controller
 
 
         $tariff_index = Tariff::where('id', $request->tariff_id)->first()->tariff_index ?? null;
-        $duration = Estate::where('id', Auth::user()->estate_id)->first()->duration ?? null;
+        $estate = Estate::where('id', Auth::user()->estate_id)->first();
+        $duration = $estate->duration ?? null;
         if ($duration == "weekly" && $utility_amount > 0) {
-            UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->decrement('amount', $utility_amount);
+            UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
             $trx = new Transaction();
             $trx->user_id = Auth::id();
             $trx->pay_type = "utility";
@@ -303,7 +305,7 @@ class MeterController extends Controller
             $trx->save();
         } elseif ($duration == "monthly" && $utility_amount > 0) {
 
-            UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->decrement('amount', $utility_amount);
+            UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
             $trx = new Transaction();
             $trx->user_id = Auth::id();
             $trx->pay_type = "utility";
@@ -317,7 +319,7 @@ class MeterController extends Controller
 
         } elseif ($duration == "yearly" && $utility_amount > 0) {
 
-            UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->decrement('amount', $utility_amount);
+            UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
             $trx = new Transaction();
             $trx->user_id = Auth::id();
             $trx->pay_type = "utility";
@@ -420,13 +422,23 @@ class MeterController extends Controller
                             $data2['address'] = Auth::user()->address . "," . Auth::user()->city . "," . Auth::user()->state;
                             $data2['service'] = "MOMAS METER";
                             $data2['trx_id'] = $trx_id;
-                            $data2['token'] = $token;
+                            $data2['token'] = $kct_data['tokens'][0];
                             $data2['amount'] = $total_paid;
-                            $data2['vending_amount'] = $vendong_amount;
-                            $data2['vend_amount_kw_per_naira'] = $unit;
-                            $data2['kct_token1'] = $kct_data['tokens'][0];
-                            $data2['kct_token2'] = $kct_data['tokens'][1];
-                            $data2['vat_amount'] = $vat_amount;
+                            $data2['meterNo'] = $request->meterNo;
+                            $date['created_at'] = $met->created_at;
+                            // $data2['vat'] = $met->vatAmount;
+                            $data2['email'] = Auth::user()->email;
+                            $data2['title'] = $estate->title;
+                            $data2['user_id'] = Auth::user()->id;
+
+                            $vend_amount = round($vendong_amount, 2);
+                            $vatt = round($vat_amount, 2);
+                            $uun = round($unit, 2);
+
+
+                            $data2['vending_amount'] = "$vend_amount";
+                            $data2['vat_amount'] = "$vatt";
+                            $data2['vend_amount_kw_per_naira'] = "$uun";
 
 
                             $email = Auth::user()->email;
@@ -436,10 +448,9 @@ class MeterController extends Controller
 
                             send_kct_email_token($email, $token, $amount, $kct_token1, $kct_token2);
 
-                            return response()->json([
-                                'status' => true,
-                                'data' => $data2
-                            ], 200);
+                            return StandardResponse::success(code: 200, message: 'Bought token successfully', data:[
+                                'receipt' => $data2,
+                            ]);
 
 
                         }
@@ -532,6 +543,11 @@ class MeterController extends Controller
                     $data['token'] = $no_kct_data['tokens'][0];
                     $data['amount'] = $total_paid;
                     $data['meterNo'] = $request->meterNo;
+                    $date['created_at'] = $met->created_at;
+                    // $data['vat'] = $met->vatAmount;
+                    $data['email'] = Auth::user()->email;
+                    $data['title'] = $estate->title;
+                    $data['user_id'] = Auth::user()->id;
 
                     $vend_amount = round($vendong_amount, 2);
                     $vatt = round($vat_amount, 2);
@@ -545,10 +561,9 @@ class MeterController extends Controller
                     $token = $no_kct_data['tokens'][0];
                     //send_email_token($email, $token, $amount);
 
-                    return response()->json([
-                        'status' => true,
-                        'data' => $data
-                    ], 200);
+                    return StandardResponse::success(code: 200, message: 'Bought token successfully', data:[
+                        'receipt' => $data,
+                    ]);
 
 
                 } else {

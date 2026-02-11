@@ -24,7 +24,9 @@ class TransactionController extends Controller
     public function arrears(request $request)
     {
 
-        $get_trx = UtilitiesPayment::where('user_id', Auth::id())->get();
+        $get_trx = UtilitiesPayment::where('user_id', Auth::id())
+            ->where('status', '!=', 2)
+            ->get();
         return response()->json([
             'status' => true,
             'data' => $get_trx
@@ -36,28 +38,46 @@ class TransactionController extends Controller
     {
         try{
             $validator = Validator::make($request->all(), [
-                'id' => 'required|string|exists:utility_payments,id',
+                'id' => 'required|integer|exists:utilities_payments,id',
+                'ref' => 'required|string'
             ]);
 
             if ($validator->fails()) {
                 return StandardResponse::error(code: 422, message: 'Valiation error', data: [
-                    'validation_error' => $validator->fail(),
+                    'validation_error' => $validator->errors(),
                 ]);
             }
 
             DB::beginTransaction();
 
-            UtilitiesPayment::where('user_id', Auth::id())->update(['status' => 2]);
-            Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+            $utl = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('id', $request->id)
+                ->first();
+
+            $amount = $utl->amount;
+            $utl->update(['status' => 2]);
+
+            $trx = Transaction::where('trx_id', $request->ref)->first();
+            if ($trx !== null) {
+                $trx->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+            } else {
+                $trx = new Transaction();
+                $trx->user_id = Auth::id();
+                $trx->pay_type = "utility";
+                $trx->amount = $amount;
+                $trx->fee = 0;
+                $trx->status = 2;
+                $trx->payment_ref = 0 ?? null;
+                $trx->service_type = "Arrears Payment";
+                $trx->trx_id = $request->ref;
+                $trx->save();
+            }
 
             $message = "Arrears Payment Completed";
-            return success($message);
-
 
             DB::commit();
             $arrears = UtilitiesPayment::where('user_id', Auth::id())->get();
-            return response()->json([
-                'status' => true,
+            return StandardResponse::success(code: 201, message: $message, data: [
                 'data' => $arrears
             ]);
         } catch (Exception $e) {
@@ -69,6 +89,30 @@ class TransactionController extends Controller
                 'file' => $e->getFile(),
             ]);
         }
+
+        // if ($request->type === "single") {
+        //     UtilitiesPayment::where('user_id', Auth::id())->where('id', $request->id)->update(['status' => 1]);
+        //     Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+
+        //     $message = "Arrears Payment Completed";
+        //     return success($message);
+        // }
+
+
+        // if ($request->type === "all") {
+        //     UtilitiesPayment::where('user_id', Auth::id())->update(['status' => 2]);
+        //     Transaction::where('trx_id', $request->ref)->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+
+        //     $message = "Arrears Payment Completed";
+        //     return success($message);
+        // }
+
+
+        // UtilitiesPayment::where('user_id', Auth::id())->get();
+        // return response()->json([
+        //     'status' => true,
+        //     'data' => $get_trx
+        // ]);
     }
 
 
@@ -648,8 +692,7 @@ class TransactionController extends Controller
                 ]);
             }
 
-            $transaction = Transaction::firstWhere('id', $request->transaction_id);
-
+            // Matches transaction to the corresponding credit_tokens table
             $trx_x_token = DB::table('transactions')
                 ->join('credit_tokens', 'credit_tokens.trx_id', '=', 'transactions.trx_id')
                 ->select([
@@ -659,11 +702,31 @@ class TransactionController extends Controller
                     'transactions.amount',
                     'credit_tokens.unitkwh',
                     'credit_tokens.token',
-                    'credit_tokens.vat',
+                    'credit_tokens.vatAmount',
                     'transactions.user_id'
                 ])
-                ->where('transactions.id', '=', $request->transaction_id)
+                ->where('transactions.id', $request->transaction_id)
+                ->where('transactions.user_id', Auth::id())
                 ->first();
+
+            // Accomodate previous transactions that occurred when transactions table was not mapped to credit tokens correctly
+            if ($trx_x_token === null) {
+                $trx_x_token = Transaction::where('transactions.id', $request->transaction_id)
+                    ->where('transactions.user_id', Auth::id())
+                    ->select([
+                        'created_at',
+                        'trx_id',
+                        'amount',
+                        'user_id',
+                    ])
+                    ->first()
+                    ?->toArray();
+            }
+
+            // If trx_x_token is null but passed through validator then transaction belongs to a different auth user
+            if ($trx_x_token === null) {
+                return StandardResponse::error(code: 404, message: 'Resource not found: no such transaction found');
+            }
 
             $user_x_estate = DB::table('users')
                 ->join('estates', 'estates.id', '=', 'users.estate_id')
@@ -671,16 +734,22 @@ class TransactionController extends Controller
                     'users.email',
                     'users.address',
                     'estates.title',
+                    'users.first_name',
+                    'users.last_name'
                 ])
                 ->where('users.id', $trx_x_token->user_id)
                 ->first();
 
-            $reciept = array_merge((array) $trx_x_token, (array) $user_x_estate);
+            $receipt = array_merge((array) $trx_x_token, (array) $user_x_estate);
+
+            // dd($receipt);
+            $receipt['fullname'] = "$user_x_estate->first_name $user_x_estate->last_name";
+            unset($receipt['first_name'], $receipt['last_name']);
 
             return response()->json([
                 'status' => true,
                 'data' => [
-                    'reciept' => $reciept,
+                    'receipt' => (array) $receipt,
                 ],
             ], 200);
         } catch (Exception $e) {
