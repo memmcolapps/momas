@@ -1,13 +1,14 @@
 <?php
 
 
-use App\Models\Meter;
-use App\Models\OauthAccessToken;
-use App\Models\Token;
 use App\Models\User;
-use App\Models\UtilitiesPayment;
+use App\Models\Meter;
+use App\Models\Token;
 use App\Models\Utitlity;
+use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
+use App\Models\OauthAccessToken;
+use App\Models\UtilitiesPayment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -288,7 +289,7 @@ if (!function_exists('send_login_code')) {
         $email = strtolower(trim($email));
         $first_name = User::where('email', $email)->first()->first_name;
         $data = array(
-            'fromsender' => env('MAIL_FROM_ADDRESS'), 
+            'fromsender' => env('MAIL_FROM_ADDRESS'),
             'from_name'  => 'MOMASPAY',
             'subject' => "One Time Password",
             'toreceiver' => $email,
@@ -420,7 +421,7 @@ if (!function_exists('send_email_token')) {
         $first_name = User::where('email', $email)->first()->first_name;
         $email = strtolower(trim($email));
         $data = array(
-            'fromsender' => env('MAIL_FROM_ADDRESS'), 
+            'fromsender' => env('MAIL_FROM_ADDRESS'),
             'from_name' => 'MOMASPAY',
             'subject' => "token Purchase",
             'toreceiver' => $email,
@@ -590,5 +591,13 @@ if (!function_exists('send_notification')) {
         $responseData = $response->json();
 
 
+    }
+}
+
+if (! function_exists('generate_unique_string')) {
+
+    function generate_unique_string($prefix = null) {
+        $prefix = $prefix ?? "TRX";
+        return $prefix . ' | ' . Str::uuid()->toString();
     }
 }

@@ -55,11 +55,18 @@ class TransactionController extends Controller
                 ->first();
 
             $amount = $utl->amount;
-            $utl->update(['status' => 2]);
+
+            $utl->status = 2;
+            $utl->save();
+
 
             $trx = Transaction::where('trx_id', $request->ref)->first();
             if ($trx !== null) {
-                $trx->update(['service_type' => "Arrears Payment", 'service' => "Arrears", 'status' => 2]);
+                $trx->service_type = "Arrears Payment";
+                $trx->service = "Arrears";
+                $trx->status = 2;
+                $trx->updated_at = Carbon::now();
+                $trx->save();
             } else {
                 $trx = new Transaction();
                 $trx->user_id = Auth::id();
@@ -70,6 +77,7 @@ class TransactionController extends Controller
                 $trx->payment_ref = 0 ?? null;
                 $trx->service_type = "Arrears Payment";
                 $trx->trx_id = $request->ref;
+                // $trx->created_at = Carbon::now();
                 $trx->save();
             }
 
@@ -615,7 +623,7 @@ class TransactionController extends Controller
             }
 
 
-            User::where('id', Auth::id())->decrement('main_wallet', $request->amount);
+            Auth::user()->debitWallet($request->amount);
 
             $trx = new Transaction();
             $trx->user_id = Auth::id();
@@ -693,34 +701,43 @@ class TransactionController extends Controller
             }
 
             // Matches transaction to the corresponding credit_tokens table
-            $trx_x_token = DB::table('transactions')
+            $trx_x_token = (array) DB::table('transactions')
                 ->join('credit_tokens', 'credit_tokens.trx_id', '=', 'transactions.trx_id')
+                ->join('meter_tokens', 'meter_tokens.trx_id', '=', 'transactions.trx_id')
                 ->select([
                     'credit_tokens.meterNo',
-                    'transactions.created_at',
+                    'transactions.updated_at',
                     'transactions.trx_id',
                     'transactions.amount',
                     'credit_tokens.unitkwh',
                     'credit_tokens.token',
                     'credit_tokens.vatAmount',
-                    'transactions.user_id'
+                    'credit_tokens.status',
+                    'transactions.user_id',
+                    'transactions.service',
+                    'transactions.service_type',
+                    'meter_tokens.kct_tokens',
                 ])
                 ->where('transactions.id', $request->transaction_id)
                 ->where('transactions.user_id', Auth::id())
                 ->first();
 
             // Accomodate previous transactions that occurred when transactions table was not mapped to credit tokens correctly
-            if ($trx_x_token === null) {
+            if (! $trx_x_token) {
                 $trx_x_token = Transaction::where('transactions.id', $request->transaction_id)
                     ->where('transactions.user_id', Auth::id())
                     ->select([
-                        'created_at',
+                        'updated_at',
                         'trx_id',
                         'amount',
                         'user_id',
+                        'service',
+                        'service_type',
+                        'status'
                     ])
                     ->first()
                     ?->toArray();
+                $trx_x_token['kct_tokens'] = null;
             }
 
             // If trx_x_token is null but passed through validator then transaction belongs to a different auth user
@@ -737,10 +754,20 @@ class TransactionController extends Controller
                     'users.first_name',
                     'users.last_name'
                 ])
-                ->where('users.id', $trx_x_token->user_id)
+                ->where('users.id', $trx_x_token['user_id'])
                 ->first();
 
-            $receipt = array_merge((array) $trx_x_token, (array) $user_x_estate);
+            $receipt = array_merge($trx_x_token, (array) $user_x_estate);
+            $kct_tokens = $receipt['kct_tokens'] ? explode(',', $receipt['kct_tokens']) : [null, null];
+            $receipt['kct_token1'] = $kct_tokens[0];
+            $receipt['kct_token2'] = $kct_tokens[1];
+
+            // Convert all integer and double values to string
+            array_walk_recursive($receipt, function (&$value, $key) {
+                if ((is_int($value) || is_float($value))) {
+                    $value = $key === 'status' ? (int) $value : (string) $value;
+                }
+            });
 
             // dd($receipt);
             $receipt['fullname'] = "$user_x_estate->first_name $user_x_estate->last_name";
