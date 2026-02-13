@@ -35,6 +35,10 @@ class TransactionController extends Controller
     }
 
 
+    /**
+     * All payment endpoints must explicitly validate request intent (type) and reject undefined flows.
+     * update status to 2 for all or single arrears payment for consistency.
+     */
     public function pay_arrears(request $request)
     {
         try{
@@ -523,6 +527,7 @@ class TransactionController extends Controller
 
 
         if ($request->pay_type === 'paystack') {
+            $est = Estate::where('id', Auth::user()->estate_id)->first();
             $fl = Setting::where('id', 1)->first();
             $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
             $flkey['flutterwave_public'] = $fl->flutterwave_public;
@@ -534,14 +539,38 @@ class TransactionController extends Controller
             $email = Auth::user()->email;
 
 
-            $databody = array(
-                "amount" => $request->amount * 100,
-                "email" => $email,
-                "ref" => $trx_id,
-                'callback_url' => url('') . "/paystack-check",
-                'metadata' => ["ref" => $trx_id],
+            // $databody = array(
+            //     "amount" => $request->amount * 100,
+            //     // "email" => $email,
+            //     "email" => strtolower(trim($$email)),
+            //     "ref" => $trx_id,
+            //     'callback_url' => url('') . "/paystack-check",
+            //     'subaccount' => $est->paystack_subaccount,
+            //     'metadata' => ["ref" => $trx_id],
+            // );
 
-            );
+            if ($request->service === 'admin_fee') {
+
+                $databody = [
+                    "amount" => $request->amount * 100,
+                    "email" => strtolower(trim($email)),
+                    "ref" => $trx_id,
+                    "callback_url" => url('') . "/paystack-check",
+                    "subaccount" => 'ACCT_nd2zcvugcv5zfqp', // MEMMCOL admin_fee subaccount
+                    "metadata" => ["ref" => $trx_id],
+                ];
+
+            } else {
+
+                $databody = [
+                    "amount" => $request->amount * 100,
+                    "email" => strtolower(trim($email)),
+                    "ref" => $trx_id,
+                    "callback_url" => url('') . "/paystack-check",
+                    "subaccount" => $est->paystack_subaccount,
+                    "metadata" => ["ref" => $trx_id],
+                ];
+            }
 
             $body = json_encode($databody);
             $curl = curl_init();
@@ -576,7 +605,8 @@ class TransactionController extends Controller
                 $trx->estate_id = Auth::user()->estate_id;
                 $trx->amount = $request->amount;
                 $trx->trx_id = $trx_id;
-                $trx->payment_ref = $var->data->access_code ?? null;
+                // $trx->payment_ref = $var->data->access_code ?? null;
+                $trx->payment_ref = $var->data->reference ?? null;
                 $trx->service_type = $request->service;
                 $trx->save();
 
@@ -588,7 +618,8 @@ class TransactionController extends Controller
             }
 
             $code = 422;
-            $message = "Payment not available at the moment, Kindly select other payment option";
+            $message = $var->message ?? "Payment not available at the moment, kindly select another payment option";
+            // $message = "Payment not available at the moment, Kindly select other payment option";
             return error($message, $code);
 
         }
@@ -680,8 +711,45 @@ class TransactionController extends Controller
             'status' => true,
             'data' => $trx,
         ], 200);
+    }
+
+    //Created to modify the backend logic (not mobile) to call same query for credittoken transction history.
+    public function all_transactions_v2(request $request)
+    {
+
+       return $this->electricityTokens($request);
 
     }
+
+     //Added newly -tokens endpoint
+    public function electricityTokens(Request $request)
+    {
+
+        $tokens = CreditToken::where('user_id', Auth::id())
+        ->where('status', 2)
+        ->latest()
+        ->take(20)
+        ->get()
+        ->map(function ($token) {
+            return [
+                'amount'     => (string) $token->amount, // cast to string
+                'pay_type'   => $token->trx_id,
+                'status'     => $token->status,
+                'created_at' => $token->created_at->toDateTimeString(),
+            ];
+        });
+
+        if ($tokens->isEmpty()) {
+            return error("No electricity tokens found", 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $tokens
+        ], 200);
+
+        }
+
 
     public function get_trx(Request $request)
     {
@@ -1380,8 +1448,31 @@ class TransactionController extends Controller
     }
 
 
+    // Check if user has paid admin fee and utility fee are unpaid for any month
     public function check_admin_fee(request $request)
     {
+        // Get the latest unpaid utility payment for the user
+        // $latest_unpaid = UtilitiesPayment::where('user_id', Auth::id())
+        //     ->where('status', '!=', 2) // status not paid
+        //     ->where('amount', '>', 0)
+        //     ->latest('created_at')
+        //     ->first();
+
+        // if ($latest_unpaid) {
+        //     // There is at least one unpaid arrear
+        //     return response()->json([
+        //         'status' => true,
+        //         'monthly_admin_fee' => "0"
+        //     ]);
+        // } else {
+        //     // No unpaid arrears
+        //     return response()->json([
+        //         'status' => true,
+        //         'monthly_admin_fee' => "1"
+        //     ]);
+        // }
+
+
         $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
             ->where('type', 'admin_fee')
             ->whereMonth('created_at', Carbon::now()->month)
@@ -1399,7 +1490,7 @@ class TransactionController extends Controller
         } else {
 
             return response()->json([
-                'status' => true,
+                'status' => false,
                 'monthly_admin_fee' => "0"
             ]);
         }

@@ -99,6 +99,8 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
     Route::get('arrears', [TransactionController::class, 'arrears']);
     Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
+    //Added newly electricity-tokens endpoint
+    Route::get('electricity-tokens', [TransactionController::class, 'electricityTokens']);
 
 
 
