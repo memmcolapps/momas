@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Estate;
 use App\Models\Setting;
+use App\Models\MeterToken;
 use App\Models\CreditToken;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -682,67 +683,77 @@ class TransactionController extends Controller
 
     }
 
-    public function get_trx(request $request)
+    public function get_trx(Request $request)
     {
-        // $get_trx = Transaction::where('id', $request->id)->first();
-        // $meterNo = CreditToken::where('trx_id', $get_trx->trx_id)->first()->meterNo ?? null;
-        // $token = CreditToken::where('trx_id', $get_trx->trx_id)->first()->token ?? null;
-        // $get_trx['token'] = $token;
-        // $get_trx['meterNo'] = $meterNo;
         try {
             $validator = Validator::make($request->all(), [
                 'transaction_id' => 'required|integer|exists:transactions,id'
             ]);
 
             if ($validator->fails()) {
-                return StandardResponse::error(code: 422, message: 'Validation error', data: [
-                    'validation_error' => $validator->errors(),
-                ]);
+                return StandardResponse::error(
+                    code: 422,
+                    message: 'Validation error',
+                    data: ['validation_error' => $validator->errors()]
+                );
             }
 
-            // Matches transaction to the corresponding credit_tokens table
-            $trx_x_token = (array) DB::table('transactions')
-                ->join('credit_tokens', 'credit_tokens.trx_id', '=', 'transactions.trx_id')
-                ->join('meter_tokens', 'meter_tokens.trx_id', '=', 'transactions.trx_id')
-                ->select([
-                    'credit_tokens.meterNo',
-                    'transactions.updated_at',
-                    'transactions.trx_id',
-                    'transactions.amount',
-                    'credit_tokens.unitkwh',
-                    'credit_tokens.token',
-                    'credit_tokens.vatAmount',
-                    'credit_tokens.status',
-                    'transactions.user_id',
-                    'transactions.service',
-                    'transactions.service_type',
-                    'meter_tokens.kct_tokens',
-                ])
-                ->where('transactions.id', $request->transaction_id)
-                ->where('transactions.user_id', Auth::id())
+            $transaction = Transaction::where('id', $request->transaction_id)
+                ->where('user_id', Auth::id())
                 ->first();
 
-            // Accomodate previous transactions that occurred when transactions table was not mapped to credit tokens correctly
-            if (! $trx_x_token) {
-                $trx_x_token = Transaction::where('transactions.id', $request->transaction_id)
-                    ->where('transactions.user_id', Auth::id())
-                    ->select([
-                        'updated_at',
-                        'trx_id',
-                        'amount',
-                        'user_id',
-                        'service',
-                        'service_type',
-                        'status'
-                    ])
-                    ->first()
-                    ?->toArray();
-                $trx_x_token['kct_tokens'] = null;
+            if (! $transaction) {
+                return StandardResponse::error(
+                    code: 404,
+                    message: 'Resource not found: no such transaction found'
+                );
             }
 
-            // If trx_x_token is null but passed through validator then transaction belongs to a different auth user
-            if ($trx_x_token === null) {
-                return StandardResponse::error(code: 404, message: 'Resource not found: no such transaction found');
+            $query = DB::table('transactions')
+                ->join('credit_tokens', 'credit_tokens.trx_id', '=', 'transactions.trx_id')
+                ->where('transactions.id', $request->transaction_id)
+                ->where('transactions.user_id', Auth::id());
+
+            // Only join meter_tokens if record exists
+            $hasMeterToken = MeterToken::where('trx_id', $transaction->trx_id)->exists();
+
+            if ($hasMeterToken) {
+                $query->leftJoin('meter_tokens', 'meter_tokens.trx_id', '=', 'transactions.trx_id');
+            }
+
+            $selectFields = [
+                'credit_tokens.meterNo',
+                'transactions.updated_at',
+                'transactions.trx_id',
+                'transactions.amount',
+                'credit_tokens.unitkwh',
+                'credit_tokens.token',
+                'credit_tokens.vatAmount',
+                'credit_tokens.status',
+                'transactions.user_id',
+                'transactions.service',
+                'transactions.service_type',
+            ];
+
+            if ($hasMeterToken) {
+                $selectFields[] = 'meter_tokens.kct_tokens';
+            }
+
+            $trx_x_token = (array) $query->select($selectFields)->first();
+
+            // Fallback for legacy transactions
+            if (! $trx_x_token) {
+                $trx_x_token = $transaction->only([
+                    'updated_at',
+                    'trx_id',
+                    'amount',
+                    'user_id',
+                    'service',
+                    'service_type',
+                    'status'
+                ]);
+
+                $trx_x_token['kct_tokens'] = null;
             }
 
             $user_x_estate = DB::table('users')
@@ -758,36 +769,46 @@ class TransactionController extends Controller
                 ->first();
 
             $receipt = array_merge($trx_x_token, (array) $user_x_estate);
-            $kct_tokens = $receipt['kct_tokens'] ? explode(',', $receipt['kct_tokens']) : [null, null];
-            $receipt['kct_token1'] = $kct_tokens[0];
-            $receipt['kct_token2'] = $kct_tokens[1];
 
-            // Convert all integer and double values to string
+            $kct_tokens = isset($receipt['kct_tokens']) && $receipt['kct_tokens']
+                ? explode(',', $receipt['kct_tokens'])
+                : [null, null];
+
+            $receipt['kct_token1'] = $kct_tokens[0] ?? null;
+            $receipt['kct_token2'] = $kct_tokens[1] ?? null;
+
             array_walk_recursive($receipt, function (&$value, $key) {
-                if ((is_int($value) || is_float($value))) {
+                if (is_int($value) || is_float($value)) {
                     $value = $key === 'status' ? (int) $value : (string) $value;
                 }
             });
 
-            // dd($receipt);
-            $receipt['fullname'] = "$user_x_estate->first_name $user_x_estate->last_name";
-            unset($receipt['first_name'], $receipt['last_name']);
+            $receipt['fullname'] = trim(
+                ($receipt['first_name'] ?? '') . ' ' . ($receipt['last_name'] ?? '')
+            );
+
+            unset($receipt['first_name'], $receipt['last_name'], $receipt['kct_tokens']);
 
             return response()->json([
                 'status' => true,
                 'data' => [
-                    'receipt' => (array) $receipt,
+                    'receipt' => $receipt,
                 ],
             ], 200);
-        } catch (Exception $e) {
-            return StandardResponse::error(code: 501, message: 'An Error Occurred', debug: [
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-            ]);
-        }
 
+        } catch (\Exception $e) {
+            return StandardResponse::error(
+                code: 501,
+                message: 'An Error Occurred',
+                debug: [
+                    'error' => $e->getMessage(),
+                    'line' => $e->getLine(),
+                    'file' => $e->getFile(),
+                ]
+            );
+        }
     }
+
 
 
     public function estate_transactions(request $request)

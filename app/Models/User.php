@@ -177,5 +177,12 @@ class User extends Authenticatable
         if ($amount <= 0) {
             throw new Exception('Cannot debit value less than or equal to 0 to wallet');
         }
+
+        if ($amount > $this->main_wallet) {
+            throw new Exception('Insufficient Funds');
+        }
+
+        $this->main_wallet -= $amount;
+        $this->save();
     }
 }
