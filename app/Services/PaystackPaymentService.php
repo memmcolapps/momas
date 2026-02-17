@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Exception;
+use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 
 class PaystackPaymentService {
@@ -57,32 +58,37 @@ class PaystackPaymentService {
 
         );
 
-        $body = json_encode($databody);
-        $curl = curl_init();
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $this->paystack_secret,
+        ])->post($this->payment_endpoint, $databody);
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => $this->payment_endpoint,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => array(
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $this->paystack_secret,
-            ),
-        ));
-
-        $var = curl_exec($curl);
-        curl_close($curl);
-        $var = json_decode($var);
-        $status = $var->status;
-
+        $var = $response->json();
+        $status = $var['status'] ?? false;
     }
+
+    public  function verifyTransaction($transactionId)
+    {
+
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer {$this->paystack_secret}",
+            'Cache-Control' => 'no-cache',
+        ])
+        ->get("https://api.paystack.co/transaction/verify/{$transactionId}");
+
+        // Optional: check if request failed
+        if ($response->failed()) {
+            return [
+                'status' => false,
+                'message' => 'Transaction verification failed',
+                'error' => $response->body()
+            ];
+        }
+
+        return json_decode($response, true);
+    }
+
 
     public static function handlePaystackWebhook($data) {
 

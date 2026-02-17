@@ -192,271 +192,7 @@ class TransactionController extends Controller
     public function make_payment(request $request)
     {
 
-//        $estate_id = Auth::id()->estate_id;
-//        $est = Estate::where('id', $estate_id)->first();
-//
-//        if($est->charge_fee_flat == null){
-//            $fee  = ($est->charge_fee_precent / 100) * (int)$request->amount;
-//        }else{
-//            $fee  = $est->charge_fee_flat;
-//        }
-//
-//        $customer_email = Auth::user()->email;
-//        $amount = $request->amount - $fee;
-//        $trx_id = "TRX" . random_int(000000000, 9999999999);
-//
-//
-//
-//        $cdt = new CreditToken();
-//        $cdt->user_id = Auth::id();
-//        $cdt->trx_id = $trx_id;
-//        $cdt->meterNo = Auth::user()->meterNo;
-//        $cdt->amount = $amount;
-//        $cdt->amount_charged = $request->amount;
-//        $cdt->customer_email = $customer_email;
-//        $cdt->fee = $fee;
-//        $cdt->vat = $request->vat;
-//        $cdt->estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title;;
-//        $cdt->estate_id = $estate_id;
-//        $cdt->tariff_id = TarrifState::where('amount', $request->tariff_amount)->first()->tariff_id;
-//        $cdt->tariff_amount = $request->tariff_amount;
-//        $cdt->vatAmount = $request->vatAmount;
-//        $cdt->costOfUnit = $request->costOfUnit;
-//        $cdt->unitkwh = $request->unit;
-//        $cdt->tariffPerKWatt = $request->tariffPerKWatt;
-//        $cdt->save();
-//
-//
-//
-//        try {
-//
-//            if ($request->pay_type == 'flutterwave') {
-//
-//
-//                $estate_id = $request->estate_id;
-//                $est = Estate::where('id', $estate_id)->first();
-//                if($est->charge_fee_flat == null){
-//                    $fee  = ($est->charge_fee_precent / 100) * (int)$request->amount;
-//                }else{
-//                    $fee  = $est->charge_fee_flat;
-//                }
-//
-//
-//                $email = Auth::user()->email;
-//                $phone = Auth::user()->phone ?? "012345678";
-//                $fl = Setting::where('id', 1)->first();
-//                $secretKey = $fl->flutterwave_secret;
-//                $fpublic = $fl->flutterwave_public;
-//                $url = url('');
-//
-//                $databody = array(
-//                    'title' => 'Payment for services',
-//                    'amount' => $request->amount,
-//                    'currency' => 'NGN',
-//                    'redirect_url' => $url . "/admin/pay-flutter-web",
-//                    'customer' => [
-//                        'email' => $customer_email,
-//                        'phonenumber' => $phone,
-//                        'name' => Auth::user()->first_name . " " . Auth::user()->last_name,
-//                    ],
-//                    'tx_ref' => $trx_id,
-//
-//                );
-//
-//                $body = json_encode($databody);
-//                $curl = curl_init();
-//
-//                curl_setopt_array($curl, array(
-//                    CURLOPT_URL => 'https://api.flutterwave.com/v3/payments',
-//                    CURLOPT_RETURNTRANSFER => true,
-//                    CURLOPT_ENCODING => '',
-//                    CURLOPT_MAXREDIRS => 10,
-//                    CURLOPT_TIMEOUT => 0,
-//                    CURLOPT_FOLLOWLOCATION => true,
-//                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-//                    CURLOPT_CUSTOMREQUEST => 'POST',
-//                    CURLOPT_POSTFIELDS => $body,
-//                    CURLOPT_HTTPHEADER => array(
-//                        'Accept: application/json',
-//                        'Content-Type: application/json',
-//                        'Authorization: Bearer ' . $secretKey,
-//                    ),
-//                ));
-//
-//                $var = curl_exec($curl);
-//                curl_close($curl);
-//                $var = json_decode($var);
-//                $status = $var->status ?? null;
-//
-//
-//                $trx = new Transaction();
-//                $trx->user_id = Auth::id();
-//                $trx->estate_id = Auth::user()->estate_id;
-//                $trx->pay_type = "flutterwave";
-//                $trx->service_type = $request->service;
-//                $trx->amount = $request->amount;
-//                $trx->fee = $fee;
-//                $trx->trx_id = $trx_id;
-//                $trx->save();
-//
-//                if ($status == "success") {
-//                    return redirect()->away($var->data->link);
-//
-//                }
-//
-//
-//            }
-//
-//        } catch (Exception $e) {
-//            return back()->with('error', $e);
-//        }
-//
-//
-//        if ($request->pay_type == 'paystack') {
-//
-////            try {
-//
-//            $estate_id = $request->estate_id ?? null;
-//            if ($estate_id === null) {
-//                $estate_id = Auth::user()->estate_id;
-//            }
-//            $est = Estate::where('id', $estate_id)->first();
-//
-//
-//            if($est->charge_fee_flat == null){
-//                $fee  = ($est->charge_fee_precent / 100) * (int)$request->amount;
-//            }else{
-//                $fee  = $est->charge_fee_flat;
-//            }
-//
-//
-//            $fl = Setting::where('id', 1)->first();
-//            $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
-//            $flkey['flutterwave_public'] = $fl->flutterwave_public;
-//            $paystackkey = $fl->paystack_secret;
-//            $pkkey['paystack_public'] = $fl->paystack_public;
-//
-//            $databody = array(
-//                "amount" => $request->amount * 100,
-//                "email" => $customer_email,
-//                "ref" => $trx_id,
-//                'callback_url' => url('') . "/admin/paystack-check-web",
-//                'subaccount' => $est->paystack_subaccount,
-//                'metadata' => ["ref" => $trx_id],
-//            );
-//
-//            $body = json_encode($databody);
-//            $curl = curl_init();
-//            curl_setopt_array($curl, array(
-//                CURLOPT_URL => 'https://api.paystack.co/transaction/initialize',
-//                CURLOPT_RETURNTRANSFER => true,
-//                CURLOPT_ENCODING => '',
-//                CURLOPT_MAXREDIRS => 10,
-//                CURLOPT_TIMEOUT => 0,
-//                CURLOPT_FOLLOWLOCATION => true,
-//                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-//                CURLOPT_CUSTOMREQUEST => 'POST',
-//                CURLOPT_POSTFIELDS => $body,
-//                CURLOPT_HTTPHEADER => array(
-//                    'Accept: application/json',
-//                    'Content-Type: application/json',
-//                    'Authorization: Bearer ' . $paystackkey,
-//                ),
-//            ));
-//
-//            $var = curl_exec($curl);
-//            curl_close($curl);
-//            $var = json_decode($var);
-//            $status = $var->status;
-//
-//
-//
-//            if ($status == true) {
-//                $trx = new Transaction();
-//                $trx->user_id = $request->user_id;
-//                $trx->pay_type = "paystack";
-//                $trx->amount = $request->amount;
-//                $trx->fee = $fee;
-//                $trx->trx_id = $trx_id;
-//                $trx->payment_ref = $var->data->access_code ?? null;
-//                $trx->service_type = "credit_token";
-//                $trx->save();
-//
-//                return redirect()->away($var->data->authorization_url);
-//
-//            }
-//
-//            $code = 422;
-//            $message = "Payment not available at the moment, Kindly select other payment option";
-//            return error($message, $code);
-//
-////            } catch (Exception $e) {
-////                return back()->with('error', $e);
-////            }
-//
-//        }
-//
-//
-//        try {
-//
-//            if ($request->pay_type == 'remita') {
-//                $trx_id = "TRX" . random_int(0000000, 9999999);
-//                $email = Auth::user()->email;
-//                $trx = new Transaction();
-//                $trx->user_id = Auth::id();
-//                $trx->pay_type = "remita";
-//                $trx->service_type = "fund";
-//                $trx->amount = $request->amount;
-//                $trx->trx_id = $trx_id;
-//                $trx->save();
-//
-//                return response()->json([
-//                    'status' => true,
-//                    'url' => url('') . "/pay-remita?amount=$request->amount&trx_id=$trx_id&email=$email"
-//                ], 200);
-//            }
-//
-//        } catch (Exception $e) {
-//            return back()->with('error', $e);
-//        }
-//
-//
-//        try {
-//            if ($request->pay_type == 'wallet') {
-//                $trx_id = "TRX" . random_int(0000000, 9999999);
-//                $email = Auth::user()->email;
-//
-//
-//                if (Auth::user()->main_wallet < $request->amount) {
-//                    $code = 422;
-//                    $message = "Insufficient Funds";
-//                    return error($message, $code);
-//                }
-//
-//
-//                User::where('id', Auth::id())->decrement('main_wallet', $request->amount);
-//
-//                $trx = new Transaction();
-//                $trx->user_id = Auth::id();
-//                $trx->pay_type = "wallet";
-//                $trx->amount = $request->amount;
-//                $trx->service_type = $request->service;
-//                $trx->trx_id = $trx_id;
-//                $trx->save();
-//
-//                return response()->json([
-//                    'status' => "success",
-//                    'ref' => $trx_id,
-//                ], 200);
-//
-//            }
-//
-//
-//        } catch (Exception $e) {
-//            return back()->with('error', $e);
-//        }
-
-
+        $request_meta = $request->metadata ?? [];
         if ($request->pay_type == 'flutterwave') {
             $trx_id = "TRXFLW" . random_int(0000000, 9999999);
             $email = Auth::user()->email;
@@ -549,7 +285,7 @@ class TransactionController extends Controller
             //     'metadata' => ["ref" => $trx_id],
             // );
 
-            if ($request->service === 'admin_fee') {
+            if ($request->service_type === 'admin_fee') {
 
                 $databody = [
                     "amount" => $request->amount * 100,
@@ -557,7 +293,9 @@ class TransactionController extends Controller
                     "ref" => $trx_id,
                     "callback_url" => url('') . "/paystack-check",
                     "subaccount" => 'ACCT_nd2zcvugcv5zfqp', // MEMMCOL admin_fee subaccount
-                    "metadata" => ["ref" => $trx_id],
+                    "metadata" => array_merge(
+                        $request_meta, ["ref" => $trx_id]
+                    ),
                 ];
 
             } else {
@@ -607,7 +345,7 @@ class TransactionController extends Controller
                 $trx->trx_id = $trx_id;
                 // $trx->payment_ref = $var->data->access_code ?? null;
                 $trx->payment_ref = $var->data->reference ?? null;
-                $trx->service_type = $request->service;
+                $trx->service_type = $request->service_type;
                 $trx->save();
 
                 return response()->json([
@@ -671,34 +409,6 @@ class TransactionController extends Controller
             ], 200);
 
         }
-
-        if ($request->pay_type === 'enkpay') {
-
-            $trx_id = "TRXENK" . random_int(0000000, 9999999);
-            $email = Auth::user()->email;
-            $phone = Auth::user()->phone ?? "012345678";
-            $fl = Setting::where('id', 1)->first();
-            $key = $fl->enkpay_key;
-
-            $url = "https://web.sprintpay.online/pay?amount=$request->amount&key=$key&ref=$trx_id&email=$email";
-
-            $trx = new Transaction();
-            $trx->user_id = Auth::id();
-            $trx->estate_id = Auth::user()->estate_id;
-            $trx->pay_type = "enkpay";
-            $trx->service_type = $request->service;
-            $trx->amount = $request->amount;
-            $trx->trx_id = $trx_id;
-            $trx->save();
-
-            return response()->json([
-                'status' => true,
-                'url' => $url
-            ], 200);
-
-
-        }
-
 
     }
 
@@ -801,6 +511,8 @@ class TransactionController extends Controller
                 'transactions.user_id',
                 'transactions.service',
                 'transactions.service_type',
+                'transactions.miscellaneous',
+                'transactions.miscellaneous_trx_amount',
             ];
 
             if ($hasMeterToken) {
@@ -818,7 +530,9 @@ class TransactionController extends Controller
                     'user_id',
                     'service',
                     'service_type',
-                    'status'
+                    'status',
+                    'miscellaneous',
+                    'miscellaneous_trx_amount',
                 ]);
 
                 $trx_x_token['kct_tokens'] = null;
@@ -959,8 +673,8 @@ class TransactionController extends Controller
     public function paystack_verify(request $request)
     {
 
-        $message = "paystack=" . json_encode($request->all());
-        send_notification($message);
+        // $message = "paystack=" . json_encode($request->all());
+        // send_notification($message);
 
         $fl = Setting::where('id', 1)->first();
         $pksecret = $fl->paystack_secret;
@@ -986,25 +700,59 @@ class TransactionController extends Controller
         curl_close($curl);
         $var = json_decode($var);
         $status = $var->status ?? null;
-        $ref = $var->data->reference ?? null;
+        $ref = null;
 
-
-        $ck_transaction = Transaction::where('trx_id', $var->data->reference)->first()->status ?? null;
-        if ($ck_transaction == null) {
-
-            if ($status == 'success') {
-                Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 2]);
-                $ref = Transaction::where('trx_id', $var->data->metadata->ref)->first()->trx_id;
-                $url = url('') . "/payment?ref=$ref&status=success";
-                return redirect($url);
-            } else {
-                $ref = Transaction::where('trx_id', $var->data->metadata->ref)->first()->trx_id;
-                $url = url('') . "/payment?ref=$ref&status=failure";
-                return redirect($url);
+        if (! $status) {
+            if ($var->code === "transaction_not_found") {
+                return StandardResponse::error(code: 404, message: 'Invalid ref: transaction not found');
             }
 
+            return StandardResponse::error(code: 500, message: 'An Error Occurred');
         }
 
+
+        $access_point = $request->access_point ?? 'web';
+        $payment_status = $var->data->status;
+        $ck_transaction = Transaction::where('trx_id', $var->data->reference)->first()->status ?? null;
+
+
+        if ($payment_status == 'success') {
+
+            if ($ck_transaction == null) {
+                Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 2]);
+            }
+
+
+            $ref = Transaction::where('trx_id', $var->data->metadata->ref)->first()->trx_id;
+
+
+            if ($access_point === 'mobile') {
+                return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [
+                    'payment_status' => $payment_status,
+                    'ref' => $ref,
+                ]);
+            }
+
+            // Web Access
+            $url = url('') . "/payment?ref=$ref&status=success";
+            return redirect($url);
+        }
+
+
+
+        $ref = Transaction::where('trx_id', $var->data->metadata->ref)->first()->trx_id;
+
+        // If status != success;
+        if ($access_point === 'mobile') {
+            return StandardResponse::success(code: 200, message: 'Payment Failed', data: [
+                'payment_status' => $payment_status,
+                'ref' => $ref,
+            ]);
+        }
+
+        // Web access
+        $url = url('') . "/payment?ref=$ref&status=failure";
+        return redirect($url);
     }
 
 
@@ -1478,9 +1226,10 @@ class TransactionController extends Controller
             ->whereMonth('created_at', Carbon::now()->month)
             ->whereYear('created_at', Carbon::now()->year)
             ->latest('created_at')
-            ->first()->status;
+            ->first();
 
-        if ($admin_fee_get == 2) {
+
+        if ($admin_fee_get && $admin_fee_get->status == 2) {
 
             return response()->json([
                 'status' => true,
@@ -1490,7 +1239,7 @@ class TransactionController extends Controller
         } else {
 
             return response()->json([
-                'status' => false,
+                'status' => true,
                 'monthly_admin_fee' => "0"
             ]);
         }
@@ -1874,6 +1623,20 @@ class TransactionController extends Controller
         return redirect()->away($url);
 
 
+    }
+
+    public function retry(request $request) {
+        $validator = Validator::make($request->all(), [
+            'trx_id' => 'required|string|exists:transactions,trx_id'
+        ]);
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        
     }
 
 
