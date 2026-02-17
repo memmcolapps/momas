@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Exception;
+use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 
 class PaystackPaymentService {
@@ -57,32 +58,66 @@ class PaystackPaymentService {
 
         );
 
-        $body = json_encode($databody);
-        $curl = curl_init();
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $this->paystack_secret,
+        ])->post($this->payment_endpoint, $databody);
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => $this->payment_endpoint,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => array(
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $this->paystack_secret,
-            ),
-        ));
-
-        $var = curl_exec($curl);
-        curl_close($curl);
-        $var = json_decode($var);
-        $status = $var->status;
-
+        $var = $response->json();
+        $status = $var['status'] ?? false;
     }
+
+    public  function verifyTransaction($transactionId)
+    {
+
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer {$this->paystack_secret}",
+            'Cache-Control' => 'no-cache',
+        ])
+        ->timeout(15)
+        ->retry(3, 1000) // retry 3 times, 1s delay
+        ->get("https://api.paystack.co/transaction/verify/{$transactionId}")
+        ->throw();
+
+        // Optional: check if request failed
+        if ($response->failed()) {
+            return [
+                'status' => false,
+                'message' => 'Transaction verification failed',
+                'error' => $response->body()
+            ];
+        }
+
+        $response_data = $response->json();
+        $message = '';
+        $status = $response_data['status'];
+        $payment_success = $response_data['data']['status'] === 'success';
+
+        // check if ref was found
+        if ($status === 'success') {
+            // change message based on payment status
+            switch ($response_data['data']['status']) {
+                case 'success':
+                    $message = 'Transaction Successful, Payment recieved';
+                    break;
+                case 'failed':
+                    $message = 'Transaction Failed, Ask customer to retry';
+                    break;
+                case 'pending':
+                    $message = 'Transaction Incomplete, check again later'; // preferably poll but try return message for now
+                    break;
+            }
+        }
+
+        return [
+            'payment_status' => $payment_success,
+            'message' => $message,
+        ];
+
+        return json_decode($response, true);
+    }
+
 
     public static function handlePaystackWebhook($data) {
 

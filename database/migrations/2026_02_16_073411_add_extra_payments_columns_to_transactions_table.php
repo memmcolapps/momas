@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tarrif_states', function (Blueprint $table) {
-            $table->double('fixed_charge', 14, 2)->default(0.00)->after('vat');
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->string('miscellaneous')->nullable();
+            $table->decimal('miscellaneous_trx_amount')->nullable();
         });
     }
 
@@ -21,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tarrif_states', function (Blueprint $table) {
-            $table->dropColumn('fixed_charge');
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->dropColumn(['miscellaneous', 'miscellaneous_trx_amount']);
         });
     }
 };

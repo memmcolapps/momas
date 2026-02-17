@@ -310,45 +310,50 @@ class MeterController extends Controller
             $tariff_index = Tariff::where('id', $request->tariff_id)->first()->tariff_index ?? null;
             $estate = Estate::where('id', Auth::user()->estate_id)->first();
             $duration = $estate->duration ?? null;
+            $paid_utility = false;
             if ($duration == "weekly" && $utility_amount > 0) {
                 UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->pay_type = "utility";
-                $trx->amount = $request->utility_amount;
-                $trx->fee = 0;
-                $trx->status = 2;
-                $trx->payment_ref = 0 ?? null;
-                $trx->service_type = "utility_payment";
-                $trx->trx_id = $trx_id;
-                $trx->save();
+                $paid_utility = true;
+                // $trx = new Transaction();
+                // $trx->user_id = Auth::id();
+                // $trx->pay_type = "utility";
+                // $trx->amount = $request->utility_amount;
+                // $trx->fee = 0;
+                // $trx->status = 2;
+                // $trx->payment_ref = 0 ?? null;
+                // $trx->service_type = "utility_payment";
+                // $trx->trx_id = $trx_id;
+                // $trx->miscellaneous_trx_amount =
+                // $trx->save();
             } elseif ($duration == "monthly" && $utility_amount > 0) {
 
                 UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->pay_type = "utility";
-                $trx->amount = $request->utility_amount;
-                $trx->fee = 0;
-                $trx->status = 2;
-                $trx->payment_ref = 0 ?? null;
-                $trx->service_type = "utility_payment";
-                $trx->trx_id = $trx_id;
-                $trx->save();
+                $paid_utility = true;
+                // $trx = new Transaction();
+                // $trx->user_id = Auth::id();
+                // $trx->pay_type = "utility";
+                // $trx->amount = $request->utility_amount;
+                // $trx->fee = 0;
+                // $trx->status = 2;
+                // $trx->payment_ref = 0 ?? null;
+                // $trx->service_type = "utility_payment";
+                // $trx->trx_id = $trx_id;
+                // $trx->save();
 
             } elseif ($duration == "yearly" && $utility_amount > 0) {
 
                 UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->pay_type = "utility";
-                $trx->amount = $request->utility_amount;
-                $trx->fee = 0;
-                $trx->status = 2;
-                $trx->payment_ref = 0 ?? null;
-                $trx->service_type = "utility_payment";
-                $trx->trx_id = $trx_id;
-                $trx->save();
+                $paid_utility = true;
+                // $trx = new Transaction();
+                // $trx->user_id = Auth::id();
+                // $trx->pay_type = "utility";
+                // $trx->amount = $request->utility_amount;
+                // $trx->fee = 0;
+                // $trx->status = 2;
+                // $trx->payment_ref = 0 ?? null;
+                // $trx->service_type = "utility_payment";
+                // $trx->trx_id = $trx_id;
+                // $trx->save();
 
 
             }
@@ -441,6 +446,11 @@ class MeterController extends Controller
                                     $trx_history->pay_type = "pay_with_test";
                                 }
 
+                                if ($paid_utility) {
+                                    $trx_history->miscellaneous = "utility";
+                                    $trx_history->miscellaneous_trx_amount = $utility_amount;
+                                }
+
                                 $trx_history->service = "METER PURCHASE";
                                 $trx_history->service_type = "credit_token";
                                 $trx_history->unit_amount = $vendong_amount;
@@ -464,6 +474,8 @@ class MeterController extends Controller
                                 $data2['title'] = $estate->title;
                                 $data2['user_id'] = (string) Auth::user()->id;
                                 $data2['status'] = $cdt->status;
+                                $data2['miscellaneous'] = $trx_history->miscellaneous;
+                                $data2['miscellaneous_trx_amount'] = $trx_history->miscellaneous_trx_amount;
 
                                 $vend_amount = round($vendong_amount, 2);
                                 $vatt = round($vat_amount, 2);
@@ -505,7 +517,7 @@ class MeterController extends Controller
                             ]);
 
 
-                            User::where('id', Auth::id())->first()->creditWallet($request->total_paid_amount);
+                            User::where('id', Auth::id())->first()->creditWallet($total_paid - $utility_amount);
 
 
                             return response()->json([
@@ -520,6 +532,7 @@ class MeterController extends Controller
 
                 } else {
 
+                    Auth::user()->creditWallet($total_paid - $utility_amount);
                     return response()->json([
                         'status' => false,
                         'message' => "Meter vending failed, Retry again using your wallet"
@@ -579,6 +592,11 @@ class MeterController extends Controller
                             $trx_history->pay_type = "pay_with_test";
                         }
 
+                        if ($paid_utility) {
+                            $trx_history->miscellaneous = "utility";
+                            $trx_history->miscellaneous_trx_amount = $utility_amount;
+                        }
+
                         $trx_history->service = "METER PURCHASE";
                         $trx_history->service_type = "credit_token";
                         $trx_history->unit_amount = $vendong_amount;
@@ -604,6 +622,8 @@ class MeterController extends Controller
                         $data['user_id'] =(string) Auth::user()->id;
                         $data['status'] = (int) $met->status;
                         $data['service_type'] = "credit_token";
+                        $data['miscellaneous'] = $trx_history->miscellaneous;
+                        $data['miscellaneous_trx_amount'] = $trx_history->miscellaneous_trx_amount;
 
 
                         $vend_amount = round($vendong_amount, 2);
@@ -649,8 +669,6 @@ class MeterController extends Controller
 
 
                 }
-
-
             }
 
             return response()->json([
@@ -676,7 +694,7 @@ class MeterController extends Controller
         $trx_id = $request->trxref;
 
 
-        $trx = Transaction::where('trx_id', $trx_id)->exists();
+        $trx = Transaction::where('trx_id', $trx_id)->first();
         if ($trx) {
             return response()->json([
                 'status' => false,
@@ -693,7 +711,7 @@ class MeterController extends Controller
         }
 
 
-        $user_wallet = User::where('id', Auth::id())->first()->main_wallet;
+        $user_wallet = User::where('id', $trx->user_id)->first()->main_wallet;
         if($user_wallet < $trx->amount){
             return response()->json([
                 'status' => false,
@@ -1006,11 +1024,15 @@ class MeterController extends Controller
             // Optional Utility Settlement
             // ============================
 
+            $paid_utility = false;
+
             if ($utility_amount > 0) {
                 UtilitiesPayment::where('estate_id', $meter->estate_id)
                     ->where('user_id', $meter->user_id)
                     ->where('status', 1)
                     ->update(['status' => 2]);
+
+                $paid_utility = true;
             }
 
             // ============================
@@ -1032,7 +1054,7 @@ class MeterController extends Controller
 
             if (!$response->successful()) {
                 $trx_history->status = 3;
-                Auth::user()->creditWallet($total_paid);
+                Auth::user()->creditWallet($total_paid - $utility_amount);
                 $trx_history->note   = "Vending server unreachable";
                 $trx_history->save();
 
@@ -1044,7 +1066,7 @@ class MeterController extends Controller
             if (($responseData['code'] ?? null) !== "SUCCESS") {
 
                 $trx_history->status = 3;
-                Auth::user()->creditWallet($total_paid);
+                Auth::user()->creditWallet($total_paid - $utility_amount);
                 $trx_history->note   = "Token generation failed";
                 $trx_history->save();
 
@@ -1091,6 +1113,11 @@ class MeterController extends Controller
             // ============================
             // Update or Create Transaction
             // ============================
+
+            if ($paid_utility) {
+                $trx_history->miscellaneous = "utility";
+                $trx_history->miscellaneous_trx_amount = $utility_amount;
+            }
 
             $trx_history->service      = 'METER PURCHASE (OTHERS)';
             $trx_history->service_type = 'credit_token';
