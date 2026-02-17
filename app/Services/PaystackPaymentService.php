@@ -75,7 +75,10 @@ class PaystackPaymentService {
             'Authorization' => "Bearer {$this->paystack_secret}",
             'Cache-Control' => 'no-cache',
         ])
-        ->get("https://api.paystack.co/transaction/verify/{$transactionId}");
+        ->timeout(15)
+        ->retry(3, 1000) // retry 3 times, 1s delay
+        ->get("https://api.paystack.co/transaction/verify/{$transactionId}")
+        ->throw();
 
         // Optional: check if request failed
         if ($response->failed()) {
@@ -85,6 +88,32 @@ class PaystackPaymentService {
                 'error' => $response->body()
             ];
         }
+
+        $response_data = $response->json();
+        $message = '';
+        $status = $response_data['status'];
+        $payment_success = $response_data['data']['status'] === 'success';
+
+        // check if ref was found
+        if ($status === 'success') {
+            // change message based on payment status
+            switch ($response_data['data']['status']) {
+                case 'success':
+                    $message = 'Transaction Successful, Payment recieved';
+                    break;
+                case 'failed':
+                    $message = 'Transaction Failed, Ask customer to retry';
+                    break;
+                case 'pending':
+                    $message = 'Transaction Incomplete, check again later'; // preferably poll but try return message for now
+                    break;
+            }
+        }
+
+        return [
+            'payment_status' => $payment_success,
+            'message' => $message,
+        ];
 
         return json_decode($response, true);
     }
