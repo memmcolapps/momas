@@ -24,13 +24,21 @@ class TransactionController extends Controller
 
     public function arrears(request $request)
     {
-
-        $get_trx = UtilitiesPayment::where('user_id', Auth::id())
+        // Get all non-admin_fee records (status != 2)
+        $other_trx = UtilitiesPayment::where('user_id', Auth::id())
             ->where('status', '!=', 2)
             ->get();
+
+        // Get sum of all admin_fee records
+        $admin_fee_sum = UtilitiesPayment::where('user_id', Auth::id())
+            ->where('status', '!=', 2)
+            ->where('type', '=', 'admin_fee')
+            ->sum('amount');
+
         return response()->json([
             'status' => true,
-            'data' => $get_trx
+            'data' => $other_trx,
+            'admin_fee_sum' => $admin_fee_sum,
         ]);
     }
 
@@ -1636,7 +1644,7 @@ class TransactionController extends Controller
             ]);
         }
 
-        
+
     }
 
 
