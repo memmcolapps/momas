@@ -950,6 +950,8 @@ class MeterController extends Controller
 
     public function pay_for_others_meter_token(Request $request)
     {
+
+        return StandardResponse::error(code: 403, message: "Currently unavailable, contact support for more info");
         try {
 
             $validator = Validator::make($request->all(), [
