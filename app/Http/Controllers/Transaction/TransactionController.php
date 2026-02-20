@@ -27,18 +27,50 @@ class TransactionController extends Controller
         // Get all non-admin_fee records (status != 2)
         $other_trx = UtilitiesPayment::where('user_id', Auth::id())
             ->where('status', '!=', 2)
+            ->where('type', '!=', 'admin_fee')
             ->get();
 
         // Get sum of all admin_fee records
-        $admin_fee_sum = UtilitiesPayment::where('user_id', Auth::id())
+        $admin_fees = UtilitiesPayment::where('user_id', Auth::id())
             ->where('status', '!=', 2)
             ->where('type', '=', 'admin_fee')
-            ->sum('amount');
+            ->latest()
+            ->get();
+
+        $most_recent_admin_fee = $admin_fees->first();
+
+        $admin_fee_sum = $admin_fees->sum('amount');
+        $history = [];
+
+        foreach ($admin_fees as $admin_fee) {
+            $history[] = [
+                'amount' => (string) $admin_fee->amount,
+                'status' => (int) $admin_fee->status,
+                'created_at' => $admin_fee->created_at->toDateTimeString(),
+                'next_due_date' => $admin_fee->nextDueDate ? $admin_fee->nextDueDate->toDateTimeString() : null,
+            ];
+        }
+
+        $other_trx = $other_trx->toArray();
+        $other_trx[] = [
+            'amount' => (string) $admin_fee_sum,
+            'status' => $most_recent_admin_fee ? (int) $most_recent_admin_fee->status : null,
+            'created_at' => $most_recent_admin_fee ? $most_recent_admin_fee->created_at->toDateTimeString() : null,
+            'next_due_date' => $most_recent_admin_fee && $most_recent_admin_fee->nextDueDate ?
+                $most_recent_admin_fee->nextDueDate->toDateTimeString() :
+                null,
+            'type' => $most_recent_admin_fee ? $most_recent_admin_fee->type : 'admin_fee',
+            'estate_id' => $most_recent_admin_fee ? $most_recent_admin_fee->estate_id : null,
+            'user_id' => $most_recent_admin_fee ? $most_recent_admin_fee->user_id : null,
+            'duration' => $most_recent_admin_fee ? $most_recent_admin_fee->duration : null,
+            'id' => $most_recent_admin_fee ? $most_recent_admin_fee->id : null,
+            'updated_at' => $most_recent_admin_fee ? $most_recent_admin_fee->updated_at->toDateTimeString() : null,
+        ];
 
         return response()->json([
             'status' => true,
             'data' => $other_trx,
-            'admin_fee_sum' => $admin_fee_sum,
+            'admin_fee_history' => $history,
         ]);
     }
 
