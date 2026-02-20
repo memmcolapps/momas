@@ -24,54 +24,108 @@ class TransactionController extends Controller
 
     public function arrears(request $request)
     {
-        // Get all non-admin_fee records (status != 2)
-        $other_trx = UtilitiesPayment::where('user_id', Auth::id())
-            ->where('status', '!=', 2)
-            ->where('type', '!=', 'admin_fee')
-            ->get();
+        try {
+            // Get all non-admin_fee records (status != 2)
+            $utilities = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                // ->where('type', '!=', 'admin_fee')
+                ->latest()
+                ->get();
 
-        // Get sum of all admin_fee records
-        $admin_fees = UtilitiesPayment::where('user_id', Auth::id())
-            ->where('status', '!=', 2)
-            ->where('type', '=', 'admin_fee')
-            ->latest()
-            ->get();
+            // Get sum of all admin_fee records
+            // $admin_fees = UtilitiesPayment::where('user_id', Auth::id())
+            //     ->where('status', '!=', 2)
+            //     ->where('type', '=', 'admin_fee')
+            //     ->latest()
+            //     ->get();
 
-        $most_recent_admin_fee = $admin_fees->first();
+            // $most_recent_admin_fee = $admin_fees->first();
 
-        $admin_fee_sum = $admin_fees->sum('amount');
-        $history = [];
+            // $admin_fee_sum = $admin_fees->sum('amount');
+            $history = [];
 
-        foreach ($admin_fees as $admin_fee) {
-            $history[] = [
-                'amount' => (string) $admin_fee->amount,
-                'status' => (int) $admin_fee->status,
-                'created_at' => $admin_fee->created_at->toDateTimeString(),
-                'next_due_date' => $admin_fee->nextDueDate ? $admin_fee->nextDueDate->toDateTimeString() : null,
+            // foreach ($utilities as $utility) {
+            //     if (! $utility) continue;
+
+            //     $history[$utility->type][] = [
+            //         'amount' => (string) $utility->amount,
+            //         'status' => (int) $utility->status,
+            //         'created_at' => $utility->created_at->toDateTimeString(),
+            //         'next_due_date' => $utility->nextDueDate ? $utility->nextDueDate->toDateTimeString() : null,
+            //     ];
+            // }
+
+            $admin_fee_sum = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '=', 'admin_fee')
+                ->sum('amount');
+
+            $admin_fee_latest = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '=', 'admin_fee')
+                ->latest()
+                ->first()
+                ?->toArray() ?? [];
+
+
+            $admin_fee_latest['amount'] = (string) $admin_fee_sum;
+
+            $utility_sum = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '!=', 'admin_fee')
+                ->sum('amount');
+
+            $utility_latest = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '!=', 'admin_fee')
+                ->latest()
+                ->first()
+                ?->toArray() ?? [];
+
+            $utility_latest['amount'] = (string) $utility_sum;
+
+            $all_history = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->latest('type')
+                ->select('type', 'amount', 'status', 'created_at', 'next_due_date')
+                ->groupBy('type', 'amount', 'status', 'created_at', 'next_due_date')
+                ->get()
+                ->toArray();
+
+            // dd('got here');
+
+            $utility_latest['history'] = $all_history['utilities'] ?? [];
+            $admin_fee_latest['history'] = [];
+
+
+            foreach ($all_history as $history_item) {
+                $history_item['amount'] = (string) $history_item['amount'];
+
+                if ($history_item['type'] === 'admin_fee') {
+                    $admin_fee_latest['history'][] = $history_item;
+                    continue;
+                }
+
+                $utility_latest['history'][] = $history_item;
+            }
+
+            $other_trx = [
+                $utility_latest,
+                $admin_fee_latest,
             ];
+
+            return response()->json([
+                'status' => true,
+                'data' => $other_trx,
+                'all_history' => $all_history,
+            ]);
+        } catch (Exception $e) {
+            return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
         }
-
-        $other_trx = $other_trx->toArray();
-        $other_trx[] = [
-            'amount' => (string) $admin_fee_sum,
-            'status' => $most_recent_admin_fee ? (int) $most_recent_admin_fee->status : null,
-            'created_at' => $most_recent_admin_fee ? $most_recent_admin_fee->created_at->toDateTimeString() : null,
-            'next_due_date' => $most_recent_admin_fee && $most_recent_admin_fee->nextDueDate ?
-                $most_recent_admin_fee->nextDueDate->toDateTimeString() :
-                null,
-            'type' => $most_recent_admin_fee ? $most_recent_admin_fee->type : 'admin_fee',
-            'estate_id' => $most_recent_admin_fee ? $most_recent_admin_fee->estate_id : null,
-            'user_id' => $most_recent_admin_fee ? $most_recent_admin_fee->user_id : null,
-            'duration' => $most_recent_admin_fee ? $most_recent_admin_fee->duration : null,
-            'id' => $most_recent_admin_fee ? $most_recent_admin_fee->id : null,
-            'updated_at' => $most_recent_admin_fee ? $most_recent_admin_fee->updated_at->toDateTimeString() : null,
-        ];
-
-        return response()->json([
-            'status' => true,
-            'data' => $other_trx,
-            'admin_fee_history' => $history,
-        ]);
     }
 
 
