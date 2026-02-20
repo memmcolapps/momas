@@ -24,22 +24,108 @@ class TransactionController extends Controller
 
     public function arrears(request $request)
     {
-        // Get all non-admin_fee records (status != 2)
-        $other_trx = UtilitiesPayment::where('user_id', Auth::id())
-            ->where('status', '!=', 2)
-            ->get();
+        try {
+            // Get all non-admin_fee records (status != 2)
+            $utilities = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                // ->where('type', '!=', 'admin_fee')
+                ->latest()
+                ->get();
 
-        // Get sum of all admin_fee records
-        $admin_fee_sum = UtilitiesPayment::where('user_id', Auth::id())
-            ->where('status', '!=', 2)
-            ->where('type', '=', 'admin_fee')
-            ->sum('amount');
+            // Get sum of all admin_fee records
+            // $admin_fees = UtilitiesPayment::where('user_id', Auth::id())
+            //     ->where('status', '!=', 2)
+            //     ->where('type', '=', 'admin_fee')
+            //     ->latest()
+            //     ->get();
 
-        return response()->json([
-            'status' => true,
-            'data' => $other_trx,
-            'admin_fee_sum' => $admin_fee_sum,
-        ]);
+            // $most_recent_admin_fee = $admin_fees->first();
+
+            // $admin_fee_sum = $admin_fees->sum('amount');
+            $history = [];
+
+            // foreach ($utilities as $utility) {
+            //     if (! $utility) continue;
+
+            //     $history[$utility->type][] = [
+            //         'amount' => (string) $utility->amount,
+            //         'status' => (int) $utility->status,
+            //         'created_at' => $utility->created_at->toDateTimeString(),
+            //         'next_due_date' => $utility->nextDueDate ? $utility->nextDueDate->toDateTimeString() : null,
+            //     ];
+            // }
+
+            $admin_fee_sum = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '=', 'admin_fee')
+                ->sum('amount');
+
+            $admin_fee_latest = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '=', 'admin_fee')
+                ->latest()
+                ->first()
+                ?->toArray() ?? [];
+
+
+            $admin_fee_latest['amount'] = (string) $admin_fee_sum;
+
+            $utility_sum = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '!=', 'admin_fee')
+                ->sum('amount');
+
+            $utility_latest = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->where('type', '!=', 'admin_fee')
+                ->latest()
+                ->first()
+                ?->toArray() ?? [];
+
+            $utility_latest['amount'] = (string) $utility_sum;
+
+            $all_history = UtilitiesPayment::where('user_id', Auth::id())
+                ->where('status', '!=', 2)
+                ->latest('type')
+                ->select('type', 'amount', 'status', 'created_at', 'next_due_date')
+                ->groupBy('type', 'amount', 'status', 'created_at', 'next_due_date')
+                ->get()
+                ->toArray();
+
+            // dd('got here');
+
+            $utility_latest['history'] = $all_history['utilities'] ?? [];
+            $admin_fee_latest['history'] = [];
+
+
+            foreach ($all_history as $history_item) {
+                $history_item['amount'] = (string) $history_item['amount'];
+
+                if ($history_item['type'] === 'admin_fee') {
+                    $admin_fee_latest['history'][] = $history_item;
+                    continue;
+                }
+
+                $utility_latest['history'][] = $history_item;
+            }
+
+            $other_trx = [
+                $utility_latest,
+                $admin_fee_latest,
+            ];
+
+            return response()->json([
+                'status' => true,
+                'data' => $other_trx,
+                'all_history' => $all_history,
+            ]);
+        } catch (Exception $e) {
+            return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
     }
 
 
