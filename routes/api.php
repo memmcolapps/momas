@@ -8,6 +8,7 @@ use App\Http\Controllers\Estate\CustomerImportController as EstateCustomerImport
 use App\Http\Controllers\Estate\EstateController;
 use App\Http\Controllers\Feature\FeatureController;
 use App\Http\Controllers\Meter\MeterController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Service\ServiceController;
@@ -143,9 +144,7 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
 });
 
 
-
-
-
+Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
 
 
 
