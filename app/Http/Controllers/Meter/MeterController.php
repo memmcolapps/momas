@@ -386,7 +386,7 @@ class MeterController extends Controller
                 $trx_history->miscellaneous_trx_amount = $utility_amount;
             }
 
-            $trx_history->service = "METER PURCHASE";
+            $trx_history->service = config("constants.service.credit_token");
             $trx_history->service_type = "credit_token";
             $trx_history->unit_amount = $vendong_amount;
             $trx_history->tariff_id = $request->tariff_id;
@@ -502,6 +502,9 @@ class MeterController extends Controller
         $tariff_index = Tariff::where('id', $trx->tariff_id)->first()->tariff_index ?? null;
         $user = User::where('id', $trx->user_id)->first();
         $meter = Meter::where('user_id', $trx->user_id)->first();
+        $need_kct = $meter->NeedKCT;
+
+        $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $need_kct);
 
 
 
@@ -600,20 +603,7 @@ class MeterController extends Controller
                         }
                     } else {
 
-                        Transaction::where('trx_id', $trx)->update([
-                            'service_type' => "token Purchase",
-                            'service' => "Meter",
-                            'status' => 3,
-                            'note' => json_encode($kct_response)
 
-
-                        ]);
-
-
-                        return response()->json([
-                            'status' => false,
-                            'message' => "Vending server not connected, Retry again later using your wallet",
-                        ], 422);
                     }
 
                 }

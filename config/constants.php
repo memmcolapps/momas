@@ -16,5 +16,9 @@ return [
         'pnd' => 0,
         'scs' => 2,
         'retry' => 3,
-    ]
+    ],
+
+    'service' => [
+        'credit_token' => 'CREDIT TOKEN PURCHASE'
+    ],
 ];

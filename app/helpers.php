@@ -598,6 +598,6 @@ if (! function_exists('generate_unique_string')) {
 
     function generate_unique_string($prefix = null) {
         $prefix = $prefix ?? "TRX";
-        return $prefix . ' | ' . Str::uuid()->toString();
+        return $prefix . ' - ' . Str::uuid()->toString();
     }
 }

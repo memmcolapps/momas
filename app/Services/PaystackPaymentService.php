@@ -34,7 +34,11 @@ class PaystackPaymentService {
 
         $this->paystack_public = $settings->paystack_public;
         $this->paystack_secret = $settings->paystack_secret;
-        $this->payment_endpoint = config('constants.paystack_payment_url');
+        if (in_array(env('APP_ENV'), ['local', 'staging', 'stg', 'lcl'])) {
+            $this->paystack_public = env('PAYSTACK_TEST_PUBLIC_KEY');
+            $this->paystack_secret = env('PAYSTACK_TEST_SECRET_KEY');
+        }
+        $this->payment_endpoint = config('constants.paystack_payment_endpoint');
     }
 
     /**
@@ -74,11 +78,12 @@ class PaystackPaymentService {
                 "value" => $transactionRef
             ]
         ];
+        // dd($transactionRef);
 
         $dataBody = [
             "amount" => (int) ($data['amount'] * 100), // Paystack expects amount in kobo
             "email" => $data['email'],
-            "ref" => $transactionRef,
+            "reference" => $transactionRef,
             "callback_url" => url('') . "/paystack-check",
             "subaccount" => $data['sub_account'],
             "metadata" => $metadata,
