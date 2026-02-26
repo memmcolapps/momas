@@ -43,6 +43,10 @@ class Transaction extends Model
         'resolve' => 'integer',
     ];
 
+    protected $hidden = [
+        'note'
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

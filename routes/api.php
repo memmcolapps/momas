@@ -8,6 +8,7 @@ use App\Http\Controllers\Estate\CustomerImportController as EstateCustomerImport
 use App\Http\Controllers\Estate\EstateController;
 use App\Http\Controllers\Feature\FeatureController;
 use App\Http\Controllers\Meter\MeterController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Service\ServiceController;
@@ -66,8 +67,6 @@ Route::any('pos/buy-token', [PosController::class, 'buy_meter_token']);
 Route::any('pos/retry-meter-token', [PosController::class, 'retry_meter_token']);
 Route::any('pos/eod', [PosController::class, 'get_all_transaction']);
 
-Route::post('get-trx', [TransactionController::class, 'get_trx']);
-
 
 
 Route::group(['middleware' => ['auth:api', 'acess']], function () {
@@ -89,7 +88,9 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
 
     //Services
     Route::get('service-properties', [ServiceController::class, 'service_properties']);
-    Route::post('service-search', [ServiceController::class, 'service_search']);
+    Route::get('get-artisan-by-id', [ServiceController::class, 'get_artisan_by_id']);
+    Route::get('fetch-services', [ServiceController::class, 'fetch_services']);
+    Route::get('get-artisans-by-service', [ServiceController::class, 'get_artisans_by_service']);
     Route::post('get-comment', [ServiceController::class, 'get_comment']);
     Route::post('save-comment', [ServiceController::class, 'save_comment']);
 
@@ -99,6 +100,8 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
     Route::get('arrears', [TransactionController::class, 'arrears']);
     Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
+    //Added newly electricity-tokens endpoint
+    Route::get('electricity-tokens', [TransactionController::class, 'electricityTokens']);
 
 
 
@@ -134,13 +137,14 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     //Services
     Route::get('get-service', [ServiceController::class, 'get_estate']);
 
+    //Transactions
+    Route::get('get-trx', [TransactionController::class, 'get_trx']);
+
 
 });
 
 
-
-
-
+Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
 
 
 

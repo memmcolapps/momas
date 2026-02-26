@@ -3,11 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\auth\MustVerifyEmail;
+use Exception;
+use Illuminate\Support\Facades\DB;
+use Laravel\Passport\HasApiTokens;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Auth;
-use Laravel\Passport\HasApiTokens;
 
 class User extends Authenticatable
 {
@@ -150,5 +152,37 @@ class User extends Authenticatable
     public function audit()
     {
         return $this->hasMany(Audit::class);
+    }
+
+    public function creditWallet($amount) {
+        if (! is_numeric($amount)) {
+            throw new Exception('Non numeric values cannot be credited to wallet ' . $amount);
+        }
+
+        if ($amount <= 0) {
+            throw new Exception('Cannot credit value less than or equal to 0 to wallet');
+        }
+
+        $amount = (double) $amount;
+
+        $this->main_wallet += $amount;
+        $this->save();
+    }
+
+    public function debitWallet($amount) {
+        if (! is_numeric($amount)) {
+            throw new Exception('Non numeric values cannot be debited to wallet ' . $amount);
+        }
+
+        if ($amount <= 0) {
+            throw new Exception('Cannot debit value less than or equal to 0 to wallet');
+        }
+
+        if ($amount > $this->main_wallet) {
+            throw new Exception('Insufficient Funds');
+        }
+
+        $this->main_wallet -= $amount;
+        $this->save();
     }
 }

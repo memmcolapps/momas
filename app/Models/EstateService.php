@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class EstateService extends Model
 {
@@ -25,6 +26,17 @@ class EstateService extends Model
     protected $casts = [
         'status' => 'integer'
     ];
+
+    public function updateRating()
+    {
+        $average = DB::table('comments')
+            ->where('job_id', $this->id)
+            ->avg('rate');
+
+        $this->rating = round($average ?? 0, 1);
+        $this->save();
+    }
+
 
 
 }

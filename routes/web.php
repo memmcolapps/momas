@@ -2,7 +2,7 @@
 
 use App\Exports\CustomerExport;
 use App\Exports\MeterExport;
-use App\Exports\MeterTransactionExport;
+use App\Exports\Meter\Export;
 use App\Http\Controllers\AccessToken\AccessTokenConroller;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\AuthController;
@@ -178,6 +178,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-utilities', [EstateController::class, 'estate_update_utilities']);
     Route::post('update-duration', [EstateController::class, 'update_duration']);
     Route::get('estate-service', [EstateServiceController::class, 'index']);
+    Route::get('new-service', [EstateServiceController::class, 'create_service']);
     Route::get('view-service', [EstateServiceController::class, 'view_service']);
     Route::post('add-new-service-list', [EstateServiceController::class, 'add_new_service']);
     Route::post('service-update', [EstateServiceController::class, 'service_update']);
