@@ -146,6 +146,10 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
 });
 
 Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
+Route::post('paystack-webhook', [TransactionController::class, 'paystackWebhook'])->name('paystack.webhook');
+
+// Test webhook endpoint - only available in local/staging environments
+Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
 
 
 

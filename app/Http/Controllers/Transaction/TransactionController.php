@@ -19,6 +19,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -381,16 +382,19 @@ class TransactionController extends Controller
                 //     'metadata' => ["ref" => $trx_id],
                 // );
 
+
+                $sub_account = $request->service_type === 'admin_fee' ?
+                    'ACCT_nd2zcvugcv5zfqp' : // MEMMCOL admin_fee subaccount
+                    $est->paystack_subaccount;
+
                 $databody = [
                     "amount" => $request->amount * 100,
                     "email" => $email,
-                    "sub_account" => $est->paystack_subaccount,
+                    "sub_account" => $sub_account,
                     "metadata" => $request->meta,
                 ];
 
-                if ($request->service_type === 'admin_fee') {
-                    $databody["sub_account"] = 'ACCT_nd2zcvugcv5zfqp'; // MEMMCOL admin_fee subaccoun
-                }
+                $validate_subaccount = PaystackPaymentService::validateSubaccount($sub_account);
 
                 $payment_init = app(PaystackPaymentService::class)->makePayment($databody);
                 $status = $payment_init['status'];
@@ -1745,12 +1749,13 @@ class TransactionController extends Controller
             // Get the raw JSON payload from the request
             $payload = $request->all();
 
+            // dd($payload, $request);
             if (empty($payload)) {
                 return StandardResponse::error(400, 'Empty webhook payload', []);
             }
 
             // Handle the webhook using PaystackPaymentService
-            $result = PaystackPaymentService::handlePaystackWebhook($payload);
+            $result = PaystackPaymentService::handlePaystackWebhook($request);
 
             if (! $result['status']) {
                 return StandardResponse::error(400, 'Invalid Webhook signature', []);
@@ -1839,6 +1844,160 @@ class TransactionController extends Controller
         }
     }
 
+    /**
+     * Trigger a mock Paystack webhook for testing purposes.
+     * Only available in staging and local environments.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    // public function triggerPaystackWebhook(Request $request)
+    // {
+    //     // Only allow in staging or local environments
+    //     $allowedEnvs = ['local', 'staging', 'stg'];
+    //     if (!in_array(env('APP_ENV'), $allowedEnvs)) {
+    //         return StandardResponse::error(403, 'This endpoint is only available in staging or local environments', []);
+    //     }
+
+    //     $validator = Validator::make($request->all(), [
+    //         'reference' => 'required|string',
+    //         'event' => 'required|string|in:charge.success,charge.failed,charge.pending,transfer.success,transfer.failed',
+    //         'amount' => 'nullable|integer|min:0',
+    //         'email' => 'nullable|email',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return StandardResponse::error(422, 'Validation error', [
+    //             'validation_error' => $validator->errors(),
+    //         ]);
+    //     }
+
+    //     $reference = $request->input('reference');
+    //     $event = $request->input('event');
+    //     $amount = $request->input('amount', 100000); // Default 1000 NGN in kobo
+    //     $email = $request->input('email', 'test@example.com');
+
+    //     // Build the webhook payload similar to what Paystack would send
+    //     $payload = [
+    //         'event' => $event,
+    //         'data' => [
+    //             'id' => rand(1000000, 9999999),
+    //             'reference' => $reference,
+    //             'amount' => $amount,
+    //             'currency' => 'NGN',
+    //             'status' => $this->mapEventToStatus($event),
+    //             'customer' => [
+    //                 'email' => $email,
+    //             ],
+    //             'created_at' => now()->toIso8601String(),
+    //         ],
+    //     ];
+
+    //     // Log the test webhook trigger
+    //     Log::info("Test Paystack Webhook Triggered: Event={$event}, Reference={$reference}", [
+    //         'payload' => $payload,
+    //         'environment' => env('APP_ENV'),
+    //     ]);
+
+    //     // Handle the webhook using the existing handler
+    //     $result = PaystackPaymentService::handlePaystackWebhook($payload);
+
+    //     // Update transaction status based on the event
+    //     if (isset($payload['data']['reference'])) {
+    //         $this->updateTransactionFromWebhook($payload);
+    //     }
+
+    //     return StandardResponse::success(200, 'Test webhook triggered successfully', [
+    //         'event' => $event,
+    //         'reference' => $reference,
+    //         'payload' => $payload,
+    //         'result' => $result,
+    //     ]);
+    // }
+
+    /**
+     * Map event type to Paystack status
+     *
+     * @param string $event
+     * @return string
+     */
+    protected function mapEventToStatus(string $event): string
+    {
+        return match ($event) {
+            'charge.success', 'transfer.success' => 'success',
+            'charge.failed', 'transfer.failed' => 'failed',
+            'charge.pending' => 'pending',
+            default => 'unknown',
+        };
+    }
+
+    public function triggerPaystackWebhook(Request $request)
+    {
+        $allowedEnvs = ['local', 'staging', 'stg'];
+        if (!in_array(app()->environment(), $allowedEnvs)) {
+            return StandardResponse::error(403, 'Only available in staging or local', []);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'reference' => 'required|string',
+            'event' => 'required|string|in:charge.success,charge.failed,charge.pending',
+            'amount' => 'nullable|integer|min:0',
+            'email' => 'nullable|email',
+        ]);
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        $reference = $request->input('reference');
+        $event = $request->input('event');
+        $amount = $request->input('amount', 100000);
+        $email = $request->input('email', 'test@example.com');
+
+        $payload = [
+            'event' => $event,
+            'data' => [
+                'id' => rand(1000000, 9999999),
+                'domain' => 'test',
+                'status' => $this->mapEventToStatus($event),
+                'reference' => $reference,
+                'amount' => $amount,
+                'currency' => 'NGN',
+                'paid_at' => now()->toIso8601String(),
+                'created_at' => now()->toIso8601String(),
+                'channel' => 'card',
+                'customer' => [
+                    'email' => $email,
+                ],
+                'metadata' => [],
+                'gateway_response' => 'Successful',
+            ],
+        ];
+
+        // Convert to raw JSON string
+        $jsonPayload = json_encode($payload);
+
+        // Fake secret key (replace later)
+        $secret = (new PaystackPaymentService())->getSecretKey();
+
+        // 2. Sign the string
+        $signature = hash_hmac('sha512', $jsonPayload, $secret);
+
+        // 3. Send the string WITHOUT letting Laravel re-encode it
+        $response = Http::withHeaders([
+            'x-paystack-signature' => $signature,
+            'Content-Type' => 'application/json',
+        ])->withBody($jsonPayload, 'application/json') // CRITICAL: Send the raw string
+        ->post(route('paystack.webhook'));
+
+        return StandardResponse::success(200, 'Webhook simulated', [
+            'payload' => $payload,
+            'signature' => $signature,
+            'webhook_response' => $response->json(),
+        ]);
+    }
 
 }
 

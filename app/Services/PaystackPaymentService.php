@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 
@@ -11,6 +12,7 @@ class PaystackPaymentService {
     protected $paystack_public;
     protected $paystack_secret;
     protected $payment_endpoint;
+    protected $paystack_env;
 
     public function __construct()
     {
@@ -34,9 +36,11 @@ class PaystackPaymentService {
 
         $this->paystack_public = $settings->paystack_public;
         $this->paystack_secret = $settings->paystack_secret;
+        $this->paystack_env = 'live';
         if (in_array(env('APP_ENV'), ['local', 'staging', 'stg', 'lcl'])) {
             $this->paystack_public = env('PAYSTACK_TEST_PUBLIC_KEY');
             $this->paystack_secret = env('PAYSTACK_TEST_SECRET_KEY');
+            $this->paystack_env = 'test';
         }
         $this->payment_endpoint = config('constants.paystack_payment_endpoint');
     }
@@ -51,6 +55,11 @@ class PaystackPaymentService {
         return $this->paystack_public;
     }
 
+    public function getSecretKey(): ?string
+    {
+        return $this->paystack_secret;
+    }
+
     /**
      * Make a payment using Paystack
      *
@@ -61,6 +70,11 @@ class PaystackPaymentService {
     public function makePayment(array $data): array
     {
         $requiredParameters = ['amount', 'email', 'sub_account', 'metadata'];
+        if ($this->paystack_env === 'test') {
+            unset($requiredParameters[array_search('sub_account', $requiredParameters)], $data['sub_account']);
+        }
+
+        // dd()
         $missingParameters = array_diff($requiredParameters, array_keys($data));
 
         if (!empty($missingParameters)) {
@@ -81,13 +95,16 @@ class PaystackPaymentService {
         // dd($transactionRef);
 
         $dataBody = [
-            "amount" => (int) ($data['amount'] * 100), // Paystack expects amount in kobo
+            "amount" => (int) ($data['amount']), // Paystack expects amount in kobo
             "email" => $data['email'],
             "reference" => $transactionRef,
             "callback_url" => url('') . "/paystack-check",
-            "subaccount" => $data['sub_account'],
             "metadata" => $metadata,
         ];
+
+        if ($this->paystack_env === 'live') {
+            $dataBody["subaccount"] = $data['sub_account'];
+        }
 
         try {
             $response = Http::withHeaders([
@@ -192,18 +209,19 @@ class PaystackPaymentService {
     /**
      * Handle Paystack webhook events
      *
-     * @param array $data The webhook payload data
+     * @param request $ The webhook request
      * @return array Response indicating success or failure
      */
-    public static function handlePaystackWebhook(array $data): array
+    public static function handlePaystackWebhook(Request $request): array
     {
+        $data = $request->all();
         $event = $data['event'] ?? '';
         $paymentData = $data['data'] ?? [];
 
         // Verify the webhook signature to ensure it's from Paystack
-        $headers = getallheaders();
+        $signature = $request->header('x-paystack-signature');
         $secret = (new self())->paystack_secret;
-        if (!self::verifyWebhookSignature($headers, json_encode($data), $secret)) {
+        if (!self::verifyWebhookSignature($signature, $request, $secret)) {
             return [
                 'status' => false,
                 'message' => 'Invalid webhook signature',
@@ -334,14 +352,43 @@ class PaystackPaymentService {
         ];
     }
 
-    protected static function verifyWebhookSignature(array $headers, string $payload, string $secret): bool
+    public static function verifyWebhookSignature(?string $signature, $payload, string $secret): bool
     {
-        $signature = $headers['x-paystack-signature'] ?? '';
-        if (empty($signature)) {
+        // 1. Handle null or empty signatures gracefully
+        if (!$signature) {
             return false;
         }
 
-        $computedSignature = hash_hmac('sha256', $payload, $secret);
+        // 2. Ensure $payload is a string (the raw body)
+        $content = is_string($payload) ? $payload : $payload->getContent();
+
+        $computedSignature = hash_hmac('sha512', $content, $secret);
+
+        // 3. Timing-attack safe comparison
         return hash_equals($computedSignature, $signature);
+    }
+
+    public static function validateSubaccount(string $subaccountCode): array
+    {
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . (new self())->paystack_secret,
+            'Accept' => 'application/json',
+        ])->get("https://api.paystack.co/subaccount/{$subaccountCode}");
+
+        $data = $response->json();
+
+        if ($response->failed() || !($data['status'] ?? false)) {
+            return [
+                'valid' => false,
+                'message' => $data['message'] ?? 'Invalid subaccount',
+                'data' => null,
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'message' => 'Subaccount is valid',
+            'data' => $data['data'],
+        ];
     }
 }
