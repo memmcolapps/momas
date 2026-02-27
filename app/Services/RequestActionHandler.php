@@ -22,6 +22,8 @@ class RequestActionHandler {
         $this->reference = $reference;
     }
 
+
+
     public static function handleRequestAction($reference) {
         $init = new self($reference);
 
@@ -48,6 +50,8 @@ class RequestActionHandler {
 
         return $handler();
     }
+
+
 
     protected function handleBuyTokenRequest($others=false) {
         $trx = Transaction::where('trx_id', $this->reference)
