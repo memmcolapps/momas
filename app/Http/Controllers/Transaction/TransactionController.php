@@ -444,10 +444,11 @@ class TransactionController extends Controller
                 $trx->action_payload = json_encode($request->action_payload);
                 $trx->save();
 
-                return response()->json([
+                return StandardResponse::success(200, 'Paystack Payment initiation successful', [
                     'status' => true,
-                    'url' => $payment_init['data']['authorization_url']
-                ], 200);
+                    'url' => $payment_init['data']['authorization_url'],
+                    'transaction_status' => $trx->status,
+                ]);
             }
 
 
@@ -810,15 +811,21 @@ class TransactionController extends Controller
         $payment_status = $var->data->status;
         $ck_transaction = Transaction::where('trx_id', $var->data->reference)->first()->status ?? null;
 
+        if ($ck_transaction === 2) {
+            // Already processed
+            return response()->json(['message' => 'Already processed']);
+        }
+
 
         if ($payment_status == 'success') {
 
             if ($ck_transaction == null) {
-                Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 2]);
+                Transaction::where('trx_id', $var->data->reference)->update(['status' => 3]);
             }
 
 
-            $ref = Transaction::where('trx_id', $var->data->metadata->ref)->first()->trx_id;
+            $ref = $var->data->metadata->ref;
+            ProcessPaystackWebhook::dispatch($var->data->reference);
 
 
             if ($access_point === 'mobile') {

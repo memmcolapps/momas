@@ -370,6 +370,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('retry-generate-credit-token', [TokenController::class, 'retry_generate_credit_token']);
     Route::get('view-logs', [TokenController::class, 'view_logs']);
 
+    Route::get('retry-generate-token', [TokenController::class, 'retry_generate_credit_token']);
+
     Route::post('add-new-tariffstate', [TariffController::class, 'add_state_tariff']);
     Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
 

@@ -37,6 +37,7 @@ class ProcessPaystackWebhook implements ShouldQueue
 
     public function handle(): void
     {
+        dump("Inside job");
         RequestActionHandler::handleRequestAction($this->reference);
     }
 

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\auth\MustVerifyEmail;
+
+use App\Services\PaystackPaymentService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\HasApiTokens;
@@ -184,5 +186,17 @@ class User extends Authenticatable
 
         $this->main_wallet -= $amount;
         $this->save();
+    }
+
+    public function payWithWallet($transaction_id)
+    {
+        $payment_engine = app(PaystackPaymentService::class);
+        $verify = $payment_engine->verifyTranscation($transaction_id);
+
+        if (! $verify['is_successful']) {
+            throw new Exception("Payment failed cannot be used for transaction");
+        }
+
+        return $verify['data']['amount'];
     }
 }
