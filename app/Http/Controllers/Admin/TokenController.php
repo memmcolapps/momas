@@ -2205,7 +2205,7 @@ class TokenController extends Controller
         }
 
 
-        $trx_id = "TRX" . random_int(000000000, 9999999999);
+        // $trx_id = "TRX" . random_int(000000000, 9999999999);
         $estate_id = Estate::where('id', $request->estate_name)->first()->id;
 
         // Get the meter to determine tariff type
@@ -3919,6 +3919,66 @@ class TokenController extends Controller
         }
     }
 
+    /**
+     * Retry generating a tamper token for a failed transaction
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function retry_generate_tamper_token(Request $request)
+    {
+        try {
+            Log::info('retry_generate_tamper_token called', [
+                'request' => $request->all(),
+            ]);
+
+            $get_trx = Transaction::where('trx_id', $request->trx_id)->first() ?? null;
+
+            if ($get_trx) {
+                if ($get_trx->pay_type == "paystack") {
+                    $transactionId = $get_trx->payment_ref;
+
+                    // Use PaystackPaymentService for transaction verification
+                    $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($transactionId);
+                    Log::info('Paystack verify response for tamper token', ['response' => $verify_result]);
+
+                    if (!$verify_result['status']) {
+                        return back()->with('error', $verify_result['message'] ?? 'Transaction verification failed');
+                    }
+
+                    $status = $verify_result['data']['status'] ?? null;
+                    $ref = $verify_result['data']['reference'] ?? null;
+                    $trx_id = $verify_result['data']['reference'] ?? null;
+
+                    $ck_transaction = Transaction::where('trx_id', $trx_id)->first()->status ?? null;
+
+                    $meterNo = TamperToken::where('trx_id', $trx_id)->first()->meterNo;
+                    $meter = Meter::where('meterNo', $meterNo)->first();
+                    $trx = Transaction::where('trx_id', $trx_id)->first();
+                    $user = User::where('meterNo', $meterNo)->first();
+
+                    $action_payload = json_decode($trx->action_payload, true);
+                    $tariff_id = $action_payload['tariff_id'];
+                    $vending_amount = $action_payload['vending_amount'];
+                    $email = $action_payload['email'] ?? $user->email;
+
+                    // Call getNewTamperToken method on the meter
+                    $meter->getNewTamperToken($tariff_id, $trx_id, $vending_amount, $email, $verify = 'null');
+
+                    return back()->with('success', 'Tamper token generated successfully');
+                }
+
+                return back()->with('error', 'Payment type not supported for tamper token retry');
+            }
+
+            return back()->with('error', 'Transaction Not Found');
+
+        } catch (Exception $e) {
+            Log::error('retry_generate_tamper_token error: ', ['exception' => $e]);
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function paystack_verify_kct(request $request)
     {
         Log::info('paystack_verify_kct called', [
@@ -5307,6 +5367,7 @@ class TokenController extends Controller
     {
 
 
+    // dd($request->all());
         try {
             Log::info('recepit', [
                 'request' => $request->all(),

@@ -297,7 +297,7 @@
                                                                 <option value="flutterwave">Pay with Flutterwave
                                                                 </option>
                                                                 <option value="enkpay">Pay with Enkpay</option>
-                                                                
+
 
                                                             </select>
                                                         </div>
@@ -368,7 +368,7 @@
 
                                                     <td>
                                                         @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}"
+                                                            <a href="recepit?trx_id={{$data->trx_id}}&type=tamper"
                                                                onclick="return confirmreprint();"
                                                                class="btn btn-primary">Reprint</a>
                                                             <script>
@@ -552,17 +552,17 @@
                                                                                     // alert("Error: Tariff index not set for customer.");
                                                                                     // return;
                                                                                 // }
-// 
+//
                                                                                 // if (response && response.tariffs) {
                                                                                     // console.log(response);
                                                                                     // var tariffSelect = $('#tariff_id');
                                                                                     // tariffSelect.empty();
                                                                                     // tariffSelect.append('<option value="">--Select Tariff--</option>');
-// 
+//
                                                                                     // response.tariffs.forEach(function (tariff) {
                                                                                         // tariffSelect.append('<option value="' + tariff.id + '">' + tariff.type + '</option>');
                                                                                     // });
-// 
+//
                                                                                     // tariffSelect.prop('disabled', false);
                                                                                 // } else {
                                                                                     // $('#tariff_id').prop('disabled', true).empty();
@@ -574,7 +574,7 @@
                                                                             // }
                                                                         // });
 
-                                                                         
+
                                                                                 $.ajax({
                                                                                     url: '/admin/fetch-meter-tariffs', // New endpoint
                                                                                     method: 'GET',
@@ -596,7 +596,7 @@
                                                                                             alert("Error: Tariff index not set for customer.");
                                                                                             return;
                                                                                         }
-                                                                                    
+
                                                                                         if (response && response.tariffs) {
                                                                                             console.log('Meter tariffs:', response);
                                                                                             populateTariffOptions(response.tariffs, response.meter);
@@ -640,7 +640,7 @@
                                                                                             });
                                                                                             tariffSelect.append('</optgroup>');
                                                                                         }
-                                                                                    
+
                                                                                         if (genTariffs.length > 0) {
                                                                                             tariffSelect.append('<optgroup label="Generator Tariffs">');
                                                                                             genTariffs.forEach(function (tariff) {
@@ -656,11 +656,11 @@
                                                                                             tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
                                                                                         });
                                                                                     }
-                                                                                
-                                                                                    tariffSelect.prop('disabled', false);           
-                                                                                
+
+                                                                                    tariffSelect.prop('disabled', false);
+
                                                                                 }
-                                                                            
+
                                                                                 function getActiveTariffLabel(tariff, meter, type) {
                                                                                        var label = tariff.title;
                                                                                        var isCurrentlyActive = false;
@@ -687,7 +687,7 @@
 
                                                                                        return label + tariffStatus;
                                                                                 }
-                                                                    
+
                                                         </script>
 
 

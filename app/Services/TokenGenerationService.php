@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Meter;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -141,6 +142,139 @@ class TokenGenerationService {
                 'success' => false,
                 'data' => [],
                 'error' => $data['message'] ?? 'Token generation failed',
+            ];
+        }
+
+        $token = $data['tokens'][0] ?? null;
+
+        if (!$token) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'No token returned',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'token' => $token
+            ],
+        ];
+    }
+
+    /**
+     * Generate a KCT (Key Change Token) for the given meter
+     *
+     * This method generates a KCT token which is used when migrating between meters.
+     * After successful generation, it sets the meter NeedKCT to 0.
+     *
+     * @param Meter $meter The meter instance
+     * @param string $meterNo The meter number
+     * @param int $sgc The source SGC (Standard Generic Classification)
+     * @param int $tosgc The target SGC
+     * @param int $ti The source tariff index
+     * @param int $toti The target tariff index
+     * @return array
+     */
+    public static function generateKctToken(Meter $meter, string $meterNo, int $sgc, int $tosgc, int $ti, int $toti)
+    {
+        $kctdatabody = [
+            'meterType' => $meter->KRN1,
+            'tometerType' => $meter->KRN2,
+            'meterNo' => $meterNo,
+            'sgc' => $sgc,
+            'tosgc' => $tosgc,
+            'ti' => $ti,
+            'toti' => $toti,
+            'allow' => false,
+            'allowkrn' => true,
+        ];
+
+        Log::info('KCT Token data body', ['request body' => $kctdatabody]);
+
+        $kct_response = Http::withOptions([
+            'verify' => false,
+            'timeout' => 10,
+        ])->post('http://169.239.189.91:19071/kcttokenGen', $kctdatabody);
+
+        if (!$kct_response->successful()) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'HTTP request failed',
+            ];
+        }
+
+        $kct = $kct_response->json();
+        $kct_data = json_decode($kct, true);
+        $status_code = $kct_data['code'] ?? null;
+
+        if ($status_code !== 'SUCCESS') {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => $kct_data['message'] ?? 'KCT token generation failed',
+            ];
+        }
+
+        // Set meter NeedKCT to 0 and save
+        $meter->NeedKCT = 0;
+        $meter->save();
+
+        return [
+            'success' => true,
+            'data' => [
+                'kct_token1' => $kct_data['tokens'][0],
+                'kct_token2' => $kct_data['tokens'][1],
+            ],
+        ];
+    }
+
+    /**
+     * Generate a clear credit token for the given meter
+     *
+     * This method generates a clear credit token to clear existing credit on a meter.
+     *
+     * @param Meter $meter The meter instance
+     * @param int $tariff_index The tariff index
+     * @return array
+     */
+    public static function generateClearCreditToken(Meter $meter, int $tariff_index)
+    {
+        $databody = [
+            'meterType' => $meter->KRN2,
+            'meterNo' => $meter->meterNo,
+            'sgc' => (int)$meter->NewSGC,
+            'ti' => $tariff_index,
+            'sbc' => 1,
+            'amount' => 10,
+        ];
+
+        Log::info('Clear Credit Token data body', ['request body' => $databody]);
+
+        $response = Http::withOptions([
+            'verify' => false,
+            'timeout' => 10,
+        ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
+
+        if (!$response->successful()) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'HTTP request failed',
+            ];
+        }
+
+        $responseData = $response->json();
+        $data = json_decode($responseData, true);
+        $status = $data['code'] ?? null;
+
+        if ($status !== 'SUCCESS') {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => $data['message'] ?? 'Clear credit token generation failed',
             ];
         }
 
