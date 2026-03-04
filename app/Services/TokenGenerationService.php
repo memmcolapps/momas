@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class TokenGenerationService {
     public static function generateMeterToken($meter, $tariff_index, $unit, $need_kct = false) {
@@ -94,6 +95,69 @@ class TokenGenerationService {
             'data' => [
                 'token' => $token,
                 'kct_token' => $kct_token,
+            ],
+        ];
+    }
+
+    /**
+     * Generate a tamper token for the given meter
+     *
+     * @param \App\Models\Meter $meter The meter instance
+     * @param int $tariff_index The tariff index
+     * @return array
+     */
+    public static function generateTamperToken($meter, $tariff_index)
+    {
+        $databody = [
+            'meterType' => $meter->KRN2,
+            'meterNo' => $meter->meterNo,
+            'sgc' => (int)$meter->NewSGC,
+            'ti' => $tariff_index,
+            'sbc' => 5,
+            'amount' => 10,
+        ];
+
+        Log::info('Tamper token data body', ['request body' => $databody]);
+
+        $response = Http::withOptions([
+            'verify' => false,
+            'timeout' => 10,
+        ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
+
+        if (!$response->successful()) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'HTTP request failed',
+            ];
+        }
+
+        $responseData = $response->json();
+        $data = json_decode($responseData, true);
+        $status = $data['code'] ?? null;
+
+        if ($status !== 'SUCCESS') {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => $data['message'] ?? 'Token generation failed',
+            ];
+        }
+
+        $token = $data['tokens'][0] ?? null;
+
+        if (!$token) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'No token returned',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'token' => $token
             ],
         ];
     }

@@ -43,12 +43,19 @@ class ProcessPaystackWebhook implements ShouldQueue
 
     public function failed(\Throwable $exception)
     {
-        Log::error("Job permanently failed for {$this->reference}: " . $exception->getMessage());
+        Log::error("Job permanently failed for {$this->reference}: " . $exception->getMessage(), [
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+        ]);
         try {
             $trx = Transaction::where('trx_id', $this->reference)->firstOrFail();
-            $user = User::where('id', $trx->user_id)->firstOrFail();
+            $action_payload = json_decode($trx->action_payload, true);
+            if ($action_payload['action'] === 'momas_meter') {
+                $trx = Transaction::where('trx_id', $this->reference)->firstOrFail();
+                $user = User::where('id', $trx->user_id)->firstOrFail();
 
-            $user->creditWallet($trx->amount);
+                $user->creditWallet($trx->amount);
+            }
         } catch (Exception $e) {
 
             Log::error("Failed to Credit User: {$user->id} wallet reason: {$e->getMessage()}");

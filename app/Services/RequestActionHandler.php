@@ -35,12 +35,17 @@ class RequestActionHandler {
             throw new Exception('Invalid action passed to paystack: Action not recognized');
         }
 
-        if ($features[$action['action']] != 1) {
+        $actionables = array_merge($features, [
+            'momas_meter_web' => 1
+        ]);
+
+        if ($actionables[$action['action']] != 1) {
             throw new Exception ('Sorry The requested feature is not available at the moment');
         }
+        dump("got here 41");
 
         $handler = match ($action['action']) {
-            'momas_meter' => fn() => $init->handleBuyTokenRequest(),
+            'momas_meter', 'momas_meter_web' => fn() => $init->handleBuyTokenRequest(),
             'others_meter' => fn() => $init->handleBuyTokenRequest($others=true),
         };
 
@@ -51,6 +56,7 @@ class RequestActionHandler {
 
     protected function handleBuyTokenRequest($others=false) {
         dump('handleBuyTokenRequest');
+        throw new Exception("Test Failure");
         $trx = Transaction::where('trx_id', $this->reference)
             ->firstOrFail();
 
@@ -62,25 +68,15 @@ class RequestActionHandler {
         }
 
         $action_payload = json_decode($trx->action_payload, true);
+        $user_id = $action_payload['user_id'];
 
-        $user = User::findOrFail($trx->user_id);
+        dump($user_id, $action_payload);
+        $user = User::findOrFail($user_id);
         dump("user->", $user->id);
 
-        $meter1 = Meter::where('user_id', $user->user_id)->firstOrFail();
-        dump("meter_with_uid->", $meter1->id);
-
-        $meter = Meter::where('meterNo', $user->meterNo)->first();
+        $meter = Meter::where('user_id', $user->id)->firstOrFail();
+        dump("meter_with_uid->", $meter->id);
         // dump($meter);
-        dump([
-            'user' => $user?->toArray(),
-            'meter_user_id' => $meter1?->toArray(),
-            '$meter_meter_no' => $meter?->toArray(),
-            'meter_no' => $user?->meterNo,
-            'user_id' => $user?->user_id,
-            'meter_no_equal_strong' => $user?->meterNo === $meter1?->meterNo,
-            'meter_no_equal_weak' => $user?->meterNo == $meter1?->meterNo
-
-        ]);
 
         $tariffId = $action_payload['tariff_id'];
         $unit = $action_payload['vend_amount_kw_per_naira'];

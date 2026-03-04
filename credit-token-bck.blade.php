@@ -223,7 +223,6 @@
                                                 <th scope="col" class="cursor-pointer">Tariff Index</th>
                                                 <th scope="col" class="cursor-pointer desc">Unit</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
-                                                {{-- <th scope="col" class="cursor-pointer desc">TRX_ID</th> --}}
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
 
@@ -255,7 +254,6 @@
                                                         {{-- {{ $data->status . ' - ' . $data->trx_id  }} --}}
 
                                                     </td>
-                                                    {{-- <td>{{$data->trx_id}}</td> --}}
                                                     <td>{{$data->created_at}}</td>
 
 

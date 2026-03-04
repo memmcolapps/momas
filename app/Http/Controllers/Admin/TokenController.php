@@ -9,10 +9,11 @@ use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\KctToken;
 use App\Models\Meter;
+use App\Models\MeterToken;
 use App\Models\Setting;
 use App\Models\TamperToken;
-use App\Models\TarrifState;
 use App\Models\Tariff;
+use App\Models\TarrifState;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
@@ -20,9 +21,9 @@ use App\Services\VatCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Lcobucci\JWT\Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Lcobucci\JWT\Exception;
 
 
 class TokenController extends Controller
@@ -40,6 +41,28 @@ class TokenController extends Controller
             $data['tariff'] = TarrifState::where('estate_id', user()->estate_id)->get();
             $data['preview'] = null;
             $data['credit_tokens'] = CreditToken::latest()->paginate('50');
+            $data['credit_tokens_select'] = CreditToken::join('users', 'users.id', '=', 'credit_tokens.user_id')
+                ->latest()
+                ->select([
+                    'users.first_name',
+                    'users.last_name',
+                    'users.estate_name',
+                    'credit_tokens.meterNo',
+                    'credit_tokens.amount',
+                    'credit_tokens.tariff_id',
+                    'credit_tokens.unitKwh',
+                    'credit_tokens.status',
+                    'credit_tokens.created_at',
+                    'credit_tokens.user_id',
+                    'credit_tokens.trx_id',
+                    'credit_tokens.status',
+                ])->paginate('50');
+
+            // foreach ($data['credit_tokens'] as $data) {
+            //     if ($data->trx_id == 'MOMAS-794791327-162eebca') {
+            //         Log::info("You tested", $data->toArray());
+            //     }
+            // }
 
             Log::info('credit_token_index data prepared', [
                 'user_id' => Auth::id(),
@@ -1282,31 +1305,32 @@ class TokenController extends Controller
         $customer_email = User::where('meterNo', $request->meterNo)->first()->email;
 
         $amount = $request->amount - $fee;
-        $trx_id = "TRX" . random_int(000000000, 9999999999);
+        $user_id = User::where('meterNo', $request->meterNo)->firstOrFail()->id;
+        // $trx_id = "TRX" . random_int(000000000, 9999999999);
         $estate_id = Estate::where('id', $request->estate_name)->first()->id;
 
-        $cdt = new CreditToken();
-        $cdt->user_id = $request->user_id;
-        $cdt->trx_id = $trx_id;
-        $cdt->meterNo = $request->meterNo;
-        $cdt->amount = $amount;
-        $cdt->amount_charged = $request->amount;
-        $cdt->customer_email = $customer_email;
-        $cdt->fee = $fee;
-        $cdt->vat = $request->vat;
-        $cdt->estate_name = Estate::where('id', $request->estate_name)->first()->title;;
-        $cdt->estate_id = $estate_id;
-        $cdt->tariff_id = $request->t_index;     //Tariff index used
-        $cdt->tariff_amount = $request->tariff_amount;
-        $cdt->vatAmount = $request->vatAmount;
-        $cdt->costOfUnit = $request->costOfUnit;
-        $cdt->unitkwh = $request->unit;
-        $cdt->tariffPerKWatt = $request->tariffPerKWatt;
+        // $cdt = new CreditToken();
+        // $cdt->user_id = $request->user_id;
+        // $cdt->trx_id = $trx_id;
+        // $cdt->meterNo = $request->meterNo;
+        // $cdt->amount = $amount;
+        // $cdt->amount_charged = $request->amount;
+        // $cdt->customer_email = $customer_email;
+        // $cdt->fee = $fee;
+        // $cdt->vat = $request->vat;
+        // $cdt->estate_name = Estate::where('id', $request->estate_name)->first()->title;;
+        // $cdt->estate_id = $estate_id;
+        // $cdt->tariff_id = $request->t_index;     //Tariff index used
+        // $cdt->tariff_amount = $request->tariff_amount;
+        // $cdt->vatAmount = $request->vatAmount;
+        // $cdt->costOfUnit = $request->costOfUnit;
+        // $cdt->unitkwh = $request->unit;
+        // $cdt->tariffPerKWatt = $request->tariffPerKWatt;
 
-        // Log before saving
-        Log::info('CreditToken about to be saved', $cdt->attributesToArray());
+        // // Log before saving
+        // Log::info('CreditToken about to be saved', $cdt->attributesToArray());
 
-        $cdt->save();
+        // $cdt->save();
 
 
         try {
@@ -1505,7 +1529,7 @@ class TokenController extends Controller
                     "amount" => $request->amount * 100,
                     "email" => strtolower(trim($customer_email)),
                     "sub_account" => $est->paystack_subaccount,
-                    "metadata" => ["ref" => $trx_id],
+                    "metadata" => [],
                 ];
 
                 $payment_init = app(\App\Services\PaystackPaymentService::class)->makePayment($databody);
@@ -1524,15 +1548,19 @@ class TokenController extends Controller
                 if ($status === true) {
                     // Build action_payload for RequestActionHandler
                     $action_payload = [
-                        'action' => 'momas_meter',
+                        'action' => 'momas_meter_web',
                         'tariff_id' => $request->tariff_id,
                         'vend_amount_kw_per_naira' => $request->unit,
                         'utility_amount' => 0,
                         'total_paid_amount' => $request->amount,
                         'vat_amount' => $request->vatAmount ?? 0,
                         'vending_amount' => $request->amount,
-                        'amount' => $request->amount,
+                        'amount' => $amount,
+                        'user_id' => $user_id,
+                        'meterNo' => $request->meterNo,
                     ];
+
+                    // dd($action_payload);
 
                     $trx = new Transaction();
                     $trx->user_id = Auth::id();
@@ -1545,6 +1573,21 @@ class TokenController extends Controller
                     $trx->service_type = "credit_token";
                     $trx->status = 0;
                     $trx->action_payload = json_encode($action_payload);
+
+                    $cdt = CreditToken::create([
+                        'trx_id' => $trx_id,
+                        'user_id' => $action_payload['user_id'],
+                        'meterNo' => $action_payload['meterNo'],
+                        'amount' => $action_payload['vending_amount'],
+                        'amount_charged' => $action_payload['vending_amount'],
+                        // 'customer_email' => $email,
+                        'unitkwh' => $action_payload['vend_amount_kw_per_naira'],
+                        'vat' => $action_payload['vat_amount'],
+                        'estate_id' => $estate_id,
+                        'estate_name' => $request->estate_name,
+                        'token' => null,
+                        'status' => 0
+                    ]);
 
                     // Log before saving
                     Log::info('Transaction about to be saved', $trx->attributesToArray());
@@ -3652,20 +3695,26 @@ class TokenController extends Controller
 
                     $status = $verify_result['data']['status'] ?? null;
                     $ref = $verify_result['data']['reference'] ?? null;
-                    $trx_id = $verify_result['data']['metadata']['ref'] ?? null;
+                    $trx_id = $verify_result['data']['reference'] ?? null;
 
 
                     $ck_transaction = Transaction::where('trx_id', $trx_id)->first()->status ?? null;
 
-                    Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+                    // Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+                    // dd($request->all(), $trx_id);
                     $meterNo = CreditToken::where('trx_id', $trx_id)->first()->meterNo;
                     $meter = Meter::where('meterNo', $meterNo)->first();
                     $trx = Transaction::where('trx_id', $trx_id)->first();
                     $user = User::where('meterNo', $meterNo)->first();
-                    $cdt = CreditToken::where('trx_id', $trx_id)->first();
-                    $tariff_id = $cdt->tariff_id;
 
-                    $meter->getNewToken($tariff_id, $cdt->tariffPerKWatt, $trx_id, $cdt->vat, $trx->unit_amount, $verify="null");
+
+                    $action_payload = json_decode($trx->action_payload, true);
+                    $tariff_id = $action_payload['tariff_id'];
+                    $unit = $action_payload['vend_amount_kw_per_naira'];
+                    $vat = $action_payload['vat_amount'];
+                    $vending_amount = $action_payload['vending_amount'];
+
+                    $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $verify="null");
 
 
 
@@ -5259,150 +5308,159 @@ class TokenController extends Controller
     public function recepit(request $request)
     {
 
-        Log::info('recepit', [
-            'request' => $request->all(),
-        ]);
 
-        if ($request->trx_id == null) {
-            return back()->with('error', "Ref can not be empty");
-        }
+        try {
+            Log::info('recepit', [
+                'request' => $request->all(),
+            ]);
 
-
-        if ($request->type == "credit_token") {
-
-            $trx_comp = CreditToken::where('trx_id', $request->trx_id)->first() ?? null;
-            $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
-
-            if ($trx_comp != null) {
-                $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
-                $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
-                $data['phone'] = $user_comp->phone;
-                $data['trx_id'] = $trx_comp->trx_id;
-                $data['token'] = $trx_comp->token;
-                $data['ref'] = $trx_comp->trx_id;
-                $data['amount'] = $trx_comp->amount_charged;
-                $data['vat_amount'] = $trx_comp->vatAmount;
-                $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
-                $data['tariff_amount'] = $trx_comp->tariff_amount;
-                $data['unit'] = $trx_comp->unitkwh;
-                $data['title'] = "Credit Token";
-                $data['date'] = date('d-m-y h:i:s');
-                $data['meter_no'] = $trx_comp->meterNo;
-
-                return view('admin/recepit.recepit', $data);
-            }
-        }
-
-        if ($request->type == "tamper") {
-
-            $trx_comp = TamperToken::where('trx_id', $request->trx_id)->first() ?? null;
-            $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
-
-
-            if ($trx_comp != null) {
-
-                $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
-                $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
-                $data['phone'] = $user_comp->phone;
-                $data['ref'] = $trx_comp->trx_id;
-                $data['token'] = $trx_comp->token;
-                $data['amount'] = $trx_comp->amount;
-                $data['vat_amount'] = $trx_comp->vatAmount;
-                $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
-                $data['tariff_amount'] = $trx_comp->tariff_amount;
-                $data['unit'] = $trx_comp->unitkwh;
-                $data['title'] = "Clear Tamper Token";
-                $data['date'] = date('d-m-y h:i:s');
-                $data['meter_no'] = $trx_comp->meterNo;
-
-                return view('admin/recepit.recepit', $data);
-
-
+            if ($request->trx_id == null) {
+                return back()->with('error', "Ref can not be empty");
             }
 
 
-        }
+            if ($request->type == "credit_token") {
+
+                $trx_comp = CreditToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
+                $met = MeterToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $kct_tokens = $met ? explode(',', $met->kct_tokens) : null;
 
 
-        if ($request->type == "clear_credit") {
+                if ($trx_comp != null) {
+                    $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
+                    $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
+                    $data['phone'] = $user_comp->phone;
+                    $data['trx_id'] = $trx_comp->trx_id;
+                    $data['token'] = $trx_comp->token;
+                    $data['ref'] = $trx_comp->trx_id;
+                    $data['amount'] = $trx_comp->amount_charged;
+                    $data['vat_amount'] = $trx_comp->vatAmount;
+                    $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
+                    $data['tariff_amount'] = $trx_comp->tariff_amount;
+                    $data['unit'] = $trx_comp->unitkwh;
+                    $data['title'] = "Credit Token";
+                    $data['date'] = date('d-m-y h:i:s');
+                    $data['meter_no'] = $trx_comp->meterNo;
+                    $data['kct_token1'] = $kct_tokens[0] ?? null;
+                    $data['kct_token2'] = $kct_tokens[1] ?? null;
 
-            $trx_comp = ClearcreditToken::where('trx_id', $request->trx_id)->first() ?? null;
-            $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
+                    return view('admin/recepit.recepit', $data);
+                }
+            }
+
+            if ($request->type == "tamper") {
+
+                $trx_comp = TamperToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
 
 
-            if ($trx_comp != null) {
+                if ($trx_comp != null) {
 
-                $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
-                $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
-                $data['phone'] = $user_comp->phone;
-                $data['ref'] = $trx_comp->trx_id;
-                $data['token'] = $trx_comp->token;
-                // UPDATED: Don't pass VAT, tariff amount, or unit for clear credit receipts
-                // $data['amount'] = $trx_comp->amount;
-                // $data['vat_amount'] = $trx_comp->vatAmount;
-                // $data['tariff_amount'] = $trx_comp->tariff_amount;
-                // $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
-                $data['title'] = "Clear Credit Token";
-                $data['date'] = date('d-m-y h:i:s');
-                $data['meter_no'] = $trx_comp->meterNo;
+                    $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
+                    $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
+                    $data['phone'] = $user_comp->phone;
+                    $data['ref'] = $trx_comp->trx_id;
+                    $data['token'] = $trx_comp->token;
+                    $data['amount'] = $trx_comp->amount;
+                    $data['vat_amount'] = $trx_comp->vatAmount;
+                    $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
+                    $data['tariff_amount'] = $trx_comp->tariff_amount;
+                    $data['unit'] = $trx_comp->unitkwh;
+                    $data['title'] = "Clear Tamper Token";
+                    $data['date'] = date('d-m-y h:i:s');
+                    $data['meter_no'] = $trx_comp->meterNo;
+
+                    return view('admin/recepit.recepit', $data);
 
 
-                return view('admin/recepit.recepit', $data);
+                }
 
 
             }
 
 
-        }
+            if ($request->type == "clear_credit") {
+
+                $trx_comp = ClearcreditToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
 
 
-        if ($request->type == "compensation") {
+                if ($trx_comp != null) {
 
-            $trx_comp = CompensationToken::where('trx_id', $request->trx_id)->first() ?? null;
-            $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
-
-
-            if ($trx_comp != null) {
-
-                $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
-                $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
-                $data['phone'] = $user_comp->phone;
-                $data['ref'] = $trx_comp->trx_id;
-                $data['token'] = $trx_comp->token;
-                $data['amount'] = 0;
-                $data['vat_amount'] = $trx_comp->vatAmount;
-                $data['tariff_amount'] = $trx_comp->tariff_amount;
-                $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
-                $data['title'] = "Compensation Token";
-                $data['date'] = date('d-m-y h:i:s');
-                $data['meter_no'] = $trx_comp->meterNo;
+                    $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
+                    $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
+                    $data['phone'] = $user_comp->phone;
+                    $data['ref'] = $trx_comp->trx_id;
+                    $data['token'] = $trx_comp->token;
+                    // UPDATED: Don't pass VAT, tariff amount, or unit for clear credit receipts
+                    // $data['amount'] = $trx_comp->amount;
+                    // $data['vat_amount'] = $trx_comp->vatAmount;
+                    // $data['tariff_amount'] = $trx_comp->tariff_amount;
+                    // $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
+                    $data['title'] = "Clear Credit Token";
+                    $data['date'] = date('d-m-y h:i:s');
+                    $data['meter_no'] = $trx_comp->meterNo;
 
 
-                return view('admin/recepit.recepit', $data);
+                    return view('admin/recepit.recepit', $data);
+
+
+                }
 
 
             }
 
 
+            if ($request->type == "compensation") {
+
+                $trx_comp = CompensationToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
+
+
+                if ($trx_comp != null) {
+
+                    $data['full_name'] = $user_comp->first_name . " " . $user_comp->last_name;
+                    $data['address'] = $user_comp->address . "," . $user_comp->city . "," . $user_comp->state;
+                    $data['phone'] = $user_comp->phone;
+                    $data['ref'] = $trx_comp->trx_id;
+                    $data['token'] = $trx_comp->token;
+                    $data['amount'] = 0;
+                    $data['vat_amount'] = $trx_comp->vatAmount;
+                    $data['tariff_amount'] = $trx_comp->tariff_amount;
+                    $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
+                    $data['title'] = "Compensation Token";
+                    $data['date'] = date('d-m-y h:i:s');
+                    $data['meter_no'] = $trx_comp->meterNo;
+
+
+                    return view('admin/recepit.recepit', $data);
+
+
+                }
+
+
+            }
+
+            if ($request->type == "kct_token") {
+                $trx = KctToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $user = User::where('id', $trx->user_id)->first() ?? null;
+
+                $data['full_name'] = $user->first_name . " " . $user->last_name;
+                $data['address'] = $user->address . "," . $user->city . "," . $user->state;
+                $data['phone'] = $user->phone;
+                $data['ref'] = $trx->trx_id;
+                $data['token1'] = $trx->kct_token1;
+                $data['token2'] = $trx->kct_token2;
+                $data['amount'] = $trx->amount;
+                $data['meter_no'] = $trx->meterNo;
+                $data['title'] = "kct_token";
+                $data['date'] = date('d-m-y h:i:s');
+                return view('admin/recepit.kct-recepit', $data);
+            }
+        } catch (Exception $e) {
+            back()->with('error', $e->getMessage());
         }
-
-        if ($request->type == "kct_token") {
-            $trx = KctToken::where('trx_id', $request->trx_id)->first() ?? null;
-            $user = User::where('id', $trx->user_id)->first() ?? null;
-
-            $data['full_name'] = $user->first_name . " " . $user->last_name;
-            $data['address'] = $user->address . "," . $user->city . "," . $user->state;
-            $data['phone'] = $user->phone;
-            $data['ref'] = $trx->trx_id;
-            $data['token1'] = $trx->kct_token1;
-            $data['token2'] = $trx->kct_token2;
-            $data['amount'] = $trx->amount;
-            $data['meter_no'] = $trx->meterNo;
-            $data['title'] = "kct_token";
-            $data['date'] = date('d-m-y h:i:s');
-            return view('admin/recepit.kct-recepit', $data);
-        }
-
 
     }
 

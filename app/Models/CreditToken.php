@@ -24,6 +24,12 @@ class CreditToken extends Model
         'vat',
         'estate_id',
         'token',
+        'status',
+        'amount_charged',
+        'customer_email',
+        'tariff_id',
+        'estate_name',
+        'unitkwh',
     ];
 
     public function estate()
