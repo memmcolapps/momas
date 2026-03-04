@@ -276,4 +276,98 @@ class Meter extends Model
         });
     }
 
+    /**
+     * Generate a new tamper token for the meter.
+     *
+     * This method handles the tamper token generation process.
+     * It validates the meter status, verifies the transaction via Paystack,
+     * generates the tamper token, and updates the TamperToken record.
+     *
+     * @param int $tariff_id The ID of the tariff to use for token generation
+     * @param string $trx_id The transaction reference ID
+     * @param float $vending_amount The total vending amount paid
+     * @param string $email The customer's email address for notifications
+     * @param string $verify Verification method: "verify" (Paystack verify), "poll" (Paystack poll), or "null" (skip verification)
+     * @return \Illuminate\Http\JsonResponse|void Returns JSON response on failure, void on success
+     * @throws \Exception Thrown when: meter is inactive, transaction already completed, payment verification fails, or token generation fails
+     */
+    public function getNewTamperToken($tariff_id, $trx_id, $vending_amount, $email = null, $verify = "verify")
+    {
+        DB::transaction(function () use ($tariff_id, $trx_id, $vending_amount, $email, $verify) {
+            $user = User::where('id', $this->user_id)->firstOrFail();
+            $email = (!$email || $email === 'null')
+                ? $user->email
+                : $email;
+
+            if ($this->status === 0) {
+                throw new Exception("Meter is unable from carrying out operations");
+            }
+
+            $trx = Transaction::where('trx_id', $trx_id)->firstOrFail();
+
+            if ($trx->status === 2) {
+                throw new Exception("Transaction already completed please restart a new transaction to generate token");
+            }
+
+            $paystack_engine = new PaystackPaymentService();
+
+            $verifier_engine = match ($verify) {
+                "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
+                "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
+                "null" => fn($arg) => [
+                    'is_successful' => true,
+                    'status' => true,
+                    'data' => [],
+                ],
+            };
+
+            if ($trx->status === 0) {
+                $verify = $verifier_engine($trx_id);
+
+                if (!$verify['is_successful']) {
+                    throw new Exception("Transaction Failed");
+                }
+            }
+
+            if ($trx->status === 1) {
+                throw new Exception("Transaction Failed");
+            }
+
+            $tariff_index = Tariff::where('id', $tariff_id)->first()->tariff_index ?? null;
+            $token_gen = TokenGenerationService::generateTamperToken($this, $tariff_index);
+
+            Transaction::where('trx_id', $trx_id)->update([
+                'service' => "TAMPER TOKEN PURCHASE",
+                'service_type' => "meter",
+                'tariff_id' => $tariff_id,
+                'unit_amount' => $vending_amount,
+            ]);
+
+            if (!$token_gen['success']) {
+                Transaction::where('trx_id', $trx_id)->update([
+                    'note' => 'tamper token generation failed',
+                    'status' => 3,
+                ]);
+                User::where('id', $this->user_id)->first()->creditWallet($vending_amount);
+
+                return response()->json([
+                    'status' => false,
+                    'message' => "Vending server not connected, Retry again on transaction history",
+                ], 422);
+            }
+
+            $token = $token_gen['data']['token'];
+
+            // Update TamperToken with the generated token
+            TamperToken::where('trx_id', $trx_id)->update([
+                'token' => $token,
+                'status' => 2
+            ]);
+
+            Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
+
+            send_email_token($email, $token, $vending_amount);
+        });
+    }
+
 }

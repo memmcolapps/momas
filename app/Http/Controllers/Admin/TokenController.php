@@ -17,7 +17,9 @@ use App\Models\TarrifState;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
+use App\Services\PaystackPaymentService;
 use App\Services\VatCalculator;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -1676,7 +1678,7 @@ class TokenController extends Controller
     {
 
          // 1. Log ALL input data to see exactly what the form submitted
-        Log::info('--- START TAMPER TOKEN GENERATION ---');
+        Log::info("--- START TAMPER TOKEN GENERATION ---\n" . Carbon::now()->toIsoString() . "\n\n");
         Log::info('Full Request Data:', $request->all());
 
 
@@ -1695,12 +1697,12 @@ class TokenController extends Controller
 
 
         $amount = $request->amount ?? 0;
-        $trx_id = "TRX" . random_int(000000000, 9999999999);
+        $trx_id = null;
         $estate_id = Estate::where('id', $request->estate_name)->first()->id;
 
+        // Create after initializing payment
         $cdt = new TamperToken();
         $cdt->user_id = $request->user_id;
-        $cdt->trx_id = $trx_id;
         $cdt->meterNo = $request->meterNo;
         $cdt->amount = $amount ?? 0;
         $cdt->amount_charged = $request->amount ?? 0;
@@ -1714,7 +1716,6 @@ class TokenController extends Controller
         $cdt->costOfUnit = $request->costOfUnit;
         $cdt->unitkwh = $request->unit;
         $cdt->tariffPerKWatt = $request->tariffPerKWatt;
-        $cdt->save();
 
 
         try {
@@ -1818,6 +1819,8 @@ class TokenController extends Controller
                     $fee = $est->charge_fee;
                 }
 
+                $amount -= $fee;
+
 
                 $fl = Setting::where('id', 1)->first();
                 $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
@@ -1831,46 +1834,37 @@ class TokenController extends Controller
                 $databody = array(
                     "amount" => $request->amount * 100,
                     "email" => strtolower(trim($email)),
-                    "ref" => $trx_id,
-                    'callback_url' => url('') . "/admin/paystack-check-web-tamper",
+                    // 'callback_url' => url('') . "/admin/paystack-check-web-tamper",
                     // 'subaccount' => $est->paystack_subaccount,
                     'subaccount' => 'ACCT_nd2zcvugcv5zfqp',   //Hardcoded MEMMCOL subaccount for tamper payments
-                    'metadata' => ["ref" => $trx_id],
+                    'metadata' => [],
                 );
 
-                $body = json_encode($databody);
-                $curl = curl_init();
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => 'https://api.paystack.co/transaction/initialize',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => '',
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 0,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_CUSTOMREQUEST => 'POST',
-                    CURLOPT_POSTFIELDS => $body,
-                    CURLOPT_HTTPHEADER => array(
-                        'Accept: application/json',
-                        'Content-Type: application/json',
-                        'Authorization: Bearer ' . $paystackkey,
-                    ),
-                ));
+                // $var = null;
 
-                $var = curl_exec($curl);
-                curl_close($curl);
-                $var = json_decode($var);
+                $payment = (new PaystackPaymentService())->makePayment($databody);
 
                 Log::info('Tamper Paystack Response', [
-                    'raw_response' => $var,
+                    'raw_response' => $payment,
                     'trx_id' => $trx_id,
                     'amount' => $request->amount,
                 ]);
 
-                $status = $var->status ?? false;
+                $status = $payment['status'] ?? false;
+
+                $action_payload = [];
+                $action_payload['action'] = 'momas_tamper_token';
+                $action_payload['tariff_id'] = $request->tariff_id;
+                $action_payload['vending_amount'] = $amount;
+                $action_payload['estate_id'] = $est->id;
+                $action_payload['meterNo'] = $request->meterNo;
+                $action_payload['user_id'] = User::where('meterNo', $request->meterNo)->firstOrFail()->id;
 
 
                 if ($status == true) {
+                    $trx_id = $payment['reference'];
+                    $action_payload['reference'] = $trx_id;
+
                     $trx = new Transaction();
                     $trx->user_id = Auth::id();
                     $trx->estate_id = Auth::user()->estate_id;
@@ -1878,21 +1872,25 @@ class TokenController extends Controller
                     $trx->amount = $request->amount;
                     $trx->fee = $fee;
                     $trx->trx_id = $trx_id;
-                    $trx->payment_ref = $var->data->reference ?? null;
+                    $trx->payment_ref = $payment['data']['reference'] ?? null;
                     $trx->service_type = "tamper_token";
+                    $trx->action_payload = json_encode($action_payload);
                     $trx->save();
 
-                    return redirect()->away($var->data->authorization_url);
+                    $cdt->trx_id = $trx_id;
+                    $cdt->save();
+
+                    return redirect()->away($payment['data']['authorization_url']);
 
                 }
 
                 Log::error('Tamper Paystack Failed', [
-                    'response' => $var,
-                    'message' => $var->message ?? 'Unknown error',
+                    'response' => $payment,
+                    'message' => $payment['data']['code'] ?? 'Unknown error',
                 ]);
 
                 $code = 422;
-                $message = $var->message ?? "Payment not available at the moment, Kindly select other payment option";
+                $message = $payment['data']['code'] ?? "Payment not available at the moment, Kindly select other payment option";
                 return back()->with('error', $message);
 
             } catch (Exception $e) {

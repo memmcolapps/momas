@@ -36,7 +36,8 @@ class RequestActionHandler {
         }
 
         $actionables = array_merge($features, [
-            'momas_meter_web' => 1
+            'momas_meter_web' => 1,
+            'momas_tamper_token' => 1
         ]);
 
         if ($actionables[$action['action']] != 1) {
@@ -46,6 +47,7 @@ class RequestActionHandler {
 
         $handler = match ($action['action']) {
             'momas_meter', 'momas_meter_web' => fn() => $init->handleBuyTokenRequest(),
+            'momas_tamper_token' => fn() => $init->handleBuyTamperTokenRequest(),
             'others_meter' => fn() => $init->handleBuyTokenRequest($others=true),
         };
 
@@ -85,6 +87,46 @@ class RequestActionHandler {
         $vending_amount = $action_payload['vending_amount'];
 
         $meter->getNewToken($tariffId, $unit, $this->reference, $vat, $vending_amount, $verify='null');
+
+        return true;
+    }
+
+    /**
+     * Handle tamper token purchase request
+     *
+     * @param bool $others Whether this is for other meters
+     * @return bool
+     * @throws \Exception
+     */
+    protected function handleBuyTamperTokenRequest($others = false)
+    {
+        Log::info('handleBuyTamperTokenRequest started', ['reference' => $this->reference]);
+
+        $trx = Transaction::where('trx_id', $this->reference)
+            ->firstOrFail();
+
+        // Only process when service not rendered
+        if ($trx->status != 3) {
+            Log::warning("Job triggered on invalid status for {$this->reference}");
+            return;
+        }
+
+        $action_payload = json_decode($trx->action_payload, true);
+        $user_id = $action_payload['user_id'];
+
+        Log::info('Tamper token request payload', ['payload' => $action_payload]);
+
+        $user = User::findOrFail($user_id);
+        $meter = Meter::where('user_id', $user->id)->firstOrFail();
+
+        $tariffId = $action_payload['tariff_id'];
+        $vending_amount = $action_payload['vending_amount'];
+        $email = $action_payload['email'] ?? null;
+
+        // Call the tamper token generation method on the meter
+        $meter->getNewTamperToken($tariffId, $this->reference, $vending_amount, $email, $verify = 'null');
+
+        Log::info('handleBuyTamperTokenRequest completed', ['reference' => $this->reference]);
 
         return true;
     }
