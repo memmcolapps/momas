@@ -147,6 +147,7 @@ class RequestActionHandler {
     protected function handleBuyKctTokenRequest()
     {
         Log::info('handleBuyKctTokenRequest started', ['reference' => $this->reference]);
+        // throw new Exception("Test Failure handleBuyKctTokenRequest");
 
         $trx = Transaction::where('trx_id', $this->reference)
             ->firstOrFail();
@@ -171,34 +172,15 @@ class RequestActionHandler {
         $ti = $action_payload['ti'];
         $toti = $action_payload['toti'] ?? 1;
 
-        // Call the KCT token generation method
-        $kct_result = TokenGenerationService::generateKctToken(
-            $meter,
+        // Call the KCT token generation method on the meter
+        $meter->getNewKctToken(
+            $this->reference,
             $meterNo,
             $sgc,
             $tosgc,
             $ti,
             $toti
         );
-
-        if (!$kct_result['success']) {
-            Log::error('KCT token generation failed', ['error' => $kct_result['error'] ?? 'Unknown error']);
-            Transaction::where('trx_id', $this->reference)->update([
-                'note' => 'KCT token generation failed: ' . ($kct_result['error'] ?? 'Unknown error'),
-                'status' => 3,
-            ]);
-            return false;
-        }
-
-        // Update KctToken record with the generated tokens
-        KctToken::where('trx_id', $this->reference)->update([
-            'kct_token1' => $kct_result['data']['kct_token1'],
-            'kct_token2' => $kct_result['data']['kct_token2'],
-            'status' => 2
-        ]);
-
-        // Update transaction status
-        Transaction::where('trx_id', $this->reference)->update(['status' => 2]);
 
         Log::info('handleBuyKctTokenRequest completed', ['reference' => $this->reference]);
 

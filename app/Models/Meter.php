@@ -277,28 +277,25 @@ class Meter extends Model
     }
 
     /**
-     * Generate a new tamper token for the meter.
+     * Generate a new KCT (Key Change Token) for the meter.
      *
-     * This method handles the tamper token generation process.
+     * This method handles the KCT token generation process.
      * It validates the meter status, verifies the transaction via Paystack,
-     * generates the tamper token, and updates the TamperToken record.
+     * generates the KCT tokens, and updates the KctToken record.
      *
-     * @param int $tariff_id The ID of the tariff to use for token generation
      * @param string $trx_id The transaction reference ID
-     * @param float $vending_amount The total vending amount paid
-     * @param string $email The customer's email address for notifications
+     * @param string $meterNo The meter number
+     * @param string $sgc The SGC (Standard Group Classification)
+     * @param string $tosgc The target SGC
+     * @param string $ti The TI (Token Identifier)
+     * @param int $toti The total TI (defaults to 1)
      * @param string $verify Verification method: "verify" (Paystack verify), "poll" (Paystack poll), or "null" (skip verification)
-     * @return \Illuminate\Http\JsonResponse|void Returns JSON response on failure, void on success
+     * @return bool Returns true on success
      * @throws \Exception Thrown when: meter is inactive, transaction already completed, payment verification fails, or token generation fails
      */
-    public function getNewTamperToken($tariff_id, $trx_id, $vending_amount, $email = null, $verify = "verify")
+    public function getNewKctToken($trx_id, $meterNo, $sgc, $tosgc, $ti, $toti = 1, $verify = "null")
     {
-        DB::transaction(function () use ($tariff_id, $trx_id, $vending_amount, $email, $verify) {
-            $user = User::where('id', $this->user_id)->firstOrFail();
-            $email = (!$email || $email === 'null')
-                ? $user->email
-                : $email;
-
+        DB::transaction(function () use ($trx_id, $meterNo, $sgc, $tosgc, $ti, $toti, $verify) {
             if ($this->status === 0) {
                 throw new Exception("Meter is unable from carrying out operations");
             }
@@ -322,9 +319,9 @@ class Meter extends Model
             };
 
             if ($trx->status === 0) {
-                $verify = $verifier_engine($trx_id);
+                $verify_result = $verifier_engine($trx_id);
 
-                if (!$verify['is_successful']) {
+                if (!$verify_result['is_successful']) {
                     throw new Exception("Transaction Failed");
                 }
             }
@@ -333,41 +330,41 @@ class Meter extends Model
                 throw new Exception("Transaction Failed");
             }
 
-            $tariff_index = Tariff::where('id', $tariff_id)->first()->tariff_index ?? null;
-            $token_gen = TokenGenerationService::generateTamperToken($this, $tariff_index);
+            // Generate KCT token using the TokenGenerationService
+            $kct_result = TokenGenerationService::generateKctToken(
+                $this,
+                $meterNo,
+                $sgc,
+                $tosgc,
+                $ti,
+                $toti
+            );
 
             Transaction::where('trx_id', $trx_id)->update([
-                'service' => "TAMPER TOKEN PURCHASE",
+                'service' => "KCT TOKEN PURCHASE",
                 'service_type' => "meter",
-                'tariff_id' => $tariff_id,
-                'unit_amount' => $vending_amount,
             ]);
 
-            if (!$token_gen['success']) {
+            if (!$kct_result['success']) {
                 Transaction::where('trx_id', $trx_id)->update([
-                    'note' => 'tamper token generation failed',
+                    'note' => 'KCT token generation failed: ' . ($kct_result['error'] ?? 'Unknown error'),
                     'status' => 3,
                 ]);
-                User::where('id', $this->user_id)->first()->creditWallet($vending_amount);
-
-                return response()->json([
-                    'status' => false,
-                    'message' => "Vending server not connected, Retry again on transaction history",
-                ], 422);
+                throw new Exception($kct_result['error'] ?? 'KCT token generation failed');
             }
 
-            $token = $token_gen['data']['token'];
-
-            // Update TamperToken with the generated token
-            TamperToken::where('trx_id', $trx_id)->update([
-                'token' => $token,
+            // Update KctToken record with the generated tokens
+            KctToken::where('trx_id', $trx_id)->update([
+                'kct_token1' => $kct_result['data']['kct_token1'],
+                'kct_token2' => $kct_result['data']['kct_token2'],
                 'status' => 2
             ]);
 
-            Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
-
-            send_email_token($email, $token, $vending_amount);
+            // Update transaction status
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
         });
+
+        return true;
     }
 
 }
