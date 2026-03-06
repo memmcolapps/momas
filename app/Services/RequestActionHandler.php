@@ -64,7 +64,7 @@ class RequestActionHandler {
 
     protected function handleBuyTokenRequest($others=false) {
         dump('handleBuyTokenRequest');
-        throw new Exception("Test Failure");
+        // throw new Exception("Test Failure");
         $trx = Transaction::where('trx_id', $this->reference)
             ->firstOrFail();
 
@@ -195,6 +195,8 @@ class RequestActionHandler {
      */
     protected function handleBuyClearCreditTokenRequest()
     {
+        dump("handleBuyClearCreditTokenRequest here");
+        throw new Exception("handleBuyClearCreditTokenRequest test failure");
         Log::info('handleBuyClearCreditTokenRequest started', ['reference' => $this->reference]);
 
         $trx = Transaction::where('trx_id', $this->reference)
@@ -208,44 +210,20 @@ class RequestActionHandler {
 
         $action_payload = json_decode($trx->action_payload, true);
         $user_id = $action_payload['user_id'];
+        dump("RequestActionHandler line:212");
 
         Log::info('Clear credit token request payload', ['payload' => $action_payload]);
 
         $user = User::findOrFail($user_id);
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
 
+        dump("RequestActionHandler line:219");
+
         $tariff_id = $action_payload['tariff_id'];
-        $tariff_index = $action_payload['tariff_index'] ?? null;
+        $email = $action_payload['email'] ?? null;
 
-        // Get tariff index if not provided in payload
-        if (!$tariff_index && $tariff_id) {
-            $tariff = \App\Models\Tariff::where('id', $tariff_id)->first();
-            $tariff_index = $tariff->tariff_index ?? null;
-        }
-
-        // Call the clear credit token generation method
-        $result = TokenGenerationService::generateClearCreditToken($meter, $tariff_index);
-
-        if (!$result['success']) {
-            Log::error('Clear credit token generation failed', ['error' => $result['error'] ?? 'Unknown error']);
-            Transaction::where('trx_id', $this->reference)->update([
-                'note' => 'Clear credit token generation failed: ' . ($result['error'] ?? 'Unknown error'),
-                'status' => 3,
-            ]);
-            return false;
-        }
-
-        // Update ClearcreditToken record with the generated token
-        ClearcreditToken::where('trx_id', $this->reference)->update([
-            'token' => $result['data']['token'],
-            'status' => 2
-        ]);
-
-        // Update transaction status
-        Transaction::where('trx_id', $this->reference)->update([
-            'status' => 2,
-            'service' => 'CLEAR CREDIT TOKEN PURCHASE',
-        ]);
+        // Call the clear credit token generation method on the meter
+        $meter->getNewClearCreditToken($tariff_id, $this->reference, $email, $verify = 'null');
 
         Log::info('handleBuyClearCreditTokenRequest completed', ['reference' => $this->reference]);
 

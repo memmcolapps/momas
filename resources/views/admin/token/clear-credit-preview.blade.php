@@ -170,6 +170,7 @@
                                                         <input required name="estate_name" value="{{$estate_name}}"
                                                                hidden="">
                                                         <input required name="amount" value="{{$amount}}" hidden="">
+                                                        <input required name="tariff_id" value="{{$tariff_id}}" hidden="">
 
 
                                                         <hr>
@@ -185,7 +186,7 @@
                                                                 <option value="enkpay">Pay with Enkpay</option>
                                                                 @if (app()->environment('staging'))
                                                                     <option value="test_bypass">Payment Bypass (Testing Only)</option>
-                                                                @endif                                                                
+                                                                @endif
                                                             </select>
                                                         </div>
 
@@ -282,7 +283,7 @@
 
                                                     <td>
                                                         @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}"
+                                                            <a href="recepit?trx_id={{$data->trx_id}}&type=clear_credit"
                                                                onclick="return confirmreprint();"
                                                                class="btn btn-primary">Reprint</a>
                                                             <script>
@@ -294,7 +295,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}"
+                                                            <a href="retry-generate-clear-credit-token?trx_id={{$data->trx_id}}"
                                                                onclick="return confirmgenertetoken();"
                                                                class="btn btn-secondary">Generate Token</a>
                                                             <script>
@@ -551,7 +552,7 @@
                                                             <!-- <option value="vend">Bypass</option> -->
                                                             @if (app()->environment('staging'))
                                                                 <option value="test_bypass">Payment Bypass (Testing Only)</option>
-                                                            @endif                                                            
+                                                            @endif
                                                         </select>
                                                     </div>
 
@@ -622,7 +623,7 @@
 
                                                     <td>
                                                         @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}"
+                                                            <a href="recepit?trx_id={{$data->trx_id}}&type=clear_credit"
                                                                onclick="return confirmreprint();"
                                                                class="btn btn-primary">Reprint</a>
                                                             <script>
@@ -634,7 +635,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}"
+                                                            <a href="retry-generate-clear-credit-token?trx_id={{$data->trx_id}}"
                                                                onclick="return confirmgenertetoken();"
                                                                class="btn btn-secondary">Generate Token</a>
                                                             <script>

@@ -2757,20 +2757,20 @@ class TokenController extends Controller
 
 
         $trx_id = "TRX" . random_int(000000000, 9999999999);
-        $estate_id = TarrifState::where('estate_id', $request->estate_name)->first()->id;
-        $cdt = new ClearcreditToken();
-        $cdt->user_id = $request->user_id;
-        $cdt->trx_id = $trx_id;
-        $cdt->meterNo = $request->meterNo;
-        $cdt->amount = $request->amount;
-        $cdt->vat = $request->vat;
-        $cdt->estate_name = $request->estate_name;
-        $cdt->estate_id = $request->estate_name;
-        $cdt->tariff_id = $request->tariff_id;
-        $cdt->vatAmount = $request->vatAmount;
-        $cdt->costOfUnit = $request->costOfUnit;
-        $cdt->tariffPerKWatt = $request->tariffPerKWatt;
-        $cdt->save();
+        // $estate_id = TarrifState::where('estate_id', $request->estate_name)->first()->id;
+        // $cdt = new ClearcreditToken();
+        // $cdt->user_id = $request->user_id;
+        // $cdt->trx_id = $trx_id;
+        // $cdt->meterNo = $request->meterNo;
+        // $cdt->amount = $request->amount;
+        // $cdt->vat = $request->vat;
+        // $cdt->estate_name = $request->estate_name;
+        // $cdt->estate_id = $request->estate_name;
+        // $cdt->tariff_id = $request->tariff_id;
+        // $cdt->vatAmount = $request->vatAmount;
+        // $cdt->costOfUnit = $request->costOfUnit;
+        // $cdt->tariffPerKWatt = $request->tariffPerKWatt;
+        // $cdt->save();
 
 
         try {
@@ -3118,52 +3118,89 @@ class TokenController extends Controller
                     $fee = $est->charge_fee;
                 }
 
-
-                $fl = Setting::where('id', 1)->first();
-                $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
-                $flkey['flutterwave_public'] = $fl->flutterwave_public;
-                $paystackkey = $fl->paystack_secret;
-                $pkkey['paystack_public'] = $fl->paystack_public;
-
                 $email = Auth::user()->email;
 
+                // // UPDATED: Get tariff_index from Tariff model using helper method
+                // try {
+                //     $tariff_index = $this->getTariffIndexWithValidation($cdt->tariff_id);
+                // } catch (\Exception $e) {
+                //     ClearcreditToken::where('trx_id', $trx_id)->update(['status' => 0]);
+                //     Transaction::where('trx_id', $trx_id)->update(['status' => 0]);
+                //     return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+                // }
 
-                $databody = array(
+                // Get user_id from meter number
+                $user_id = User::where('meterNo', $request->meterNo)->firstOrFail()->id;
+
+                // Use PaystackPaymentService for payment initialization
+                $databody = [
                     "amount" => $request->amount * 100,
                     "email" => strtolower(trim($email)),
-                    "ref" => $trx_id,
-                    'callback_url' => url('') . "/admin/paystack-clear-credit",
-                    // 'subaccount' => $est->paystack_subaccount,
-                    'subaccount' => 'ACCT_nd2zcvugcv5zfqp',
-                    'metadata' => ["ref" => $trx_id],
-                );
+                    "sub_account" => $est->paystack_subaccount ?? 'ACCT_nd2zcvugcv5zfqp',
+                    "metadata" => [],
+                ];
 
-                $body = json_encode($databody);
-                $curl = curl_init();
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => 'https://api.paystack.co/transaction/initialize',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => '',
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 0,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_CUSTOMREQUEST => 'POST',
-                    CURLOPT_POSTFIELDS => $body,
-                    CURLOPT_HTTPHEADER => array(
-                        'Accept: application/json',
-                        'Content-Type: application/json',
-                        'Authorization: Bearer ' . $paystackkey,
-                    ),
-                ));
+                $payment_init = app(\App\Services\PaystackPaymentService::class)->makePayment($databody);
+                $status = $payment_init['status'];
 
-                $var = curl_exec($curl);
-                curl_close($curl);
-                $var = json_decode($var);
-                $status = $var->status;
+                if (!$status) {
+                    Log::warning("Payment init by {$email} Failed for clear credit token");
+                    return redirect('/admin/clear-credit-token')->with(
+                        'error',
+                        $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option"
+                    );
+                }
 
+                $trx_id = $payment_init['reference'];
 
-                if ($status == true) {
+                if ($status === true) {
+                    // Build action_payload for RequestActionHandler
+                    $action_payload = [
+                        'action' => 'momas_clear_credit_token',
+                        'tariff_id' => $request->tariff_id,
+                        'user_id' => $user_id,
+                        'email' => $email,
+                        'meterNo' => $request->meterNo,
+                    ];
+
+                    $cdt = new ClearcreditToken();
+                    $cdt->user_id = $request->user_id;
+                    $cdt->trx_id = $trx_id;
+                    $cdt->meterNo = $request->meterNo;
+                    $cdt->amount = $request->amount;
+                    $cdt->vat = $request->vat;
+                    $cdt->estate_name = $request->estate_name;
+                    $cdt->estate_id = $request->estate_name;
+                    $cdt->tariff_id = $request->tariff_id;
+                    $cdt->vatAmount = $request->vatAmount;
+                    $cdt->costOfUnit = $request->costOfUnit;
+                    $cdt->tariffPerKWatt = $request->tariffPerKWatt;
+                    $cdt->status = 0;
+                    $cdt->save();
+
+                    // Create ClearcreditToken record before payment
+                    // $cdt = ClearcreditToken::create([
+                    //     'trx_id' => $trx_id,
+                    //     'user_id' => $user_id,
+                    //     'meterNo' => $request->meterNo,
+                    //     'amount' => $request->amount ?? 0,
+                    //     'amount_charged' => $request->amount ?? 0,
+                    //     'customer_email' => $email,
+                    //     'fee' => $fee ?? 0,
+                    //     'vat' => $request->vat ?? 0,
+                    //     'estate_id' => $estate_id,
+                    //     'estate_name' => $request->estate_name,
+                    //     'tariff_id' => $request->tariff_id,
+                    //     'tariff_amount' => $request->tariff_amount ?? 0,
+                    //     'vatAmount' => $request->vatAmount ?? 0,
+                    //     'costOfUnit' => $request->costOfUnit ?? 0,
+                    //     'unitkwh' => $request->unit ?? 0,
+                    //     'tariffPerKWatt' => $request->tariffPerKWatt ?? 0,
+                    //     'token' => null,
+                    //     'status' => 0
+                    // ]);
+
+                    // Create transaction record with action_payload
                     $trx = new Transaction();
                     $trx->user_id = Auth::id();
                     $trx->estate_id = $estate_id;
@@ -3171,21 +3208,18 @@ class TokenController extends Controller
                     $trx->amount = $request->amount;
                     $trx->fee = $fee;
                     $trx->trx_id = $trx_id;
-                    $trx->payment_ref = $var->data->reference ?? null;
+                    $trx->payment_ref = $trx_id;
                     $trx->service_type = "clear_credit_token";
+                    $trx->status = 0; // 0 = Pending payment verification
+                    $trx->action_payload = json_encode($action_payload);
                     $trx->save();
 
-
-                    return redirect()->away($var->data->authorization_url);
-
+                    return redirect()->away($payment_init['data']['authorization_url']);
                 }
 
-                $code = 422;
-                $message = "Payment not available at the moment, Kindly select other payment option";
-                return error($message, $code);
-
             } catch (Exception $e) {
-                return back()->with('error', $e);
+                Log::error('Paystack clear credit token transaction error', ['exception' => $e]);
+                return redirect('/admin/clear-credit-token')->with('error', $e->getMessage());
             }
 
         }
@@ -4059,6 +4093,65 @@ class TokenController extends Controller
 
         } catch (Exception $e) {
             Log::error('retry_generate_kct_token error: ', ['exception' => $e]);
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Retry generating a clear credit token for a failed transaction
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function retry_generate_clear_credit_token(Request $request)
+    {
+        try {
+            Log::info('retry_generate_clear_credit_token called', [
+                'request' => $request->all(),
+            ]);
+
+            $get_trx = Transaction::where('trx_id', $request->trx_id)->first() ?? null;
+
+            if ($get_trx) {
+                if ($get_trx->pay_type == "paystack") {
+                    $transactionId = $get_trx->payment_ref;
+
+                    // Use PaystackPaymentService for transaction verification
+                    $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($transactionId);
+                    Log::info('Paystack verify response for clear credit token', ['response' => $verify_result]);
+
+                    if (!$verify_result['status']) {
+                        return back()->with('error', $verify_result['message'] ?? 'Transaction verification failed');
+                    }
+
+                    $status = $verify_result['data']['status'] ?? null;
+                    $ref = $verify_result['data']['reference'] ?? null;
+                    $trx_id = $verify_result['data']['reference'] ?? null;
+
+                    $ck_transaction = Transaction::where('trx_id', $trx_id)->first()->status ?? null;
+
+                    $meterNo = ClearcreditToken::where('trx_id', $trx_id)->first()->meterNo;
+                    $meter = Meter::where('meterNo', $meterNo)->first();
+                    $trx = Transaction::where('trx_id', $trx_id)->first();
+                    $user = User::where('meterNo', $meterNo)->first();
+
+                    $action_payload = json_decode($trx->action_payload, true);
+                    $tariff_id = $action_payload['tariff_id'];
+                    $email = $action_payload['email'] ?? $user->email;
+
+                    // Call getNewClearCreditToken method on the meter with verify='null' to skip payment verification
+                    $meter->getNewClearCreditToken($tariff_id, $trx_id, $email, $verify = 'null');
+
+                    return back()->with('success', 'Clear credit token generated successfully');
+                }
+
+                return back()->with('error', 'Payment type not supported for clear credit token retry');
+            }
+
+            return back()->with('error', 'Transaction Not Found');
+
+        } catch (Exception $e) {
+            Log::error('retry_generate_clear_credit_token error: ', ['exception' => $e]);
             return back()->with('error', $e->getMessage());
         }
     }

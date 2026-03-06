@@ -235,6 +235,7 @@ class TokenGenerationService {
      * Generate a clear credit token for the given meter
      *
      * This method generates a clear credit token to clear existing credit on a meter.
+     * Note: KCT generation is handled separately in the Meter model using generateKctToken when needed.
      *
      * @param Meter $meter The meter instance
      * @param int $tariff_index The tariff index

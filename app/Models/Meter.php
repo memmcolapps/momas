@@ -8,6 +8,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Meter extends Model
 {
@@ -365,6 +366,312 @@ class Meter extends Model
         });
 
         return true;
+    }
+
+    /**
+     * Generate a new clear credit token for the meter.
+     *
+     * This method handles the clear credit token generation process.
+     * It validates the meter status, verifies the transaction via Paystack,
+     * generates the clear credit token and KCT tokens, and creates the necessary records.
+     *
+     * @param int $tariff_id The ID of the tariff to use for token generation
+     * @param string $trx_id The transaction reference ID
+     * @param string $email The customer's email address for notifications
+     * @param string $verify Verification method: "verify" (Paystack verify), "poll" (Paystack poll), or "null" (skip verification)
+     * @return bool Returns true on success
+     * @throws \Exception Thrown when: meter is inactive, transaction already completed, payment verification fails, or token generation fails
+     */
+    public function getNewClearCreditToken($tariff_id, $trx_id, $email = null, $verify = "null")
+    {
+        dump("Meter: 387");
+        DB::transaction(function () use ($tariff_id, $trx_id, $email, $verify) {
+            // Validate meter status
+            if ($this->status === 0) {
+                throw new Exception("Meter is unable from carrying out operations");
+            }
+
+            // Get user and set email
+            $user = User::where('id', $this->user_id)->firstOrFail();
+            $email = (! $email || $email === 'null')
+                ? $user->email
+                : $email;
+
+            // Get transaction
+            $trx = Transaction::where('trx_id', $trx_id)->firstOrFail();
+
+            if ($trx->status === 2) {
+                throw new Exception("Transaction already completed please restart a new transaction to generate token");
+            }
+
+            // Setup Paystack verification engine
+            $paystack_engine = new PaystackPaymentService();
+
+            $verifier_engine = match ($verify) {
+                "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
+                "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
+                "null" => fn($arg) => [
+                    'is_successful' => true,
+                    'status' => true,
+                    'data' => [],
+                ],
+            };
+
+            // Verify transaction if needed
+            if ($trx->status === 0) {
+                $verify_result = $verifier_engine($trx_id);
+
+                if (!$verify_result['is_successful']) {
+                    throw new Exception("Transaction Failed");
+                }
+            }
+
+            if ($trx->status === 1) {
+                throw new Exception("Transaction Failed");
+            }
+
+            // Get tariff index
+            $tariff = Tariff::where('id', $tariff_id)->first();
+            $tariff_index = $tariff->tariff_index ?? null;
+
+            // Generate clear credit token
+            dump("Meter: 438", "tariff_id -> " . $tariff_id);
+            $clear_credit_result = TokenGenerationService::generateClearCreditToken($this, $tariff_index);
+
+            // Update transaction
+            Transaction::where('trx_id', $trx_id)->update([
+                'service' => "CLEAR CREDIT TOKEN PURCHASE",
+                'service_type' => "meter",
+                'tariff_id' => $tariff_id,
+            ]);
+
+            if (!$clear_credit_result['success']) {
+                Transaction::where('trx_id', $trx_id)->update([
+                    'note' => 'Clear credit token generation failed: ' . ($clear_credit_result['error'] ?? 'Unknown error'),
+                    'status' => 3,
+                ]);
+                throw new Exception($clear_credit_result['error'] ?? 'Clear credit token generation failed');
+            }
+
+            $clear_credit_token = $clear_credit_result['data']['token'];
+
+            // Save ClearcreditToken record
+            ClearcreditToken::updateOrCreate([
+                'trx_id' => $trx_id,
+                'user_id' => $this->user_id,
+                'meterNo' => $this->meterNo,
+            ],
+                [
+                'amount' => $trx->amount ?? 0,
+                'vat' => $trx->vat ?? 0,
+                'estate_id' => $this->estate_id,
+                'estate_name' => $user->estate_name,
+                'tariff_id' => $tariff_id,
+                'token' => $clear_credit_token,
+                'status' => 2
+            ]);
+
+            // Update transaction status
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+        });
+
+        return true;
+    }
+
+    /**
+     * Generate a new tamper token for the meter.
+     *
+     * This method handles the tamper token generation process.
+     * It validates the meter status, verifies the transaction via Paystack,
+     * generates the tamper token, and creates the necessary records.
+     *
+     * @param int $tariff_id The ID of the tariff to use for token generation
+     * @param string $trx_id The transaction reference ID
+     * @param float $vending_amount The total vending amount paid
+     * @param string $email The customer's email address for notifications
+     * @param string $verify Verification method: "verify" (Paystack verify), "poll" (Paystack poll), or "null" (skip verification)
+     * @return bool Returns true on success
+     * @throws \Exception Thrown when: meter is inactive, transaction already completed, payment verification fails, or token generation fails
+     */
+    public function getNewTamperToken($tariff_id, $trx_id, $vending_amount = 0, $email = null, $verify = "null")
+    {
+        DB::transaction(function () use ($tariff_id, $trx_id, $vending_amount, $email, $verify) {
+            // Validate meter status
+            if ($this->status === 0) {
+                throw new Exception("Meter is unable from carrying out operations");
+            }
+
+            // Get user and set email
+            $user = User::where('id', $this->user_id)->firstOrFail();
+            $email = (! $email || $email === 'null')
+                ? $user->email
+                : $email;
+
+            // Get transaction
+            $trx = Transaction::where('trx_id', $trx_id)->firstOrFail();
+
+            if ($trx->status === 2) {
+                throw new Exception("Transaction already completed please restart a new transaction to generate token");
+            }
+
+            // Setup Paystack verification engine
+            $paystack_engine = new PaystackPaymentService();
+
+            $verifier_engine = match ($verify) {
+                "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
+                "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
+                "null" => fn($arg) => [
+                    'is_successful' => true,
+                    'status' => true,
+                    'data' => [],
+                ],
+            };
+
+            // Verify transaction if needed
+            if ($trx->status === 0) {
+                $verify_result = $verifier_engine($trx_id);
+
+                if (!$verify_result['is_successful']) {
+                    throw new Exception("Transaction Failed");
+                }
+            }
+
+            if ($trx->status === 1) {
+                throw new Exception("Transaction Failed");
+            }
+
+            // Get tariff index
+            $tariff = Tariff::where('id', $tariff_id)->first();
+            $tariff_index = $tariff->tariff_index ?? null;
+
+            // Generate tamper token
+            $tamper_result = TokenGenerationService::generateTamperToken($this, $tariff_index);
+
+            // Update transaction
+            Transaction::where('trx_id', $trx_id)->update([
+                'service' => "TAMPER TOKEN PURCHASE",
+                'service_type' => "meter",
+                'tariff_id' => $tariff_id,
+            ]);
+
+            if (!$tamper_result['success']) {
+                Transaction::where('trx_id', $trx_id)->update([
+                    'note' => 'Tamper token generation failed: ' . ($tamper_result['error'] ?? 'Unknown error'),
+                    'status' => 3,
+                ]);
+                throw new Exception($tamper_result['error'] ?? 'Tamper token generation failed');
+            }
+
+            $tamper_token = $tamper_result['data']['token'];
+
+            // Save TamperToken record
+            TamperToken::updateOrCreate([
+                'trx_id' => $trx_id,
+                'user_id' => $this->user_id,
+                'meterNo' => $this->meterNo,
+            ],
+                [
+                'amount' => $vending_amount,
+                'estate_id' => $this->estate_id,
+                'token' => $tamper_token,
+                'status' => 2
+            ]);
+
+            // Update transaction status
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+        });
+
+        return true;
+    }
+
+    /**
+     * Initiate clear credit token purchase payment.
+     *
+     * This method handles the payment initiation for clear credit token purchase.
+     * It uses PaystackPaymentService to make payment, creates the transaction
+     * with action_payload, and returns the payment authorization URL.
+     *
+     * @param int $tariff_id The ID of the tariff to use
+     * @param float $amount The amount to pay
+     * @param string $email The customer's email address
+     * @param string $sub_account The Paystack subaccount for the agent
+     * @return array Returns payment initialization data with authorization URL
+     * @throws \Exception Thrown when payment initialization fails
+     */
+    public function buyClearCreditToken($tariff_id, $amount, $email, $sub_account = null)
+    {
+        // Get tariff
+        $tariff = Tariff::where('id', $tariff_id)->first();
+
+        if (!$tariff) {
+            throw new Exception("Tariff not found");
+        }
+
+        // Get user
+        $user = User::where('id', $this->user_id)->first();
+
+        if (!$user) {
+            throw new Exception("User not found");
+        }
+
+        // Create action payload
+        $action_payload = [
+            'action' => 'momas_clear_credit_token',
+            'user_id' => $this->user_id,
+            'meterNo' => $this->meterNo,
+            'tariff_id' => $tariff_id,
+            'tariff_index' => $tariff->tariff_index,
+            'amount' => $amount,
+            'email' => $email,
+            'estate_id' => $this->estate_id,
+        ];
+
+        // Create transaction record
+        $trx_id = generate_unique_string('MOMAS');
+
+        Transaction::create([
+            'trx_id' => $trx_id,
+            'user_id' => $this->user_id,
+            'amount' => $amount,
+            'action_payload' => json_encode($action_payload),
+            'service' => 'CLEAR CREDIT TOKEN PURCHASE',
+            'service_type' => 'meter',
+            'status' => 0, // Pending payment
+        ]);
+
+        // Prepare payment data
+        $paymentData = [
+            'amount' => $amount * 100, // Convert to kobo
+            'email' => $email,
+            'sub_account' => $sub_account,
+            'metadata' => [
+                'trx_id' => $trx_id,
+                'meterNo' => $this->meterNo,
+                'action' => 'momas_clear_credit_token',
+            ],
+        ];
+
+        // Initialize Paystack payment
+        $paystack = new PaystackPaymentService();
+        $paymentResult = $paystack->makePayment($paymentData);
+
+        if (!$paymentResult['status']) {
+            // Update transaction status to failed
+            Transaction::where('trx_id', $trx_id)->update([
+                'status' => 1, // Failed
+                'note' => 'Payment initialization failed: ' . ($paymentResult['message'] ?? 'Unknown error'),
+            ]);
+
+            throw new Exception($paymentResult['message'] ?? 'Payment initialization failed');
+        }
+
+        // Return payment initialization data
+        return [
+            'status' => true,
+            'trx_id' => $trx_id,
+            'authorization_url' => $paymentResult['data']['authorization_url'] ?? null,
+            'reference' => $paymentResult['reference'] ?? null,
+        ];
     }
 
 }
