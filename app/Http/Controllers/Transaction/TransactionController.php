@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers\Transaction;
 
-use Exception;
-use Carbon\Carbon;
-use App\Models\User;
-use App\Models\Estate;
-use App\Models\Setting;
-use App\Models\MeterToken;
-use App\Models\CreditToken;
-use App\Models\Transaction;
-use Illuminate\Http\Request;
-use App\Models\UtilitiesPayment;
-use App\Services\StandardResponse;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
+use App\Models\CreditToken;
+use App\Models\Estate;
+use App\Models\MeterToken;
+use App\Models\Setting;
+use App\Models\Transaction;
+use App\Models\User;
+use App\Models\UtilitiesPayment;
 use App\Models\VirtualAccountTransaction;
+use App\Services\StandardResponse;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class TransactionController extends Controller
@@ -384,7 +385,7 @@ class TransactionController extends Controller
                 $databody = [
                     "amount" => $request->amount * 100,
                     "email" => strtolower(trim($email)),
-                    "ref" => $trx_id,
+                    "reference" => $trx_id,
                     "callback_url" => url('') . "/paystack-check",
                     "subaccount" => 'ACCT_nd2zcvugcv5zfqp', // MEMMCOL admin_fee subaccount
                     "metadata" => array_merge(
@@ -397,12 +398,20 @@ class TransactionController extends Controller
                 $databody = [
                     "amount" => $request->amount * 100,
                     "email" => strtolower(trim($email)),
-                    "ref" => $trx_id,
+                    "reference" => $trx_id,
                     "callback_url" => url('') . "/paystack-check",
                     "subaccount" => $est->paystack_subaccount,
                     "metadata" => ["ref" => $trx_id],
                 ];
             }
+
+            if (! $databody['subaccount']) {
+                Log::warning("Payment failed for user with email: {$databody['email']} estate_id: {$est->id}; Passed null subaccount ----->>>>> " . Carbon::now()->toIsoString());
+
+                return StandardResponse::error(500, 'Invalid subaccount passed', []);
+            }
+
+            Log::warning("Payment user with email: {$email} subaccount: {$databody['subaccount']}");
 
             $body = json_encode($databody);
             $curl = curl_init();
