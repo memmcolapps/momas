@@ -411,6 +411,8 @@ class TransactionController extends Controller
                 return StandardResponse::error(500, 'Invalid subaccount passed', []);
             }
 
+            Log::warning("Payment user with email: {$email} subaccount: {$databody['subaccount']}");
+
             $body = json_encode($databody);
             $curl = curl_init();
 
