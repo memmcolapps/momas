@@ -28,6 +28,17 @@ class RequestActionHandler {
         $trx = Transaction::where('trx_id', $reference)
             ->firstOrFail();
 
+
+        if (! $trx->action_payload) {
+
+            // Payload wasn't passed at transaction instanciation, maintain backward compatibility
+            $trx->status = 3;
+            $trx->save();
+
+            return;
+        }
+
+
         $features =  Feature::where('id', 1)->first()->makeHidden(['created_at', 'updated_at', 'id']);
         $features = $features->toArray();
 
@@ -75,7 +86,10 @@ class RequestActionHandler {
             return;
         }
 
+        dump("RequestActionHandler: 78", $trx);
+
         $action_payload = json_decode($trx->action_payload, true);
+        dump("Booyah");
         $user_id = $action_payload['user_id'];
 
         dump($user_id, $action_payload);

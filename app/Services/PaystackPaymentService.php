@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class PaystackPaymentService {
@@ -104,6 +106,18 @@ class PaystackPaymentService {
 
         if ($this->paystack_env === 'live') {
             $dataBody["subaccount"] = $data['sub_account'];
+
+            $validate_subaccount = self::validateSubaccount($data['sub_account']);
+
+            if (! $validate_subaccount['valid']) {
+                Log::warning("User with email: {$data['email']} passed has invalid estate id on db ---->>>> ". Carbon::now()->toIsoString());
+
+                return [
+                    'status' => false,
+                    'message' => $validate_subaccount['message'],
+                    'data' => $validate_subaccount['data'] ?? null,
+                ];
+            }
         }
 
         try {

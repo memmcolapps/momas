@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Meter;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Transaction\TransactionController;
 use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\KctMeterToken;
@@ -80,6 +81,12 @@ class MeterController extends Controller
             $message = "Validation Failed, please check meter number or estate selected";
             $code = 422;
             return error($message, $code);
+        }
+
+
+        if (! $meter->isActive()) {
+
+            return StandardResponse::error(403, 'Meter unable to perform this action reach out to your estate admin for support', []);
         }
 
 
@@ -297,7 +304,8 @@ class MeterController extends Controller
                 ]);
             }
             $amount = $request->amount;
-            $meterNo = $request->meter_no;
+            // $meterNo = $request->meter_no;
+            $meterNo = Auth::user()->meterNo;
             $trx = $request->trxref ?? $request->ref;
             $utility_amount = $request->utility_amount;
             $total_paid = $request->total_paid_amount;
@@ -306,6 +314,36 @@ class MeterController extends Controller
             $vat_amount = $request->vat_amount;
             $tariff_id = $request->tariff_id;
             $trx_id = $request->trxref ?? $request->ref;
+
+
+            $trx = Transaction::where('trx_id', $trx_id)->where('user_id', Auth::user()->id)->first();
+
+            if (! $trx) {
+
+                return StandardResponse::error(404, 'Resource not found: Invalid transaction reference', []);
+            }
+
+            if ($trx->status === 0 || $trx->status === 1) {
+
+                return StandardResponse::error(403, 'Transaction yet to be verified or failed', []);
+            }
+
+            if ($trx->status === 2) {
+
+                $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id);
+
+                return StandardResponse::success(200, 'Transaction has previously been completed', [
+                    'receipt' => $receipt,
+                ]);
+            }
+
+            $meter = Meter::where('MeterNo', $meterNo)->firstOrFail();
+
+
+            if (! $meter->isActive()) {
+
+                return StandardResponse::error(403, 'Meter unable to perform this action reach out to your estate admin for support', []);
+            }
 
 
             $tariff_index = Tariff::where('id', $request->tariff_id)->first()->tariff_index ?? null;
@@ -330,7 +368,6 @@ class MeterController extends Controller
             }
 
 
-            $meter = Meter::where('MeterNo', $meterNo)->first() ?? null;
             $need_kct = $meter->NeedKCT;
 
             $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $need_kct);

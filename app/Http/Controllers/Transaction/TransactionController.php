@@ -363,6 +363,14 @@ class TransactionController extends Controller
 
             if ($request->pay_type === 'paystack') {
                 $est = Estate::where('id', Auth::user()->estate_id)->first();
+                $estate_id = Auth::user()->estate_id;
+
+
+                if (! $est) {
+                    Log::warning("User with email: {$email} passed has invalid estate id on db estate_id: {$estate_id} ---->>>> ". Carbon::now()->toIsoString());
+
+                    return StandardResponse::error(500, 'User estate_id is invalid', []);
+                }
                 // $fl = Setting::where('id', 1)->first();
                 // $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
                 // $flkey['flutterwave_public'] = $fl->flutterwave_public;
@@ -387,6 +395,7 @@ class TransactionController extends Controller
                     'ACCT_nd2zcvugcv5zfqp' : // MEMMCOL admin_fee subaccount
                     $est->paystack_subaccount;
 
+
                 $databody = [
                     "amount" => $request->amount * 100,
                     "email" => $email,
@@ -394,7 +403,6 @@ class TransactionController extends Controller
                     "metadata" => $request->meta,
                 ];
 
-                $validate_subaccount = PaystackPaymentService::validateSubaccount($sub_account);
 
                 $payment_init = app(PaystackPaymentService::class)->makePayment($databody);
                 $status = $payment_init['status'];
@@ -405,6 +413,7 @@ class TransactionController extends Controller
                 }
 
                 $trx_id = $payment_init['reference'];
+                $action_payload = $request->action_payload;
 
                 // $body = json_encode($databody);
                 // $curl = curl_init();
@@ -432,7 +441,7 @@ class TransactionController extends Controller
                 // $status = $var->status;
 
 
-                $request->action_payload['user_id'] = Auth::user()->id;
+                $action_payload['user_id'] = Auth::user()->id;
                 $trx = new Transaction();
                 $trx->user_id = Auth::id();
                 $trx->pay_type = "paystack";
@@ -442,7 +451,7 @@ class TransactionController extends Controller
                 $trx->payment_ref = $trx_id;
                 $trx->service_type = $request->service_type;
                 $trx->status = 0;
-                $trx->action_payload = json_encode($request->action_payload);
+                $trx->action_payload = json_encode($action_payload);
                 $trx->save();
 
                 return StandardResponse::success(200, 'Paystack Payment initiation successful', [
@@ -558,6 +567,110 @@ class TransactionController extends Controller
         }
 
 
+    /**
+     * Get receipt data for a transaction.
+     *
+     * @param int $transactionId
+     * @param int $userId
+     * @return array|null
+     */
+    public static function getReceiptData(int $transactionId, int $userId): ?array
+    {
+        $transaction = Transaction::where('id', $transactionId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (! $transaction) {
+            return null;
+        }
+
+        $query = DB::table('transactions')
+            ->join('credit_tokens', 'credit_tokens.trx_id', '=', 'transactions.trx_id')
+            ->where('transactions.id', $transactionId)
+            ->where('transactions.user_id', $userId);
+
+        // Only join meter_tokens if record exists
+        $hasMeterToken = MeterToken::where('trx_id', $transaction->trx_id)->exists();
+
+        if ($hasMeterToken) {
+            $query->leftJoin('meter_tokens', 'meter_tokens.trx_id', '=', 'transactions.trx_id');
+        }
+
+        $selectFields = [
+            'credit_tokens.meterNo',
+            'transactions.updated_at',
+            'transactions.trx_id',
+            'transactions.amount',
+            'credit_tokens.unitkwh',
+            'credit_tokens.token',
+            'credit_tokens.vatAmount',
+            'credit_tokens.status',
+            'transactions.user_id',
+            'transactions.service',
+            'transactions.service_type',
+            'transactions.miscellaneous',
+            'transactions.miscellaneous_trx_amount',
+        ];
+
+        if ($hasMeterToken) {
+            $selectFields[] = 'meter_tokens.kct_tokens';
+        }
+
+        $trx_x_token = (array) $query->select($selectFields)->first();
+
+        // Fallback for legacy transactions
+        if (! $trx_x_token) {
+            $trx_x_token = $transaction->only([
+                'updated_at',
+                'trx_id',
+                'amount',
+                'user_id',
+                'service',
+                'service_type',
+                'status',
+                'miscellaneous',
+                'miscellaneous_trx_amount',
+            ]);
+
+            $trx_x_token['kct_tokens'] = null;
+        }
+
+        $user_x_estate = DB::table('users')
+            ->join('estates', 'estates.id', '=', 'users.estate_id')
+            ->select([
+                'users.email',
+                'users.address',
+                'estates.title',
+                'users.first_name',
+                'users.last_name'
+            ])
+            ->where('users.id', $trx_x_token['user_id'])
+            ->first();
+
+        $receipt = array_merge($trx_x_token, (array) $user_x_estate);
+
+        $kct_tokens = isset($receipt['kct_tokens']) && $receipt['kct_tokens']
+            ? explode(',', $receipt['kct_tokens'])
+            : [null, null];
+
+        $receipt['kct_token1'] = $kct_tokens[0] ?? null;
+        $receipt['kct_token2'] = $kct_tokens[1] ?? null;
+
+        array_walk_recursive($receipt, function (&$value, $key) {
+            if (is_int($value) || is_float($value)) {
+                $value = $key === 'status' ? (int) $value : (string) $value;
+            }
+        });
+
+        $receipt['fullname'] = trim(
+            ($receipt['first_name'] ?? '') . ' ' . ($receipt['last_name'] ?? '')
+        );
+
+        unset($receipt['first_name'], $receipt['last_name'], $receipt['kct_tokens']);
+
+        return $receipt;
+    }
+
     public function get_trx(Request $request)
     {
         try {
@@ -573,100 +686,17 @@ class TransactionController extends Controller
                 );
             }
 
-            $transaction = Transaction::where('id', $request->transaction_id)
-                ->where('user_id', Auth::id())
-                ->first();
+            $receipt = self::getReceiptData(
+                (int) $request->transaction_id,
+                (int) Auth::id()
+            );
 
-            if (! $transaction) {
+            if (! $receipt) {
                 return StandardResponse::error(
                     code: 404,
                     message: 'Resource not found: no such transaction found'
                 );
             }
-
-            $query = DB::table('transactions')
-                ->join('credit_tokens', 'credit_tokens.trx_id', '=', 'transactions.trx_id')
-                ->where('transactions.id', $request->transaction_id)
-                ->where('transactions.user_id', Auth::id());
-
-            // Only join meter_tokens if record exists
-            $hasMeterToken = MeterToken::where('trx_id', $transaction->trx_id)->exists();
-
-            if ($hasMeterToken) {
-                $query->leftJoin('meter_tokens', 'meter_tokens.trx_id', '=', 'transactions.trx_id');
-            }
-
-            $selectFields = [
-                'credit_tokens.meterNo',
-                'transactions.updated_at',
-                'transactions.trx_id',
-                'transactions.amount',
-                'credit_tokens.unitkwh',
-                'credit_tokens.token',
-                'credit_tokens.vatAmount',
-                'credit_tokens.status',
-                'transactions.user_id',
-                'transactions.service',
-                'transactions.service_type',
-                'transactions.miscellaneous',
-                'transactions.miscellaneous_trx_amount',
-            ];
-
-            if ($hasMeterToken) {
-                $selectFields[] = 'meter_tokens.kct_tokens';
-            }
-
-            $trx_x_token = (array) $query->select($selectFields)->first();
-
-            // Fallback for legacy transactions
-            if (! $trx_x_token) {
-                $trx_x_token = $transaction->only([
-                    'updated_at',
-                    'trx_id',
-                    'amount',
-                    'user_id',
-                    'service',
-                    'service_type',
-                    'status',
-                    'miscellaneous',
-                    'miscellaneous_trx_amount',
-                ]);
-
-                $trx_x_token['kct_tokens'] = null;
-            }
-
-            $user_x_estate = DB::table('users')
-                ->join('estates', 'estates.id', '=', 'users.estate_id')
-                ->select([
-                    'users.email',
-                    'users.address',
-                    'estates.title',
-                    'users.first_name',
-                    'users.last_name'
-                ])
-                ->where('users.id', $trx_x_token['user_id'])
-                ->first();
-
-            $receipt = array_merge($trx_x_token, (array) $user_x_estate);
-
-            $kct_tokens = isset($receipt['kct_tokens']) && $receipt['kct_tokens']
-                ? explode(',', $receipt['kct_tokens'])
-                : [null, null];
-
-            $receipt['kct_token1'] = $kct_tokens[0] ?? null;
-            $receipt['kct_token2'] = $kct_tokens[1] ?? null;
-
-            array_walk_recursive($receipt, function (&$value, $key) {
-                if (is_int($value) || is_float($value)) {
-                    $value = $key === 'status' ? (int) $value : (string) $value;
-                }
-            });
-
-            $receipt['fullname'] = trim(
-                ($receipt['first_name'] ?? '') . ' ' . ($receipt['last_name'] ?? '')
-            );
-
-            unset($receipt['first_name'], $receipt['last_name'], $receipt['kct_tokens']);
 
             return response()->json([
                 'status' => true,
@@ -820,9 +850,7 @@ class TransactionController extends Controller
 
         if ($payment_status == 'success') {
 
-            if ($ck_transaction == null) {
-                Transaction::where('trx_id', $var->data->reference)->update(['status' => 3]);
-            }
+            Transaction::where('trx_id', $var->data->reference)->update(['status' => 3]);
 
 
             $ref = $var->data->metadata->ref;
@@ -843,7 +871,11 @@ class TransactionController extends Controller
 
 
 
-        $ref = Transaction::where('trx_id', $var->data->metadata->ref)->first()->trx_id;
+        $trx = Transaction::where('trx_id', $var->data->metadata->ref)->first();
+        $ref = $trx->trx_id;
+
+        $trx->status = 1;
+        $trx->save();
 
         // If status != success;
         if ($access_point === 'mobile') {

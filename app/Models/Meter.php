@@ -95,6 +95,11 @@ class Meter extends Model
         return $this->belongsTo(Estate::class, 'estate_id', 'id');
     }
 
+    public function isActive()
+    {
+        return $this->status !== 0;
+    }
+
 
     /**
      * Generate a new token for the meter after payment verification.
@@ -185,7 +190,7 @@ class Meter extends Model
                     'note' => 'kct generation failed',
                     'status' => 3,
                 ]);
-                User::where('id', $this->user_id)->first()->creditWallet($vending_amount);
+                // User::where('id', $this->user_id)->first()->creditWallet($vending_amount);
 
 
                 return response()->json([
@@ -346,6 +351,7 @@ class Meter extends Model
                 'service_type' => "meter",
             ]);
 
+
             if (!$kct_result['success']) {
                 Transaction::where('trx_id', $trx_id)->update([
                     'note' => 'KCT token generation failed: ' . ($kct_result['error'] ?? 'Unknown error'),
@@ -354,10 +360,12 @@ class Meter extends Model
                 throw new Exception($kct_result['error'] ?? 'KCT token generation failed');
             }
 
+
             // Update KctToken record with the generated tokens
             KctToken::where('trx_id', $trx_id)->update([
                 'kct_token1' => $kct_result['data']['kct_token1'],
                 'kct_token2' => $kct_result['data']['kct_token2'],
+                'kct_tokens' => implode(',', $kct_result['data']),
                 'status' => 2
             ]);
 
@@ -450,6 +458,7 @@ class Meter extends Model
                     'note' => 'Clear credit token generation failed: ' . ($clear_credit_result['error'] ?? 'Unknown error'),
                     'status' => 3,
                 ]);
+
                 throw new Exception($clear_credit_result['error'] ?? 'Clear credit token generation failed');
             }
 
