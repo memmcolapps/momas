@@ -157,9 +157,7 @@ Route::post('paystack-webhook', [TransactionController::class, 'paystackWebhook'
 Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
 
 
-
-
-
+Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
 
 
 
