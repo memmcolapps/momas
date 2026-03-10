@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\MeterImportController;
+use App\Http\Controllers\AnalyticController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Bills\BillsController;
@@ -140,6 +141,10 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
 
     //Transactions
     Route::get('get-trx', [TransactionController::class, 'get_trx']);
+
+
+    // Analytics
+    Route::get('get-token-purchase-by-month', [AnalyticController::class, 'getTokenPurchaseByMonth']);
 
 
     // Broadcast

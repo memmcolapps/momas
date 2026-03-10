@@ -29,9 +29,12 @@ class RequestActionHandler {
             ->firstOrFail();
 
 
-        if (! $trx->action_payload) {
+        dump($trx->toArray());
+        $action_payload = json_decode($trx->action_payload);
+        if (! $action_payload) {
 
             // Payload wasn't passed at transaction instanciation, maintain backward compatibility
+            dump('Backward compatibility');
             $trx->status = 3;
             $trx->save();
 

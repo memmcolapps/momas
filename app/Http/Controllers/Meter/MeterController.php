@@ -1366,7 +1366,14 @@ class MeterController extends Controller
     public
     function delete_meter(request $request)
     {
-        Meter::where('id', $request->id)->delete();
+
+        $meter = Meter::where('id', $request->id)->first();
+
+        if (isset($meter->user_id) || User::where('meterNo', $meter->meterNo)->exists()) {
+            return redirect('admin/meter-list')->with('error', "Deactivate meter before deleting");
+        }
+
+
         return redirect('admin/meter-list')->with('message', "Meter deleted successfully");
 
     }

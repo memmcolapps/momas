@@ -441,7 +441,11 @@ class TransactionController extends Controller
                 // $status = $var->status;
 
 
-                $action_payload['user_id'] = Auth::user()->id;
+                // If action payload is not passed do not assign user id and maintain backward compatibilty with previous designs
+                if ($action_payload) {
+                    $action_payload['user_id'] = Auth::user()->id;
+                }
+
                 $trx = new Transaction();
                 $trx->user_id = Auth::id();
                 $trx->pay_type = "paystack";
@@ -1367,8 +1371,8 @@ class TransactionController extends Controller
 
         return response()->json([
             'status' => true,
-            'monthly_admin_fee' => $admin_fee_get !== null ? "1" : "0",
-            'has_unpaid_fee' => $admin_fee_get !== null
+            'monthly_admin_fee' => $admin_fee_get !== null ? "0" : "1",
+            // 'has_unpaid_fee' => $admin_fee_get !== null
         ]);
     }
 

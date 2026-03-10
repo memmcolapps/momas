@@ -7,12 +7,13 @@ use App\Services\TokenGenerationService;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class Meter extends Model
 {
-    use HasFactory;
+    use HasFactory; //, SoftDeletes;
 
     protected $fillable = [
 
@@ -179,7 +180,7 @@ class Meter extends Model
 
             Transaction::where('trx_id', $trx_id)->update([
                 'service' => "CREDIT TOKEN PURCHASE",
-                'service_type' => "meter",
+                'service_type' => "credit_token",
                 'tariff_id' => $tariff_id,
                 'unit_amount' => $vending_amount,
             ]);
@@ -348,7 +349,7 @@ class Meter extends Model
 
             Transaction::where('trx_id', $trx_id)->update([
                 'service' => "KCT TOKEN PURCHASE",
-                'service_type' => "meter",
+                'service_type' => "kct_token",
             ]);
 
 
@@ -449,7 +450,7 @@ class Meter extends Model
             // Update transaction
             Transaction::where('trx_id', $trx_id)->update([
                 'service' => "CLEAR CREDIT TOKEN PURCHASE",
-                'service_type' => "meter",
+                'service_type' => "clear_credit_token",
                 'tariff_id' => $tariff_id,
             ]);
 
