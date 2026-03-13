@@ -370,8 +370,26 @@ class MeterController extends Controller
 
             $need_kct = $meter->NeedKCT;
 
+
+            $estate_id = Auth::user()->estate_id;
+            $cdt = new CreditToken();
+            $cdt->user_id = Auth::user()->id;
+            $cdt->trx_id = $trx_id;
+            $cdt->meterNo = $meterNo;
+            $cdt->amount = $total_paid ?? 0;
+            $cdt->vat = $vat_amount ?? 0;
+            $cdt->estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title ?? "NAME";
+            $cdt->estate_id = $estate_id;
+            $cdt->tariff_id = TarrifState::where('estate_id', $estate_id)->where('status', 2)->first()->tariff_id;
+            $cdt->vatAmount = $vat_amount;
+            $cdt->costOfUnit = $request->vending_amount;
+            $cdt->tariffPerKWatt = $request->vend_amount_kw_per_naira;
+            $cdt->save();
+
+
             $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $need_kct);
             $token = $token_gen['data']['token'];
+
 
             if ($token_gen['success'] && $token_gen['success'] === false) {
                 Transaction::where('trx_id', $trx_id)->update([
@@ -394,21 +412,11 @@ class MeterController extends Controller
                 ], 422);
             }
 
-            $estate_id = Auth::user()->estate_id;
-            $cdt = new CreditToken();
-            $cdt->user_id = Auth::user()->id;
-            $cdt->trx_id = $trx_id;
-            $cdt->meterNo = $meterNo;
-            $cdt->amount = $total_paid ?? 0;
-            $cdt->vat = $vat_amount ?? 0;
-            $cdt->estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title ?? "NAME";
-            $cdt->estate_id = $estate_id;
-            $cdt->tariff_id = TarrifState::where('estate_id', $estate_id)->where('status', 2)->first()->tariff_id;
-            $cdt->vatAmount = $vat_amount;
-            $cdt->costOfUnit = $request->vending_amount;
-            $cdt->tariffPerKWatt = $request->vend_amount_kw_per_naira;
+
+            $cdt->unitkwh = $request->vend_amount_kw_per_naira;
             $cdt->token = $token;
             $cdt->save();
+
 
             $trx_history = Transaction::where('trx_id', $trx_id)->first();
             if (! $trx_history) {
@@ -1454,7 +1462,7 @@ class MeterController extends Controller
 
         // Update meter: set status to blocked (3), remove user assignment and account number
         Meter::where('id', $request->id)->update([
-            'status' => 3,  // 3 = Blocked status
+            'status' => 0,  // 0 = Blocked status
             'user_id' => null,
             'AccountNo' => null
         ]);

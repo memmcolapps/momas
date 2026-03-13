@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\MeterImportController;
+use App\Http\Controllers\Admin\TokenController;
 use App\Http\Controllers\AnalyticController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -118,7 +119,7 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     //
     Route::post('buy-meter', [MeterController::class, 'buy_meter_token']);
     Route::post('request-meter', [MeterController::class, 'request_meter']);
-    Route::post('retry-meter', [MeterController::class, 'retry_meter_token']);
+    Route::post('retry-meter', [TokenController::class, 'retry_generate_credit_token']);
 
     Route::post('buy-meter-others', [MeterController::class, 'pay_for_others_meter_token']);
     Route::post('reprint-token', [MeterController::class, 'reprint_meter_token']);

@@ -2,6 +2,7 @@
 
 return [
     'paystack_payment_endpoint' => 'https://api.paystack.co/transaction/initialize',
+    'flutterwave_payment_endpoint' => 'https://api.flutterwave.com/v3/payments',
 
     'status' => [  //Uninversal status and status code for uniformity and easy refactoring in case of future change
         'scs' => 'success',

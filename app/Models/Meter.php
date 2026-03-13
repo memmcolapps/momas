@@ -120,9 +120,27 @@ class Meter extends Model
      * @throws \Exception Thrown when: meter is inactive, transaction already completed, payment verification fails, or token generation fails
      */
     public function getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $email=null, $verify="verify") {
-        DB::transaction(function () use ($tariff_id, $unit, $trx_id, $vat, $vending_amount, $email, $verify) {
+        $user = User::where('id', $this->user_id)->firstOrFail();
+
+        // dd(DB::transactionLevel());
+
+        // $cdt = CreditToken::create([
+        //     'trx_id' => $trx_id,
+        //     // 'user_id' => $action_payload['user_id'],
+        //     'meterNo' => $this->meterNo,
+        //     'amount' => $vending_amount,
+        //     'amount_charged' => $vending_amount,
+        //     // 'customer_email' => $email,
+        //     // 'unitkwh' => $unit,
+        //     'vat' => $vat,
+        //     'estate_id' => $this->estate_id,
+        //     'estate_name' => $user->estate_name,
+        //     // 'token' => null,
+        //     'status' => 0
+        // ]);
+
+        DB::transaction(function () use ($tariff_id, $unit, $trx_id, $vat, $vending_amount, $email, $verify, $user) {
             // dump('getNewToken', $this->user_id, $this);
-            $user = User::where('id', $this->user_id)->firstOrFail();
             $email = (! $email || $email === 'null')
                 ? $user->email
                 : $email;
@@ -205,24 +223,6 @@ class Meter extends Model
             // dump("got here meter:188");
             $token = $token_gen['data']['token'];
             // dump("got here meter:190");
-
-            // $cdt = new CreditToken();
-            // $cdt->user_id = $request->user_id;
-            // $cdt->trx_id = $trx_id;
-            // $cdt->meterNo = $request->meterNo;
-            // $cdt->amount = $amount;
-            // $cdt->amount_charged = $request->amount;
-            // $cdt->customer_email = $customer_email;
-            // $cdt->fee = $fee;
-            // $cdt->vat = $request->vat;
-            // $cdt->estate_name = Estate::where('id', $request->estate_name)->first()->title;;
-            // $cdt->estate_id = $estate_id;
-            // $cdt->tariff_id = $request->t_index;     //Tariff index used
-            // $cdt->tariff_amount = $request->tariff_amount;
-            // $cdt->vatAmount = $request->vatAmount;
-            // $cdt->costOfUnit = $request->costOfUnit;
-            // $cdt->unitkwh = $request->unit;
-            // $cdt->tariffPerKWatt = $request->tariffPerKWatt;
 
 
             $cdt = CreditToken::updateOrCreate([

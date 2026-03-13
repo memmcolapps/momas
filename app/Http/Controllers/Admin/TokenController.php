@@ -18,6 +18,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Services\PaystackPaymentService;
+use App\Services\StandardResponse;
 use App\Services\VatCalculator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -3726,18 +3727,22 @@ class TokenController extends Controller
 
     public function retry_generate_credit_token(request $request)
     {
+        $access_point = $request->access_point ?? 'web';
+
         try {
             Log::info('retry_generate_credit_token called', [
                 'request' => $request->all(),
             ]);
 
-            $get_trx =  Transaction::where('trx_id', $request->trx_id)->first() ?? null;
+            $trx_id = $request->trx_id ?? $request->trxref;
+
+            $get_trx =  Transaction::where('trx_id', $trx_id)->first() ?? null;
 
             if($get_trx){
 
                 if($get_trx->pay_type == "paystack"){
 
-                    $transactionId = $get_trx->payment_ref;
+                    $transactionId = $get_trx->trx_id;
 
                     // Use PaystackPaymentService for transaction verification
                     $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($transactionId);
@@ -3756,17 +3761,36 @@ class TokenController extends Controller
 
                     // Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
                     // dd($request->all(), $trx_id);
-                    $meterNo = CreditToken::where('trx_id', $trx_id)->first()->meterNo;
+                    $cdt = CreditToken::where('trx_id', $trx_id)->first();
+                    $meterNo = $cdt->meterNo;
                     $meter = Meter::where('meterNo', $meterNo)->first();
                     $trx = Transaction::where('trx_id', $trx_id)->first();
                     $user = User::where('meterNo', $meterNo)->first();
 
 
                     $action_payload = json_decode($trx->action_payload, true);
-                    $tariff_id = $action_payload['tariff_id'];
-                    $unit = $action_payload['vend_amount_kw_per_naira'];
-                    $vat = $action_payload['vat_amount'];
-                    $vending_amount = $action_payload['vending_amount'];
+
+                    /**
+                     * tariff_id by trx
+                     * unit by cred_tk
+                     * vat by cdt
+                     * $vending amount by cdt
+                     */
+
+                    $tariff_id = $trx->tariff_id;
+                    $unit = $cdt->unitkwh;
+                    $vat = $cdt->vat;
+                    $vending_amount = $cdt->costOfUnit;
+
+
+                    if ($action_payload) {
+
+                        $tariff_id = $action_payload['tariff_id'];
+                        $unit = $action_payload['vend_amount_kw_per_naira'];
+                        $vat = $action_payload['vat_amount'];
+                        $vending_amount = $action_payload['vending_amount'];
+
+                    }
 
                     $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $verify="null");
 
@@ -3962,8 +3986,17 @@ class TokenController extends Controller
 
 
                     $type = "credit_token";
+
+                    if ($access_point === 'web') {
+                        return StandardResponse::success(201, 'Generated token successfully', []);
+                    }
+
                     return redirect("admin/recepit?trx_id=$trx_id&type=$type");
                 }
+            }
+
+            if ($access_point === 'web') {
+                return StandardResponse::success(404, 'Transaction Not Found', []);
             }
 
             return back()->with('error', 'Transction Not Found');
@@ -3971,6 +4004,12 @@ class TokenController extends Controller
         } catch (Exception $e) {
         //    return back()->with('error', $e);
             Log::error('retry_generate_credit_token error: ', ['exception' => $e]);
+
+
+            if ($access_point === 'web') {
+                return StandardResponse::success(404, 'Big Error', []);
+            }
+
             return back()->with('error', $e->getMessage());
         }
     }

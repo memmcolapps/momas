@@ -8,17 +8,12 @@ use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\MeterToken;
 use App\Models\Setting;
-use App\Models\Setting;
 use App\Models\Transaction;
-use App\Models\User;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\VirtualAccountTransaction;
 use App\Services\PaystackPaymentService;
 use App\Services\StandardResponse;
-use Carbon\Carbon;
-use Exception;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -495,9 +490,8 @@ class TransactionController extends Controller
 
 
                 if (Auth::user()->main_wallet < $request->amount) {
-                    $code = 422;
-                    $message = "Insufficient Funds";
-                    return error($message, $code);
+
+                    return StandardResponse::error(403, 'Insufficient Funds', []);
                 }
 
 
@@ -613,7 +607,7 @@ class TransactionController extends Controller
             'credit_tokens.unitkwh',
             'credit_tokens.token',
             'credit_tokens.vatAmount',
-            'credit_tokens.status',
+            'transactions.status',
             'transactions.user_id',
             'transactions.service',
             'transactions.service_type',
