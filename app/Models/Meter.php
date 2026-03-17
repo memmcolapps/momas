@@ -156,7 +156,7 @@ class Meter extends Model
                 ->firstOrFail();
 
             if ($trx->status === 2) {
-                throw new Exception("Transaction already completed please restart a new transaction to generate token");
+                throw new Exception ("Transaction already completed please restart a new transaction to generate token");
             }
 
             $paystack_engine = new PaystackPaymentService();
@@ -193,7 +193,7 @@ class Meter extends Model
             $token_gen = TokenGenerationService::generateMeterToken($this, $tariff_index, $unit, $this->NeedKCT);
 
 
-            // dump($token_gen);
+            // dd($token_gen);
 
 
             Transaction::where('trx_id', $trx_id)->update([
@@ -212,11 +212,7 @@ class Meter extends Model
                 // User::where('id', $this->user_id)->first()->creditWallet($vending_amount);
 
 
-                return response()->json([
-
-                    'status' => false,
-                    'message' => "Vending server not connected, Retry again on transaction history",
-                ], 422);
+                throw new Exception("Vending server not connected, Retry again on transaction history");
             }
 
 

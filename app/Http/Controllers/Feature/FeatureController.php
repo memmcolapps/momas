@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Feature;
 use App\Models\Slider;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class FeatureController extends Controller
 {
@@ -23,6 +24,14 @@ class FeatureController extends Controller
         ]);
 
     }
+
+    // public function updateFeaturesStatus(Request $request) {
+    //     $validator = Validator::make($request->all(), []);
+
+    //     if ($validator->fails()) {
+
+    //     }
+    // }
 
 
     public function promotion(){

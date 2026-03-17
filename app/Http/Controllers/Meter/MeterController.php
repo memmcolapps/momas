@@ -86,7 +86,7 @@ class MeterController extends Controller
 
         if (! $meter->isActive()) {
 
-            return StandardResponse::error(403, 'Meter unable to perform this action reach out to your estate admin for support', []);
+            return StandardResponse::error(403, 'Meter Blocked', []);
         }
 
 
@@ -287,7 +287,7 @@ class MeterController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'meter_no' => 'required|string|max:255|exists:meters,meterNo',
+                // 'meter_no' => 'required|string|max:255|exists:meters,meterNo',
                 'utility_amount' => 'nullable|numeric|min:0',
                 'total_paid_amount' => 'required|numeric|min:1',
                 'vend_amount_kw_per_naira' => 'required|numeric|min:0',
@@ -388,10 +388,10 @@ class MeterController extends Controller
 
 
             $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $need_kct);
-            $token = $token_gen['data']['token'];
+            // dd($token_gen);
 
 
-            if ($token_gen['success'] && $token_gen['success'] === false) {
+            if (! $token_gen['success']) {
                 Transaction::where('trx_id', $trx_id)->update([
                     'service' => "METER PURCHASE",
                     'service_type' => "meter",
@@ -411,6 +411,8 @@ class MeterController extends Controller
                     'message' => "Vending server not connected, Retry again on transaction history",
                 ], 422);
             }
+
+            $token = $token_gen['data']['token'];
 
 
             $cdt->unitkwh = $request->vend_amount_kw_per_naira;

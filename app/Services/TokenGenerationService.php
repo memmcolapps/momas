@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 class TokenGenerationService {
     public static function generateMeterToken($meter, $tariff_index, $unit, $need_kct = false) {
         // throw new Exception('Test Failure');
+        // return ['success' => false];
         $databody = [
             'meterType' => $meter->KRN2,
             'meterNo' => $meter->meterNo,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Transaction\TransactionController;
 use App\Models\ClearcreditToken;
 use App\Models\CompensationToken;
 use App\Models\CreditToken;
@@ -3987,15 +3988,17 @@ class TokenController extends Controller
 
                     $type = "credit_token";
 
-                    if ($access_point === 'web') {
-                        return StandardResponse::success(201, 'Generated token successfully', []);
+                    if ($access_point === 'mobile') {
+                        return StandardResponse::success(201, 'Generated token successfully', [
+                            'receipt' => TransactionController::getReceiptData($trx_id, $user->id),
+                        ]);
                     }
 
                     return redirect("admin/recepit?trx_id=$trx_id&type=$type");
                 }
             }
 
-            if ($access_point === 'web') {
+            if ($access_point === 'mobile') {
                 return StandardResponse::success(404, 'Transaction Not Found', []);
             }
 
