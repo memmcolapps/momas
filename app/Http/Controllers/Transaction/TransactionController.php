@@ -802,63 +802,38 @@ class TransactionController extends Controller
 
     public function paystack_verify(request $request)
     {
-
         // $message = "paystack=" . json_encode($request->all());
         // send_notification($message);
 
-        $fl = Setting::where('id', 1)->first();
-        $pksecret = $fl->paystack_secret;
         $transactionId = $request->reference;
 
-        $curl = curl_init();
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://api.paystack.co/transaction/verify/$transactionId",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
-            CURLOPT_HTTPHEADER => array(
-                "Authorization: Bearer $pksecret",
-                "Cache-Control: no-cache",
-            ),
-        ));
+        // Use PaystackPaymentService to verify transaction
+        $paymentService = app(PaystackPaymentService::class);
+        $verificationResult = $paymentService->verifyTransaction($transactionId);
 
-        $var = curl_exec($curl);
-        curl_close($curl);
-        $var = json_decode($var);
-        $status = $var->status ?? null;
-        $ref = null;
-
-        if (! $status) {
-            if ($var->code === "transaction_not_found") {
+        if (! $verificationResult['status']) {
+            if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
                 return StandardResponse::error(code: 404, message: 'Invalid ref: transaction not found');
             }
 
             return StandardResponse::error(code: 500, message: 'An Error Occurred');
         }
 
-
         $access_point = $request->header('Access-Point') ?? 'web';
-        $payment_status = $var->data->status;
-        $ck_transaction = Transaction::where('trx_id', $var->data->reference)->first()->status ?? null;
+        $payment_status = $verificationResult['payment_status'];
+        $transactionData = $verificationResult['data'];
+        $ck_transaction = Transaction::where('trx_id', $transactionData['reference'])->first()->status ?? null;
 
         if ($ck_transaction === 2) {
             // Already processed
             return response()->json(['message' => 'Already processed']);
         }
 
-
         if ($payment_status == 'success') {
+            Transaction::where('trx_id', $transactionData['reference'])->update(['status' => 3]);
 
-            Transaction::where('trx_id', $var->data->reference)->update(['status' => 3]);
-
-
-            $ref = $var->data->metadata->ref;
-            ProcessPaystackWebhook::dispatch($var->data->reference);
-
+            $ref = $transactionData['reference'];
+            ProcessPaystackWebhook::dispatch($transactionData['reference']);
 
             if ($access_point === 'mobile') {
                 return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [
@@ -872,9 +847,7 @@ class TransactionController extends Controller
             return redirect($url);
         }
 
-
-
-        $trx = Transaction::where('trx_id', $var->data->metadata->ref)->first();
+        $trx = Transaction::where('trx_id', $transactionData['reference'])->first();
         $ref = $trx->trx_id;
 
         $trx->status = 1;
