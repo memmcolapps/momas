@@ -3728,7 +3728,7 @@ class TokenController extends Controller
 
     public function retry_generate_credit_token(request $request)
     {
-        $access_point = $request->access_point ?? 'web';
+        $access_point = $request->header('Access-Point') ?? 'web';
 
         try {
             Log::info('retry_generate_credit_token called', [
@@ -4009,8 +4009,8 @@ class TokenController extends Controller
             Log::error('retry_generate_credit_token error: ', ['exception' => $e]);
 
 
-            if ($access_point === 'web') {
-                return StandardResponse::success(404, 'Big Error', []);
+            if ($access_point === 'mobile') {
+                return StandardResponse::success(404, 'An Error Occurred', []);
             }
 
             return back()->with('error', $e->getMessage());

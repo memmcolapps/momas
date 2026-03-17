@@ -841,7 +841,7 @@ class TransactionController extends Controller
         }
 
 
-        $access_point = $request->access_point ?? 'web';
+        $access_point = $request->header('Access-Point') ?? 'web';
         $payment_status = $var->data->status;
         $ck_transaction = Transaction::where('trx_id', $var->data->reference)->first()->status ?? null;
 
