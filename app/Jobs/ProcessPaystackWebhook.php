@@ -19,7 +19,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 
 class ProcessPaystackWebhook implements ShouldQueue
 {
@@ -43,7 +43,7 @@ class ProcessPaystackWebhook implements ShouldQueue
 
     public function failed(\Throwable $exception)
     {
-        Log::error("Job permanently failed for {$this->reference}: " . $exception->getMessage(), [
+        Logger::error("Job permanently failed for {$this->reference}: " . $exception->getMessage(), [
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
         ]);
@@ -58,7 +58,7 @@ class ProcessPaystackWebhook implements ShouldQueue
             }
         } catch (Exception $e) {
 
-            Log::error("Failed to Credit User: {$user->id} wallet reason: {$e->getMessage()}");
+            Logger::error("Failed to Credit User: {$user->id} wallet reason: {$e->getMessage()}");
 
         }
     }

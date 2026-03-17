@@ -25,7 +25,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 use Illuminate\Support\Str;
 use Lcobucci\JWT\Exception;
 
@@ -64,11 +64,11 @@ class TokenController extends Controller
 
             // foreach ($data['credit_tokens'] as $data) {
             //     if ($data->trx_id == 'MOMAS-794791327-162eebca') {
-            //         Log::info("You tested", $data->toArray());
+            //         Logger::info("You tested", $data->toArray());
             //     }
             // }
 
-            Log::info('credit_token_index data prepared', [
+            Logger::info('credit_token_index data prepared', [
                 'user_id' => Auth::id(),
                 'estate_count' => $data['estate']->count(),
                 'tariff_count' => $data['tariff']->count(),
@@ -307,7 +307,7 @@ class TokenController extends Controller
     //Validate
     public function validate_compensation_meter(request $request)
     {
-        Log::info('validate_compensation_meter', [
+        Logger::info('validate_compensation_meter', [
             'request' => $request->all(),
         ]);
 
@@ -383,7 +383,7 @@ class TokenController extends Controller
                 return back()->with('error', 'Error retrieving tariff index: ' . $e->getMessage());
             }
 
-            Log::info('CompensationToken data returned', $data);
+            Logger::info('CompensationToken data returned', $data);
 
             return view('admin.token.compensation-token-view', $data);
 
@@ -459,7 +459,7 @@ class TokenController extends Controller
             }
 
 
-            Log::info('CompensationToken data returned', $data);
+            Logger::info('CompensationToken data returned', $data);
 
             return view('admin.token.compensation-token-view', $data);
 
@@ -478,7 +478,7 @@ class TokenController extends Controller
     public function validate_clear_credit_meter(request $request)
     {
 
-        Log::info('validate_clear_credit_meter called', [
+        Logger::info('validate_clear_credit_meter called', [
             'user_id' => Auth::id(),
             'user_role' => Auth::user()->role ?? null,
             'request' => $request->all(),
@@ -535,7 +535,7 @@ class TokenController extends Controller
             $data['credit_tokens'] = ClearcreditToken::latest()->paginate('50');
 
             // Log all data before returning the view
-            Log::info('Clear credit token preview data', $data);
+            Logger::info('Clear credit token preview data', $data);
 
             return view('admin.token.clear-credit-preview', $data);
 
@@ -598,7 +598,7 @@ class TokenController extends Controller
             $data['preview'] = "clear_credit";
 
             // Log all data before returning the view
-            Log::info('Clear credit token preview data', $data);
+            Logger::info('Clear credit token preview data', $data);
 
             return view('admin.token.clear-credit-preview', $data);
 
@@ -617,7 +617,7 @@ class TokenController extends Controller
     public function validate_meter(request $request)
     {
 
-        Log::info('validate_meter called', [
+        Logger::info('validate_meter called', [
             'user_id' => Auth::id(),
             'user_role' => Auth::user()->role ?? null,
             'request' => $request->all(),
@@ -725,7 +725,7 @@ class TokenController extends Controller
             $data['serviceFee'] = $percn;
 
             // Log all data before returning the view
-            Log::info('Credit token preview data', $data);
+            Logger::info('Credit token preview data', $data);
 
             return view('admin.token.credit-token-preview', $data);
 
@@ -859,7 +859,7 @@ class TokenController extends Controller
             $data['serviceFee'] = $percn;
 
             // Log all data before returning the view
-            Log::info('Credit token preview data', $data);
+            Logger::info('Credit token preview data', $data);
 
             return view('admin.token.credit-token-preview', $data);
 
@@ -878,7 +878,7 @@ class TokenController extends Controller
     public function validate_kct_meter(request $request)
     {
 
-            Log::info('validate_kct_meter called', [
+            Logger::info('validate_kct_meter called', [
             'user_id' => Auth::id(),
             'user_role' => Auth::user()->role ?? null,
             'request' => $request->all(),
@@ -982,7 +982,7 @@ class TokenController extends Controller
             $data['credit_tokens'] = KctToken::latest()->paginate('50');
 
             // Log all data before returning the view
-            Log::info('KCT token preview data', $data);
+            Logger::info('KCT token preview data', $data);
 
             return view('admin.token.kct-preview', $data);
 
@@ -1085,7 +1085,7 @@ class TokenController extends Controller
 
 
             // Log all data before returning the view
-            Log::info('KCT token preview data', $data);
+            Logger::info('KCT token preview data', $data);
 
             return view('admin.token.kct-preview', $data);
 
@@ -1103,7 +1103,7 @@ class TokenController extends Controller
 
     public function validate_tamper_meter(request $request)
     {
-        Log::info('validate_tamper_meter called', [
+        Logger::info('validate_tamper_meter called', [
             'user_id' => Auth::id(),
             'user_role' => Auth::user()->role ?? null,
             'request' => $request->all(),
@@ -1187,7 +1187,7 @@ class TokenController extends Controller
             $data['preview'] = "clear_tamper";
 
             // Log all data before returning the view
-            Log::info('tamper token preview data', $data);
+            Logger::info('tamper token preview data', $data);
 
             return view('admin.token.tamper-preview', $data);
 
@@ -1273,7 +1273,7 @@ class TokenController extends Controller
             $data['preview'] = "clear_tamper";
 
             // Log all data before returning the view
-            Log::info('tamper token preview data', $data);
+            Logger::info('tamper token preview data', $data);
 
             return view('admin.token.tamper-preview', $data);
 
@@ -1293,7 +1293,7 @@ class TokenController extends Controller
     //Generate
     public function generate_credit_meter_token(request $request)
     {
-        Log::info('generate_credit_meter_token called', [
+        Logger::info('generate_credit_meter_token called', [
             'request' => $request->all(),
         ]);
 
@@ -1332,7 +1332,7 @@ class TokenController extends Controller
         // $cdt->tariffPerKWatt = $request->tariffPerKWatt;
 
         // // Log before saving
-        // Log::info('CreditToken about to be saved', $cdt->attributesToArray());
+        // Logger::info('CreditToken about to be saved', $cdt->attributesToArray());
 
         // $cdt->save();
 
@@ -1468,7 +1468,7 @@ class TokenController extends Controller
                 'amount'    => (float)1.00, // USING UNITS HERE - with decimals
             ];
 
-            Log::info('Credit token data body', ['request body' => $databody]);
+            Logger::info('Credit token data body', ['request body' => $databody]);
 
             try {
                 // 4. Call Token Generation API
@@ -1540,7 +1540,7 @@ class TokenController extends Controller
                 $status = $payment_init['status'];
 
                 if (! $status) {
-                    Log::warning("Payment init by {$customer_email} Failed");
+                    Logger::warning("Payment init by {$customer_email} Failed");
                     return redirect('/admin/credit-token')->with(
                         'error',
                         $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option"
@@ -1594,8 +1594,8 @@ class TokenController extends Controller
                     ]);
 
                     // Log before saving
-                    Log::info('Transaction about to be saved', $trx->attributesToArray());
-                    Log::info('Transaction about to be saved', [
+                    Logger::info('Transaction about to be saved', $trx->attributesToArray());
+                    Logger::info('Transaction about to be saved', [
                     'user_id' => Auth::id(),
                     'user_id2' => Auth::user()->id,
                     ]);
@@ -1607,7 +1607,7 @@ class TokenController extends Controller
 
             } catch (Exception $e) {
                 //    return back()->with('error', $e);
-                Log::error('Paystack transaction error', ['exception' => $e]);
+                Logger::error('Paystack transaction error', ['exception' => $e]);
                 return redirect('/admin/credit-token')->with('error', $e->getMessage());
            }
 
@@ -1680,8 +1680,8 @@ class TokenController extends Controller
     {
 
          // 1. Log ALL input data to see exactly what the form submitted
-        Log::info("--- START TAMPER TOKEN GENERATION ---\n" . Carbon::now()->toIsoString() . "\n\n");
-        Log::info('Full Request Data:', $request->all());
+        Logger::info("--- START TAMPER TOKEN GENERATION ---\n" . Carbon::now()->toIsoString() . "\n\n");
+        Logger::info('Full Request Data:', $request->all());
 
 
         $est = Estate::where('id', $request->estate_name)->first();
@@ -1846,7 +1846,7 @@ class TokenController extends Controller
 
                 $payment = (new PaystackPaymentService())->makePayment($databody);
 
-                Log::info('Tamper Paystack Response', [
+                Logger::info('Tamper Paystack Response', [
                     'raw_response' => $payment,
                     'trx_id' => $trx_id,
                     'amount' => $request->amount,
@@ -1886,7 +1886,7 @@ class TokenController extends Controller
 
                 }
 
-                Log::error('Tamper Paystack Failed', [
+                Logger::error('Tamper Paystack Failed', [
                     'response' => $payment,
                     'message' => $payment['data']['code'] ?? 'Unknown error',
                 ]);
@@ -1983,8 +1983,8 @@ class TokenController extends Controller
                 // }
 
                     $tariff_index = $request->t_index;
-                    Log::info("Clear tamper Tariff index: $tariff_index");
-                    Log::info("Clear tamper SGC: $meter->NewSGC");
+                    Logger::info("Clear tamper Tariff index: $tariff_index");
+                    Logger::info("Clear tamper SGC: $meter->NewSGC");
 
                 $databody = [
                     'meterType' => $meter->KRN2,
@@ -1995,7 +1995,7 @@ class TokenController extends Controller
                     'amount' => 10, // Amount not needed for tamper tokens
                 ];
 
-                Log::info('Tamper Token data body', ['request body' => $databody]);
+                Logger::info('Tamper Token data body', ['request body' => $databody]);
 
                 $no_kct_response = Http::withOptions([
                     'verify' => false,
@@ -2009,7 +2009,7 @@ class TokenController extends Controller
                     $no_kct_data = json_decode($no_kct, true);
                     $status = $no_kct_data['code'] ?? null;
 
-                    Log::info('Clear tamper response Body:', $no_kct_data);
+                    Logger::info('Clear tamper response Body:', $no_kct_data);
 
 
                     if ($status == "SUCCESS") {
@@ -2100,8 +2100,8 @@ class TokenController extends Controller
                     return redirect('admin/tamper-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
                 }
 
-                    Log::info("Clear tamper Tariff index: $tariff_index");
-                    Log::info("Clear tamper SGC: $meter->NewSGC");
+                    Logger::info("Clear tamper Tariff index: $tariff_index");
+                    Logger::info("Clear tamper SGC: $meter->NewSGC");
 
                 $databody = [
                     'meterType' => $meter->KRN2,
@@ -2112,7 +2112,7 @@ class TokenController extends Controller
                     'amount' => 10, // Amount not needed for tamper tokens
                 ];
 
-                Log::info('Tamper Token data body', ['request body' => $databody]);
+                Logger::info('Tamper Token data body', ['request body' => $databody]);
 
                 $no_kct_response = Http::withOptions([
                     'verify' => false,
@@ -2126,7 +2126,7 @@ class TokenController extends Controller
                     $no_kct_data = json_decode($no_kct, true);
                     $status = $no_kct_data['code'] ?? null;
 
-                    Log::info('Clear tamper response Body:', $no_kct_data);
+                    Logger::info('Clear tamper response Body:', $no_kct_data);
 
 
                     if ($status == "SUCCESS") {
@@ -2185,7 +2185,7 @@ class TokenController extends Controller
 
     public function generate_kctclear_token(request $request)
     {
-        Log::info('generate_kctclear_token called', [
+        Logger::info('generate_kctclear_token called', [
             'request' => $request->all(),
         ]);
 
@@ -2276,7 +2276,7 @@ class TokenController extends Controller
             $tariff_type = $request->tariff_type ?? 'nepa';
             $isDualTariff = ($meter->isDualTariff === 'on' || $meter->isDualTariff === true || $meter->isDualTariff === 1);
 
-            Log::info("=== KCT Token Generation - Meter Details ===", [
+            Logger::info("=== KCT Token Generation - Meter Details ===", [
                 'MeterNo' => $request->meterNo,
                 'TariffType_Requested' => $tariff_type,
                 'isDualTariff' => $isDualTariff ? 'YES' : 'NO',
@@ -2295,7 +2295,7 @@ class TokenController extends Controller
                     $sgc = (int)$meter->OldSGCDual;
                     $tosgc = (int)$meter->NewSGCDual;
 
-                    Log::info("=== Using GENERATOR Tariff Indices ===", [
+                    Logger::info("=== Using GENERATOR Tariff Indices ===", [
                         'ti (tariff_index from OldTariffDualID)' => $ti,
                         'toti (tariff_index from NewTariffDualID)' => $toti,
                         'sgc (OldSGCDual)' => $sgc,
@@ -2308,7 +2308,7 @@ class TokenController extends Controller
                     $sgc = (int)$meter->OldSGC;
                     $tosgc = (int)$meter->NewSGC;
 
-                    Log::info("=== Using NEPA Tariff Indices ===", [
+                    Logger::info("=== Using NEPA Tariff Indices ===", [
                         'ti (tariff_index from OldTariffID)' => $ti,
                         'toti (tariff_index from NewTariffID)' => $toti,
                         'sgc (OldSGC)' => $sgc,
@@ -2336,7 +2336,7 @@ class TokenController extends Controller
                 'allowkrn' => true,
             ];
 
-            Log::info('KCT Data body (Bye-pass)', ['request body' => $kctdatabody]);
+            Logger::info('KCT Data body (Bye-pass)', ['request body' => $kctdatabody]);
 
             // 4. Generate KCT token
             $kct_response = Http::withOptions([
@@ -2349,7 +2349,7 @@ class TokenController extends Controller
                 $kct_data = json_decode($kct, true);
                 $status = $kct_data['code'] ?? null;
 
-                Log::info('KCT Response Body:', $kct_data);
+                Logger::info('KCT Response Body:', $kct_data);
 
 
                 if ($status == "SUCCESS") {
@@ -2753,7 +2753,7 @@ class TokenController extends Controller
 
     public function generate_clear_credit_meter_token(request $request)
     {
-        Log::info('generate_clear_credit_meter_token called', [
+        Logger::info('generate_clear_credit_meter_token called', [
             'request' => $request->all(),
         ]);
 
@@ -2795,8 +2795,8 @@ class TokenController extends Controller
                         return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
                     }
 
-                    Log::info("Clear credit Tariff index: $tariff_index");
-                    Log::info("Clear credit SGC: $meter->NewSGC");
+                    Logger::info("Clear credit Tariff index: $tariff_index");
+                    Logger::info("Clear credit SGC: $meter->NewSGC");
 
                     $databody = [
                         'meterType' => $meter->KRN2,
@@ -2807,7 +2807,7 @@ class TokenController extends Controller
                         'amount' => 10, // Amount not needed for clear credit tokens
                     ];
 
-                    Log::info('Clear Credit Token data body (Bye-pass)', ['request body' => $databody]);
+                    Logger::info('Clear Credit Token data body (Bye-pass)', ['request body' => $databody]);
 
                     $no_kct_response = Http::withOptions([
                         'verify' => false,
@@ -3017,8 +3017,8 @@ class TokenController extends Controller
                         return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
                     }
 
-                    Log::info("Clear credit Tariff index: $tariff_index");
-                    Log::info("Clear credit SGC: $meter->NewSGC");
+                    Logger::info("Clear credit Tariff index: $tariff_index");
+                    Logger::info("Clear credit SGC: $meter->NewSGC");
 
                     $databody = [
                         'meterType' => $meter->KRN2,
@@ -3029,7 +3029,7 @@ class TokenController extends Controller
                         'amount' => 10, // Amount not needed for clear credit tokens
                     ];
 
-                    Log::info('Clear Credit Token data body (Bye-pass)', ['request body' => $databody]);
+                    Logger::info('Clear Credit Token data body (Bye-pass)', ['request body' => $databody]);
 
                     $no_kct_response = Http::withOptions([
                         'verify' => false,
@@ -3146,7 +3146,7 @@ class TokenController extends Controller
                 $status = $payment_init['status'];
 
                 if (!$status) {
-                    Log::warning("Payment init by {$email} Failed for clear credit token");
+                    Logger::warning("Payment init by {$email} Failed for clear credit token");
                     return redirect('/admin/clear-credit-token')->with(
                         'error',
                         $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option"
@@ -3220,7 +3220,7 @@ class TokenController extends Controller
                 }
 
             } catch (Exception $e) {
-                Log::error('Paystack clear credit token transaction error', ['exception' => $e]);
+                Logger::error('Paystack clear credit token transaction error', ['exception' => $e]);
                 return redirect('/admin/clear-credit-token')->with('error', $e->getMessage());
             }
 
@@ -3295,7 +3295,7 @@ class TokenController extends Controller
         try
             {
 
-                Log::info('generate_compensation_meter_token called', [
+                Logger::info('generate_compensation_meter_token called', [
                     'request' => $request->all(),
                 ]);
 
@@ -3314,7 +3314,7 @@ class TokenController extends Controller
                 $cdt->costOfUnit = $request->costOfUnit;
                 $cdt->tariffPerKWatt = $request->tariffPerKWatt;
                 // Log before saving
-                Log::info('CompensationToken about to be saved', $cdt->attributesToArray());
+                Logger::info('CompensationToken about to be saved', $cdt->attributesToArray());
 
                 $cdt->save();
 
@@ -3340,7 +3340,7 @@ class TokenController extends Controller
                     'ti' => $tariff_index,
                     'amount' => (int)$request->amount,
                 ];
-                Log::info('CompensationToken data body', ['request body' => $databody]);
+                Logger::info('CompensationToken data body', ['request body' => $databody]);
 
 
                 $response = Http::withOptions([
@@ -3355,7 +3355,7 @@ class TokenController extends Controller
                     $get_token = $response->json();
                     $token_data = json_decode($get_token, true);
 
-                    Log::info('CompensationToken response', ['response' => $token_data]);
+                    Logger::info('CompensationToken response', ['response' => $token_data]);
 
                     $status = $token_data['code'] ?? null;
 
@@ -3381,7 +3381,7 @@ class TokenController extends Controller
                         $trx->unit_amount = $request->costOfUnit;
 
                         // Log before saving
-                        Log::info('Transaction to be saved', $trx->attributesToArray());
+                        Logger::info('Transaction to be saved', $trx->attributesToArray());
 
                         $trx->save();
 
@@ -3403,7 +3403,7 @@ class TokenController extends Controller
                         $trx->amount = $request->amount;
                         $trx->unit_amount = $request->costOfUnit;
                         // Log before saving
-                        Log::info('Transaction to be saved', $trx->attributesToArray());
+                        Logger::info('Transaction to be saved', $trx->attributesToArray());
                         $trx->save();
 
                         Transaction::where('trx_id', $trx->trx_id)->update([
@@ -3431,7 +3431,7 @@ class TokenController extends Controller
             }
         catch (Exception $e) {
             //    return back()->with('error', $e);
-                Log::error('Paystack validation error', ['exception' => $e]);
+                Logger::error('Paystack validation error', ['exception' => $e]);
                 return back()->with('error', $e->getMessage());
                 // return redirect('/admin/credit-token')->with('error', $e->getMessage());
             }
@@ -3446,7 +3446,7 @@ class TokenController extends Controller
         try {
 
 
-        Log::info('paystack_verify_web called', [
+        Logger::info('paystack_verify_web called', [
             'request' => $request->all(),
         ]);
 
@@ -3475,7 +3475,7 @@ class TokenController extends Controller
         $var = json_decode($var);
 
          // Log the decoded object as JSON for readability
-        Log::info('Paystack verify response', ['response' => $var]);
+        Logger::info('Paystack verify response', ['response' => $var]);
 
         $status1 = $var->status ?? null;
         $status = $var->data->status ?? null;
@@ -3536,7 +3536,7 @@ class TokenController extends Controller
                     'amount' => (float)$trx->unitkwh,
                 ];
 
-                 Log::info('Credit token data body', ['request body' => $databody]);
+                 Logger::info('Credit token data body', ['request body' => $databody]);
 
                 $no_kct_response = Http::withOptions([
                     'verify' => false,
@@ -3549,7 +3549,7 @@ class TokenController extends Controller
                     $no_kct = $no_kct_response->json();
                     $no_kct_data = json_decode($no_kct, true);
 
-                    Log::info('Credit token response', ['response' => $no_kct_data]);
+                    Logger::info('Credit token response', ['response' => $no_kct_data]);
 
                     $status = $no_kct_data['code'] ?? null;
 
@@ -3647,7 +3647,7 @@ class TokenController extends Controller
                     'amount' => (float)$trx->unitkwh,
                 ];
 
-                Log::info('Credit token data body', ['request body' => $databody]);
+                Logger::info('Credit token data body', ['request body' => $databody]);
 
                 $no_kct_response = Http::withOptions([
                     'verify' => false,
@@ -3659,7 +3659,7 @@ class TokenController extends Controller
                     $no_kct = $no_kct_response->json();
                     $no_kct_data = json_decode($no_kct, true);
 
-                    Log::info('Credit token response', ['response' => $no_kct_data]);
+                    Logger::info('Credit token response', ['response' => $no_kct_data]);
 
                     $status = $no_kct_data['code'] ?? null;
 
@@ -3720,7 +3720,7 @@ class TokenController extends Controller
         }
            } catch (Exception $e) {
             //    return back()->with('error', $e);
-                Log::error('Paystack validation error', ['exception' => $e]);
+                Logger::error('Paystack validation error', ['exception' => $e]);
                 return redirect('/admin/credit-token')->with('error', $e->getMessage());
            }
 
@@ -3731,7 +3731,7 @@ class TokenController extends Controller
         $access_point = $request->header('Access-Point') ?? 'web';
 
         try {
-            Log::info('retry_generate_credit_token called', [
+            Logger::info('retry_generate_credit_token called', [
                 'request' => $request->all(),
             ]);
 
@@ -3747,7 +3747,7 @@ class TokenController extends Controller
 
                     // Use PaystackPaymentService for transaction verification
                     $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($transactionId);
-                    Log::info('Paystack verify response', ['response' => $verify_result]);
+                    Logger::info('Paystack verify response', ['response' => $verify_result]);
 
                     if (!$verify_result['status']) {
                         return back()->with('error', $verify_result['message'] ?? 'Transaction verification failed');
@@ -3813,7 +3813,7 @@ class TokenController extends Controller
                     //             'amount' => (float)$trx->unitkwh,
                     //         ];
 
-                    //         Log::info('Credit token data body', ['request body' => $databody]);
+                    //         Logger::info('Credit token data body', ['request body' => $databody]);
 
                     //         $url = "http://169.239.189.91:19071/tokenGen";
 
@@ -3827,7 +3827,7 @@ class TokenController extends Controller
                     //         if ($no_kct_response->successful()) {
                     //             $no_kct = $no_kct_response->json();
                     //             $no_kct_data = json_decode($no_kct, true);
-                    //             Log::info('Credit token response', ['response' => $no_kct_data]);
+                    //             Logger::info('Credit token response', ['response' => $no_kct_data]);
                     //             $status1 = $no_kct_data['code'] ?? null;
 
 
@@ -3911,7 +3911,7 @@ class TokenController extends Controller
                     //             'amount' => $trx->costOfUnit,
                     //         ];
 
-                    //         Log::info('Credit token data body', ['request body' => $databody]);
+                    //         Logger::info('Credit token data body', ['request body' => $databody]);
 
                     //         $no_kct_response = Http::withOptions([
                     //             'verify' => false,
@@ -3922,7 +3922,7 @@ class TokenController extends Controller
                     //         if ($no_kct_response->successful()) {
                     //             $no_kct = $no_kct_response->json();
                     //             $no_kct_data = json_decode($no_kct, true);
-                    //             Log::info('Credit token response', ['response' => $no_kct_data]);
+                    //             Logger::info('Credit token response', ['response' => $no_kct_data]);
                     //             $status1 = $no_kct_data['code'] ?? null;
 
                     //             if ($status1 === "SUCCESS") {
@@ -4006,7 +4006,7 @@ class TokenController extends Controller
 
         } catch (Exception $e) {
         //    return back()->with('error', $e);
-            Log::error('retry_generate_credit_token error: ', ['exception' => $e]);
+            Logger::error('retry_generate_credit_token error: ', ['exception' => $e]);
 
 
             if ($access_point === 'mobile') {
@@ -4026,7 +4026,7 @@ class TokenController extends Controller
     public function retry_generate_tamper_token(Request $request)
     {
         try {
-            Log::info('retry_generate_tamper_token called', [
+            Logger::info('retry_generate_tamper_token called', [
                 'request' => $request->all(),
             ]);
 
@@ -4038,7 +4038,7 @@ class TokenController extends Controller
 
                     // Use PaystackPaymentService for transaction verification
                     $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($transactionId);
-                    Log::info('Paystack verify response for tamper token', ['response' => $verify_result]);
+                    Logger::info('Paystack verify response for tamper token', ['response' => $verify_result]);
 
                     if (!$verify_result['status']) {
                         return back()->with('error', $verify_result['message'] ?? 'Transaction verification failed');
@@ -4072,7 +4072,7 @@ class TokenController extends Controller
             return back()->with('error', 'Transaction Not Found');
 
         } catch (Exception $e) {
-            Log::error('retry_generate_tamper_token error: ', ['exception' => $e]);
+            Logger::error('retry_generate_tamper_token error: ', ['exception' => $e]);
             return back()->with('error', $e->getMessage());
         }
     }
@@ -4086,7 +4086,7 @@ class TokenController extends Controller
     public function retry_generate_kct_token(Request $request)
     {
         try {
-            Log::info('retry_generate_kct_token called', [
+            Logger::info('retry_generate_kct_token called', [
                 'request' => $request->all(),
             ]);
 
@@ -4098,7 +4098,7 @@ class TokenController extends Controller
 
                     // Use PaystackPaymentService for transaction verification
                     $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($transactionId);
-                    Log::info('Paystack verify response for KCT token', ['response' => $verify_result]);
+                    Logger::info('Paystack verify response for KCT token', ['response' => $verify_result]);
 
                     if (!$verify_result['status']) {
                         return back()->with('error', $verify_result['message'] ?? 'Transaction verification failed');
@@ -4134,7 +4134,7 @@ class TokenController extends Controller
             return back()->with('error', 'Transaction Not Found');
 
         } catch (Exception $e) {
-            Log::error('retry_generate_kct_token error: ', ['exception' => $e]);
+            Logger::error('retry_generate_kct_token error: ', ['exception' => $e]);
             return back()->with('error', $e->getMessage());
         }
     }
@@ -4148,7 +4148,7 @@ class TokenController extends Controller
     public function retry_generate_clear_credit_token(Request $request)
     {
         try {
-            Log::info('retry_generate_clear_credit_token called', [
+            Logger::info('retry_generate_clear_credit_token called', [
                 'request' => $request->all(),
             ]);
 
@@ -4160,7 +4160,7 @@ class TokenController extends Controller
 
                     // Use PaystackPaymentService for transaction verification
                     $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($transactionId);
-                    Log::info('Paystack verify response for clear credit token', ['response' => $verify_result]);
+                    Logger::info('Paystack verify response for clear credit token', ['response' => $verify_result]);
 
                     if (!$verify_result['status']) {
                         return back()->with('error', $verify_result['message'] ?? 'Transaction verification failed');
@@ -4193,14 +4193,14 @@ class TokenController extends Controller
             return back()->with('error', 'Transaction Not Found');
 
         } catch (Exception $e) {
-            Log::error('retry_generate_clear_credit_token error: ', ['exception' => $e]);
+            Logger::error('retry_generate_clear_credit_token error: ', ['exception' => $e]);
             return back()->with('error', $e->getMessage());
         }
     }
 
     public function paystack_verify_kct(request $request)
     {
-        Log::info('paystack_verify_kct called', [
+        Logger::info('paystack_verify_kct called', [
             'request' => $request->all(),
         ]);
 
@@ -4290,7 +4290,7 @@ class TokenController extends Controller
                 'allowkrn' => true,
             ];
 
-            Log::info('KCT Token data body', ['request body' => $kctdatabody]);
+            Logger::info('KCT Token data body', ['request body' => $kctdatabody]);
 
             $kct_response = Http::withOptions([
                 'verify' => false,
@@ -4349,7 +4349,7 @@ class TokenController extends Controller
         //             'ti' => $trx->tariff_id,
         //             'amount' => $trx->costOfUnit,
         //         ];
-        //         Log::info('Credit token data body', ['request body' => $databody]);
+        //         Logger::info('Credit token data body', ['request body' => $databody]);
 
         //         $no_kct_response = Http::withOptions([
         //             'verify' => false,
@@ -4422,7 +4422,7 @@ class TokenController extends Controller
 
     public function paystack_verify_web_tamper(request $request)
     {
-        Log::info('paystack_verify_web_tamper called', [
+        Logger::info('paystack_verify_web_tamper called', [
             'request' => $request->all(),
         ]);
 
@@ -4475,7 +4475,7 @@ class TokenController extends Controller
                     'amount' => 10,
                 ];
 
-                Log::info('Tamper token data body', ['request body' => $databody]);
+                Logger::info('Tamper token data body', ['request body' => $databody]);
 
 
                 $no_kct_response = Http::withOptions([
@@ -4568,7 +4568,7 @@ class TokenController extends Controller
                     'amount' => 10,
                 ];
 
-                Log::info('Tamper token data body', ['request body' => $databody]);
+                Logger::info('Tamper token data body', ['request body' => $databody]);
 
                 $no_kct_response = Http::withOptions([
                     'verify' => false,
@@ -4642,7 +4642,7 @@ class TokenController extends Controller
 
     public function paystack_clear_credit(request $request)
     {
-        Log::info('paystack_clear_credit called', [
+        Logger::info('paystack_clear_credit called', [
             'request' => $request->all(),
         ]);
 
@@ -4693,8 +4693,8 @@ class TokenController extends Controller
                     return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
                 }
 
-                Log::info("Paystack clear credit - Tariff index: $tariff_index");
-                Log::info("Paystack clear credit - SGC: " . $meter->NewSGC);
+                Logger::info("Paystack clear credit - Tariff index: $tariff_index");
+                Logger::info("Paystack clear credit - SGC: " . $meter->NewSGC);
 
                 $databody = [
                     'meterType' => $meter->KRN2, // UPDATED: Use KRN2 for clear credit
@@ -4705,7 +4705,7 @@ class TokenController extends Controller
                     'amount' => 10, // UPDATED: Amount not needed for clear credit tokens
                 ];
 
-                Log::info('Clear credit token data body', ['request body' => $databody]);
+                Logger::info('Clear credit token data body', ['request body' => $databody]);
 
                 $no_kct_response = Http::withOptions([
                     'verify' => false,
@@ -5300,8 +5300,8 @@ class TokenController extends Controller
                     Transaction::where('trx_id', $ref)->update(['status' => 3]);
                     return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
                 }
-                Log::info("Flutterwave clear credit - Tariff index: $tariff_index");
-                Log::info("Flutterwave clear credit - SGC: " . $meter->NewSGC);
+                Logger::info("Flutterwave clear credit - Tariff index: $tariff_index");
+                Logger::info("Flutterwave clear credit - SGC: " . $meter->NewSGC);
 
                 $databody = [
                     'meterType' => $meter->KRN2,
@@ -5535,7 +5535,7 @@ class TokenController extends Controller
 
     public function payment(Request $request)
     {
-        Log::info('payment', [
+        Logger::info('payment', [
             'request' => $request->all(),
         ]);
 
@@ -5588,7 +5588,7 @@ class TokenController extends Controller
 
     // dd($request->all());
         try {
-            Log::info('recepit', [
+            Logger::info('recepit', [
                 'request' => $request->all(),
             ]);
 

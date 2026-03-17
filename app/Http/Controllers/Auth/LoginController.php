@@ -13,7 +13,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Meter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 use Laravel\Passport\Passport;
 use App\Models\OauthAccessToken;
 use App\Http\Controllers\Controller;
@@ -775,7 +775,7 @@ class LoginController extends Controller
             $user['monthly_admin_fee'] = $admin_fee;
             $user['meter_status'] = $meter->status;
 
-            Log::info('LOGIN DEBUG START', [
+            Logger::info('LOGIN DEBUG START', [
 
                 // Core identity
                 'meterNo' => $request->meterNo ?? null,
@@ -806,7 +806,7 @@ class LoginController extends Controller
                 'user_object' => $user ? 'exists' : 'null',
             ]);
 
-            Log::info('LOGIN DEBUG END');
+            Logger::info('LOGIN DEBUG END');
 
 
             return response()->json([
@@ -1063,7 +1063,7 @@ class LoginController extends Controller
             $user['tariff'] = $tariffs;
             $user['monthly_admin_fee'] = $admin_fee;
 
-             Log::info('LOGIN DEBUG START', [
+             Logger::info('LOGIN DEBUG START', [
 
                 // Core identity
                 'meterNo' => $request->meterNo ?? null,
@@ -1093,7 +1093,7 @@ class LoginController extends Controller
                 'user_object' => $user ? 'exists' : 'null',
             ]);
 
-            Log::info('LOGIN DEBUG END');
+            Logger::info('LOGIN DEBUG END');
 
 
             return response()->json([

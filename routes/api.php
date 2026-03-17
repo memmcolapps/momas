@@ -162,3 +162,13 @@ Route::get('check-app-version', [NotificationController::class, 'checkAppVersion
 
 
 
+
+
+// Log APIs
+Route::get('/logs', [App\Http\Controllers\LogController::class, 'getAllLogs']);
+Route::get('/logs/query', [App\Http\Controllers\LogController::class, 'queryLogs']);
+Route::get('/logs/stats', [App\Http\Controllers\LogController::class, 'getStats']);
+Route::delete('/logs/clear', [App\Http\Controllers\LogController::class, 'clearLogs']);
+Route::get('/logs/{id}', [App\Http\Controllers\LogController::class, 'getLog']);
+Route::delete('/logs/{id}', [App\Http\Controllers\LogController::class, 'deleteLog']);
+

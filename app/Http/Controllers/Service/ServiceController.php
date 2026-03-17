@@ -8,6 +8,7 @@ use App\Models\Estate;
 use App\Models\Rating;
 use App\Models\Comment;
 use App\Models\Service;
+use App\Models\Logger;
 use Illuminate\Http\Request;
 use App\Models\EstateService;
 use App\Services\StandardResponse;
@@ -48,6 +49,7 @@ class ServiceController extends Controller
                 'data' => $data
             ], 200);
         } catch (Exception $e) {
+            Logger::error('ServiceController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(code: 501, message: 'An Error Occurred', debug: [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
@@ -103,6 +105,7 @@ class ServiceController extends Controller
                 'artisans' => $artisans,
             ]);
         } catch (Exception $e) {
+            Logger::error('ServiceController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(code: 500, message: 'An Error Occurred', debug: [
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
@@ -167,6 +170,7 @@ class ServiceController extends Controller
                 'message' => "Comment successfully saved"
             ], 200);
         } catch (Exception $e) {
+            Logger::error('ServiceController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             DB::rollBack();
 
             return StandardResponse::error(code: 500, message: 'An Error Occurred', debug: [

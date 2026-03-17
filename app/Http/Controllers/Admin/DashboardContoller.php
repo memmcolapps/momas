@@ -23,7 +23,7 @@ use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 
 class DashboardContoller extends Controller
 {
@@ -51,11 +51,11 @@ class DashboardContoller extends Controller
         public function index()
     {
 
-        Log::info('Upadate of 2026-01-16 16:41:00');
-        Log::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
+        Logger::info('Upadate of 2026-01-16 16:41:00');
+        Logger::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
 
         if (Auth::user()->role == 0) {
-        Log::info('main-branch dummy Update of 2026-01-16 15:27:00');
+        Logger::info('main-branch dummy Update of 2026-01-16 15:27:00');
 
             $data['users'] = User::where('status', 2)->count();
             $data['meter'] = Meter::count();
@@ -758,7 +758,7 @@ class DashboardContoller extends Controller
             return view('admin/user/view', $data);
         } catch (Exception $e) {
             // dump('Booyah');
-            Log::error("Error Exception: {$e->getMessage()} on Line: {$e->getLine()} in File: {$e->getFile()}");
+            Logger::error("Error Exception: {$e->getMessage()} on Line: {$e->getLine()} in File: {$e->getFile()}");
             back()->with('error', $e->getMessage());
             // dump('Kasha');
         }

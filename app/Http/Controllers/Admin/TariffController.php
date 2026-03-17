@@ -458,7 +458,7 @@ class TariffController extends Controller
     public function update_tariffstate(request $request)
     {
         // Debug: Log all request data
-        \Log::info('Update tariff state request data:', $request->all());
+        Logger::info('Update tariff state request data:', $request->all());
 
         $ttf = TarrifState::find($request->id);
         if ($ttf) {
