@@ -14,6 +14,18 @@ class MeterToken extends Model
         'status' => 'integer'
     ];
 
+    protected $fillable = [
+        'trx_id',
+        'user_id',
+        'meterNo',
+        'token',
+        'kct_tokens',
+        'amount',
+        'vat',
+        'estate_id',
+        'status',
+    ];
+
     public function estate()
     {
         return $this->belongsTo(Estate::class);

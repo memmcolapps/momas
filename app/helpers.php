@@ -597,7 +597,7 @@ if (!function_exists('send_notification')) {
 if (! function_exists('generate_unique_string')) {
 
     function generate_unique_string($prefix = null) {
-        $prefix = $prefix ?? "TRX";
-        return $prefix . ' | ' . Str::uuid()->toString();
+        $number = str_pad(random_int(0, 999999999), 9, '0', STR_PAD_LEFT);
+        return $prefix . '-' . $number . '-' .explode('-', Str::uuid())[0];
     }
 }

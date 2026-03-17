@@ -19,6 +19,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utitlity;
+use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,7 +50,7 @@ class DashboardContoller extends Controller
 
         public function index()
     {
-          
+
         Log::info('Upadate of 2026-01-16 16:41:00');
         Log::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
 
@@ -209,16 +210,16 @@ class DashboardContoller extends Controller
     public function get_unassigned_meters(Request $request)
     {
         $estateId = $request->estate_id;
-        
+
         if (!$estateId) {
             return response()->json(['meters' => []]);
         }
-        
+
         $meters = Meter::where('estate_id', $estateId)
                        ->whereNull('user_id')
                        ->select('id', 'meterNo')
                        ->get();
-        
+
         return response()->json(['meters' => $meters]);
     }
 
@@ -239,7 +240,7 @@ class DashboardContoller extends Controller
         $existing_user = User::where('email', $request->email)
                         ->orWhere('phone', $request->phone)
                         ->first();
-        
+
         if (!$existing_user) {
 
 
@@ -282,7 +283,7 @@ class DashboardContoller extends Controller
                 $meter->save();
             }
 
-            
+
 
             // if ($request->meterNo !== null) {
             //     $m_id = Meter::where('meterNo', $request->meterNo)->first()->id;
@@ -687,70 +688,80 @@ class DashboardContoller extends Controller
 
     public function view_user(request $request)
     {
-        $data['user'] = User::where('id', $request->id)->first();
-        $data['estate'] = Estate::where('status', 2)->get();
-        $data['estate_name'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
-        $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
-        $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
-        $data['meters'] = Meter::all();
-        $data['tariff_count'] = Tariff::where('user_id', $request->id)->count();
-        $data['tariffs'] = Tariff::where('user_id', $request->id)->get();
-        $data['meter_no'] = Meter::where('user_id', $request->id)->first()->MeterNo ?? null;
-        $data['kcttokens'] = KctMeterToken::where('user_id', $request->id)->get();
-        $data['meter'] = Meter::where('user_id', $request->id)->first() ?? null;
-        $data['estate_title'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
-        $data['ptype'] = Estate::where('id', $data['user']->estate_id)->first()->ptype ?? null;
-        $data['tariff'] = Tariff::where('estate_id', $data['user']->estate_id)->where('user_id', null)->get();
-        $data['nepa_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->title ?? null;
-        $data['gen_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->title ?? null;
-        $data['tariff_index_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->tariff_index ?? null;
-        $data['tariff_index_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->tariff_index ?? null;
-        $data['tariff_count_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->count() ?? null;
-        $data['tariff_count_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->count() ?? null;
-        $data['tariff_id_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->id ?? null;
-        $data['tariff_id_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->id ?? null;
-        $data['percentage'] = SpreadPayment::where('user_id', $request->id)->first()->percentage ?? null;
-        $ck_meter = Meter::where('MeterNo', $data['user']->meterNo)->first() ?? null;
-        $ck_user_id = Meter::where('MeterNo', $data['user']->meterNo)->first()->user_id ?? null;
-        if ($ck_meter != null && $ck_user_id == null) {
-            Meter::where('MeterNo', $data['user']->meterNo)->update(['user_id' => $request->id]);
-        }
-        $data['meter_count'] = Meter::where('MeterNo', $data['user']->meterNo)->count();
-        $data['meterNo'] = Meter::where('MeterNo', $data['user']->meterNo)->first()->meterNo ?? null;
-        $user_info = User::where('id', $request->id)->first();
-        $estate_id = $user_info->estate_id ?? null;
-        if ($estate_id == null) {
-            return back()->with('error', 'Customer has not been assigned to any estate');
-        }
-        $title = Tariff::where('estate_id', $user_info->estate_id)->first()->title ?? null;
-        if ($title == null) {
-            return back()->with('error', 'Estate does not have any tariff');
-        }
-        if ($user_info->nepa_source != null) {
-            $t_id = Tariff::where('estate_id', $user_info->estate_id)
-                ->where([
-                    'tariff_index' => $user_info->tariffidnepa,
-                    'type' => "nepa",
-                ])->first()->id ?? null;
-            if ($t_id == null) {
-                return back()->with('error', "Tariff ID - $user_info->tariffidnepa | does not exist ");
+        // dump('Hello World');
+        try {
+            // dump('I am Innanantia');
+            $data['user'] = User::where('id', $request->id)->first();
+            $data['estate'] = Estate::where('status', 2)->get();
+            $data['estate_name'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
+            $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
+            $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
+            $data['meters'] = Meter::all();
+            $data['tariff_count'] = Tariff::where('user_id', $request->id)->count();
+            $data['tariffs'] = Tariff::where('user_id', $request->id)->get();
+            $data['meter_no'] = Meter::where('user_id', $request->id)->first()->MeterNo ?? null;
+            $data['kcttokens'] = KctMeterToken::where('user_id', $request->id)->get();
+            $data['meter'] = Meter::where('user_id', $request->id)->first() ?? null;
+            $data['estate_title'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
+            $data['ptype'] = Estate::where('id', $data['user']->estate_id)->first()->ptype ?? null;
+            $data['tariff'] = Tariff::where('estate_id', $data['user']->estate_id)->where('user_id', null)->get();
+            $data['nepa_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->title ?? null;
+            $data['gen_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->title ?? null;
+            $data['tariff_index_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->tariff_index ?? null;
+            $data['tariff_index_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->tariff_index ?? null;
+            $data['tariff_count_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->count() ?? null;
+            $data['tariff_count_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->count() ?? null;
+            $data['tariff_id_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->id ?? null;
+            $data['tariff_id_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->id ?? null;
+            $data['percentage'] = SpreadPayment::where('user_id', $request->id)->first()->percentage ?? null;
+            $ck_meter = Meter::where('MeterNo', $data['user']->meterNo)->first() ?? null;
+            $ck_user_id = Meter::where('MeterNo', $data['user']->meterNo)->first()->user_id ?? null;
+            if ($ck_meter != null && $ck_user_id == null) {
+                Meter::where('MeterNo', $data['user']->meterNo)->update(['user_id' => $request->id]);
             }
-            $t_amount = TarrifState::where('tariff_id', $t_id)->first()->amount;
-            User::where('id', $user_info->id)->update(['nepa_source_amount' => $t_amount]);
-        }
-        if ($user_info->gen_source != null) {
-            $t_id = Tariff::where('estate_id', $user_info->estate_id)
-                ->where([
-                    'tariff_index' => $user_info->tariffidgen,
-                    'type' => "gen",
-                ])->first()->id ?? null;
-            if ($t_id == null) {
-                return back()->with('error', "Tariff ID - $user_info->tariffidgen | does not exist ");
+            $data['meter_count'] = Meter::where('MeterNo', $data['user']->meterNo)->count();
+            $data['meterNo'] = Meter::where('MeterNo', $data['user']->meterNo)->first()->meterNo ?? null;
+            $user_info = User::where('id', $request->id)->first();
+            $estate_id = $user_info->estate_id ?? null;
+            if ($estate_id == null) {
+                return back()->with('error', 'Customer has not been assigned to any estate');
             }
-            $t_amount = TarrifState::where('tariff_id', $t_id)->first()->amount;
-            User::where('id', $user_info->id)->update(['gen_source_amount' => $t_amount]);
+            $title = Tariff::where('estate_id', $user_info->estate_id)->first()->title ?? null;
+            if ($title == null) {
+                return back()->with('error', 'Estate does not have any tariff');
+            }
+            if ($user_info->nepa_source != null) {
+                $t_id = Tariff::where('estate_id', $user_info->estate_id)
+                    ->where([
+                        'tariff_index' => $user_info->tariffidnepa,
+                        'type' => "nepa",
+                    ])->first()->id ?? null;
+                if ($t_id == null) {
+                    return back()->with('error', "Tariff ID - $user_info->tariffidnepa | does not exist ");
+                }
+                $t_amount = TarrifState::where('tariff_id', $t_id)->first()->amount;
+                User::where('id', $user_info->id)->update(['nepa_source_amount' => $t_amount]);
+            }
+            if ($user_info->gen_source != null) {
+                $t_id = Tariff::where('estate_id', $user_info->estate_id)
+                    ->where([
+                        'tariff_index' => $user_info->tariffidgen,
+                        'type' => "gen",
+                    ])->first()->id ?? null;
+                if ($t_id == null) {
+                    return back()->with('error', "Tariff ID - $user_info->tariffidgen | does not exist ");
+                }
+                $t_amount = TarrifState::where('tariff_id', $t_id)->first()->amount;
+                User::where('id', $user_info->id)->update(['gen_source_amount' => $t_amount]);
+            }
+            // dump('Finn');
+            return view('admin/user/view', $data);
+        } catch (Exception $e) {
+            // dump('Booyah');
+            Log::error("Error Exception: {$e->getMessage()} on Line: {$e->getLine()} in File: {$e->getFile()}");
+            back()->with('error', $e->getMessage());
+            // dump('Kasha');
         }
-        return view('admin/user/view', $data);
     }
 
 
@@ -1044,7 +1055,7 @@ class DashboardContoller extends Controller
     {
         $query = $request->input('q');
         $estateId = $request->input('estate_id');
-        
+
         if (strlen($query) < 2) {
             return response()->json(['meters' => []]);
         }
@@ -1063,7 +1074,7 @@ class DashboardContoller extends Controller
                        ->select('id', 'meterNo', 'AccountNo')
                        ->limit(10) // Limit results for performance
                        ->get();
-                   
+
         return response()->json([
             'meters' => $meters
         ]);

@@ -138,7 +138,7 @@
 
                                         <div class="col-xl-6 col-sm-12" >
                                             @if($preview == "kct_token")
-                                                <form action="/admin/generate-kctclear-token" method="POST"
+                                                <form action="generate-kctclear-token" method="POST"
                                                       enctype="multipart/form-data">
                                                     @csrf
 
@@ -152,16 +152,19 @@
                                                         <div class="row">
                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                 <label class="my-2">Estate</label>
+                                                                <input required  name="estate_id" value="{{$estate->title}}" hidden="">
                                                                 <h6>{{$estate->title}}</h6>
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                 <label class="my-2">Customer</label>
+                                                                <input required name="user_id" value="{{$user->id}}" hidden="">
                                                                 <h6>{{$user->first_name}} {{$user->last_name}}</h6>
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                 <label class="my-2">Meter No</label>
+                                                                <input required name="meterNo" value="{{$meter->meterNo}}" hidden="">
                                                                 <h6>{{$meter->meterNo}}</h6>
                                                             </div>
 
@@ -170,13 +173,43 @@
 
 
                                                         @if($amount > 0)
+                                                            <div class="row">
+
+                                                                <div class="col-xl-4 my-2 col-sm-12">
+                                                                    <!-- <label class="my-2">Unit</label> -->
+                                                                    @php
+                                                                        $unnit = $costOfUnit / $tarrif_amount;
+                                                                    @endphp
+                                                                    <input required name="unit" value="{{number_format($unnit,2)}}" hidden="">
+                                                                    <!-- <h6>{{number_format($unnit, 2)}}kw/h</h6> -->
+                                                                </div>
+
+                                                                <div class="col-xl-4 my-2 col-sm-12">
+                                                                    <!-- <label class="my-2">Vat Amount</label> -->
+                                                                    <input required name="vatAmount" value="{{number_format($vatAmount,2)}}" hidden="">
+                                                                    <!-- <h6>{{number_format($vatAmount, 2)}}</h6> -->
+                                                                </div>
+
+                                                                <div class="col-xl-4 my-2 col-sm-12">
+                                                                    <!-- <label class="my-2">Cost Of Unit</label> -->
+                                                                    <input required name="costOfUnit" value="{{number_format($costOfUnit,2)}}" hidden="">
+                                                                    <!-- <h6>{{number_format($costOfUnit, 2)}}</h6> -->
+                                                                </div>
+
+                                                                <input required name="vat" value="{{$vat}}" hidden="">
+                                                                <input required name="estate_id" value="{{$estate_id}}" hidden="">
+                                                                <input required name="estate_name" value="{{$estate_name}}" hidden="">
+                                                                <input required name="amount" value="{{$amount}}" hidden="">
+                                                                <input required name="tariff_amount" value="{{$tarrif_amount}}" hidden="">
+                                                                <input required name="tariff_type" value="{{$tariff_type ?? 'nepa'}}" hidden="">
+
+
+
+
+                                                            </div>
+
                                                             <hr>
 
-                                                            {{-- Required hidden fields --}}
-                                                            <input type="hidden" name="user_id" value="{{$user->id}}">
-                                                            <input type="hidden" name="meterNo" value="{{$meter->meterNo}}">
-                                                            <input type="hidden" name="estate_name" value="{{$estate_id}}">
-                                                            <input type="hidden" name="amount" value="{{$amount}}">
 
                                                             <div class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
                                                                 <select  class="form-control" required name="pay_type" >
@@ -324,9 +357,8 @@
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
-                                                {{-- <th scope="col" class="cursor-pointer">KCT Token 1</th>
-                                                <th scope="col" class="cursor-pointer desc">KCT Token 2</th> --}}
-                                                <th scope="col" class="cursor-pointer desc">NeedKCT</th>
+                                                <th scope="col" class="cursor-pointer">KCT Token 1</th>
+                                                <th scope="col" class="cursor-pointer desc">KCT Token 2</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
@@ -344,9 +376,8 @@
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
-                                                    {{-- <td>{{$data->kct_token1 ?? "N/A"}}</td>
-                                                    <td>{{$data->kct_token2 ?? "N/A"}}</td> --}}
-                                                    <td>{{$data->need_kct ?? "N/A"}}</td>
+                                                    <td>{{$data->kct_token1 ?? "N/A"}}</td>
+                                                    <td>{{$data->kct_token2 ?? "N/A"}}</td>
                                                     <td>
                                                         @if($data->status == 2)
                                                             <span class="badge text-bg-primary">Successful</span>
@@ -372,7 +403,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-kct-token?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
+                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
                                                             <script>
 
                                                                 function confirmgenertetoken() {
@@ -571,16 +602,19 @@
                                                         <div class="row">
                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                 <label class="my-2">Estate</label>
+                                                                <input required  name="estate_id" value="{{$estate->title}}" hidden="">
                                                                 <h6>{{$estate->title}}</h6>
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                 <label class="my-2">Customer</label>
+                                                                <input required name="user_id" value="{{$user->id}}" hidden="">
                                                                 <h6>{{$user->first_name}} {{$user->last_name}}</h6>
                                                             </div>
 
                                                             <div class="col-xl-4 my-2 col-sm-12">
                                                                 <label class="my-2">Meter No</label>
+                                                                <input required name="meterNo" value="{{$meter->meterNo}}" hidden="">
                                                                 <h6>{{$meter->meterNo}}</h6>
                                                             </div>
 
@@ -589,13 +623,43 @@
 
 
                                                         @if($amount > 0)
+                                                            <div class="row">
+
+                                                                <div class="col-xl-4 my-2 col-sm-12">
+                                                                    <!-- <label class="my-2">Unit</label> -->
+                                                                    @php
+                                                                        $unnit = $costOfUnit / $tarrif_amount;
+                                                                    @endphp
+                                                                    <input required name="unit" value="{{number_format($unnit,2)}}" hidden="">
+                                                                    <!-- <h6>{{number_format($unnit, 2)}}kw/h</h6> -->
+                                                                </div>
+
+                                                                <div class="col-xl-4 my-2 col-sm-12">
+                                                                    <!-- <label class="my-2">Vat Amount</label> -->
+                                                                    <input required name="vatAmount" value="{{number_format($vatAmount,2)}}" hidden="">
+                                                                    <!-- <h6>{{number_format($vatAmount, 2)}}</h6> -->
+                                                                </div>
+
+                                                                <div class="col-xl-4 my-2 col-sm-12">
+                                                                    <!-- <label class="my-2">Cost Of Unit</label> -->
+                                                                    <input required name="costOfUnit" value="{{number_format($costOfUnit,2)}}" hidden="">
+                                                                    <!-- <h6>{{number_format($costOfUnit, 2)}}</h6> -->
+                                                                </div>
+
+                                                                <input required name="vat" value="{{$vat}}" hidden="">
+                                                                <input required name="estate_id" value="{{$estate_id}}" hidden="">
+                                                                <input required name="estate_name" value="{{$estate_name}}" hidden="">
+                                                                <input required name="amount" value="{{$amount}}" hidden="">
+                                                                <input required name="tariff_amount" value="{{$tarrif_amount}}" hidden="">
+                                                                <input required name="tariff_type" value="{{$tariff_type ?? 'nepa'}}" hidden="">
+
+
+
+
+                                                            </div>
+
                                                             <hr>
 
-                                                            {{-- Required hidden fields --}}
-                                                            <input type="hidden" name="user_id" value="{{$user->id}}">
-                                                            <input type="hidden" name="meterNo" value="{{$meter->meterNo}}">
-                                                            <input type="hidden" name="estate_name" value="{{$estate_id}}">
-                                                            <input type="hidden" name="amount" value="{{$amount}}">
 
                                                             <div class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
                                                                 <select  class="form-control" required name="pay_type" >
@@ -748,9 +812,8 @@
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
-                                                {{-- <th scope="col" class="cursor-pointer">KCT Token 1</th>
-                                                <th scope="col" class="cursor-pointer desc">KCT Token 2</th> --}}
-                                                <th scope="col" class="cursor-pointer desc">NeedKCT</th>
+                                                <th scope="col" class="cursor-pointer">KCT Token 1</th>
+                                                <th scope="col" class="cursor-pointer desc">KCT Token 2</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
@@ -768,9 +831,8 @@
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
-                                                    {{-- <td>{{$data->kct_token1 ?? "N/A"}}</td>
-                                                    <td>{{$data->kct_token2 ?? "N/A"}}</td> --}}
-                                                    <td>{{$data->need_kct ?? "N/A"}}</td>
+                                                    <td>{{$data->kct_token1 ?? "N/A"}}</td>
+                                                    <td>{{$data->kct_token2 ?? "N/A"}}</td>
                                                     <td>
                                                         @if($data->status == 2)
                                                             <span class="badge text-bg-primary">Successful</span>
@@ -796,7 +858,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-kct-token?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
+                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}&type=kct_token"  onclick="return confirmgenertetoken();" class="btn btn-secondary">Generate Token</a>
                                                             <script>
 
                                                                 function confirmgenertetoken() {

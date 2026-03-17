@@ -773,12 +773,14 @@ class LoginController extends Controller
             $user['meter'] = $meter;
             $user['tariff'] = $tariffs;
             $user['monthly_admin_fee'] = $admin_fee;
+            $user['meter_status'] = $meter->status;
 
             Log::info('LOGIN DEBUG START', [
 
                 // Core identity
                 'meterNo' => $request->meterNo ?? null,
                 'user_status' => $status ?? null,
+                'meter_status' => $meter->status,
 
                 // Tariffs
                 'tariffs_exist' => isset($tariffs) && $tariffs->count() > 0 ? 'exists' : 'null',
@@ -1135,11 +1137,11 @@ class LoginController extends Controller
     public function get_user(request $request)
     {
 
-        $fl = Setting::where('id', 1)->first();
-        $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
-        $flkey['flutterwave_public'] = $fl->flutterwave_public;
-        $pkkey['paystack_secret'] = $fl->paystack_secret;
-        $pkkey['paystack_public'] = $fl->paystack_public;
+        // $fl = Setting::where('id', 1)->first();
+        // $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
+        // $flkey['flutterwave_public'] = $fl->flutterwave_public;
+        // $pkkey['paystack_secret'] = $fl->paystack_secret;
+        // $pkkey['paystack_public'] = $fl->paystack_public;
 
         $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
             ->where('type', 'admin_fee')
@@ -1160,9 +1162,10 @@ class LoginController extends Controller
         $meter = meter();
         $user = user();
         $user['token'] = $token;
+        $user['meter_status'] = $meter->status;
         $user['meter'] = $meter;
-        $user['flutterwave_keys'] =  $flkey;
-        $user['paystack_keys'] =  $pkkey;
+        // $user['flutterwave_keys'] =  $flkey;
+        // $user['paystack_keys'] =  $pkkey;
         $user['monthly_admin_fee'] = $admin_fee;
 
 

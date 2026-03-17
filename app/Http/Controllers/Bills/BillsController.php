@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Bills;
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class BillsController extends Controller
 {
@@ -45,6 +47,10 @@ class BillsController extends Controller
         curl_close($curl);
         $var = json_decode($var);
         $status = $var->status ?? null;
+
+        Log::info("Airtime purchase triggered by " . Carbon::now()->toIsoString(), [
+            'data' => $var
+        ]);
 
 
 

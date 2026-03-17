@@ -420,8 +420,9 @@
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
-                                                <th scope="col" class="cursor-pointer">KCT1</th>
-                                                <th scope="col" class="cursor-pointer">KCT2</th>
+                                                {{-- <th scope="col" class="cursor-pointer">KCT1</th>
+                                                <th scope="col" class="cursor-pointer">KCT2</th> --}}
+                                                <th scope="col" class="cursor-pointer desc">NeedKCT</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
@@ -457,8 +458,9 @@
 
                                                     </td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
-                                                    <td>{{$data->kct_token1}}</td>
-                                                    <td>{{$data->kct_token2}}</td>
+                                                    {{-- <td>{{$data->kct_token1}}</td>
+                                                    <td>{{$data->kct_token2}}</td> --}}
+                                                    <td>{{$data->need_kct ?? "N/A"}}</td>
                                                     <td>
                                                         @if($data->status == 2)
                                                             <span class="badge text-bg-primary">Successful</span>
@@ -474,7 +476,7 @@
 
                                                     <td>
                                                         @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}"
+                                                            <a href="recepit?trx_id={{$data->trx_id}}&type=kct_token"
                                                                onclick="return confirmreprint();"
                                                                class="btn btn-primary">Reprint</a>
                                                             <script>
@@ -486,7 +488,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}"
+                                                            <a href="retry-generate-kct-token?trx_id={{$data->trx_id}}"
                                                                onclick="return confirmgenertetoken();"
                                                                class="btn btn-secondary">Generate Token</a>
                                                             <script>
@@ -947,8 +949,9 @@
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
-                                                <th scope="col" class="cursor-pointer">KCT1</th>
-                                                <th scope="col" class="cursor-pointer">KCT2</th>
+                                                {{-- <th scope="col" class="cursor-pointer">KCT1</th>
+                                                <th scope="col" class="cursor-pointer">KCT2</th> --}}
+                                                <th scope="col" class="cursor-pointer desc">NeedKCT</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
@@ -984,8 +987,9 @@
 
                                                     </td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
-                                                    <td>{{$data->kct_token1}}</td>
-                                                    <td>{{$data->kct_token2}}</td>
+                                                    {{-- <td>{{$data->kct_token1}}</td>
+                                                    <td>{{$data->kct_token2}}</td> --}}
+                                                    <td>{{$data->need_kct ?? "N/A"}}</td>
                                                     <td>
                                                         @if($data->status == 2)
                                                             <span class="badge text-bg-primary">Successful</span>
@@ -1001,7 +1005,7 @@
 
                                                     <td>
                                                         @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}"
+                                                            <a href="recepit?trx_id={{$data->trx_id}}&typekct_token"
                                                                onclick="return confirmreprint();"
                                                                class="btn btn-primary">Reprint</a>
                                                             <script>
@@ -1013,7 +1017,7 @@
 
                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}"
+                                                            <a href="retry-generate-kct-token?trx_id={{$data->trx_id}}"
                                                                onclick="return confirmgenertetoken();"
                                                                class="btn btn-secondary">Generate Token</a>
                                                             <script>

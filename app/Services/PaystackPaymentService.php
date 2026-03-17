@@ -3,14 +3,18 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use Carbon\Carbon;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class PaystackPaymentService {
     protected $paystack_public;
     protected $paystack_secret;
     protected $payment_endpoint;
+    protected $paystack_env;
 
     public function __construct()
     {
@@ -34,7 +38,13 @@ class PaystackPaymentService {
 
         $this->paystack_public = $settings->paystack_public;
         $this->paystack_secret = $settings->paystack_secret;
-        $this->payment_endpoint = config('constants.paystack_payment_url');
+        $this->paystack_env = 'live';
+        if (in_array(env('APP_ENV'), ['local', 'staging', 'stg', 'lcl'])) {
+            $this->paystack_public = env('PAYSTACK_TEST_PUBLIC_KEY');
+            $this->paystack_secret = env('PAYSTACK_TEST_SECRET_KEY');
+            $this->paystack_env = 'test';
+        }
+        $this->payment_endpoint = config('constants.paystack_payment_endpoint');
     }
 
     /**
@@ -47,6 +57,11 @@ class PaystackPaymentService {
         return $this->paystack_public;
     }
 
+    public function getSecretKey(): ?string
+    {
+        return $this->paystack_secret;
+    }
+
     /**
      * Make a payment using Paystack
      *
@@ -57,6 +72,11 @@ class PaystackPaymentService {
     public function makePayment(array $data): array
     {
         $requiredParameters = ['amount', 'email', 'sub_account', 'metadata'];
+        if ($this->paystack_env === 'test') {
+            unset($requiredParameters[array_search('sub_account', $requiredParameters)], $data['sub_account']);
+        }
+
+        // dd()
         $missingParameters = array_diff($requiredParameters, array_keys($data));
 
         if (!empty($missingParameters)) {
@@ -74,15 +94,31 @@ class PaystackPaymentService {
                 "value" => $transactionRef
             ]
         ];
+        // dd($transactionRef);
 
         $dataBody = [
-            "amount" => (int) ($data['amount'] * 100), // Paystack expects amount in kobo
+            "amount" => (int) ($data['amount']), // Paystack expects amount in kobo
             "email" => $data['email'],
-            "ref" => $transactionRef,
+            "reference" => $transactionRef,
             "callback_url" => url('') . "/paystack-check",
-            "subaccount" => $data['sub_account'],
             "metadata" => $metadata,
         ];
+
+        if ($this->paystack_env === 'live') {
+            $dataBody["subaccount"] = $data['sub_account'];
+
+            $validate_subaccount = self::validateSubaccount($data['sub_account']);
+
+            if (! $validate_subaccount['valid']) {
+                Log::warning("User with email: {$data['email']} passed has invalid estate id on db ---->>>> ". Carbon::now()->toIsoString());
+
+                return [
+                    'status' => false,
+                    'message' => $validate_subaccount['message'],
+                    'data' => $validate_subaccount['data'] ?? null,
+                ];
+            }
+        }
 
         try {
             $response = Http::withHeaders([
@@ -137,7 +173,8 @@ class PaystackPaymentService {
                 return [
                     'status' => false,
                     'message' => 'Transaction verification failed',
-                    'error' => $response->body()
+                    'error' => $response->body(),
+                    'payment_status' => null,
                 ];
             }
 
@@ -149,56 +186,186 @@ class PaystackPaymentService {
                 return [
                     'status' => false,
                     'message' => $responseData['message'] ?? 'Transaction verification failed',
-                    'payment_status' => false,
+                    'payment_status' => null,
                 ];
             }
 
+            // Extract detailed transaction information
+            $transactionData = $responseData['data'] ?? [];
+            $amount = $transactionData['amount'] ?? 0;
+            $currency = $transactionData['currency'] ?? 'NGN';
+            $customerEmail = $transactionData['customer']['email'] ?? '';
+            $channel = $transactionData['channel'] ?? '';
+            $reference = $transactionData['reference'] ?? $transactionId;
+            $paidAt = $transactionData['paid_at'] ?? null;
+
             $message = '';
+            $isSuccessful = false;
+
             switch ($paymentStatus) {
                 case 'success':
-                    $message = 'Transaction Successful, Payment received';
+                    $message = 'Transaction completed successfully';
+                    $isSuccessful = true;
                     break;
                 case 'failed':
-                    $message = 'Transaction Failed, Ask customer to retry';
+                    $message = 'Transaction failed';
                     break;
                 case 'pending':
-                    $message = 'Transaction Incomplete, check again later';
+                    $message = 'Transaction is still pending';
+                    break;
+                case 'abandoned':
+                    $message = 'Transaction was abandoned by customer';
                     break;
                 default:
-                    $message = 'Unknown transaction status';
+                    $message = 'Unknown transaction status: ' . $paymentStatus;
             }
 
             return [
                 'status' => true,
-                'payment_status' => $paymentStatus === 'success',
                 'message' => $message,
-                'data' => $responseData['data'] ?? null,
+                'payment_status' => $paymentStatus,
+                'is_successful' => $isSuccessful,
+                'data' => [
+                    'reference' => $reference,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'customer_email' => $customerEmail,
+                    'channel' => $channel,
+                    'paid_at' => $paidAt,
+                    'status' => $paymentStatus,
+                ],
             ];
         } catch (Exception $e) {
             return [
                 'status' => false,
                 'message' => 'Transaction verification failed: ' . $e->getMessage(),
-                'payment_status' => false,
+                'payment_status' => null,
+            ];
+        }
+    }
+
+    /**
+     * Poll transaction status of a Paystack transaction
+     *
+     * @param string $transactionReference
+     * @param int $maxAttempts
+     * @param int $intervalSeconds
+     * @return array
+     */
+    public function pollTransactionStatus(
+        string $transactionReference,
+        int $maxAttempts = 10,
+        int $intervalSeconds = 5
+    ): array {
+        $attempt = 0;
+
+        try {
+            while ($attempt < $maxAttempts) {
+                $attempt++;
+
+                $response = Http::withHeaders([
+                    'Authorization' => "Bearer {$this->paystack_secret}",
+                    'Cache-Control' => 'no-cache',
+                ])
+                ->timeout(30)
+                ->get("https://api.paystack.co/transaction/verify/{$transactionReference}");
+
+                if ($response->failed()) {
+                    return [
+                        'status' => false,
+                        'message' => 'Failed to poll transaction status',
+                        'error' => $response->body(),
+                        'payment_status' => null,
+                        'is_successful' => false,
+                        'data' => null,
+                    ];
+                }
+
+                $responseData = $response->json();
+                $paymentStatus = $responseData['data']['status'] ?? 'failed';
+
+                // Stop polling if transaction is no longer pending
+                if (in_array($paymentStatus, ['success', 'failed', 'abandoned'])) {
+                    return $this->formatPollResponse($responseData);
+                }
+
+                // If still pending, wait before next attempt
+                if ($paymentStatus === 'pending') {
+                    sleep($intervalSeconds);
+                    continue;
+                }
+
+                // Unknown status — stop polling
+                return $this->formatPollResponse($responseData);
+            }
+
+            // Max attempts reached
+            return [
+                'status' => false,
+                'message' => 'Polling timeout reached',
+                'payment_status' => 'pending',
+                'is_successful' => false,
+                'data' => null,
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'status' => false,
+                'message' => 'Failed to poll transaction status: ' . $e->getMessage(),
+                'payment_status' => null,
+                'is_successful' => false,
+                'data' => null,
             ];
         }
     }
 
 
+    private function formatPollResponse(array $responseData): array
+    {
+        $transactionData = $responseData['data'] ?? [];
+        $paymentStatus = $transactionData['status'] ?? 'failed';
+
+        return [
+            'status' => true,
+            'message' => match ($paymentStatus) {
+                'success' => 'Transaction completed successfully',
+                'failed' => 'Transaction failed',
+                'pending' => 'Transaction is still pending',
+                'abandoned' => 'Transaction was abandoned',
+                default => 'Unknown transaction status',
+            },
+            'payment_status' => $paymentStatus,
+            'is_successful' => $paymentStatus === 'success',
+            'data' => [
+                'reference' => $transactionData['reference'] ?? null,
+                'amount' => $transactionData['amount'] ?? 0,
+                'currency' => $transactionData['currency'] ?? 'NGN',
+                'customer_email' => $transactionData['customer']['email'] ?? '',
+                'channel' => $transactionData['channel'] ?? '',
+                'paid_at' => $transactionData['paid_at'] ?? null,
+                'status' => $paymentStatus,
+            ],
+        ];
+    }
+
+
+
     /**
      * Handle Paystack webhook events
      *
-     * @param array $data The webhook payload data
+     * @param request $ The webhook request
      * @return array Response indicating success or failure
      */
-    public static function handlePaystackWebhook(array $data): array
+    public static function handlePaystackWebhook(Request $request): array
     {
+        $data = $request->all();
         $event = $data['event'] ?? '';
         $paymentData = $data['data'] ?? [];
 
         // Verify the webhook signature to ensure it's from Paystack
-        $headers = getallheaders();
+        $signature = $request->header('x-paystack-signature');
         $secret = (new self())->paystack_secret;
-        if (!self::verifyWebhookSignature($headers, json_encode($data), $secret)) {
+        if (!self::verifyWebhookSignature($signature, $request, $secret)) {
             return [
                 'status' => false,
                 'message' => 'Invalid webhook signature',
@@ -329,14 +496,45 @@ class PaystackPaymentService {
         ];
     }
 
-    protected static function verifyWebhookSignature(array $headers, string $payload, string $secret): bool
+    public static function verifyWebhookSignature(?string $signature, $payload, string $secret): bool
     {
-        $signature = $headers['x-paystack-signature'] ?? '';
-        if (empty($signature)) {
+        // 1. Handle null or empty signatures gracefully
+        if (!$signature) {
             return false;
         }
 
-        $computedSignature = hash_hmac('sha256', $payload, $secret);
+        // 2. Ensure $payload is a string (the raw body)
+        $content = is_string($payload) ? $payload : $payload->getContent();
+
+        $computedSignature = hash_hmac('sha512', $content, $secret);
+
+        // 3. Timing-attack safe comparison
         return hash_equals($computedSignature, $signature);
+    }
+
+    public static function validateSubaccount(string $subaccountCode): array
+    {
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . (new self())->paystack_secret,
+            'Accept' => 'application/json',
+        ])
+        ->timeout(0.1)
+        ->get("https://api.paystack.co/subaccount/{$subaccountCode}");
+
+        $data = $response->json();
+
+        if ($response->failed() || !($data['status'] ?? false)) {
+            return [
+                'valid' => false,
+                'message' => $data['message'] ?? 'Invalid subaccount',
+                'data' => null,
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'message' => 'Subaccount is valid',
+            'data' => $data['data'],
+        ];
     }
 }

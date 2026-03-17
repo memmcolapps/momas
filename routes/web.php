@@ -366,9 +366,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
 
     Route::any('recepit', [TokenController::class, 'recepit']);
-    Route::any('retry-generate-tamper-token', [TokenController::class, 'retry_generate_tamper-token']);
+    Route::any('retry-generate-tamper-token', [TokenController::class, 'retry_generate_tamper_token']);
     Route::any('retry-generate-credit-token', [TokenController::class, 'retry_generate_credit_token']);
+    Route::any('retry-generate-kct-token', [TokenController::class, 'retry_generate_kct_token']);
+    Route::any('retry-generate-clear-credit-token', [TokenController::class, 'retry_generate_clear_credit_token']);
     Route::get('view-logs', [TokenController::class, 'view_logs']);
+
+    Route::get('retry-generate-token', [TokenController::class, 'retry_generate_credit_token']);
 
     Route::post('add-new-tariffstate', [TariffController::class, 'add_state_tariff']);
     Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
