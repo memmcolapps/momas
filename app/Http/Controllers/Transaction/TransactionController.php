@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
+use App\Models\Logger;
 use App\Models\VirtualAccountTransaction;
 use App\Services\PaystackPaymentService;
 use App\Services\StandardResponse;
@@ -20,7 +21,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class TransactionController extends Controller
@@ -367,7 +367,7 @@ class TransactionController extends Controller
 
 
                 if (! $est) {
-                    Log::warning("User with email: {$email} passed has invalid estate id on db estate_id: {$estate_id} ---->>>> ". Carbon::now()->toIsoString());
+                    Logger::warning("User with email: {$email} passed has invalid estate id on db estate_id: {$estate_id} ---->>>> ". Carbon::now()->toIsoString());
 
                     return StandardResponse::error(500, 'User estate_id is invalid', []);
                 }
@@ -407,7 +407,7 @@ class TransactionController extends Controller
                 $payment_init = app(PaystackPaymentService::class)->makePayment($databody);
                 $status = $payment_init['status'];
                 if (! $status) {
-                    Log::warning("Payment init by {$email} Failed at: {$now}");
+                    Logger::warning("Payment init by {$email} Failed at: {$now}");
 
                     return StandardResponse::success(200, "Payment not available at the moment, kindly select another payment option", []);
                 }
@@ -1800,7 +1800,7 @@ class TransactionController extends Controller
             $event = $payload['event'] ?? 'unknown';
             $reference = $payload['data']['reference'] ?? 'unknown';
 
-            Log::info("Paystack Webhook: Event={$event}, Reference={$reference}, Result=" . json_encode($result));
+            Logger::info("Paystack Webhook: Event={$event}, Reference={$reference}, Result=" . json_encode($result));
 
             // Update transaction status based on the event
             if (isset($payload['data']['reference'])) {
@@ -1815,7 +1815,7 @@ class TransactionController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error("Paystack Webhook Error: " . $e->getMessage(), [
+            Logger::error("Paystack Webhook Error: " . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -1847,12 +1847,12 @@ class TransactionController extends Controller
             ->first();
 
         if (!$transaction) {
-            Log::warning("Paystack Webhook: Transaction not found for reference: {$reference}");
+            Logger::warning("Paystack Webhook: Transaction not found for reference: {$reference}");
             return;
         }
 
         if ($transaction->status == 2 || $transaction->status == 3) {
-            Log::warning("Paystack Webhook: Transaction duplicate call for reference: {$reference}");
+            Logger::warning("Paystack Webhook: Transaction duplicate call for reference: {$reference}");
             return;
         }
 
@@ -1860,7 +1860,7 @@ class TransactionController extends Controller
             case 'charge.success':
                 $transaction->status = 3; // Payment Completed Action yet to be taken
                 $transaction->save();
-                Log::info("Paystack Webhook: Transaction {$reference} marked as paid");
+                Logger::info("Paystack Webhook: Transaction {$reference} marked as paid");
 
                 ProcessPaystackWebhook::dispatch($reference);
                 break;
@@ -1868,13 +1868,13 @@ class TransactionController extends Controller
             case 'charge.failed':
                 $transaction->status = 1; // Failed
                 $transaction->save();
-                Log::info("Paystack Webhook: Transaction {$reference} marked as failed");
+                Logger::info("Paystack Webhook: Transaction {$reference} marked as failed");
                 break;
 
             case 'charge.pending':
                 $transaction->status = 0; // Pending
                 $transaction->save();
-                Log::info("Paystack Webhook: Transaction {$reference} marked as pending");
+                Logger::info("Paystack Webhook: Transaction {$reference} marked as pending");
                 break;
         }
     }
@@ -1929,7 +1929,7 @@ class TransactionController extends Controller
     //     ];
 
     //     // Log the test webhook trigger
-    //     Log::info("Test Paystack Webhook Triggered: Event={$event}, Reference={$reference}", [
+    //     Logger::info("Test Paystack Webhook Triggered: Event={$event}, Reference={$reference}", [
     //         'payload' => $payload,
     //         'environment' => env('APP_ENV'),
     //     ]);

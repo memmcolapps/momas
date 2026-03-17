@@ -7,7 +7,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 use InvalidArgumentException;
 
 class FlutterwavePaymentService
@@ -164,7 +164,7 @@ class FlutterwavePaymentService
             $validateSubaccount = self::validateSubaccount($data['sub_account']);
 
             if (! $validateSubaccount['valid']) {
-                Log::warning(sprintf(
+                Logger::warning(sprintf(
                     'User %s provided an invalid sub-account [%s] at %s',
                     $data['email'],
                     $data['sub_account'],
@@ -202,7 +202,7 @@ class FlutterwavePaymentService
                 'reference' => $transactionRef,
             ];
         } catch (Exception $e) {
-            Log::error('Flutterwave makePayment exception: ' . $e->getMessage());
+            Logger::error('Flutterwave makePayment exception: ' . $e->getMessage());
 
             return [
                 'status'  => false,

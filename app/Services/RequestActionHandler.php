@@ -9,7 +9,7 @@ use App\Models\Meter;
 use App\Models\Transaction;
 use App\Models\User;
 use Exception;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 
 class RequestActionHandler {
     protected $reference;
@@ -85,7 +85,7 @@ class RequestActionHandler {
         // dd($trx);
         // Only process when service not rendered
         if ($trx->status != 3) {
-            Log::warning("Job triggered on invalid status for {$this->reference}");
+            Logger::warning("Job triggered on invalid status for {$this->reference}");
             return;
         }
 
@@ -123,7 +123,7 @@ class RequestActionHandler {
      */
     protected function handleBuyTamperTokenRequest($others = false)
     {
-        Log::info('handleBuyTamperTokenRequest started', ['reference' => $this->reference]);
+        Logger::info('handleBuyTamperTokenRequest started', ['reference' => $this->reference]);
         // throw new Exception("Test Failure handleBuyTamperTokenRequest");
 
         $trx = Transaction::where('trx_id', $this->reference)
@@ -131,14 +131,14 @@ class RequestActionHandler {
 
         // Only process when service not rendered
         if ($trx->status != 3) {
-            Log::warning("Job triggered on invalid status for {$this->reference}");
+            Logger::warning("Job triggered on invalid status for {$this->reference}");
             return;
         }
 
         $action_payload = json_decode($trx->action_payload, true);
         $user_id = $action_payload['user_id'];
 
-        Log::info('Tamper token request payload', ['payload' => $action_payload]);
+        Logger::info('Tamper token request payload', ['payload' => $action_payload]);
 
         $user = User::findOrFail($user_id);
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
@@ -150,7 +150,7 @@ class RequestActionHandler {
         // Call the tamper token generation method on the meter
         $meter->getNewTamperToken($tariffId, $this->reference, $vending_amount, $email, $verify = 'null');
 
-        Log::info('handleBuyTamperTokenRequest completed', ['reference' => $this->reference]);
+        Logger::info('handleBuyTamperTokenRequest completed', ['reference' => $this->reference]);
 
         return true;
     }
@@ -163,7 +163,7 @@ class RequestActionHandler {
      */
     protected function handleBuyKctTokenRequest()
     {
-        Log::info('handleBuyKctTokenRequest started', ['reference' => $this->reference]);
+        Logger::info('handleBuyKctTokenRequest started', ['reference' => $this->reference]);
         // throw new Exception("Test Failure handleBuyKctTokenRequest");
 
         $trx = Transaction::where('trx_id', $this->reference)
@@ -171,14 +171,14 @@ class RequestActionHandler {
 
         // Only process when service not rendered
         if ($trx->status != 3) {
-            Log::warning("Job triggered on invalid status for {$this->reference}");
+            Logger::warning("Job triggered on invalid status for {$this->reference}");
             return;
         }
 
         $action_payload = json_decode($trx->action_payload, true);
         $user_id = $action_payload['user_id'];
 
-        Log::info('KCT token request payload', ['payload' => $action_payload]);
+        Logger::info('KCT token request payload', ['payload' => $action_payload]);
 
         $user = User::findOrFail($user_id);
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
@@ -199,7 +199,7 @@ class RequestActionHandler {
             $toti
         );
 
-        Log::info('handleBuyKctTokenRequest completed', ['reference' => $this->reference]);
+        Logger::info('handleBuyKctTokenRequest completed', ['reference' => $this->reference]);
 
         return true;
     }
@@ -214,14 +214,14 @@ class RequestActionHandler {
     {
         dump("handleBuyClearCreditTokenRequest here");
         throw new Exception("handleBuyClearCreditTokenRequest test failure");
-        Log::info('handleBuyClearCreditTokenRequest started', ['reference' => $this->reference]);
+        Logger::info('handleBuyClearCreditTokenRequest started', ['reference' => $this->reference]);
 
         $trx = Transaction::where('trx_id', $this->reference)
             ->firstOrFail();
 
         // Only process when service not rendered
         if ($trx->status != 3) {
-            Log::warning("Job triggered on invalid status for {$this->reference}");
+            Logger::warning("Job triggered on invalid status for {$this->reference}");
             return;
         }
 
@@ -229,7 +229,7 @@ class RequestActionHandler {
         $user_id = $action_payload['user_id'];
         dump("RequestActionHandler line:212");
 
-        Log::info('Clear credit token request payload', ['payload' => $action_payload]);
+        Logger::info('Clear credit token request payload', ['payload' => $action_payload]);
 
         $user = User::findOrFail($user_id);
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
@@ -242,7 +242,7 @@ class RequestActionHandler {
         // Call the clear credit token generation method on the meter
         $meter->getNewClearCreditToken($tariff_id, $this->reference, $email, $verify = 'null');
 
-        Log::info('handleBuyClearCreditTokenRequest completed', ['reference' => $this->reference]);
+        Logger::info('handleBuyClearCreditTokenRequest completed', ['reference' => $this->reference]);
 
         return true;
     }

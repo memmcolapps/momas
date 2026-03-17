@@ -7,7 +7,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 use InvalidArgumentException;
 
 class PaystackPaymentService {
@@ -110,7 +110,7 @@ class PaystackPaymentService {
             $validate_subaccount = self::validateSubaccount($data['sub_account']);
 
             if (! $validate_subaccount['valid']) {
-                Log::warning("User with email: {$data['email']} passed has invalid estate id on db ---->>>> ". Carbon::now()->toIsoString());
+                Logger::warning("User with email: {$data['email']} passed has invalid estate id on db ---->>>> ". Carbon::now()->toIsoString());
 
                 return [
                     'status' => false,

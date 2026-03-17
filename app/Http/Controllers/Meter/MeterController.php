@@ -17,6 +17,7 @@ use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utitlity;
+use App\Models\Logger;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
@@ -503,6 +504,7 @@ class MeterController extends Controller
             ]);
 
         } catch (Exception $e) {
+            Logger::error('MeterController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(code: 500, message: 'An Error Occured', debug: [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),

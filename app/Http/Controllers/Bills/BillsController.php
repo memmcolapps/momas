@@ -8,7 +8,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 
 class BillsController extends Controller
 {
@@ -48,7 +48,7 @@ class BillsController extends Controller
         $var = json_decode($var);
         $status = $var->status ?? null;
 
-        Log::info("Airtime purchase triggered by " . Carbon::now()->toIsoString(), [
+        Logger::info("Airtime purchase triggered by " . Carbon::now()->toIsoString(), [
             'data' => $var
         ]);
 

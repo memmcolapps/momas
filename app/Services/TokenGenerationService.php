@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Meter;
 use Exception;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 
 class TokenGenerationService {
     public static function generateMeterToken($meter, $tariff_index, $unit, $need_kct = false) {
@@ -121,7 +121,7 @@ class TokenGenerationService {
             'amount' => 10,
         ];
 
-        Log::info('Tamper token data body', ['request body' => $databody]);
+        Logger::info('Tamper token data body', ['request body' => $databody]);
 
         $response = Http::withOptions([
             'verify' => false,
@@ -194,7 +194,7 @@ class TokenGenerationService {
             'allowkrn' => true,
         ];
 
-        Log::info('KCT Token data body', ['request body' => $kctdatabody]);
+        Logger::info('KCT Token data body', ['request body' => $kctdatabody]);
 
         $kct_response = Http::withOptions([
             'verify' => false,
@@ -255,7 +255,7 @@ class TokenGenerationService {
             'amount' => 10,
         ];
 
-        Log::info('Clear Credit Token data body', ['request body' => $databody]);
+        Logger::info('Clear Credit Token data body', ['request body' => $databody]);
 
         $response = Http::withOptions([
             'verify' => false,
