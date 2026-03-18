@@ -141,8 +141,9 @@ class TransactionController extends Controller
     {
         try{
             $validator = Validator::make($request->all(), [
-                'id' => 'required|integer|exists:utilities_payments,id',
-                'ref' => 'required|string'
+                // 'id' => 'required|integer|exists:utilities_payments,id',
+                'ref' => 'required|string|exists:transactions,trx_id',
+                'service_type' => 'required|string|in:admin_fee,utilities'
             ]);
 
             if ($validator->fails()) {
@@ -151,38 +152,55 @@ class TransactionController extends Controller
                 ]);
             }
 
-            DB::beginTransaction();
+            $user = Auth::user();
+            $type = $request->service_type;
 
-            $utl = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('id', $request->id)
+
+            $trx = Transaction::where('trx_id', $request->ref)
+                ->where('user_id', $user->id)
                 ->first();
 
-            $amount = $utl->amount;
+            if (! $trx) {
 
-            $utl->status = 2;
-            $utl->save();
-
-
-            $trx = Transaction::where('trx_id', $request->ref)->first();
-            if ($trx !== null) {
-                $trx->service_type = "Arrears Payment";
-                $trx->service = "Arrears";
-                $trx->status = 2;
-                $trx->updated_at = Carbon::now();
-                $trx->save();
-            } else {
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->pay_type = "utility";
-                $trx->amount = $amount;
-                $trx->fee = 0;
-                $trx->status = 2;
-                $trx->payment_ref = 0 ?? null;
-                $trx->service_type = "Arrears Payment";
-                $trx->trx_id = $request->ref;
-                // $trx->created_at = Carbon::now();
-                $trx->save();
+                // Log here
+                return StandardResponse::error(404, 'Resource not found Invalid Transaction ID');
             }
+
+            if ($trx->status === 2) {
+
+                // Log here
+                return StandardResponse::error(404, 'The transaction has been completed please start a new transaction');
+            }
+
+            if ($trx->status === 1) {
+
+                // Log here
+                return StandardResponse::error(404, 'The transaction failed please try again');
+            }
+
+
+
+
+            $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($request->ref);
+            Logger::info('Paystack verify response pay_arrears', ['response' => $verify_result]);
+
+            if (!$verify_result['status']) {
+
+                // Log here
+                return StandardResponse::error(code: 401, message: 'Transaction failed please make payment again');
+            }
+
+
+            DB::beginTransaction();
+
+            handle_pay_arrears($trx->trx_id, $user->id, $type);
+
+
+            $trx->service_type = "Arrears Payment";
+            $trx->service = "Arrears";
+            $trx->status = 2;
+            $trx->updated_at = Carbon::now();
+            $trx->save();
 
             $message = "Arrears Payment Completed";
 
@@ -661,6 +679,9 @@ class TransactionController extends Controller
 
         array_walk_recursive($receipt, function (&$value, $key) {
             if (is_int($value) || is_float($value)) {
+                if ($key === 'unitkwh') {
+                    $value = round((float) $value, 2);
+                }
                 $value = $key === 'status' ? (int) $value : (string) $value;
             }
         });

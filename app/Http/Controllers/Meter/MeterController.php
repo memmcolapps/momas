@@ -1048,6 +1048,7 @@ class MeterController extends Controller
 
             if ($request->meterNo == null) {
 
+                $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
                 $data['meters'] = Meter::count();
                 $data['meter_lists'] = Meter::orderBy('created_at', 'desc')->where('estate_id', Auth::user()->estate_id)->paginate('20');
                 return view('admin/meter/meter-lists', $data);
@@ -1458,7 +1459,7 @@ class MeterController extends Controller
         $meter = Meter::where('id', $request->id)->first();
 
         if (!$meter) {
-            return back()->with('error', "Meter not found");
+            return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
         }
 
         // Get the user_id before nullifying
@@ -1478,7 +1479,7 @@ class MeterController extends Controller
             ]);
         }
 
-        return back()->with('message', "Meter deactivated and unassigned successfully");
+        return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
 
     }
 
@@ -1489,7 +1490,7 @@ class MeterController extends Controller
 
         Meter::where('id', $request->id)->update(['status' => 2]);
 
-        return back()->with('message', "Meter Activated successfully");
+        return redirect('/admin/meter-list')->with('message', 'Meter Activated successfully.');
 
 
     }
@@ -1499,7 +1500,7 @@ class MeterController extends Controller
     {
         Meter::where('id', $request->id)->update(['status' => 0]);
 
-        return back()->with('message', "Meter blocked successfully");
+        return redirect('/admin/meter-list')->with('message', 'Meter blocked successfully.');
     }
 
     public

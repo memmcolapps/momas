@@ -58,6 +58,7 @@ class Logger extends Model
 
     public static function info(string $message, array $context = []): ?Logger
     {
+        $context = self::addUserInfo($context);
         return Logger::create([
             'level' => 'info',
             'message' => $message,
@@ -67,6 +68,7 @@ class Logger extends Model
 
     public static function error(string $message, array $context = []): ?Logger
     {
+        $context = self::addUserInfo($context);
         return Logger::create([
             'level' => 'error',
             'message' => $message,
@@ -76,10 +78,28 @@ class Logger extends Model
 
     public static function warning(string $message, array $context = []): ?Logger
     {
+        $context = self::addUserInfo($context);
         return Logger::create([
             'level' => 'warning',
             'message' => $message,
             'context' => $context
         ]);
+    }
+
+    /**
+     * Add user firstname and lastname to log context if user is authenticated
+     */
+    private static function addUserInfo(array $context = []): array
+    {
+        if (auth()->check()) {
+            $user = auth()->user();
+            $context['user'] = [
+                'id' => $user->id,
+                'firstname' => $user->first_name ?? 'N/A',
+                'lastname' => $user->last_name ?? 'N/A',
+                'email' => $user->email ?? 'N/A'
+            ];
+        }
+        return $context;
     }
 }

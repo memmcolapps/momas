@@ -1,17 +1,19 @@
 <?php
 
 
-use App\Models\User;
+use App\Models\Logger;
 use App\Models\Meter;
-use App\Models\Token;
-use App\Models\Utitlity;
-use Illuminate\Support\Str;
-use Illuminate\Support\Carbon;
 use App\Models\OauthAccessToken;
+use App\Models\Token;
+use App\Models\Transaction;
+use App\Models\User;
 use App\Models\UtilitiesPayment;
+use App\Models\Utitlity;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 
 if (!function_exists('token')) {
@@ -599,5 +601,50 @@ if (! function_exists('generate_unique_string')) {
     function generate_unique_string($prefix = null) {
         $number = str_pad(random_int(0, 999999999), 9, '0', STR_PAD_LEFT);
         return $prefix . '-' . $number . '-' .explode('-', Str::uuid())[0];
+    }
+}
+
+if (! function_exists('handle_pay_arrears')) {
+
+    function handle_pay_arrears($trx_id, $user_id, $type) {
+
+        $user = User::where('id', $user_id)->first();
+
+        if (! $user) {
+
+            Logger::error("Invalid User ID {$user_id} passed for handler_pay_arrears");
+            throw new Exception("Invalid User ID {$user_id} passed for handler_pay_arrears");
+        }
+
+        $trx = Transaction::where('trx_id', $trx_id)
+            ->where('user_id', $user_id)
+            ->first();
+
+        // dd($trx, $trx_id, $user_id);
+
+        if (! $trx) {
+
+            Logger::error("Invalid Transaction ID {$trx_id} passed for arrears {$user_id}");
+            throw new Exception("Invalid Transaction ID {$trx_id} passed for arrears");
+        }
+
+        $amount = $trx->amount;
+        $utilities = $admin_fee_sum = UtilitiesPayment::where('user_id', $user_id)
+            ->orderBy('created_at', 'asc')
+            ->where('status', '!=', 2)
+            ->where('type', '=', $type)
+            ->get();
+
+        // dd($utilities, $type);
+        foreach($utilities as $node) {
+            if ($amount < $node->amount) {
+                break;
+            }
+
+            $amount -= $node->amount;
+            UtilitiesPayment::where('id', $node->id)->update(['status' => 2]);
+        }
+
+        return $utilities;
     }
 }
