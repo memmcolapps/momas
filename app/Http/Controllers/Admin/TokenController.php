@@ -1421,90 +1421,90 @@ class TokenController extends Controller
         }
 
 
-        if ($request->pay_type === 'test_bypass' && !app()->environment('staging')) {
-            abort(403, 'Payment bypass is not allowed. Bypass can only be used in staging environment.');
-        }
+        // if ($request->pay_type === 'test_bypass' && !app()->environment('staging')) {
+        //     abort(403, 'Payment bypass is not allowed. Bypass can only be used in staging environment.');
+        // }
 
-        // --- PAYMENT BYPASS / TEST MODE ---
-        if ($request->pay_type == 'test_bypass') {
+        // // --- PAYMENT BYPASS / TEST MODE ---
+        // if ($request->pay_type == 'test_bypass') {
 
-            // 1. Create a successful transaction record
-            $trx = new Transaction();
-            $trx->user_id = Auth::id();
-            $trx->estate_id = $estate_id;
-            $trx->pay_type = "bypass_test";
-            $trx->service_type = $request->service ?? 'credit_token';
-            $trx->amount = $request->amount;
-            $trx->fee = $fee;
-            $trx->trx_id = $trx_id;
-            $trx->payment_ref = $this->generateBypassReference();
-            $trx->status = 2; // 2 = Successful
-            $trx->save();
+        //     // 1. Create a successful transaction record
+        //     $trx = new Transaction();
+        //     $trx->user_id = Auth::id();
+        //     $trx->estate_id = $estate_id;
+        //     $trx->pay_type = "bypass_test";
+        //     $trx->service_type = $request->service ?? 'credit_token';
+        //     $trx->amount = $request->amount;
+        //     $trx->fee = $fee;
+        //     $trx->trx_id = $trx_id;
+        //     $trx->payment_ref = $this->generateBypassReference();
+        //     $trx->status = 2; // 2 = Successful
+        //     $trx->save();
 
-            // 2. Get meter details
-            $meter = Meter::where('meterNo', $request->meterNo)->first();
+        //     // 2. Get meter details
+        //     $meter = Meter::where('meterNo', $request->meterNo)->first();
 
-            if (!$meter) {
-                return back()->with('error', 'Meter not found');
-            }
+        //     if (!$meter) {
+        //         return back()->with('error', 'Meter not found');
+        //     }
 
-            // 3. Get tariff_index from the selected tariff
-            // try {
-            //     $tariff_index = $this->getTariffIndexWithValidation($request->tariff_id);
-            // } catch (\Exception $e) {
-            //     return back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
-            // }
+        //     // 3. Get tariff_index from the selected tariff
+        //     // try {
+        //     //     $tariff_index = $this->getTariffIndexWithValidation($request->tariff_id);
+        //     // } catch (\Exception $e) {
+        //     //     return back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
+        //     // }
 
-            $tariff_index = $request->t_index;
+        //     $tariff_index = $request->t_index;
 
-            // 4. Prepare token generation API payload using UNITS (not costOfUnit)
-            $unitsKwh = $request->unit ?? 0;
+        //     // 4. Prepare token generation API payload using UNITS (not costOfUnit)
+        //     $unitsKwh = $request->unit ?? 0;
 
-            $databody = [
-                'meterType' => $meter->KRN1,
-                'meterNo'   => $meter->meterNo,
-                'sgc'       => (int)$meter->NewSGC,
-                'ti'        => $tariff_index,
-                'amount'    => (float)1.00, // USING UNITS HERE - with decimals
-            ];
+        //     $databody = [
+        //         'meterType' => $meter->KRN1,
+        //         'meterNo'   => $meter->meterNo,
+        //         'sgc'       => (int)$meter->NewSGC,
+        //         'ti'        => $tariff_index,
+        //         'amount'    => (float)1.00, // USING UNITS HERE - with decimals
+        //     ];
 
-            Logger::info('Credit token data body', ['request body' => $databody]);
+        //     Logger::info('Credit token data body', ['request body' => $databody]);
 
-            try {
-                // 4. Call Token Generation API
-                $response = Http::withOptions([
-                    'verify' => false,
-                    'timeout' => 15,
-                ])->post('http://169.239.189.91:19071/tokenGen', $databody);
+        //     try {
+        //         // 4. Call Token Generation API
+        //         $response = Http::withOptions([
+        //             'verify' => false,
+        //             'timeout' => 15,
+        //         ])->post('http://169.239.189.91:19071/tokenGen', $databody);
 
-                if ($response->successful()) {
-                    $json_response = $response->json();
-                    $decoded_data = json_decode($json_response, true);
-                    $status = $decoded_data['code'] ?? null;
+        //         if ($response->successful()) {
+        //             $json_response = $response->json();
+        //             $decoded_data = json_decode($json_response, true);
+        //             $status = $decoded_data['code'] ?? null;
 
-                    if ($status == "SUCCESS") {
-                        $generated_token = $decoded_data['tokens'][0];
+        //             if ($status == "SUCCESS") {
+        //                 $generated_token = $decoded_data['tokens'][0];
 
-                        // 5. Update Credit Token Record
-                        CreditToken::where('trx_id', $trx_id)->update([
-                            'token' => $generated_token,
-                            'status' => 2
-                        ]);
+        //                 // 5. Update Credit Token Record
+        //                 CreditToken::where('trx_id', $trx_id)->update([
+        //                     'token' => $generated_token,
+        //                     'status' => 2
+        //                 ]);
 
-                        // 6. Redirect to Receipt
-                        $type = "credit_token";
-                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+        //                 // 6. Redirect to Receipt
+        //                 $type = "credit_token";
+        //                 return redirect("admin/recepit?trx_id=$trx_id&type=$type");
 
-                    } else {
-                        return back()->with('error', "Payment Bypass Failed: " . ($decoded_data['msg'] ?? 'Token generation failed'));
-                    }
-                } else {
-                    return back()->with('error', "Payment Bypass: Failed to connect to Token Server");
-                }
-            } catch (\Exception $e) {
-                return back()->with('error', "Payment Bypass Exception: " . $e->getMessage());
-            }
-        }
+        //             } else {
+        //                 return back()->with('error', "Payment Bypass Failed: " . ($decoded_data['msg'] ?? 'Token generation failed'));
+        //             }
+        //         } else {
+        //             return back()->with('error', "Payment Bypass: Failed to connect to Token Server");
+        //         }
+        //     } catch (\Exception $e) {
+        //         return back()->with('error', "Payment Bypass Exception: " . $e->getMessage());
+        //     }
+        // }
         // --- END PAYMENT BYPASS ---
 
 
@@ -2063,122 +2063,122 @@ class TokenController extends Controller
             }
         }
 
-        if ($request->pay_type === 'test_bypass' && !app()->environment('staging')) {
-            abort(403, 'Payment bypass is not allowed. Bypass can only be used in staging environment.');
-        }
+        // if ($request->pay_type === 'test_bypass' && !app()->environment('staging')) {
+        //     abort(403, 'Payment bypass is not allowed. Bypass can only be used in staging environment.');
+        // }
 
-        if ($request->pay_type == 'test_bypass') {
-
-
-            try {
-
-                // 1. Create a successful transaction record
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->estate_id = $estate_id;
-                $trx->pay_type = "bypass_test";
-                $trx->service_type = $request->service ?? 'tamper_token';
-                $trx->amount = $request->amount;
-                $trx->fee = $fee;
-                $trx->trx_id = $trx_id;
-                $trx->payment_ref = $this->generateBypassReference();
-                $trx->status = 2; // 2 = Successful
-                $trx->save();
+        // if ($request->pay_type == 'test_bypass') {
 
 
-                $meterNo = $request->meterNo;
-                $meter = Meter::where('meterNo', $meterNo)->first();
-                $trx = TamperToken::where('trx_id', $trx_id)->first();
-                $traff_id = TamperToken::where('trx_id', $trx_id)->first();
+        //     try {
+
+        //         // 1. Create a successful transaction record
+        //         $trx = new Transaction();
+        //         $trx->user_id = Auth::id();
+        //         $trx->estate_id = $estate_id;
+        //         $trx->pay_type = "bypass_test";
+        //         $trx->service_type = $request->service ?? 'tamper_token';
+        //         $trx->amount = $request->amount;
+        //         $trx->fee = $fee;
+        //         $trx->trx_id = $trx_id;
+        //         $trx->payment_ref = $this->generateBypassReference();
+        //         $trx->status = 2; // 2 = Successful
+        //         $trx->save();
+
+
+        //         $meterNo = $request->meterNo;
+        //         $meter = Meter::where('meterNo', $meterNo)->first();
+        //         $trx = TamperToken::where('trx_id', $trx_id)->first();
+        //         $traff_id = TamperToken::where('trx_id', $trx_id)->first();
 
 
 
-                // Get tariff_index from Tariff model
-                try {
-                    $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
-                } catch (\Exception $e) {
-                    return redirect('admin/tamper-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
-                }
+        //         // Get tariff_index from Tariff model
+        //         try {
+        //             $tariff_index = $this->getTariffIndexWithValidation($trx->tariff_id);
+        //         } catch (\Exception $e) {
+        //             return redirect('admin/tamper-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+        //         }
 
-                    Logger::info("Clear tamper Tariff index: $tariff_index");
-                    Logger::info("Clear tamper SGC: $meter->NewSGC");
+        //             Logger::info("Clear tamper Tariff index: $tariff_index");
+        //             Logger::info("Clear tamper SGC: $meter->NewSGC");
 
-                $databody = [
-                    'meterType' => $meter->KRN2,
-                    'meterNo' => $meter->meterNo,
-                    'sgc' => (int)$meter->NewSGC,
-                    'ti' => $tariff_index,
-                    'sbc' => 5,
-                    'amount' => 10, // Amount not needed for tamper tokens
-                ];
+        //         $databody = [
+        //             'meterType' => $meter->KRN2,
+        //             'meterNo' => $meter->meterNo,
+        //             'sgc' => (int)$meter->NewSGC,
+        //             'ti' => $tariff_index,
+        //             'sbc' => 5,
+        //             'amount' => 10, // Amount not needed for tamper tokens
+        //         ];
 
-                Logger::info('Tamper Token data body', ['request body' => $databody]);
+        //         Logger::info('Tamper Token data body', ['request body' => $databody]);
 
-                $no_kct_response = Http::withOptions([
-                    'verify' => false,
-                    'timeout' => 10,
-                ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
-                $error = $no_kct_response->json() ?? null;
-
-
-                if ($no_kct_response->successful()) {
-                    $no_kct = $no_kct_response->json();
-                    $no_kct_data = json_decode($no_kct, true);
-                    $status = $no_kct_data['code'] ?? null;
-
-                    Logger::info('Clear tamper response Body:', $no_kct_data);
+        //         $no_kct_response = Http::withOptions([
+        //             'verify' => false,
+        //             'timeout' => 10,
+        //         ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
+        //         $error = $no_kct_response->json() ?? null;
 
 
-                    if ($status == "SUCCESS") {
+        //         if ($no_kct_response->successful()) {
+        //             $no_kct = $no_kct_response->json();
+        //             $no_kct_data = json_decode($no_kct, true);
+        //             $status = $no_kct_data['code'] ?? null;
 
-                        $no_kct_token = $no_kct_data['tokens'][0];
-                        TamperToken::where('trx_id', $trx_id)->update([
-                            'token' => $no_kct_token,
-                            'status' => 2
-                        ]);
-
-                        $trx_id = $trx_id;
-                        $user = User::where('id', $trx->user_id)->first();
-                        $email = $user->email;
-                        $token = $no_kct_token;
-
-                        send_email_kct_token($email, $token, $meterNo);
+        //             Logger::info('Clear tamper response Body:', $no_kct_data);
 
 
-                        Transaction::where('trx_id', $trx_id)->update([
-                            'status' => 2,
-                        ]);
+        //             if ($status == "SUCCESS") {
 
-                        $type = "tamper";
-                        return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+        //                 $no_kct_token = $no_kct_data['tokens'][0];
+        //                 TamperToken::where('trx_id', $trx_id)->update([
+        //                     'token' => $no_kct_token,
+        //                     'status' => 2
+        //                 ]);
 
-                    } else {
+        //                 $trx_id = $trx_id;
+        //                 $user = User::where('id', $trx->user_id)->first();
+        //                 $email = $user->email;
+        //                 $token = $no_kct_token;
 
-                        Transaction::where('trx_id', $trx_id)->update([
-                            'service' => "TAMPER TOKEN PURCHASE",
-                            'service_type' => "meter",
-                            'status' => 3,
-                            'tariff_id' => $request->tariff_id,
-                            'note' => json_encode($no_kct_data) . "|" . json_encode($databody)
-                        ]);
-
-                        User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
+        //                 send_email_kct_token($email, $token, $meterNo);
 
 
-                        return redirect('admin/tamper-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
-                    }
+        //                 Transaction::where('trx_id', $trx_id)->update([
+        //                     'status' => 2,
+        //                 ]);
+
+        //                 $type = "tamper";
+        //                 return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+
+        //             } else {
+
+        //                 Transaction::where('trx_id', $trx_id)->update([
+        //                     'service' => "TAMPER TOKEN PURCHASE",
+        //                     'service_type' => "meter",
+        //                     'status' => 3,
+        //                     'tariff_id' => $request->tariff_id,
+        //                     'note' => json_encode($no_kct_data) . "|" . json_encode($databody)
+        //                 ]);
+
+        //                 User::where('id', Auth::id())->increment('main_wallet', $trx->amount);
 
 
-                    $code = 422;
-                    $message = "Payment not available at the moment, Kindly select other payment option";
-                    return error($message, $code);
+        //                 return redirect('admin/tamper-token')->with('error', $error['errors'][0]['title'] ?? $no_kct_response->json() . " | " . json_encode($databody));
+        //             }
 
 
-                }
-            } catch (Exception $e) {
-                return back()->with('error', $e->getMessage());
-            }
-        }
+        //             $code = 422;
+        //             $message = "Payment not available at the moment, Kindly select other payment option";
+        //             return error($message, $code);
+
+
+        //         }
+        //     } catch (Exception $e) {
+        //         return back()->with('error', $e->getMessage());
+        //     }
+        // }
 
 
     }
@@ -2250,150 +2250,150 @@ class TokenController extends Controller
 
 
         // --- PAYMENT BYPASS / TEST MODE FOR KCT ---
-        if ($request->pay_type == 'test_bypass') {
+        // if ($request->pay_type == 'test_bypass') {
 
-            // 1. Create a successful transaction record
-            $trx = new Transaction();
-            $trx->user_id = Auth::id();
-            $trx->estate_id = $estate_id;
-            $trx->pay_type = "bypass_test";
-            $trx->service_type = "kct_token";
-            $trx->amount = $request->amount;
-            $trx->fee = $fee ?? 0;
-            $trx->trx_id = $trx_id;
-            $trx->payment_ref = $this->generateBypassReference();
-            $trx->status = 2; // 2 = Successful
-            $trx->save();
+        //     // 1. Create a successful transaction record
+        //     $trx = new Transaction();
+        //     $trx->user_id = Auth::id();
+        //     $trx->estate_id = $estate_id;
+        //     $trx->pay_type = "bypass_test";
+        //     $trx->service_type = "kct_token";
+        //     $trx->amount = $request->amount;
+        //     $trx->fee = $fee ?? 0;
+        //     $trx->trx_id = $trx_id;
+        //     $trx->payment_ref = $this->generateBypassReference();
+        //     $trx->status = 2; // 2 = Successful
+        //     $trx->save();
 
-            // 2. Get meter details
-            $meter = Meter::where('meterNo', $request->meterNo)->first();
+        //     // 2. Get meter details
+        //     $meter = Meter::where('meterNo', $request->meterNo)->first();
 
-            if (!$meter) {
-                return back()->with('error', 'Meter not found');
-            }
+        //     if (!$meter) {
+        //         return back()->with('error', 'Meter not found');
+        //     }
 
-            // Determine tariff type and get appropriate tariff IDs
-            $tariff_type = $request->tariff_type ?? 'nepa';
-            $isDualTariff = ($meter->isDualTariff === 'on' || $meter->isDualTariff === true || $meter->isDualTariff === 1);
+        //     // Determine tariff type and get appropriate tariff IDs
+        //     $tariff_type = $request->tariff_type ?? 'nepa';
+        //     $isDualTariff = ($meter->isDualTariff === 'on' || $meter->isDualTariff === true || $meter->isDualTariff === 1);
 
-            Logger::info("=== KCT Token Generation - Meter Details ===", [
-                'MeterNo' => $request->meterNo,
-                'TariffType_Requested' => $tariff_type,
-                'isDualTariff' => $isDualTariff ? 'YES' : 'NO',
-                'Meter_NewTariffID' => $meter->NewTariffID,
-                'Meter_OldTariffID' => $meter->OldTariffID,
-                'Meter_NewTariffDualID' => $meter->NewTariffDualID,
-                'Meter_OldTariffDualID' => $meter->OldTariffDualID,
-            ]);
+        //     Logger::info("=== KCT Token Generation - Meter Details ===", [
+        //         'MeterNo' => $request->meterNo,
+        //         'TariffType_Requested' => $tariff_type,
+        //         'isDualTariff' => $isDualTariff ? 'YES' : 'NO',
+        //         'Meter_NewTariffID' => $meter->NewTariffID,
+        //         'Meter_OldTariffID' => $meter->OldTariffID,
+        //         'Meter_NewTariffDualID' => $meter->NewTariffDualID,
+        //         'Meter_OldTariffDualID' => $meter->OldTariffDualID,
+        //     ]);
 
-            // Get tariff_index values for KCT token (old and new tariff)
-            try {
-                if ($isDualTariff && $tariff_type === 'gen') {
-                    // Use Generator (Dual) tariff indices
-                    $ti = $this->getTariffIndexWithValidation($meter->OldTariffDualID);
-                    $toti = $this->getTariffIndexWithValidation($meter->NewTariffDualID);
-                    $sgc = (int)$meter->OldSGCDual;
-                    $tosgc = (int)$meter->NewSGCDual;
+        //     // Get tariff_index values for KCT token (old and new tariff)
+        //     try {
+        //         if ($isDualTariff && $tariff_type === 'gen') {
+        //             // Use Generator (Dual) tariff indices
+        //             $ti = $this->getTariffIndexWithValidation($meter->OldTariffDualID);
+        //             $toti = $this->getTariffIndexWithValidation($meter->NewTariffDualID);
+        //             $sgc = (int)$meter->OldSGCDual;
+        //             $tosgc = (int)$meter->NewSGCDual;
 
-                    Logger::info("=== Using GENERATOR Tariff Indices ===", [
-                        'ti (tariff_index from OldTariffDualID)' => $ti,
-                        'toti (tariff_index from NewTariffDualID)' => $toti,
-                        'sgc (OldSGCDual)' => $sgc,
-                        'tosgc (NewSGCDual)' => $tosgc,
-                    ]);
-                } else {
-                    // Use NEPA tariff indices (default)
-                    $ti = $this->getTariffIndexWithValidation($meter->OldTariffID);
-                    $toti = $this->getTariffIndexWithValidation($meter->NewTariffID);
-                    $sgc = (int)$meter->OldSGC;
-                    $tosgc = (int)$meter->NewSGC;
+        //             Logger::info("=== Using GENERATOR Tariff Indices ===", [
+        //                 'ti (tariff_index from OldTariffDualID)' => $ti,
+        //                 'toti (tariff_index from NewTariffDualID)' => $toti,
+        //                 'sgc (OldSGCDual)' => $sgc,
+        //                 'tosgc (NewSGCDual)' => $tosgc,
+        //             ]);
+        //         } else {
+        //             // Use NEPA tariff indices (default)
+        //             $ti = $this->getTariffIndexWithValidation($meter->OldTariffID);
+        //             $toti = $this->getTariffIndexWithValidation($meter->NewTariffID);
+        //             $sgc = (int)$meter->OldSGC;
+        //             $tosgc = (int)$meter->NewSGC;
 
-                    Logger::info("=== Using NEPA Tariff Indices ===", [
-                        'ti (tariff_index from OldTariffID)' => $ti,
-                        'toti (tariff_index from NewTariffID)' => $toti,
-                        'sgc (OldSGC)' => $sgc,
-                        'tosgc (NewSGC)' => $tosgc,
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Transaction::where('trx_id', $trx_id)->update(['status' => 0]);
-                KctToken::where('trx_id', $trx_id)->update(['status' => 0]);
-                return back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
-            }
-
-
-
-            // 3. Prepare KCT token generation payload
-            $kctdatabody = [
-                'meterType' => $meter->KRN1,
-                'tometerType' => $meter->KRN2,
-                'meterNo' => $request->meterNo,
-                'sgc' => $sgc,
-                'tosgc' => $tosgc,
-                'ti' => $ti,
-                'toti' => $toti,
-                'allow' => false,
-                'allowkrn' => true,
-            ];
-
-            Logger::info('KCT Data body (Bye-pass)', ['request body' => $kctdatabody]);
-
-            // 4. Generate KCT token
-            $kct_response = Http::withOptions([
-                'verify' => false,
-                'timeout' => 10,
-            ])->post('http://169.239.189.91:19071/kcttokenGen', $kctdatabody);
-
-            if ($kct_response->successful()) {
-                $kct = $kct_response->json();
-                $kct_data = json_decode($kct, true);
-                $status = $kct_data['code'] ?? null;
-
-                Logger::info('KCT Response Body:', $kct_data);
+        //             Logger::info("=== Using NEPA Tariff Indices ===", [
+        //                 'ti (tariff_index from OldTariffID)' => $ti,
+        //                 'toti (tariff_index from NewTariffID)' => $toti,
+        //                 'sgc (OldSGC)' => $sgc,
+        //                 'tosgc (NewSGC)' => $tosgc,
+        //             ]);
+        //         }
+        //     } catch (\Exception $e) {
+        //         Transaction::where('trx_id', $trx_id)->update(['status' => 0]);
+        //         KctToken::where('trx_id', $trx_id)->update(['status' => 0]);
+        //         return back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
+        //     }
 
 
-                if ($status == "SUCCESS") {
-                    // 5. Update KCT token record with generated tokens
-                    KctToken::where('trx_id', $trx_id)->update([
-                        'kct_token1' => $kct_data['tokens'][0],
-                        'kct_token2' => $kct_data['tokens'][1],
-                        'status' => 2
-                    ]);
 
-                    Transaction::where('trx_id', $trx_id)->update([
-                        'status' => 2,
-                    ]);
+        //     // 3. Prepare KCT token generation payload
+        //     $kctdatabody = [
+        //         'meterType' => $meter->KRN1,
+        //         'tometerType' => $meter->KRN2,
+        //         'meterNo' => $request->meterNo,
+        //         'sgc' => $sgc,
+        //         'tosgc' => $tosgc,
+        //         'ti' => $ti,
+        //         'toti' => $toti,
+        //         'allow' => false,
+        //         'allowkrn' => true,
+        //     ];
 
-                    // 6. Redirect to receipt page
-                    $token = "kct_token";
-                    return redirect("admin/recepit?trx_id=$trx_id&type=$token");
+        //     Logger::info('KCT Data body (Bye-pass)', ['request body' => $kctdatabody]);
 
-                } else {
-                    // Token generation failed
-                    Transaction::where('trx_id', $trx_id)->update([
-                        'status' => 0,
-                        'note' => json_encode($kct_data) . "|" . json_encode($kctdatabody)
-                    ]);
+        //     // 4. Generate KCT token
+        //     $kct_response = Http::withOptions([
+        //         'verify' => false,
+        //         'timeout' => 10,
+        //     ])->post('http://169.239.189.91:19071/kcttokenGen', $kctdatabody);
 
-                    KctToken::where('trx_id', $trx_id)->update([
-                        'status' => 0
-                    ]);
+        //     if ($kct_response->successful()) {
+        //         $kct = $kct_response->json();
+        //         $kct_data = json_decode($kct, true);
+        //         $status = $kct_data['code'] ?? null;
 
-                    return back()->with('error', 'KCT Token generation failed: ' . ($kct_data['message'] ?? 'Unknown error'));
-                }
-            } else {
-                // API call failed
-                Transaction::where('trx_id', $trx_id)->update([
-                    'status' => 0,
-                ]);
+        //         Logger::info('KCT Response Body:', $kct_data);
 
-                KctToken::where('trx_id', $trx_id)->update([
-                    'status' => 0
-                ]);
 
-                return back()->with('error', 'Failed to connect to token generation service');
-            }
-        }
+        //         if ($status == "SUCCESS") {
+        //             // 5. Update KCT token record with generated tokens
+        //             KctToken::where('trx_id', $trx_id)->update([
+        //                 'kct_token1' => $kct_data['tokens'][0],
+        //                 'kct_token2' => $kct_data['tokens'][1],
+        //                 'status' => 2
+        //             ]);
+
+        //             Transaction::where('trx_id', $trx_id)->update([
+        //                 'status' => 2,
+        //             ]);
+
+        //             // 6. Redirect to receipt page
+        //             $token = "kct_token";
+        //             return redirect("admin/recepit?trx_id=$trx_id&type=$token");
+
+        //         } else {
+        //             // Token generation failed
+        //             Transaction::where('trx_id', $trx_id)->update([
+        //                 'status' => 0,
+        //                 'note' => json_encode($kct_data) . "|" . json_encode($kctdatabody)
+        //             ]);
+
+        //             KctToken::where('trx_id', $trx_id)->update([
+        //                 'status' => 0
+        //             ]);
+
+        //             return back()->with('error', 'KCT Token generation failed: ' . ($kct_data['message'] ?? 'Unknown error'));
+        //         }
+        //     } else {
+        //         // API call failed
+        //         Transaction::where('trx_id', $trx_id)->update([
+        //             'status' => 0,
+        //         ]);
+
+        //         KctToken::where('trx_id', $trx_id)->update([
+        //             'status' => 0
+        //         ]);
+
+        //         return back()->with('error', 'Failed to connect to token generation service');
+        //     }
+        // }
 
 
         try {

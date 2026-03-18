@@ -120,7 +120,9 @@ class Meter extends Model
      * @throws \Exception Thrown when: meter is inactive, transaction already completed, payment verification fails, or token generation fails
      */
     public function getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $email=null, $verify="verify") {
+        dump('before');
         $user = User::where('id', $this->user_id)->firstOrFail();
+        dump('after');
 
         // dd(DB::transactionLevel());
 

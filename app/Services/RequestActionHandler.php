@@ -22,19 +22,19 @@ class RequestActionHandler {
 
 
     public static function handleRequestAction($reference) {
-        dump("handleRequestAction");
+        // dump("handleRequestAction");
         $init = new self($reference);
 
         $trx = Transaction::where('trx_id', $reference)
             ->firstOrFail();
 
 
-        dump($trx->toArray());
+        // dump($trx->toArray());
         $action_payload = json_decode($trx->action_payload);
         if (! $action_payload) {
 
             // Payload wasn't passed at transaction instanciation, maintain backward compatibility
-            dump('Backward compatibility');
+            // dump('Backward compatibility');
             $trx->status = 3;
             $trx->save();
 
@@ -61,7 +61,7 @@ class RequestActionHandler {
         if ($actionables[$action['action']] != 1) {
             throw new Exception ('Sorry The requested feature is not available at the moment');
         }
-        dump("got here 41");
+        // dump("got here 41");
 
         $handler = match ($action['action']) {
             'momas_meter', 'momas_meter_web' => fn() => $init->handleBuyTokenRequest(),
@@ -77,7 +77,7 @@ class RequestActionHandler {
 
 
     protected function handleBuyTokenRequest($others=false) {
-        dump('handleBuyTokenRequest');
+        // dump('handleBuyTokenRequest');
         // throw new Exception("Test Failure");
         $trx = Transaction::where('trx_id', $this->reference)
             ->firstOrFail();
@@ -89,19 +89,19 @@ class RequestActionHandler {
             return;
         }
 
-        dump("RequestActionHandler: 78", $trx);
+        // dump("RequestActionHandler: 78", $trx);
 
         $action_payload = json_decode($trx->action_payload, true);
-        dump("Booyah");
+        // dump("Booyah");
         $user_id = $action_payload['user_id'];
 
-        dump($user_id, $action_payload);
+        // dump($user_id, $action_payload);
         $user = User::findOrFail($user_id);
-        dump("user->", $user->id);
+        // dump("user->", $user->id);
 
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
-        dump("meter_with_uid->", $meter->id);
-        // dump($meter);
+        // dump("meter_with_uid->", $meter->id);
+        dump($meter);
 
         $tariffId = $action_payload['tariff_id'];
         $unit = $action_payload['vend_amount_kw_per_naira'];
@@ -212,7 +212,7 @@ class RequestActionHandler {
      */
     protected function handleBuyClearCreditTokenRequest()
     {
-        dump("handleBuyClearCreditTokenRequest here");
+        // dump("handleBuyClearCreditTokenRequest here");
         throw new Exception("handleBuyClearCreditTokenRequest test failure");
         Logger::info('handleBuyClearCreditTokenRequest started', ['reference' => $this->reference]);
 
@@ -227,14 +227,14 @@ class RequestActionHandler {
 
         $action_payload = json_decode($trx->action_payload, true);
         $user_id = $action_payload['user_id'];
-        dump("RequestActionHandler line:212");
+        // dump("RequestActionHandler line:212");
 
         Logger::info('Clear credit token request payload', ['payload' => $action_payload]);
 
         $user = User::findOrFail($user_id);
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
 
-        dump("RequestActionHandler line:219");
+        // dump("RequestActionHandler line:219");
 
         $tariff_id = $action_payload['tariff_id'];
         $email = $action_payload['email'] ?? null;
