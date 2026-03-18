@@ -679,6 +679,9 @@ class TransactionController extends Controller
 
         array_walk_recursive($receipt, function (&$value, $key) {
             if (is_int($value) || is_float($value)) {
+                if ($key === 'unitkwh') {
+                    $value = round((float) $value, 2);
+                }
                 $value = $key === 'status' ? (int) $value : (string) $value;
             }
         });
