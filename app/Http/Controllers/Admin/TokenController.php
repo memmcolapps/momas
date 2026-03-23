@@ -2556,7 +2556,7 @@ class TokenController extends Controller
                     }
 
                     $user = User::where('meterNo', $request->meterNo)->first();
-                    dump('got here', $user?->toArray());
+                    // dump('got here', $user?->toArray());
                     $action_payload = [
                         'action' => 'momas_kct_token',
                         'user_id' => User::where('meterNo', $request->meterNo)->firstOrFail()->id,
@@ -2567,7 +2567,7 @@ class TokenController extends Controller
                         'meterNo' => $request->meterNo,
                     ];
 
-                    dump('got here');
+                    // dump('got here');
 
 
                     $trx = new Transaction();
