@@ -1326,26 +1326,18 @@ class TransactionController extends Controller
 
         $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
             ->where('type', 'admin_fee')
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
+            ->where('status', '!=', 2)
+            // ->whereMonth('created_at', Carbon::now()->month)
+            // ->whereYear('created_at', Carbon::now()->year)
             ->latest('created_at')
             ->first();
 
 
-        if ($admin_fee_get && $admin_fee_get->status == 2) {
-
-            return response()->json([
-                'status' => true,
-                'monthly_admin_fee' => "1"
-            ]);
-
-        } else {
-
-            return response()->json([
-                'status' => true,
-                'monthly_admin_fee' => "0"
-            ]);
-        }
+        return response()->json([
+            'status' => true,
+            'monthly_admin_fee' => $admin_fee_get !== null ? "0" : "1",
+            // 'has_unpaid_fee' => $admin_fee_get !== null
+        ]);
     }
 
     public function enkpay_webhook(request $request)
