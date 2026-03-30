@@ -16,11 +16,12 @@ class FeatureController extends Controller
     public function features(){
 
         $feature =  Feature::where('id', 1)->first()->makeHidden(['created_at', 'updated_at']);
-        $feature->bill_payment = 2;
+        $feature->bill_payment = 1;
 
         $meter = meter();
         if ($meter->status !== 2) {
             $feature->momas_meter = 2;
+            $feature->other_meter = 2;
         }
 
 

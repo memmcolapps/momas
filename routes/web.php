@@ -102,6 +102,7 @@ Route::get('/search-meter', [MeterController::class, 'searchMeter']);
 Route::any('pay-flutter', [TransactionController::class, 'flutter_payment']);
 Route::any('payment-check', [TransactionController::class, 'flutter_verify']);
 Route::any('paystack-check', [TransactionController::class, 'paystack_verify']);
+Route::any('payment-check', [TransactionController::class, 'paystack_verify']);
 Route::any('payment', [TokenController::class, 'payment']);
 Route::any('fund_wallet', [TransactionController::class, 'fund_wallet']);
 
