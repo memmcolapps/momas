@@ -557,8 +557,8 @@ class LoginController extends Controller
                 return error($message, $code);
             }
 
-            Passport::tokensExpireIn(Carbon::now()->addMinutes(20));
-            Passport::refreshTokensExpireIn(Carbon::now()->addMinutes(20));
+            Passport::tokensExpireIn(Carbon::now()->addHours(2));
+            Passport::refreshTokensExpireIn(Carbon::now()->addHours(2));
 
             if (!auth()->attempt($credentials)) {
                 $message = "Meter No or Password Incorrect";
