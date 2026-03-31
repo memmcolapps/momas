@@ -21,6 +21,7 @@ class FeatureController extends Controller
         $meter = meter();
         if ($meter->status !== 2) {
             $feature->momas_meter = 2;
+            $feature->other_meter = 2;
         }
 
 

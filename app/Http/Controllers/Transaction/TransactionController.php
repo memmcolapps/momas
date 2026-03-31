@@ -181,7 +181,22 @@ class TransactionController extends Controller
 
 
 
-            $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($request->ref);
+
+
+            $verify_result = [
+                'status' => false
+            ];
+
+            if ($trx->pay_type == 'wallet') {
+                $verify_result = [
+                    'status' => true
+                ];
+            }
+
+            if ($trx->pay_type == 'paystack') {
+                $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($request->ref);
+            }
+
             Logger::info('Paystack verify response pay_arrears', ['response' => $verify_result]);
 
             if (!$verify_result['status']) {
@@ -521,6 +536,7 @@ class TransactionController extends Controller
                 $trx->amount = $request->amount;
                 $trx->service_type = $request->service;
                 $trx->trx_id = $trx_id;
+                $trx->status = 3;
                 $trx->save();
 
                 return response()->json([
