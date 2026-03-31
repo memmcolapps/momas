@@ -13,7 +13,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Meter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 use Laravel\Passport\Passport;
 use App\Models\OauthAccessToken;
 use App\Http\Controllers\Controller;
@@ -557,8 +557,8 @@ class LoginController extends Controller
                 return error($message, $code);
             }
 
-            Passport::tokensExpireIn(Carbon::now()->addMinutes(20));
-            Passport::refreshTokensExpireIn(Carbon::now()->addMinutes(20));
+            Passport::tokensExpireIn(Carbon::now()->addHours(2));
+            Passport::refreshTokensExpireIn(Carbon::now()->addHours(2));
 
             if (!auth()->attempt($credentials)) {
                 $message = "Meter No or Password Incorrect";
@@ -773,12 +773,14 @@ class LoginController extends Controller
             $user['meter'] = $meter;
             $user['tariff'] = $tariffs;
             $user['monthly_admin_fee'] = $admin_fee;
+            $user['meter_status'] = $meter->status;
 
-            Log::info('LOGIN DEBUG START', [
+            Logger::info('LOGIN DEBUG START', [
 
                 // Core identity
                 'meterNo' => $request->meterNo ?? null,
                 'user_status' => $status ?? null,
+                'meter_status' => $meter->status,
 
                 // Tariffs
                 'tariffs_exist' => isset($tariffs) && $tariffs->count() > 0 ? 'exists' : 'null',
@@ -804,7 +806,7 @@ class LoginController extends Controller
                 'user_object' => $user ? 'exists' : 'null',
             ]);
 
-            Log::info('LOGIN DEBUG END');
+            Logger::info('LOGIN DEBUG END');
 
 
             return response()->json([
@@ -1061,7 +1063,7 @@ class LoginController extends Controller
             $user['tariff'] = $tariffs;
             $user['monthly_admin_fee'] = $admin_fee;
 
-             Log::info('LOGIN DEBUG START', [
+             Logger::info('LOGIN DEBUG START', [
 
                 // Core identity
                 'meterNo' => $request->meterNo ?? null,
@@ -1091,7 +1093,7 @@ class LoginController extends Controller
                 'user_object' => $user ? 'exists' : 'null',
             ]);
 
-            Log::info('LOGIN DEBUG END');
+            Logger::info('LOGIN DEBUG END');
 
 
             return response()->json([
@@ -1135,11 +1137,11 @@ class LoginController extends Controller
     public function get_user(request $request)
     {
 
-        $fl = Setting::where('id', 1)->first();
-        $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
-        $flkey['flutterwave_public'] = $fl->flutterwave_public;
-        $pkkey['paystack_secret'] = $fl->paystack_secret;
-        $pkkey['paystack_public'] = $fl->paystack_public;
+        // $fl = Setting::where('id', 1)->first();
+        // $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
+        // $flkey['flutterwave_public'] = $fl->flutterwave_public;
+        // $pkkey['paystack_secret'] = $fl->paystack_secret;
+        // $pkkey['paystack_public'] = $fl->paystack_public;
 
         $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
             ->where('type', 'admin_fee')
@@ -1160,9 +1162,10 @@ class LoginController extends Controller
         $meter = meter();
         $user = user();
         $user['token'] = $token;
+        $user['meter_status'] = $meter->status;
         $user['meter'] = $meter;
-        $user['flutterwave_keys'] =  $flkey;
-        $user['paystack_keys'] =  $pkkey;
+        // $user['flutterwave_keys'] =  $flkey;
+        // $user['paystack_keys'] =  $pkkey;
         $user['monthly_admin_fee'] = $admin_fee;
 
 

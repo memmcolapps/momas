@@ -207,8 +207,12 @@
                                             Tariff Amt : <b>₦ {{number_format($tariff_amount, 2) }}</b></br><br>
                                             Meter NO : <b>{{$meter_no}}</b></br><br>
                                             Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                            Unit :  <b>{{$unit ?? "0.00"}}KWH</b></br><br>
+                                            Unit :  <b>{{round($unit, 2) ?? "0.00"}}KWH</b></br><br>
                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
+                                            @if ($kct_token1)
+                                                KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
+                                                KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
+                                            @endif
                                         @endif
 
                                     </p>
@@ -442,6 +446,10 @@
                                             Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
                                             Unit :  <b>{{$unit ?? "0.00"}}KWH</b></br><br>
                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
+                                            @if ($kct_token1)
+                                                KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
+                                                KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
+                                            @endif
                                         @endif
 
                                     </p>

@@ -4,7 +4,7 @@ namespace App\Exceptions;
 
 use Throwable;
 use App\Mail\ExceptionOccured;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 
@@ -58,7 +58,7 @@ class Handler extends ExceptionHandler
                 Mail::to($adminEmail)->send(new ExceptionOccured($exception));
             }
         } catch (Throwable $mailException) {
-            Log::error('Error sending exception email: ' . $mailException->getMessage());
+            Logger::error('Error sending exception email: ' . $mailException->getMessage());
         }
     }
 

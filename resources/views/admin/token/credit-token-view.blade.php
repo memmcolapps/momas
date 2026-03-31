@@ -223,6 +223,7 @@
                                                 <th scope="col" class="cursor-pointer">Tariff Index</th>
                                                 <th scope="col" class="cursor-pointer desc">Unit</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
+                                                {{-- <th scope="col" class="cursor-pointer desc">TRX_ID</th> --}}
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
 
@@ -236,7 +237,7 @@
 
                                                 <tr>
                                                     <td>
-                                                        <a href="view-user?id={{$data->id}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
+                                                        <a href="view-user?id={{$data->user?->id ?? null}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
                                                     </td>
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
@@ -251,8 +252,10 @@
                                                         @elseif($data->status == 3)
                                                             <span class="badge text-bg-danger">Declined</span>
                                                         @endif
+                                                        {{-- {{ $data->status . ' - ' . $data->trx_id  }} --}}
 
                                                     </td>
+                                                    {{-- <td>{{$data->trx_id}}</td> --}}
                                                     <td>{{$data->created_at}}</td>
 
 
@@ -505,8 +508,8 @@
                                                                     }
                                                                 });
 
-                                                        
-                                                                
+
+
                                                         });
 
                                                         function populateTariffOptions(tariffs, meter) {
@@ -548,15 +551,15 @@
                                                                 });
                                                             }
 
-                                                            tariffSelect.prop('disabled', false);           
-                                                        
+                                                            tariffSelect.prop('disabled', false);
+
                                                         }
 
                                                             function getActiveTariffLabel(tariff, meter, type) {
                                                                var label = tariff.title;
                                                                var isCurrentlyActive = false;
                                                                var tariffStatus = '';
-                                                                                                                       
+
                                                                // Check if this tariff is currently active for the meter
                                                                if (type === 'nepa') {
                                                                    if (meter.NewTariffID == tariff.id) {
@@ -575,7 +578,7 @@
                                                                        tariffStatus = ' (Old Gen)';
                                                                    }
                                                                }
-                                                               
+
                                                                return label + tariffStatus;
                                                             }
 
