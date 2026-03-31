@@ -16,7 +16,7 @@ class NotificationController extends Controller
             'minimum_version' => '1.0.2',
             'latest_version' => '1.1.0',
             'last_update_date' => '2026-03-31',
-            'app_size' => '60mb',
+            'app_size' => '26.1mb',
             'play_store_url' => 'https://play.google.com/store/apps/details?id=com.memmcol.momaspayplus',
             'app_store_url' => 'https://apps.apple.com/us/app/momaspay-plus/id6743942353',
         ]);
