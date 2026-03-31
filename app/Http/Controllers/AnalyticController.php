@@ -251,7 +251,7 @@ class AnalyticController extends Controller
             ];
         }
 
-        return StandardResponse::success(200, [
+        return StandardResponse::success(200, 'Fetched Analytics', [
             'total_month_amount'    => (float) $total_month_sum,
             'month_change_percent'  => $month_change_percent,
             'month_trend'           => $month_change_percent >= 0 ? 'up' : 'down',
