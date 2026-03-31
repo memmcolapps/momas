@@ -219,24 +219,6 @@ class Meter extends Model
             }
         }
 
-        $cdt = CreditToken::create([
-            'trx_id' => $trx_id,
-            'user_id' => $this->user_id,
-            'meterNo' => $this->meterNo,
-            'amount' => $this->vending_amount,
-            // 'amount_charged' => $action_payload['vending_amount'],
-            // 'customer_email' => $email,
-            // 'unitkwh' => $action_payload['vend_amount_kw_per_naira'],
-            // 'vat' => $action_payload['vat_amount'],
-            'estate_id' => $this->estate_id,
-            // 'estate_name' => $request->estate_name,
-            // 'token' => null,
-            'status' => 0
-        ]);
-
-        throw new Exception('Testing exception');
-
-
         $user = User::where('id', $this->user_id)->firstOrFail();
 
 
