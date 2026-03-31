@@ -11,7 +11,7 @@ use App\Models\UtilitiesPayment;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 
 class GenerateMonthlyArrears extends Command
 {
@@ -48,12 +48,12 @@ class GenerateMonthlyArrears extends Command
 
             DB::commit();
             $this->info("✓ {$fixedCount} fixed charges, {$utilCount} utilities");
-            Log::info("Arrears generated: {$fixedCount} fixed, {$utilCount} utilities for {$billingPeriod}");
+            Logger::info("Arrears generated: {$fixedCount} fixed, {$utilCount} utilities for {$billingPeriod}");
             return 0;
         } catch (\Exception $e) {
             DB::rollBack();
             $this->error('Error: ' . $e->getMessage());
-            Log::error('Arrears generation failed: ' . $e->getMessage());
+            Logger::error('Arrears generation failed: ' . $e->getMessage());
             return 1;
         }
     }

@@ -7,7 +7,7 @@ use App\Models\UtilitiesPayment;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Models\Logger;
 
 class CheckUtility extends Command
 {
@@ -41,7 +41,7 @@ class CheckUtility extends Command
                 $mssage = "Estate not found for UtilityPayment ID: {$payment->id}";
                 send_notification($mssage);
 
-                Log::warning("Estate not found for UtilityPayment ID: {$payment->id}");
+                Logger::warning("Estate not found for UtilityPayment ID: {$payment->id}");
                 continue;
 
 
@@ -85,12 +85,12 @@ class CheckUtility extends Command
                 $mssage = "Updated UtilityPayment ID: {$payment->id} | New Amount: {$payment->amount} | Next Due Date: {$payment->next_due_date}";
                 send_notification($mssage);
 
-                Log::info("Updated UtilityPayment ID: {$payment->id} | New Amount: {$payment->amount} | Next Due Date: {$payment->next_due_date}");
+                Logger::info("Updated UtilityPayment ID: {$payment->id} | New Amount: {$payment->amount} | Next Due Date: {$payment->next_due_date}");
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                Log::error("Error updating UtilityPayment ID: {$payment->id} - " . $e->getMessage());
+                Logger::error("Error updating UtilityPayment ID: {$payment->id} - " . $e->getMessage());
             }
         }
 

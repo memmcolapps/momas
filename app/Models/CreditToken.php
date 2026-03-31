@@ -16,6 +16,22 @@ class CreditToken extends Model
         'fee' => 'float',
     ];
 
+    protected $fillable = [
+        'trx_id',
+        'user_id',
+        'meterNo',
+        'amount',
+        'vat',
+        'estate_id',
+        'token',
+        'status',
+        'amount_charged',
+        'customer_email',
+        'tariff_id',
+        'estate_name',
+        'unitkwh',
+    ];
+
     public function estate()
     {
         return $this->belongsTo(Estate::class);

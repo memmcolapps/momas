@@ -1,3 +1,7 @@
+@php
+    // dump("Hello World");
+@endphp
+
 @extends('layouts.main')
 @section('content')
 

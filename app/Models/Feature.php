@@ -13,6 +13,9 @@ class Feature extends Model
     protected $fillable = [
         'momas_meter',
         'other_meter',
+        'momas_tamper_token',
+        'momas_kct_token',
+        'momas_clear_credit_token',
         'print_token',
         'access_token',
         'services',
@@ -27,6 +30,9 @@ class Feature extends Model
 
     "id" => 'integer',
     "momas_meter" => 'integer',
+    "momas_tamper_token" => 'integer',
+    "momas_kct_token" => 'integer',
+    "momas_clear_credit_token" => 'integer',
     "other_meter" => 'integer',
     "print_token"=> 'integer',
     "access_token"=> 'integer',

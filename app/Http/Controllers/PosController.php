@@ -14,6 +14,7 @@ use App\Models\TarrifState;
 use App\Models\Transaction;
 use App\Models\User;
 use Exception;
+use App\Models\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -487,6 +488,7 @@ class PosController extends Controller
 
 
             } catch (Exception $e) {
+            Logger::error('PosController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
                 return response()->json([
                     'status' => false,
@@ -618,6 +620,7 @@ class PosController extends Controller
                 }
 
             } catch (Exception $e) {
+            Logger::error('PosController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
                 return response()->json([
                     'status' => false,

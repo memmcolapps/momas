@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\MeterImportController;
+use App\Http\Controllers\Admin\TokenController;
+use App\Http\Controllers\AnalyticController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Bills\BillsController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Service\ServiceController;
 use App\Http\Controllers\Transaction\TransactionController;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Route;
 
 
@@ -116,7 +119,7 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     //
     Route::post('buy-meter', [MeterController::class, 'buy_meter_token']);
     Route::post('request-meter', [MeterController::class, 'request_meter']);
-    Route::post('retry-meter', [MeterController::class, 'retry_meter_token']);
+    Route::post('retry-meter', [TokenController::class, 'retry_generate_credit_token']);
 
     Route::post('buy-meter-others', [MeterController::class, 'pay_for_others_meter_token']);
     Route::post('reprint-token', [MeterController::class, 'reprint_meter_token']);
@@ -141,10 +144,31 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     Route::get('get-trx', [TransactionController::class, 'get_trx']);
 
 
+    // Analytics
+    Route::get('get-token-purchase-by-month', [AnalyticController::class, 'getTokenPurchaseByMonth']);
+
+
+    // Broadcast
 });
+
+Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
+Route::post('paystack-webhook', [TransactionController::class, 'paystackWebhook'])->name('paystack.webhook');
+
+// Test webhook endpoint - only available in local/staging environments
+Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
 
 
 Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
 
 
+
+
+
+// Log APIs
+Route::get('/logs', [App\Http\Controllers\LogController::class, 'getAllLogs']);
+Route::get('/logs/query', [App\Http\Controllers\LogController::class, 'queryLogs']);
+Route::get('/logs/stats', [App\Http\Controllers\LogController::class, 'getStats']);
+Route::delete('/logs/clear', [App\Http\Controllers\LogController::class, 'clearLogs']);
+Route::get('/logs/{id}', [App\Http\Controllers\LogController::class, 'getLog']);
+Route::delete('/logs/{id}', [App\Http\Controllers\LogController::class, 'deleteLog']);
 
