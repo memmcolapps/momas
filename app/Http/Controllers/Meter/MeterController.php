@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Meter;
 
+use App\Contracts\PaymentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Transaction\TransactionController;
 use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\KctMeterToken;
+use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\MeterRequest;
 use App\Models\MeterToken;
@@ -17,7 +19,6 @@ use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utitlity;
-use App\Models\Logger;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
@@ -288,14 +289,9 @@ class MeterController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'utility_amount' => 'nullable|numeric|min:0',
-                'total_paid_amount' => 'required|numeric|min:1',
-                'vend_amount_kw_per_naira' => 'required|numeric|min:0',
-                'vending_amount' => 'required|numeric|min:1',
-                'vat_amount' => 'required|numeric|min:0',
                 'tariff_id' => 'required|integer|exists:tariffs,id',
-                'trxref' => 'nullable|string',
-                'ref' => 'nullable|string',
+                'trxref' => 'required_without:ref|string',
+                'ref' => 'required_without:trxref|string',
             ]);
 
             if ($validator->fails()) {
@@ -304,13 +300,16 @@ class MeterController extends Controller
                 ]);
             }
 
+
             $trx_id = $request->trxref ?? $request->ref;
             $tariff_id = $request->tariff_id;
             $utility_amount = $request->utility_amount ?? 0;
+            $auth_user = Auth::user();
 
             if (!$trx_id) {
                 return StandardResponse::error(422, "Transaction reference missing");
             }
+
 
             // ============================
             // Check Existing Transaction
@@ -322,7 +321,7 @@ class MeterController extends Controller
                 return StandardResponse::error(404, 'Resource not found: Invalid transaction reference', []);
             }
 
-            if ($trx->status === 0 || $trx->status === 1) {
+            if ($trx->status === 1) {
                 return StandardResponse::error(403, 'Transaction yet to be verified or failed', []);
             }
 
@@ -334,6 +333,20 @@ class MeterController extends Controller
                 return StandardResponse::success(200, 'Transaction has previously been completed', [
                     'receipt' => $receipt,
                 ]);
+            }
+
+            if ($trx->status === 0) {
+                $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
+                $verifier->verifyTransaction($trx->trx_id);
+
+                if (! $verifier['is_successful']) {
+
+                    $trx->status = 1;
+                    $trx->save();
+                    Logger::warning("User {$auth_user->id} tried buying a token with a failed transaction {$trx->trx_id}");
+
+                    return StandardResponse::error(403, 'Payment failed please try again', []);
+                }
             }
 
             $meter = Meter::where('meterNo', Auth::user()->meterNo)

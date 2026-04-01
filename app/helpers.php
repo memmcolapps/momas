@@ -606,7 +606,7 @@ if (! function_exists('generate_unique_string')) {
 
 if (! function_exists('handle_pay_arrears')) {
 
-    function handle_pay_arrears($trx_id, $user_id, $type) {
+    function handle_pay_arrears($trx_id, $user_id, $type, $return_amount=false) {
 
         $user = User::where('id', $user_id)->first();
 
@@ -645,6 +645,11 @@ if (! function_exists('handle_pay_arrears')) {
             UtilitiesPayment::where('id', $node->id)->update(['status' => 2]);
         }
 
-        return $utilities;
+        $trx->vending_amount = $amount;
+        $trx->save();
+
+
+
+        return $return_amount ? $amount : $utilities;
     }
 }

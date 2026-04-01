@@ -122,15 +122,16 @@ class Meter extends Model
 
         // NEW CALCULATION FLOW:
         // [1] 2.5% Service Fee
-        $percn = (2.5 / 100) * (int)$trx->amount;
-        $afterServiceFee = $trx->amount - $percn;
+        $amount = $trx->vending_amount ?? $trx->amount;
+        $percn = (2.5 / 100) * (int)$amount;
+        $afterServiceFee = $amount - $percn;
 
         // [2] Estate Service Charge
         $est = Estate::where('id', $this->estate_id)->first();
         if ($est->charge_fee_flat != null) {
             $estateFee = $est->charge_fee_flat;
         } else if ($est->charge_fee_precent != null) {
-            $estateFee = ($est->charge_fee_precent / 100) * (int)$trx->amount;
+            $estateFee = ($est->charge_fee_precent / 100) * (int)$amount;
         } else {
             $estateFee = 0;
         }
@@ -306,6 +307,7 @@ class Meter extends Model
                 'service_type' => "credit_token",
                 'tariff_id' => $tariff_id,
                 'unit_amount' => $vending_amount,
+                'vat' => $vatAmount,
             ]);
 
 
