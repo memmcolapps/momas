@@ -110,7 +110,7 @@ class AuthController extends Controller
         $code = Auth::user()->code;
         $email = Auth::user()->email;
         send_login_code($email, $code);
-        return view('auth.code', compact('code', 'email'));
+        return view('auth.code', compact('email'));
 
     }
 
@@ -125,7 +125,7 @@ class AuthController extends Controller
     public function auth_code(request $request)
     {
         $email = Auth::user()->email;
-        return view('auth.code', compact( 'email'));
+        return view('auth.code', compact('email'));
 
     }
 

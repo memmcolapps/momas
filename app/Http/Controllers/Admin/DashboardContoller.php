@@ -48,15 +48,15 @@ class DashboardContoller extends Controller
     }
 
 
-        public function index()
+    public function index()
     {
-
+    
         Logger::info('Upadate of 2026-01-16 16:41:00');
         Logger::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
-
-        if (Auth::user()->role == 0) {
+    
+        if (Auth::user()->isSuperAdmin()) {
         Logger::info('main-branch dummy Update of 2026-01-16 15:27:00');
-
+    
             $data['users'] = User::where('status', 2)->count();
             $data['meter'] = Meter::count();
             $data['total_in'] = Transaction::where('status', 2)->sum('amount');
@@ -64,39 +64,39 @@ class DashboardContoller extends Controller
             $data['token'] = Token::count();
             $data['meter_token'] = MeterToken::where('status', 2)->count();
             $data['transaction'] = Transaction::paginate('20');
-
+    
             $data['title'] = "Admin Dashboard";
-
+    
             return view('admin.dashboard', $data);
         } elseif (Auth::user()->role == 1) {
-        } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
-
+        } elseif (Auth::user()->isCustomer()) {
+        } elseif (Auth::user()->isEstateAdmin()) {
+    
             $data['users'] = User::where([
                 'status' => 2,
                 'estate_id' => Auth::user()->estate_id,
                 'role' => 3,
             ])->count();
-
-
+    
+    
             $data['customers'] = User::where([
                 'status' => 2,
                 'estate_id' => Auth::user()->estate_id,
                 'role' => 2,
             ])->count();
-
+    
             $data['meter'] = Meter::where('estate_id', Auth::user()->estate_id)->count();
-
+    
             $data['token'] = Token::where('estate_id', Auth::user()->estate_id)->count();
-
-
+    
+    
             $estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title ?? "Estate";
-
-
+    
+    
             $data['title'] = "Dashboard | $estate_name ";
-
+    
             return view('admin.dashboard', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -105,16 +105,16 @@ class DashboardContoller extends Controller
 
     public function list_users()
     {
-
-        if (Auth::user()->role == 0) {
-
+    
+        if (Auth::user()->isSuperAdmin()) {
+        
             $data['users'] = User::latest()->where('status', 2)->count();
             $data['users_lists'] = User::latest()->where('role', '!=', 2)->paginate('20');
             return view('admin/user/user-list', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
-
+        } elseif (Auth::user()->isEstateAdmin()) {
+        
             $data['users'] = User::where([
                 'role' => 3,
                 'estate_id' => Auth::user()->estate_id,
@@ -124,7 +124,7 @@ class DashboardContoller extends Controller
                 'estate_id' => Auth::user()->estate_id,
             ])->ORwhere('role', 4)->paginate('20');
             return view('admin/user/user-list', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -133,25 +133,25 @@ class DashboardContoller extends Controller
 
     public function list_customers()
     {
-
-
-        if (Auth::user()->role == 0) {
-
+    
+    
+        if (Auth::user()->isSuperAdmin()) {
+        
             $data['users'] = User::latest()->where('status', 2)->where('role', 2)->count();
             $data['users_lists'] = User::latest()->where('role', 2)->paginate('20');
             $data['estate'] = Estate::latest()->where('status', 2)->get();
-
+        
             return view('admin/user/customer-list', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
-
+        } elseif (Auth::user()->isEstateAdmin()) {
+        
             $data['users'] = User::latest()->where('estate_id', Auth::user()->estate_id)->where('role', 2)->count();
             $data['users_lists'] = User::latest()->where('estate_id', Auth::user()->estate_id)->where('role', 2)->paginate('20');
             $data['estate'] = Estate::latest()->where('status', 2)->get();
-
+        
             return view('admin/user/customer-list', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -160,22 +160,22 @@ class DashboardContoller extends Controller
 
     public function new_user()
     {
-
-
-        if (Auth::user()->role == 0) {
-
+    
+    
+        if (Auth::user()->isSuperAdmin()) {
+        
             $data['estate'] = Estate::all();
             $data['meters'] = Meter::all();
             return view('admin/user/new-user', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
         } elseif (Auth::user()->role == 3) {
-
+        
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['meters'] = Meter::all();
-
+        
             return view('admin/user/new-user', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -184,24 +184,24 @@ class DashboardContoller extends Controller
 
     public function new_customer()
     {
-
-
-        if (Auth::user()->role == 0) {
-
+    
+    
+        if (Auth::user()->isSuperAdmin()) {
+        
             $data['estate'] = Estate::all();
             // $data['meters'] = Meter::all();
             $data['meters'] = Meter::whereNull('user_id')->get(); // Only unassigned meters
             return view('admin/user/new-customer', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
+        } elseif (Auth::user()->isEstateAdmin()) {
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->first();
             // $data['meters'] = Meter::where('id', Auth::user()->estate_id)->get();
             $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)
-                              ->whereNull('user_id')
-                              ->get(); // Only unassigned meters for this estate
+                               ->whereNull('user_id')
+                               ->get(); // Only unassigned meters for this estate
             return view('admin/user/new-customer', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -365,37 +365,37 @@ class DashboardContoller extends Controller
 
     public function settings(request $request)
     {
-
-
-        if (Auth::user()->role == 0) {
-
+    
+    
+        if (Auth::user()->isSuperAdmin()) {
+        
             $data['fea'] = Feature::where('id', 1)->first();
             $data['set'] = Setting::where('id', 1)->first();
-
+        
             // Load utilities payments data for super admin
             $data['utilities_payments'] = UtilitiesPayment::with(['user', 'estate'])
                 ->orderBy('created_at', 'desc')
                 ->get();
             $data['estates'] = Estate::orderBy('title', 'asc')->get();
             $data['outstanding_utilities_count'] = UtilitiesPayment::where('status', '!=', 2)->count();
-
+        
             return view('admin/settings', $data);
         } elseif (Auth::user()->role == 1) {
-
+        
             $data['fea'] = Feature::where('id', 1)->first();
             $data['set'] = Setting::where('id', 1)->first();
             return view('admin/settings', $data);
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
-
+        } elseif (Auth::user()->isEstateAdmin()) {
+        
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
             $data['utl'] = Utitlity::where('estate_id', Auth::user()->estate_id)->first() ?? null;
             $data['total_utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->sum('amount');
             $data['utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->get() ?? null;
-
+        
             return view('admin/settings', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -447,7 +447,7 @@ class DashboardContoller extends Controller
     public function clearSingleUtilityPayment(Request $request)
     {
         // Super admin only check
-        if (Auth::user()->role != 0) {
+        if (!Auth::user()->isSuperAdmin()) {
             return redirect('admin/settings')->with('error', 'Unauthorized access');
         }
 
@@ -481,7 +481,7 @@ class DashboardContoller extends Controller
     public function editUtilityPayment(Request $request)
     {
         // Super admin only check
-        if (Auth::user()->role != 0) {
+        if (!Auth::user()->isSuperAdmin()) {
             return redirect('admin/settings')->with('error', 'Unauthorized access');
         }
 
