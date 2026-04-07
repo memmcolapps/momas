@@ -628,6 +628,14 @@ if (! function_exists('handle_pay_arrears')) {
             throw new Exception("Invalid Transaction ID {$trx_id} passed for arrears");
         }
 
+        if ($trx->status == 1) {
+            throw new Exception("Transaction Failed");
+        }
+
+        if ($trx->status == 2) {
+            throw new Exception("Transaction Completed");
+        }
+
         $amount = $trx->amount;
         $utilities = $admin_fee_sum = UtilitiesPayment::where('user_id', $user_id)
             ->orderBy('created_at', 'asc')

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Bills;
 
+use App\Contracts\PaymentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Logger;
 use App\Models\Transaction;
@@ -26,9 +27,56 @@ class BillsController extends Controller
     {
 
         $validator = Validator::make($request->all(), [
-            'trx_id' => 'nullable|integer|exists:transactions,id',
-            'amount' => 'nullable|numeric',
+            'trx_id' => 'required|string|exists:transactions,trx_id',
+            'phone' => 'required|numeric',
         ]);
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+
+        $auth_user = Auth::user();
+
+        $trx = Transaction::where('trx_id', $request->trx_id)
+            ->where('user_id', $auth_user->id)
+            ->first();
+
+        if (! $trx) {
+            return StandardResponse::error(404, 'Invalid transaction Id', []);
+        }
+
+
+        $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type]);
+
+        switch ($trx->status) {
+            case 0:
+                $verifier = $payment_engine->verifyTransaction($trx->trx_id);
+
+                // dd($verifier);
+                if (! $verifier['is_successful']) {
+                    return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                }
+
+                $trx->status = 3;
+                $trx->save();
+                break;
+
+            case 1:
+                return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                break;
+
+            case 2:
+                return StandardResponse::error(403, 'Transaction Completed, restart a new transaction', []);
+                break;
+        }
+
+        // Pay utility fees
+        // handle_pay_arrears($trx->trx_id, $auth_user->id, 'utilities');
+
+
         // Map service_id to Paybeta network format
         $networkMap = [
             'mtn' => 'mtn',
@@ -44,7 +92,7 @@ class BillsController extends Controller
         $response = $this->paybetaService->purchaseAirtime(
             $network,
             $request->phone,
-            $request->amount,
+            $trx->vending_amount,
             $reference
         );
 
@@ -132,8 +180,11 @@ class BillsController extends Controller
             ]);
         }
 
-        $message = $allCableBouquets;
-        send_notification($message);
+        // $message = $allCableBouquets;
+        // send_notification($message);
+        $auth_user = Auth::user();
+
+        Logger::error("Failed to fetch cable plans for User {$auth_user->id}");
     }
 
 

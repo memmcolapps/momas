@@ -156,7 +156,7 @@ class PaybetaService
     public function getCableBouquets($service)
     {
         // $service: dstv, gotv, startimes
-        return $this->makeRequest('post', 'cable/bouquets', [
+        return $this->makeRequest('post', 'cable/bouquet', [
             'service' => $service
         ]);
     }

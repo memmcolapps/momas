@@ -454,7 +454,7 @@ class TransactionController extends Controller
                 }
 
                 $trx = new Transaction();
-                $trx->user_id = Auth::id();
+                $trx->user_id = Auth::user()->id;
                 $trx->pay_type = $request->pay_type;
                 $trx->estate_id = Auth::user()->estate_id;
                 $trx->amount = $request->amount;
