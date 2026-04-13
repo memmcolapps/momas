@@ -167,6 +167,7 @@ class Meter extends Model
             throw new Exception('Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
         }
 
+
         return [
             'tariffAmount' => $tariffAmount,
             'vat' => $vat,
@@ -216,6 +217,7 @@ class Meter extends Model
 
             if (!$other_meter) {
 
+                // dd($receiver_meterNo);
                 throw new Exception('You Cannot Vend for this Meter');
             }
         }
@@ -236,6 +238,7 @@ class Meter extends Model
                 ->firstOrFail();
 
             // Calculate token values using the dedicated method
+
             $calculatedValues = $this->calculateTokenValues($tariff_id, $trx);
 
             // Extract calculated values
@@ -307,11 +310,12 @@ class Meter extends Model
                 'service_type' => "credit_token",
                 'tariff_id' => $tariff_id,
                 'unit_amount' => $vending_amount,
-                'vat' => $vatAmount,
+                // 'vat' => $vatAmount,
             ]);
 
 
             if ( ! $token_gen['success']) {
+                dump('Failed Meter: 317');
                 Transaction::where('trx_id', $trx_id)->update([
                     'note' => 'token generation failed',
                     'status' => 3,
@@ -344,7 +348,9 @@ class Meter extends Model
                 'estate_id' => $this->estate_id,
                 'estate_name' => $user->estate_name,
                 'token' => $token,
-                'status' => 2
+                'status' => 2,
+                'vatAmount' => $vatAmount,
+                'tariff_amount' => $tariffAmount,
             ]);
 
 

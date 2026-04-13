@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class BillsController extends Controller
 {
@@ -29,6 +30,7 @@ class BillsController extends Controller
         $validator = Validator::make($request->all(), [
             'trx_id' => 'required|string|exists:transactions,trx_id',
             'phone' => 'required|numeric',
+            'service_id' => 'required|string|in:mtn,glo,airtel,9mobile,etisalat'
         ]);
 
         if ($validator->fails()) {
@@ -92,7 +94,7 @@ class BillsController extends Controller
         $response = $this->paybetaService->purchaseAirtime(
             $network,
             $request->phone,
-            $trx->vending_amount,
+            $trx->vending_amount ?? $trx->amount,
             $reference
         );
 
@@ -107,21 +109,24 @@ class BillsController extends Controller
 
         if ($status === 'successful') {
 
-            Transaction::where('trx_id', $request->ref)->update(['service_type' => "Airtime Purchase", 'service' => "Airtime", 'status' => 2]);
+            Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$network}_airtime_purchase", 'service' => "Airtime Purchase", 'status' => 2]);
 
             $message = "Airtime Purchase successful";
             return success($message);
 
         }
 
-        // Handle failure cases
-        $message = $response;
-        send_notification($message);
+        // // Handle failure cases
+        // $message = $response;
+        // send_notification($message);
 
         // Check for insufficient funds
         $errorMessage = $response['message'] ?? '';
         if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
-            User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+            Logger::error("Airtime Purchase fail due to insufficient balance", [
+                'user_id' => Auth::id(),
+            ]);
+            User::where('id', Auth::id())->increment('main_wallet', (int) $request->amount);
             $message = "Airtime Purchase not successful, Try again later";
             $code = 422;
             return error($message, $code);
@@ -145,8 +150,7 @@ class BillsController extends Controller
                    !empty($allDataBundles['9mobile']);
 
         if ($hasData) {
-            return response()->json([
-                'status' => true,
+            return StandardResponse::success(200, 'Fetch Data Plan', [
                 'mtn_data' => $allDataBundles['mtn'] ?? null,
                 'glo_data' => $allDataBundles['glo'] ?? null,
                 'airtel_data' => $allDataBundles['airtel'] ?? null,
@@ -171,8 +175,7 @@ class BillsController extends Controller
                    !empty($allCableBouquets['startimes']);
 
         if ($hasData) {
-            return response()->json([
-                'status' => true,
+            return StandardResponse::success(200, 'Fetched Cable Plans', [
                 'dstv' => $allCableBouquets['dstv'] ?? null,
                 'gotv' => $allCableBouquets['gotv'] ?? null,
                 'startimes' => $allCableBouquets['startimes'] ?? null,
@@ -260,7 +263,7 @@ class BillsController extends Controller
         $status = $response['status'] ?? null;
 
         // Update transaction status regardless of outcome (per original logic)
-        Transaction::where('trx_id', $request->ref)->update(['service_type' => "Cable Purchase", 'service' => "Cable", 'status' => 2]);
+        Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$service}_cable_purchase", 'service' => "Cable Purchase", 'status' => 2]);
 
         if ($status === 'successful') {
             $message = "Cable Purchase successful";
@@ -286,7 +289,26 @@ class BillsController extends Controller
     public function buy_data(request $request)
     {
 
-        $validator = Validator::make($request->all(), []);
+        $validator = Validator::make($request->all(), [
+            'trx_id' => ['required', Rule::exists('transactions', 'trx_id')
+                ->where(function ($query) {
+                    $query->where('user_id', auth()->id());
+                }),
+            ],
+            'phone' => 'required|numeric',
+            'service_id' => 'required|string|in:mtn,glo,airtel,9mobile,etisalat',
+            'variation_code' => 'required|string',
+        ]);
+
+        // dd($request->all());
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+
         // Map service_id to Paybeta network format
         $networkMap = [
             'mtn' => 'mtn',
@@ -314,7 +336,7 @@ class BillsController extends Controller
         ]);
 
         // Update transaction status regardless of outcome (per original logic)
-        Transaction::where('trx_id', $request->ref)->update(['service_type' => "Data Purchase", 'service' => "Data", 'status' => 2]);
+        Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$network}_data_purchase", 'service' => "Data Purchase", 'status' => 2]);
 
         $status = $response['status'] ?? null;
 
@@ -332,8 +354,8 @@ class BillsController extends Controller
             return error($message, $code);
         }
 
-        $message = $response;
-        send_notification($message);
+        // $message = $response;
+        // send_notification($message);
     }
 
 

@@ -800,8 +800,12 @@ class TransactionController extends Controller
         // $message = "paystack=" . json_encode($request->all());
         // send_notification($message);
 
+        // dd($request->all());
         $transactionId = $request->reference;
-        $provider = Transaction::where('trx_id')->pluck('pay_type');
+        $trx = Transaction::where('trx_id', $transactionId)->first();
+        $provider = $trx?->pay_type;
+
+        // dd($trx->toArray());
 
         // Use PaystackPaymentService to verify transaction
         $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);

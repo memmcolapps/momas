@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CreditToken;
 use App\Models\Token;
 use App\Models\Transaction;
 use App\Services\StandardResponse;
@@ -11,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 class AnalyticController extends Controller
 {
@@ -143,16 +141,20 @@ class AnalyticController extends Controller
         $min_year = $current_year - 5;
 
         $available_years = range($current_year, $min_year);
+        foreach ($available_years as $idx => $year) {
+            $available_years[$idx] = (string) $year;
+        }
 
 
         $year_start = Carbon::now()->startOfYear();
-        $month_start = Carbon::now()->startOfMonth();
+        $month_start = $year_start;
+        $transaction_month_start = Carbon::now()->startOfMonth();
         $last_month_start = Carbon::now()->subMonth()->startOfMonth();
         $last_month_end = Carbon::now()->subMonth()->endOfMonth();
 
 
         $total_month_sum = Transaction::where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$month_start, $now])
+            ->whereBetween('created_at', [$transaction_month_start, $now])
             ->sum('amount');
 
 
@@ -188,7 +190,7 @@ class AnalyticController extends Controller
         }
 
 
-        $serviceTypes = ['airtime_top_up', 'data_top_up', 'credit_token'];
+        $serviceTypes = ['airtime_top_up', 'data_top_up', 'credit_token', 'cable_subscription'];
 
         $this_month_by_service = Transaction::where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$month_start, $now])
@@ -242,22 +244,24 @@ class AnalyticController extends Controller
             ->get()
             ->keyBy('status');
 
-        $tokenStatuses = ['pending', 'used', 'failed'];
-        $tokenStatusBreakdown = [];
-        foreach ($tokenStatuses as $status) {
-            $tokenStatusBreakdown[] = [
-                'status' => $status,
-                'count'  => isset($tokens[$status]) ? (int) $tokens[$status]->count : 0,
-            ];
+        $tokenStatuses = [ 0 => 'pending', 1 => 'failed', 2 => 'used' ];
+        $total = 0;
+        $breakdown = [];
+
+        foreach ($tokenStatuses as $status => $value) {
+            $count  = isset($tokens[$status]) ? (int) $tokens[$status]->count : 0;
+            $total += $count;
+            $breakdown[] = ['status' => $value, 'count' => $count];
         }
 
         return StandardResponse::success(200, 'Fetched Analytics', [
             'total_month_amount'    => (float) $total_month_sum,
             'month_change_percent'  => $month_change_percent,
+            'year'                  => (string) $current_year,
             'month_trend'           => $month_change_percent >= 0 ? 'up' : 'down',
-            'by_year'               => $byYear,
-            'by_service_type'       => $byServiceType,
-            'token_status_breakdown' => $tokenStatusBreakdown,
+            'months'               => $byYear,
+            'services'       => $byServiceType,
+            'token_breakdown' => $breakdown,
             'available_years' => $available_years,
             'period' => [
                 'start_date' => $year_start->toDateString(),
@@ -281,6 +285,7 @@ class AnalyticController extends Controller
         }
 
         $year = (int) $request->input('year', $current_year);
+        // dd($year);
 
         $start = Carbon::create($year)->startOfYear();
         $end   = $year === $current_year
@@ -302,6 +307,12 @@ class AnalyticController extends Controller
         // Current year = up to current month only | Past year = all 12 months
         $months_to_show = $year === $current_year ? Carbon::now()->month : 12;
 
+        $available_years = range($current_year, $min_year);
+
+        foreach ($available_years as $idx => $t_year) {
+            $available_years[$idx] = (string) $t_year;
+        }
+
         $months = [];
         for ($m = 1; $m <= $months_to_show; $m++) {
             $months[] = [
@@ -312,9 +323,9 @@ class AnalyticController extends Controller
             ];
         }
 
-        return StandardResponse::success(200, [
-            'year'            => $year,
-            'available_years' => range($current_year, $min_year),
+        return StandardResponse::success(200, 'Fetch Transaction Chart Data', [
+            'year'            => (string) $year,
+            'available_years' => $available_years,
             'months'          => $months,
         ]);
     }
@@ -387,9 +398,14 @@ class AnalyticController extends Controller
             ];
         }
 
-        return StandardResponse::success(200, [
-            'year'            => $year,
-            'available_years' => range($current_year, $min_year),
+        $available_years = range($current_year, $min_year);
+        foreach ($available_years as $idx => $year) {
+            $available_years[$idx] = (string) $year;
+        }
+
+        return StandardResponse::success(200, 'Fetched utilities metrics successfully', [
+            'year'            => (string) $year,
+            'available_years' => $available_years,
             'services'        => $services,
         ]);
     }
@@ -425,14 +441,16 @@ class AnalyticController extends Controller
             ->get()
             ->keyBy('status');
 
-        $tokenStatuses = ['pending', 'used', 'failed'];
+        // dd($tokens->toArray());
+
+        $tokenStatuses = [ 0 => 'pending', 1 => 'failed', 2 => 'used' ];
         $total = 0;
         $breakdown = [];
 
-        foreach ($tokenStatuses as $status) {
+        foreach ($tokenStatuses as $status => $value) {
             $count  = isset($tokens[$status]) ? (int) $tokens[$status]->count : 0;
             $total += $count;
-            $breakdown[] = ['status' => $status, 'count' => $count];
+            $breakdown[] = ['status' => $value, 'count' => $count];
         }
 
         // Inject percentage for donut chart rendering
@@ -443,11 +461,16 @@ class AnalyticController extends Controller
         }
         unset($entry);
 
-        return StandardResponse::success(200, [
-            'year'            => $year,
-            'available_years' => range($current_year, $min_year),
+        $available_years = range($current_year, $min_year);
+        foreach ($available_years as $idx => $year) {
+            $available_years[$idx] = (string) $year;
+        }
+
+        return StandardResponse::success(200, 'Fetched access tokens', [
+            'year'            => (string) $year,
+            'available_years' => $available_years,
             'total'           => $total,
-            'breakdown'       => $breakdown,
+            'token_breakdown'       => $breakdown,
         ]);
     }
 }

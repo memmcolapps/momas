@@ -1578,6 +1578,10 @@ class TokenController extends Controller
                     $trx->status = 0;
                     $trx->action_payload = json_encode($action_payload);
 
+                    $trx->save();
+
+                    // dd($trx->toArray());
+
                     $cdt = CreditToken::create([
                         'trx_id' => $trx_id,
                         'user_id' => $action_payload['user_id'],
@@ -1599,8 +1603,6 @@ class TokenController extends Controller
                     'user_id' => Auth::id(),
                     'user_id2' => Auth::user()->id,
                     ]);
-
-                    $trx->save();
 
                     return redirect()->away($payment_init['data']['authorization_url']);
                 }
@@ -3793,7 +3795,7 @@ class TokenController extends Controller
 
                     }
 
-                    $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $verify="null");
+                    $meter->getNewToken($tariff_id, $trx_id, $verify="null");
 
 
 

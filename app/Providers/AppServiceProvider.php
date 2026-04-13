@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
                 'paystack' => new PaystackPaymentService(),
                 'flutterwave' => new FlutterwavePaymentService(),
                 'wallet' => new WalletPaymentService(),
-                default => throw new \Exception('Unsupported payment provider'),
+                default => dd($provider) //throw new \Exception('Unsupported payment provider'),
             };
         });
     }
