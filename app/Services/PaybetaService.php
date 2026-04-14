@@ -12,11 +12,14 @@ class PaybetaService
 {
     protected $apiKey;
     protected $baseUrl;
+    protected $cable_services;
+    protected $networkMap;
 
     public function __construct()
     {
         $this->apiKey = config('services.paybeta.key');
         $this->baseUrl = config('services.paybeta.base_url');
+        $this->cable_services = ['dstv', 'gotv', 'startimes'];
     }
 
     /**
@@ -123,8 +126,6 @@ class PaybetaService
     {
         // $network: mtn_data, glo_data, airtel_data, 9mobile_data
 
-        $cache_key = 'paybeta_data_bundles-' . $network;
-
         $networkMap = [
             'mtn' => 'mtn_data',
             'glo' => 'glo_data',
@@ -136,6 +137,8 @@ class PaybetaService
         if (!in_array($network, array_keys($networkMap))) {
             throw new InvalidArgumentException("Invalid network type");
         }
+
+        $cache_key = 'paybeta_data_bundles-' . $networkMap[$network];
 
         return Cache::remember($cache_key, $ttl, function () use ($network, $networkMap) {
 
@@ -180,12 +183,24 @@ class PaybetaService
     /**
      * Fetch available bouquets for Cable TV (DStv, GOtv, etc.)
      */
-    public function getCableBouquets($service)
+    public function getCableBouquets($service, $ttl = 12600)
     {
         // $service: dstv, gotv, startimes
-        return $this->makeRequest('post', 'cable/bouquet', [
-            'service' => $service
-        ]);
+        $services = $this->cable_services;
+
+        $cache_key = 'paybeta_service_bouquets-' . $service;
+
+        return Cache::remember($cache_key, $ttl, function () use ($service) {
+            $response =  $this->makeRequest('post', 'cable/bouquet', [
+                'service' => $service
+            ]);
+
+            if (!$response || isset($response['error'])) {
+                throw new Exception('Failed to fetch service bouquets');
+            }
+
+            return $response;
+        });
     }
 
     /**
@@ -195,7 +210,7 @@ class PaybetaService
      */
     public function getAllCableBouquets(): array
     {
-        $services = ['dstv', 'gotv', 'startimes'];
+        $services = $this->cable_services;
         $results = [];
 
         foreach ($services as $service) {
@@ -251,7 +266,32 @@ class PaybetaService
             throw new InvalidArgumentException('Invalid network passed');
         }
 
-        $packages = $this->getDataBundles($network)['packages'] ?? [];
+        $packages = $this->getDataBundles($network)['data']['packages'] ?? [];
+
+        // dd($packages, $this->popDataBundleCache($network));
+
+        foreach ($packages as $package) {
+            if (isset($package['code']) && $package['code'] == $variation_code) {
+                $package['search_success'] = true;
+                return $package;
+            }
+        }
+
+        return [
+            'search_success' => false
+        ];
+    }
+
+    public function getCablePackage($service, $variation_code) {
+
+        $services = $this->cable_services;
+        if (!in_array($service, $services)) {
+            throw new InvalidArgumentException('Invalid Cable Service Passed');
+        }
+
+        $packages = $this->getCableBouquets($service)['data']['packages'] ?? [];
+
+        // dd($packages, $this->popDataBundleCache($network));
 
         foreach ($packages as $package) {
             if (isset($package['code']) && $package['code'] == $variation_code) {
@@ -268,6 +308,12 @@ class PaybetaService
     public function popDataBundleCache($network) {
         $cache_key = 'paybeta_data_bundles-' . $network;
 
-        Cache::forget($cache_key);
+        return Cache::forget($cache_key);
+    }
+
+    public function popCableBouquetCache($service) {
+        $cache_key = 'paybeta_service_bouquets-' . $service;
+
+        return Cache::forget($cache_key);
     }
 }

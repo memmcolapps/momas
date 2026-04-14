@@ -657,7 +657,92 @@ if (! function_exists('handle_pay_arrears')) {
         $trx->save();
 
 
-
         return $return_amount ? $amount : $utilities;
+    }
+}
+
+if (! function_exists('get_user_arrears')) {
+
+    function get_user_arrears(int $user_id, string $return_type = 'all') {
+
+        $baseQuery = UtilitiesPayment::where('user_id', $user_id)
+            ->where('status', '!=', 2);
+
+        switch ($return_type) {
+            case 'utilities':
+                return (clone $baseQuery)
+                    ->where('type', '!=', 'admin_fee')
+                    ->latest()
+                    ->get();
+
+            case 'admin_fees':
+                return (clone $baseQuery)
+                    ->where('type', '=', 'admin_fee')
+                    ->latest()
+                    ->get();
+
+            case 'utilities_sum':
+                return (clone $baseQuery)
+                    ->where('type', '!=', 'admin_fee')
+                    ->sum('amount');
+
+            case 'admin_fees_sum':
+                return (clone $baseQuery)
+                    ->where('type', '=', 'admin_fee')
+                    ->sum('amount');
+
+            case 'utilities_latest':
+                return (clone $baseQuery)
+                    ->where('type', '!=', 'admin_fee')
+                    ->latest()
+                    ->first()
+                    ?->toArray() ?? [];
+
+            case 'admin_fees_latest':
+                return (clone $baseQuery)
+                    ->where('type', '=', 'admin_fee')
+                    ->latest()
+                    ->first()
+                    ?->toArray() ?? [];
+
+            case 'all_history':
+                return (clone $baseQuery)
+                    ->latest('type')
+                    ->select('type', 'amount', 'status', 'created_at', 'next_due_date')
+                    ->groupBy('type', 'amount', 'status', 'created_at', 'next_due_date')
+                    ->get()
+                    ->toArray();
+
+            case 'all':
+            default:
+                $admin_fee_sum = get_user_arrears($user_id, 'admin_fees_sum');
+                $admin_fee_latest = get_user_arrears($user_id, 'admin_fees_latest');
+                $admin_fee_latest['amount'] = (string) $admin_fee_sum;
+
+                $utility_sum = get_user_arrears($user_id, 'utilities_sum');
+                $utility_latest = get_user_arrears($user_id, 'utilities_latest');
+                $utility_latest['amount'] = (string) $utility_sum;
+
+                $all_history = get_user_arrears($user_id, 'all_history');
+
+                $utility_latest['history'] = [];
+                $admin_fee_latest['history'] = [];
+
+                foreach ($all_history as $history_item) {
+                    $history_item['amount'] = (string) $history_item['amount'];
+
+                    if ($history_item['type'] === 'admin_fee') {
+                        $admin_fee_latest['history'][] = $history_item;
+                    } else {
+                        $utility_latest['history'][] = $history_item;
+                    }
+                }
+
+                return [
+                    'utility' => $utility_latest,
+                    'admin_fee' => $admin_fee_latest,
+                    'all_history' => $all_history
+                ];
+        }
     }
 }

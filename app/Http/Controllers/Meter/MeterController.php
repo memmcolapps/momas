@@ -26,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class MeterController extends Controller
 {
@@ -285,6 +286,53 @@ class MeterController extends Controller
 
 
     }
+
+    public function calculate_token_fees(request $request) {
+
+        $auth_user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'tariff_id' => ['required', 'numeric', Rule::exists('tariff_states', 'tariff_id')
+                                                        ->where('estate_id', $auth_user->estate_id)
+                                                        ->where('status', 2)
+            ],
+            'trx_id' => ['required', 'string', Rule::exists('transactions', 'trx_id')
+                                                    ->where('user_id', $auth_user->id)
+                                                    ->where('status', 3)
+            ],
+
+        ]);
+
+        if ($validator->fails()) {
+
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        $meter = meter();
+
+        if (!$meter->isActive()) {
+
+            Logger::error("User $auth_user->id failed to calculate meter fees for token due to blocked meter", [
+                'user_id' => $auth_user->id,
+                'meter' => $meter,
+                'trx_id' => $request->trx_id,
+            ]);
+
+            return StandardResponse::error(401, 'Meter blocked please reach out to estate admin for support', [], [
+                'user' => $auth_user,
+                'meter' => $meter,
+            ]);
+
+        }
+
+
+        $trx = Transaction::where('trx_id', $request->trx_id)->first();
+
+        $values = $meter->calculateTokenValues($request->tariff_id, $trx);
+    }
+
     public function buy_meter_token(request $request)
     {
         try {
@@ -420,6 +468,7 @@ class MeterController extends Controller
             ]);
         }
     }
+
 
     public function retry_meter_token(request $request)
     {

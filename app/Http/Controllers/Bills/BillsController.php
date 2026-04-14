@@ -124,9 +124,12 @@ class BillsController extends Controller
         // Check for insufficient funds
         $errorMessage = $response['message'] ?? '';
         if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
+
             Logger::error("Airtime Purchase fail due to insufficient balance", [
                 'user_id' => Auth::id(),
+                'phone' => $request->phone,
             ]);
+
             User::where('id', Auth::id())->increment('main_wallet', (int) $request->amount);
             $message = "Airtime Purchase not successful, Try again later";
             $code = 422;
@@ -186,24 +189,36 @@ class BillsController extends Controller
 
     public function get_cable_plan(request $request)
     {
+
+        $serviceMap = [
+            'dstv' => 'dstv',
+            'gotv' => 'gotv',
+            'startimes' => 'startimes',
+            'showmax' => 'showmax',
+        ];
+
+        $service_ids = implode(',', array_keys($serviceMap));
+
+        $validator = Validator::make($request->all(), [
+            'service_id' => ['required', 'string', "in:$service_ids"],
+        ]);
+
         $allCableBouquets = $this->paybetaService->getAllCableBouquets();
 
         // Check if we got any data from the service
-        $hasData = !empty($allCableBouquets['dstv']) ||
-                   !empty($allCableBouquets['gotv']) ||
-                   !empty($allCableBouquets['startimes']);
+        if ($validator->fails()) {
 
-        if ($hasData) {
-            return StandardResponse::success(200, 'Fetched Cable Plans', [
-                'dstv' => $allCableBouquets['dstv'] ?? null,
-                'gotv' => $allCableBouquets['gotv'] ?? null,
-                'startimes' => $allCableBouquets['startimes'] ?? null,
-                'showmax' => null
+            return StandardResponse::error(422, "Validator Errors", [
+                "validator_error" => $validator->errors(),
             ]);
         }
 
-        // $message = $allCableBouquets;
-        // send_notification($message);
+        $cableBouquets = $this->paybetaService->getCableBouquets($request->service_id);
+
+        return StandardResponse::success(200, 'Fetch Data Plan', [
+            $request->service_id . '_data_bundle' => $cableBouquets,
+        ]);
+
         $auth_user = Auth::user();
 
         Logger::error("Failed to fetch cable plans for User {$auth_user->id}");
@@ -244,64 +259,159 @@ class BillsController extends Controller
 
     public function buy_cable(request $request)
     {
-        // Map decoder_type to Paybeta service format
-        $serviceMap = [
-            'dstv' => 'dstv',
-            'gotv' => 'gotv',
-            'startimes' => 'startimes',
-            'showmax' => 'showmax',
-        ];
+        $auth_user = Auth::user();
 
-        $service = $serviceMap[strtolower($request->decoder_type)] ?? $request->decoder_type;
-        $reference = $request->ref ?? uniqid('cable_');
+        try {
+            // Map decoder_type to Paybeta service format
+            $serviceMap = [
+                'dstv' => 'dstv',
+                'gotv' => 'gotv',
+                'startimes' => 'startimes',
+                'showmax' => 'showmax',
+            ];
 
-        // Handle showmax separately as it uses different method
-        if (strtolower($request->decoder_type) === 'showmax') {
-            $response = $this->paybetaService->purchaseShowmax(
-                Auth::user()->phone,
+            $service = $serviceMap[strtolower($request->decoder_type)] ?? $request->decoder_type;
+            $reference = $request->ref ?? uniqid('cable_');
+
+            $trx = Transaction::where('trx_id', $request->trx_id)
+                ->where('user_id', $auth_user->id)
+                ->first();
+
+            if (! $trx) {
+                return StandardResponse::error(404, 'Invalid transaction Id', []);
+            }
+
+
+            $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type]);
+
+            switch ($trx->status) {
+                case 0:
+                    $verifier = $payment_engine->verifyTransaction($trx->trx_id);
+
+                    // dd($verifier);
+                    if (! $verifier['is_successful']) {
+                        return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                    }
+
+                    $trx->status = 3;
+                    $trx->save();
+                    break;
+
+                case 1:
+                    return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                    break;
+
+                case 2:
+                    return StandardResponse::error(403, 'Transaction Completed, restart a new transaction', []);
+                    break;
+            }
+
+
+            handle_pay_arrears($trx->trx_id, $auth_user->id, 'utilities');
+
+
+            $amount = $trx->vending_amount;
+
+            $package = $this->paybetaService->getCablePackage(
+                $request->service_id,
                 $request->variation_code,
-                $request->amount,
-                $reference
             );
-        } else {
-            $response = $this->paybetaService->purchaseCable(
-                $service,
-                $request->decoder_no,
-                $request->variation_code,
-                $request->amount,
-                $reference
-            );
-        }
 
-        $user = Auth::user();
+            if (! $package['search_success']) {
 
-        Logger::info("Cable purchase triggered by {$user->id} | " . Carbon::now()->toIsoString(), [
-            'data' => $response
-        ]);
+                Logger::error("User $auth_user->id passed an invalid variation code poping stored cache", [
+                    'user_id' => $auth_user->id,
+                    'variation_code' => $request->variation_code,
+                    'service' => $request->service_id,
+                    'cable_bouquet' => $this->paybetaService->getCableBouquets($request->service_id),
+                ]);
 
-        $status = $response['status'] ?? null;
+                $this->paybetaService->popCableBouquetCache($request->service_id);
 
-        // Update transaction status regardless of outcome (per original logic)
-        Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$service}_cable_purchase", 'service' => "Cable Purchase", 'status' => 2]);
+                return StandardResponse::success(200, 'Cable Bouquet You Selected Doesn\'t exist', []);
+            }
 
-        if ($status === 'successful') {
-            $message = "Cable Purchase successful";
-            return success($message);
-        }
+            $bundle_price = (double) $package['price'];
+            $value_left = $amount - $bundle_price;
 
-        // Handle failure cases
-        $errorMessage = $response['message'] ?? '';
-        if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
-            User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+            if ($value_left < 0) {
+
+                Logger::error("User $auth_user->id tried to failed to buy data bundle due to insufficient_fund", [
+                    'user_id' => $auth_user->id,
+                    'package' => $package,
+                ]);
+
+                return StandardResponse::error(403, "Insufficient funds for the selected data bundle", [
+                    'reason' => "After Utilities fees payment you have $amount left for transaction bundle costs $bundle_price",
+                ]);
+            }
+
+            // Handle showmax separately as it uses different method
+            if (strtolower($request->decoder_type) === 'showmax') {
+                $response = $this->paybetaService->purchaseShowmax(
+                    $request->phone,
+                    $request->variation_code,
+                    $request->amount,
+                    $reference
+                );
+            } else {
+                $response = $this->paybetaService->purchaseCable(
+                    $service,
+                    $request->decoder_no,
+                    $request->variation_code,
+                    $request->amount,
+                    $reference
+                );
+            }
+
+            $user = Auth::user();
+
+            Logger::info("Cable purchase triggered by {$user->id} | " . Carbon::now()->toIsoString(), [
+                'data' => $response,
+                'payload' => $request->all(),
+            ]);
+
+            $status = $response['status'] ?? null;
+
+            // Update transaction status regardless of outcome (per original logic)
+            Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$service}_cable_purchase", 'service' => "Cable Purchase", 'status' => 2]);
+
+            if ($status === 'successful') {
+                $message = "Cable Purchase successful";
+                return success($message);
+            }
+
+            // Handle failure cases
+            $errorMessage = $response['message'] ?? '';
+            if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
+
+                Logger::error("Cable Bouquet Purchase fail due to insufficient balance", [
+                    'user_id' => Auth::id(),
+                    'decoder_no/phone(for_showmax)' => $request->decoder_no ?? $request->phone,
+                ]);
+
+                User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+                $message = $response;
+                send_notification($message);
+                $message = "Cable Purchase not successful, Try again later";
+                $code = 422;
+                return error($message, $code);
+            }
+
             $message = $response;
-            send_notification($message);
-            $message = "Cable Purchase not successful, Try again later";
-            $code = 422;
-            return error($message, $code);
-        }
+            // send_notification($message);
+        } catch (Exception $e) {
 
-        $message = $response;
-        send_notification($message);
+            Logger::error($e->getMessage(), [
+                'user_id' => $auth_user->id,
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, "An Error Occurred", [], [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTrace(),
+            ]);
+        }
     }
 
 
@@ -311,8 +421,7 @@ class BillsController extends Controller
         $validator = Validator::make($request->all(), [
             'trx_id' => ['required', Rule::exists('transactions', 'trx_id')
                 ->where(function ($query) use ($auth_user) {
-                    $query->where('user_id', $auth_user->id())
-                        ->where('status', 3);
+                    $query->where('user_id', $auth_user->id);
                 }),
             ],
             'phone' => 'required|numeric',
@@ -341,11 +450,41 @@ class BillsController extends Controller
         $network = $networkMap[strtolower($request->service_id)] ?? $request->service_id;
         $reference = $request->ref ?? uniqid('data_');
 
-        // Ownership and status verification already handled inside validator
-        $trx = Transaction::where('trx_id', $request->trx_id)->first();
+        $trx = Transaction::where('trx_id', $request->trx_id)
+            ->where('user_id', $auth_user->id)
+            ->first();
+
+        if (! $trx) {
+            return StandardResponse::error(404, 'Invalid transaction Id', []);
+        }
 
 
-        handle_pay_arrears($trx->id, $auth_user->id, 'utilities');
+        $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type]);
+
+        switch ($trx->status) {
+            case 0:
+                $verifier = $payment_engine->verifyTransaction($trx->trx_id);
+
+                // dd($verifier);
+                if (! $verifier['is_successful']) {
+                    return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                }
+
+                $trx->status = 3;
+                $trx->save();
+                break;
+
+            case 1:
+                return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                break;
+
+            case 2:
+                return StandardResponse::error(403, 'Transaction Completed, restart a new transaction', []);
+                break;
+        }
+
+
+        handle_pay_arrears($trx->trx_id, $auth_user->id, 'utilities');
 
 
         $amount = $trx->vending_amount;
@@ -369,7 +508,8 @@ class BillsController extends Controller
             return StandardResponse::success(200, 'Data Bundle You Selected Doesn\'t exist', []);
         }
 
-        $value_left = $amount - (double) $package['price'];
+        $bundle_price = (double) $package['price'];
+        $value_left = $amount - $bundle_price;
 
         if ($value_left < 0) {
 
@@ -379,7 +519,7 @@ class BillsController extends Controller
             ]);
 
             return StandardResponse::error(403, "Insufficient funds for the selected data bundle", [
-                'reason' => "After Utilities fees payment you have $amount left for transaction",
+                'reason' => "After Utilities fees payment you have $amount left for transaction bundle costs $bundle_price",
             ]);
         }
 
