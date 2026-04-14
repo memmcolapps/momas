@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\PaybetaService;
 use App\Services\StandardResponse;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -141,27 +142,45 @@ class BillsController extends Controller
 
     public function get_data(request $request)
     {
-        $allDataBundles = $this->paybetaService->getAllDataBundles();
+        try {
+            $networkMap = [
+                'mtn' => 'mtn',
+                'glo' => 'glo',
+                'airtel' => 'airtel',
+                '9mobile' => '9mobile',
+                'etisalat' => '9mobile',
+            ];
 
-        // Check if we got any data from the service
-        $hasData = !empty($allDataBundles['mtn']) ||
-                   !empty($allDataBundles['glo']) ||
-                   !empty($allDataBundles['airtel']) ||
-                   !empty($allDataBundles['9mobile']);
+            $service_ids = implode(',', array_keys($networkMap));
 
-        if ($hasData) {
+            $validator = Validator::make($request->all(), [
+                'service_id' => ['required', 'string', "in:$service_ids"],
+            ]);
+
+            if ($validator->fails()) {
+
+                return StandardResponse::error(422, "Validator Errors", [
+                    "validator_error" => $validator->errors(),
+                ]);
+            }
+
+            $dataBundles = $this->paybetaService->getDataBundles($request->service_id);
+
             return StandardResponse::success(200, 'Fetch Data Plan', [
-                'mtn_data' => $allDataBundles['mtn'] ?? null,
-                'glo_data' => $allDataBundles['glo'] ?? null,
-                'airtel_data' => $allDataBundles['airtel'] ?? null,
-                '9mobile_data' => $allDataBundles['9mobile'] ?? null,
-                'smile_data' => null,
-                'spectranet_data' => null
+                $request->service_id . '_data_bundle' => $dataBundles,
+            ]);
+
+        } catch (Exception $e) {
+            Logger::error('Failed to fetch data plan', [
+                'user_id' => Auth::user()->id,
+                'service_id' => $request->service_id,
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, 'An Error, Occurred', [], [
+                'trace' => $e->getTrace(),
             ]);
         }
-
-        $message = $allDataBundles;
-        // send_notification($message);
     }
 
 
@@ -288,11 +307,12 @@ class BillsController extends Controller
 
     public function buy_data(request $request)
     {
-
+        $auth_user = Auth::user();
         $validator = Validator::make($request->all(), [
             'trx_id' => ['required', Rule::exists('transactions', 'trx_id')
-                ->where(function ($query) {
-                    $query->where('user_id', auth()->id());
+                ->where(function ($query) use ($auth_user) {
+                    $query->where('user_id', $auth_user->id())
+                        ->where('status', 3);
                 }),
             ],
             'phone' => 'required|numeric',
@@ -321,11 +341,57 @@ class BillsController extends Controller
         $network = $networkMap[strtolower($request->service_id)] ?? $request->service_id;
         $reference = $request->ref ?? uniqid('data_');
 
+        // Ownership and status verification already handled inside validator
+        $trx = Transaction::where('trx_id', $request->trx_id)->first();
+
+
+        handle_pay_arrears($trx->id, $auth_user->id, 'utilities');
+
+
+        $amount = $trx->vending_amount;
+
+        $package = $this->paybetaService->getDataPackage(
+            $request->service_id,
+            $request->variation_code,
+        );
+
+        if (! $package['search_success']) {
+
+            Logger::error("User $auth_user->id passed an invalid variation code poping stored cache", [
+                'user_id' => $auth_user->id,
+                'variation_code' => $request->variation_code,
+                'network' => $request->service_id,
+                'data_bundles' => $this->paybetaService->getDataBundles($request->service_id),
+            ]);
+
+            $this->paybetaService->popDataBundleCache($request->service_id);
+
+            return StandardResponse::success(200, 'Data Bundle You Selected Doesn\'t exist', []);
+        }
+
+        $value_left = $amount - (double) $package['price'];
+
+        if ($value_left < 0) {
+
+            Logger::error("User $auth_user->id tried to failed to buy data bundle due to insufficient_fund", [
+                'user_id' => $auth_user->id,
+                'package' => $package,
+            ]);
+
+            return StandardResponse::error(403, "Insufficient funds for the selected data bundle", [
+                'reason' => "After Utilities fees payment you have $amount left for transaction",
+            ]);
+        }
+
+
+        $value_left > 0 && $auth_user->creditWallet($value_left);
+
+
         $response = $this->paybetaService->purchaseData(
             $network,
             $request->phone,
             $request->variation_code,
-            $request->amount,
+            $amount,
             $reference
         );
 

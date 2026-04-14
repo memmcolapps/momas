@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 class PaybetaService
 {
@@ -116,12 +119,36 @@ class PaybetaService
      * Fetch available data plans for a specific network.
      * Use this to populate your "Select Plan" dropdown.
      */
-    public function getDataBundles($network)
+    public function getDataBundles($network, $ttl = 12600)
     {
         // $network: mtn_data, glo_data, airtel_data, 9mobile_data
-        return $this->makeRequest('post', 'data-bundle/list', [
-            'service' => $network
-        ]);
+
+        $cache_key = 'paybeta_data_bundles-' . $network;
+
+        $networkMap = [
+            'mtn' => 'mtn_data',
+            'glo' => 'glo_data',
+            'airtel' => 'airtel_data',
+            '9mobile' => '9mobile_data',
+            'etisalat' => '9mobile_data',
+        ];
+
+        if (!in_array($network, array_keys($networkMap))) {
+            throw new InvalidArgumentException("Invalid network type");
+        }
+
+        return Cache::remember($cache_key, $ttl, function () use ($network, $networkMap) {
+
+            $response =  $this->makeRequest('post', 'data-bundle/list', [
+                'service' => $networkMap[$network]
+            ]);
+
+            if (!$response || isset($response['error'])) {
+                throw new Exception('Failed to fetch data bundles');
+            }
+
+            return $response;
+        });
     }
 
     /**
@@ -138,7 +165,7 @@ class PaybetaService
             try {
                 $key = str_replace('_data', '', $network);
                 $results[$key] = $this->getDataBundles($network);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // Log error but continue with other networks
                 Log::warning("Failed to fetch data bundles for {$network}", [
                     'error' => $e->getMessage()
@@ -174,7 +201,7 @@ class PaybetaService
         foreach ($services as $service) {
             try {
                 $results[$service] = $this->getCableBouquets($service);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::warning("Failed to fetch cable bouquets for {$service}", [
                     'error' => $e->getMessage()
                 ]);
@@ -209,5 +236,38 @@ class PaybetaService
             'meterNumber' => $meterNumber,
             'type' => $type // prepaid or postpaid
         ]);
+    }
+
+    public function getDataPackage($network, $variation_code) {
+        $allowed_networks = [
+            'mtn',
+            'glo',
+            'airtel',
+            '9mobile',
+            'etisalat',
+        ];
+
+        if (!in_array($network, $allowed_networks)) {
+            throw new InvalidArgumentException('Invalid network passed');
+        }
+
+        $packages = $this->getDataBundles($network)['packages'] ?? [];
+
+        foreach ($packages as $package) {
+            if (isset($package['code']) && $package['code'] == $variation_code) {
+                $package['search_success'] = true;
+                return $package;
+            }
+        }
+
+        return [
+            'search_success' => false
+        ];
+    }
+
+    public function popDataBundleCache($network) {
+        $cache_key = 'paybeta_data_bundles-' . $network;
+
+        Cache::forget($cache_key);
     }
 }
