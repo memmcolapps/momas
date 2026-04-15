@@ -103,7 +103,8 @@ class TransactionController extends Controller
 
 
 
-            $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($request->ref);
+            $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type ]);
+            $verify_result = $payment_engine->verifyTransaction($request->ref);
             Logger::info('Paystack verify response pay_arrears', ['response' => $verify_result]);
 
             if (!$verify_result['status']) {

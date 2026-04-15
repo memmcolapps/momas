@@ -298,7 +298,6 @@ class MeterController extends Controller
             ],
             'trx_id' => ['required', 'string', Rule::exists('transactions', 'trx_id')
                                                     ->where('user_id', $auth_user->id)
-                                                    ->where('status', 3)
             ],
 
         ]);

@@ -77,7 +77,7 @@ class BillsController extends Controller
         }
 
         // Pay utility fees
-        // handle_pay_arrears($trx->trx_id, $auth_user->id, 'utilities');
+        $amount = handle_pay_arrears($trx->trx_id, $auth_user->id, 'utilities', true);
 
 
         // Map service_id to Paybeta network format
@@ -95,13 +95,12 @@ class BillsController extends Controller
         $response = $this->paybetaService->purchaseAirtime(
             $network,
             $request->phone,
-            $trx->vending_amount ?? $trx->amount,
+            $amount,
             $reference
         );
 
-        $user = Auth::user();
 
-        Logger::info("Airtime purchase triggered by {$user->id} | " . Carbon::now()->toIsoString(), [
+        Logger::info("Airtime purchase triggered by {$auth_user->id} | " . Carbon::now()->toIsoString(), [
             'data' => $response
         ]);
 
@@ -130,7 +129,7 @@ class BillsController extends Controller
                 'phone' => $request->phone,
             ]);
 
-            User::where('id', Auth::id())->increment('main_wallet', (int) $request->amount);
+            User::where('id', Auth::id())->increment('main_wallet', (int) $amount);
             $message = "Airtime Purchase not successful, Try again later";
             $code = 422;
             return error($message, $code);
@@ -138,6 +137,12 @@ class BillsController extends Controller
 
         $message = $response;
         // send_notification($message);
+        User::where('id', Auth::id())->increment('main_wallet', (int) $amount);
+
+        Logger::error("An Error Occurred", [
+            'user_id' => $auth_user->id,
+            'error' => $response,
+        ]);
 
         return StandardResponse::error(500, 'An Error Occurred', $response);
     }
