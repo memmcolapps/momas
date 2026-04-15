@@ -175,7 +175,8 @@ class BillsController extends Controller
             $dataBundles = $this->paybetaService->getDataBundles($request->service_id);
 
             return StandardResponse::success(200, 'Fetch Data Plan', [
-                $request->service_id . '_data_bundle' => $dataBundles,
+                'data_bundle' => $dataBundles,
+                'service_id' => $request->service_id
             ]);
 
         } catch (Exception $e) {
@@ -221,7 +222,8 @@ class BillsController extends Controller
         $cableBouquets = $this->paybetaService->getCableBouquets($request->service_id);
 
         return StandardResponse::success(200, 'Fetch Data Plan', [
-            $request->service_id . '_data_bundle' => $cableBouquets,
+            'data_bundle' => $cableBouquets,
+            'service_id' => $request->service_id
         ]);
 
         $auth_user = Auth::user();

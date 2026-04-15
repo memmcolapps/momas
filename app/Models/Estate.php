@@ -62,6 +62,14 @@ class Estate extends Model
         return $this->hasMany(UtilitiesPayment::class);
     }
 
+    public function scopeByUser($query, $user) {
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        return $query->where('estate_id', $user->estate_id);
+    }
+
     protected $casts = [
         'status' => 'integer',
         ];

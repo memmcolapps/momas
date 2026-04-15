@@ -146,7 +146,7 @@ class PaybetaService
                 'service' => $networkMap[$network]
             ]);
 
-            if (!$response || isset($response['error'])) {
+            if (!$response || isset($response['error']) || $response['status'] == 'failed') {
                 throw new Exception('Failed to fetch data bundles');
             }
 
