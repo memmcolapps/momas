@@ -222,6 +222,9 @@ class Meter extends Model
             $token = $token_gen['data']['token'];
             // dump("got here meter:190");
 
+            $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+            $tariffAmount = $tariffState->amount ?? 0;
+
 
             $cdt = CreditToken::updateOrCreate([
                 'trx_id' => $trx_id,
@@ -232,12 +235,15 @@ class Meter extends Model
                 'amount' => $vending_amount,
                 'amount_charged' => $vending_amount,
                 'customer_email' => $email,
+                // 'receiver_meterNo' => $receiver_meterNo,
                 'unitkwh' => $unit,
                 'vat' => $vat,
                 'estate_id' => $this->estate_id,
                 'estate_name' => $user->estate_name,
                 'token' => $token,
-                'status' => 2
+                'status' => 2,
+                'vatAmount' => $vat,
+                'tariff_amount' => $tariffAmount,
             ]);
 
             // dump("got here meter:227");
