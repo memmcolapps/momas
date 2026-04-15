@@ -3760,7 +3760,9 @@ class TokenController extends Controller
 
                     $ck_transaction = Transaction::where('trx_id', $trx_id)->first()->status ?? null;
 
-                    // Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+                    if ($verify_result['is_successful']) {
+                        Transaction::where('trx_id', $trx_id)->update(['status' => 3]);
+                    }
                     // dd($request->all(), $trx_id);
                     $cdt = CreditToken::where('trx_id', $trx_id)->first();
                     $meterNo = $cdt->meterNo;
