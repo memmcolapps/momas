@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\EstateModFeature;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -68,6 +69,10 @@ class Estate extends Model
         }
 
         return $query->where('estate_id', $user->estate_id);
+    }
+
+    public function estateModFeature() {
+        return $this->hasMany(EstateModFeature::class, 'estate_id');
     }
 
     protected $casts = [

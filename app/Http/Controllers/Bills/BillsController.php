@@ -175,7 +175,7 @@ class BillsController extends Controller
             $dataBundles = $this->paybetaService->getDataBundles($request->service_id);
 
             return StandardResponse::success(200, 'Fetch Data Plan', [
-                'data_bundle' => $dataBundles,
+                'data_bundle' => $dataBundles['data']['packages'],
                 'service_id' => $request->service_id
             ]);
 
@@ -222,7 +222,7 @@ class BillsController extends Controller
         $cableBouquets = $this->paybetaService->getCableBouquets($request->service_id);
 
         return StandardResponse::success(200, 'Fetch Data Plan', [
-            'data_bundle' => $cableBouquets,
+            'cable_plans' => $cableBouquets['data']['packages'],
             'service_id' => $request->service_id
         ]);
 
