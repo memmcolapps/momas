@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\PaystackPaymentService;
 use App\Services\TokenGenerationService;
+use App\Services\VatCalculator;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -101,6 +102,86 @@ class Meter extends Model
         return $this->status !== 0;
     }
 
+    /**
+     * Calculate token values based on tariff and transaction amount.
+     *
+     * This method extracts the calculation logic for determining
+     * service fees, estate charges, VAT, and final unit values.
+     *
+     * @param int $tariff_id The ID of the tariff to use for calculations
+     * @param \App\Models\Transaction $trx The transaction object containing the amount
+     * @return array Array of calculated values including service fees, charges, and unit details
+     * @throws \Exception When the amount is too small after deductions or unit is less than 0.1KWh
+     */
+    public function calculateTokenValues(int $tariff_id, Transaction $trx): array
+    {
+        $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+        $tariffAmount = $tariffState->amount ?? 0;
+        $vat = $tariffState->vat ?? 0;
+        $fixedCharge = $tariffState->fixed_charge ?? 0;
+
+        // NEW CALCULATION FLOW:
+        // [1] 2.5% Service Fee
+        $amount = $trx->vending_amount ?? $trx->amount;
+        $percn = (2.5 / 100) * (int)$amount;
+        $afterServiceFee = $amount - $percn;
+
+        // [2] Estate Service Charge
+        $est = Estate::where('id', $this->estate_id)->first();
+        if ($est->charge_fee_flat != null) {
+            $estateFee = $est->charge_fee_flat;
+        } else if ($est->charge_fee_precent != null) {
+            $estateFee = ($est->charge_fee_precent / 100) * (int)$amount;
+        } else {
+            $estateFee = 0;
+        }
+        $afterEstateFee = $afterServiceFee - $estateFee;
+
+        // [3] Tariff Fixed Charge
+        $afterFixedCharge = $afterEstateFee - $fixedCharge;
+
+        // Validate that amount after deductions is not negative or too small
+        if ($afterFixedCharge <= 0) {
+            $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
+                '), estate fee (NGN ' . number_format($estateFee, 2) .
+                '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
+                '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
+                '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
+        }
+
+        // [4] VAT Calculation on remaining amount
+        $calculator = new VatCalculator();
+        $params = [
+            'amountText' => $afterFixedCharge,
+            'tariffAmount' => $tariffAmount,
+            'utilitiesAmount' => 0,
+            'vat' => $vat,
+        ];
+
+        $vatAmount = $calculator->calculateVatAmount($params);
+        $vending_amount = $calculator->calculateCostOfUnit($params);
+        $unit = $calculator->calculateTariffAmountPerKWatt($params);
+
+        if ($unit < 0.1) {
+            throw new Exception('Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
+        }
+
+
+        return [
+            'tariffAmount' => $tariffAmount,
+            'vat' => $vat,
+            'fixedCharge' => $fixedCharge,
+            'serviceFee' => $percn,
+            'afterServiceFee' => $afterServiceFee,
+            'estateFee' => $estateFee,
+            'afterEstateFee' => $afterEstateFee,
+            'afterFixedCharge' => $afterFixedCharge,
+            'vatAmount' => $vatAmount,
+            'vending_amount' => $vending_amount,
+            'unit' => $unit,
+        ];
+    }
 
     /**
      * Generate a new token for the meter after payment verification.
@@ -121,11 +202,7 @@ class Meter extends Model
      */
     public function getNewToken(
         $tariff_id,
-        $unit,
         $trx_id,
-        $vat,
-        $vending_amount,
-        $email=null,
         $verify="verify",
         $receiver_meterNo='',
         $action='momas_meter'
@@ -140,50 +217,56 @@ class Meter extends Model
 
             if (!$other_meter) {
 
+                // dd($receiver_meterNo);
                 throw new Exception('You Cannot Vend for this Meter');
             }
         }
-        // dd ($this->toArray(), $other_meter->toArray());
-        // dump('before');
+
         $user = User::where('id', $this->user_id)->firstOrFail();
-        // dump('after');
 
 
         DB::transaction(function () use (
             $tariff_id,
-            $unit,
             $trx_id,
-            $vat,
-            $vending_amount,
-            $email,
             $verify,
             $user,
             $receiver_meterNo,
             $other_meter,
             $action
         ) {
-            // dump('getNewToken', $this->user_id, $this);
-            // $meterNo = $receiver_meterNo ?? $this->meterNo;
-            $email = (! $email || $email === 'null')
-                ? $user->email
-                : $email;
+            $trx = Transaction::where('trx_id', $trx_id)
+                ->firstOrFail();
+
+            // Calculate token values using the dedicated method
+
+            $calculatedValues = $this->calculateTokenValues($tariff_id, $trx);
+
+            // Extract calculated values
+            $tariffAmount = $calculatedValues['tariffAmount'];
+            $vat = $calculatedValues['vat'];
+            $fixedCharge = $calculatedValues['fixedCharge'];
+            $percn = $calculatedValues['serviceFee'];
+            $afterServiceFee = $calculatedValues['afterServiceFee'];
+            $estateFee = $calculatedValues['estateFee'];
+            $afterEstateFee = $calculatedValues['afterEstateFee'];
+            $afterFixedCharge = $calculatedValues['afterFixedCharge'];
+            $vatAmount = $calculatedValues['vatAmount'];
+            $vending_amount = $calculatedValues['vending_amount'];
+            $unit = $calculatedValues['unit'];
+
+
+            $email = $user->email;
 
             $service = $other_meter ? "CREDIT TOKEN PURCHASE(OTHERS)" : "CREDIT TOKEN PURCHASE";
 
-            // dump('fetched User', $user->toArray(), $user->toArray()['email']);
-
 
             $meter = $other_meter ?? $this;
-            // dump('Got here 182');
+
 
             if (! $meter->isActive() || ($receiver_meterNo && ! $this->isActive())) {
                 throw new Exception("Meter is unable from carrying out operations");
             }
 
-            // dump('Got here 188');
-
-            $trx = Transaction::where('trx_id', $trx_id)
-                ->firstOrFail();
 
             if ($trx->status === 2) {
                 throw new Exception ("Transaction already completed please restart a new transaction to generate token");
@@ -201,7 +284,6 @@ class Meter extends Model
                 ],
             };
 
-            // dump ($verifier_engine);
 
             if ($trx->status === 0) {
                 $verify = $verifier_engine($trx_id);
@@ -215,7 +297,6 @@ class Meter extends Model
                 throw new Exception("Transaction Failed");
             }
 
-            // dump('Passed trx ver');
 
             $need_kct = $meter->NeedKCT;
 
@@ -224,18 +305,17 @@ class Meter extends Model
             $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $meter->NeedKCT);
 
 
-            // dd($token_gen);
-
-
             Transaction::where('trx_id', $trx_id)->update([
                 'service' => $service,
                 'service_type' => "credit_token",
                 'tariff_id' => $tariff_id,
                 'unit_amount' => $vending_amount,
+                // 'vat' => $vatAmount,
             ]);
 
 
             if ( ! $token_gen['success']) {
+                dump('Failed Meter: 317');
                 Transaction::where('trx_id', $trx_id)->update([
                     'note' => 'token generation failed',
                     'status' => 3,
@@ -250,12 +330,9 @@ class Meter extends Model
             }
 
 
-            // dump("got here meter:188");
             $token = $token_gen['data']['token'];
-            // dump("got here meter:190");
 
 
-            // dd($this->meterNo, $other_meter->meterNo);
             $cdt = CreditToken::updateOrCreate([
                 'trx_id' => $trx_id,
                 'user_id' => $this->user_id,
@@ -271,13 +348,10 @@ class Meter extends Model
                 'estate_id' => $this->estate_id,
                 'estate_name' => $user->estate_name,
                 'token' => $token,
-                'status' => 2
+                'status' => 2,
+                'vatAmount' => $vatAmount,
+                'tariff_amount' => $tariffAmount,
             ]);
-
-
-            // dump("got here meter:227");
-
-            // dump($cdt->toArray());
 
 
             if ($need_kct) {
@@ -299,7 +373,6 @@ class Meter extends Model
                 $met->receiver_meterNo = $receiver_meterNo;
                 $met->save();
 
-                // dump('created need kct meter:256');
 
                 $kct_token1 = $kct_tokens[0];
                 $kct_token2 = $kct_tokens[1];
@@ -309,7 +382,6 @@ class Meter extends Model
 
                 send_kct_email_token($email, $token, $vending_amount, $kct_token1, $kct_token2);
 
-                // dump('sent kct meter:267');
             }
 
             Transaction::where('trx_id', $trx_id)->update(['status' => '2']);

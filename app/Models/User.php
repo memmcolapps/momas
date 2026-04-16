@@ -62,6 +62,29 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    const SUPER_ADMIN = 0;
+    const CUSTOMER = 2;
+    const ESTATE_STAFF = 4;
+    const ESTATE_ADMIN = 3;
+
+    public function isSuperAdmin()
+    {
+        return $this->role == self::SUPER_ADMIN;
+    }
+
+    public function isCustomer()
+    {
+        return $this->role == self::CUSTOMER;
+    }
+
+    public function isEstateStaff() {
+        return $this->role == self::ESTATE_STAFF;
+    }
+
+    public function isEstateAdmin() {
+        return $this->role == self::ESTATE_ADMIN;
+    }
+
     /**
      * The attributes that should be cast.
      *

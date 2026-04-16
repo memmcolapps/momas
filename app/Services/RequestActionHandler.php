@@ -113,7 +113,7 @@ class RequestActionHandler {
         $reciever_meterNo = $action_payload['reciever_meterNo'] ?? null;
 
         dump ('Got here');
-        $meter->getNewToken($tariffId, $unit, $this->reference, $vat, $vending_amount, $verify='null', $reciever_meterNo, $action);
+        $meter->getNewToken($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 
         return true;
     }

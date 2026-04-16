@@ -55,7 +55,6 @@ Route::post('check-email', [RegisterController::class, 'check_user']);
 Route::post('validate-email', [RegisterController::class, 'validate_email']);
 Route::post('register', [RegisterController::class, 'register']);
 Route::post('validate', [MeterController::class, 'validate_mobile_meter']);
-Route::get('cable-plan', [BillsController::class, 'get_cable_plan']);
 Route::post('validate-cable', [BillsController::class, 'validate_cable']);
 
 // Client-side validation endpoints
@@ -112,6 +111,7 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
     Route::get('get-data', [BillsController::class, 'get_data']);
     Route::post('buy-data', [BillsController::class, 'buy_data']);
     Route::post('buy-cable', [BillsController::class, 'buy_cable']);
+    Route::get('cable-plan', [BillsController::class, 'get_cable_plan']);
 
 
     //
