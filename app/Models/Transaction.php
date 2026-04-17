@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Constants\TransactionConstants;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -60,5 +61,9 @@ class Transaction extends Model
     public function creditToken()
     {
         return $this->hasOne(CreditToken::class, 'trx_id', 'trx_id');
+    }
+
+    public function scopeByStatus($query, $status=TransactionConstants::TRANSACTION_COMPLETE) {
+        return $query->where('status', $status);
     }
 }

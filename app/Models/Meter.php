@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Constants\ServiceTypeConstants;
+use App\Constants\TransactionConstants;
 use App\Services\PaystackPaymentService;
 use App\Services\TokenGenerationService;
 use App\Services\VatCalculator;
@@ -307,7 +309,7 @@ class Meter extends Model
 
             Transaction::where('trx_id', $trx_id)->update([
                 'service' => $service,
-                'service_type' => "credit_token",
+                'service_type' => ServiceTypeConstants::CREDIT_TOKEN,
                 'tariff_id' => $tariff_id,
                 'unit_amount' => $vending_amount,
                 // 'vat' => $vatAmount,

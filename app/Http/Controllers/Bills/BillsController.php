@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Bills;
 
+use App\Constants\ServiceTypeConstants;
+use App\Constants\TransactionConstants;
 use App\Contracts\PaymentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Logger;
@@ -109,7 +111,11 @@ class BillsController extends Controller
 
         if ($status === 'successful') {
 
-            Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$network}_airtime_purchase", 'service' => "Airtime Purchase", 'status' => 2]);
+            Transaction::where('trx_id', $request->ref)->update([
+                'service_type' => ServiceTypeConstants::AIRTIME_TOP_UP,
+                'service' => "Airtime Purchase {$network}",
+                'status' => TransactionConstants::TRANSACTION_COMPLETE,
+            ]);
 
             $message = "Airtime Purchase successful";
             return success($message);
@@ -381,7 +387,11 @@ class BillsController extends Controller
             $status = $response['status'] ?? null;
 
             // Update transaction status regardless of outcome (per original logic)
-            Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$service}_cable_purchase", 'service' => "Cable Purchase", 'status' => 2]);
+            Transaction::where('trx_id', $request->ref)->update([
+                'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
+                'service' => "Cable Purchase {$service}",
+                'status' => TransactionConstants::TRANSACTION_COMPLETE,
+            ]);
 
             if ($status === 'successful') {
                 $message = "Cable Purchase successful";
@@ -501,6 +511,9 @@ class BillsController extends Controller
             $request->variation_code,
         );
 
+        $bundle_price = (double) $package['price'];
+        $value_left = $amount - $bundle_price;
+
         if (! $package['search_success']) {
 
             Logger::error("User $auth_user->id passed an invalid variation code poping stored cache", [
@@ -510,13 +523,13 @@ class BillsController extends Controller
                 'data_bundles' => $this->paybetaService->getDataBundles($request->service_id),
             ]);
 
+            $value_left > 0 && $auth_user->creditWallet($value_left);
+
             $this->paybetaService->popDataBundleCache($request->service_id);
 
-            return StandardResponse::success(200, 'Data Bundle You Selected Doesn\'t exist', []);
+            return StandardResponse::error(200, 'Data Bundle You Selected Doesn\'t exist', []);
         }
 
-        $bundle_price = (double) $package['price'];
-        $value_left = $amount - $bundle_price;
 
         if ($value_left < 0) {
 
@@ -526,7 +539,7 @@ class BillsController extends Controller
             ]);
 
             return StandardResponse::error(403, "Insufficient funds for the selected data bundle", [
-                'reason' => "After Utilities fees payment you have $amount left for transaction bundle costs $bundle_price",
+                'reason' => "After Utilities fees payment you have $value_left left for transaction bundle costs $bundle_price",
             ]);
         }
 
@@ -549,7 +562,11 @@ class BillsController extends Controller
         ]);
 
         // Update transaction status regardless of outcome (per original logic)
-        Transaction::where('trx_id', $request->ref)->update(['service_type' => "{$network}_data_purchase", 'service' => "Data Purchase", 'status' => 2]);
+        Transaction::where('trx_id', $request->ref)->update([
+            'service_type' => ServiceTypeConstants::DATA_TOP_UP,
+            'service' => "Data Purchase {$network}",
+            'status' => TransactionConstants::TRANSACTION_COMPLETE,
+        ]);
 
         $status = $response['status'] ?? null;
 

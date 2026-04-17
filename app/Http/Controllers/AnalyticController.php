@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Constants\ServiceTypeConstants;
+use App\Constants\TransactionConstants;
 use App\Models\Token;
 use App\Models\Transaction;
 use App\Services\StandardResponse;
@@ -153,12 +155,14 @@ class AnalyticController extends Controller
         $last_month_end = Carbon::now()->subMonth()->endOfMonth();
 
 
-        $total_month_sum = Transaction::where('user_id', $auth_user->id)
+        $total_month_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$transaction_month_start, $now])
             ->sum('amount');
 
 
-        $last_month_sum = Transaction::where('user_id', $auth_user->id)
+        $last_month_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$last_month_start, $last_month_end])
             ->sum('amount');
 
@@ -167,7 +171,8 @@ class AnalyticController extends Controller
             : 0;
 
 
-        $trx_by_month = Transaction::where('user_id', $auth_user->id)
+        $trx_by_month = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$year_start, $now])
             ->select([
                 DB::raw('MONTH(created_at) as month'),
@@ -190,10 +195,16 @@ class AnalyticController extends Controller
         }
 
 
-        $serviceTypes = ['airtime_top_up', 'data_top_up', 'credit_token', 'cable_subscription'];
+        $serviceTypes = [
+            ServiceTypeConstants::AIRTIME_TOP_UP,
+            ServiceTypeConstants::DATA_TOP_UP,
+            ServiceTypeConstants::CREDIT_TOKEN,
+            ServiceTypeConstants::CABLE_SUBSCRIPTION,
+        ];
 
-        $this_month_by_service = Transaction::where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$month_start, $now])
+        $this_month_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
+            ->whereBetween('created_at', [$year_start, $now])
             ->whereIn('service_type', $serviceTypes)
             ->select([
                 'service_type',
@@ -204,9 +215,10 @@ class AnalyticController extends Controller
             ->get()
             ->keyBy('service_type');
 
-        $last_month_by_service = Transaction::where('user_id', $auth_user->id)
+        $last_month_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$last_month_start, $last_month_end])
-            ->whereIn('service_type', $serviceTypes)
+            // ->whereIn('service_type', $serviceTypes)
             ->select([
                 'service_type',
                 DB::raw('SUM(amount) as total_amount'),
@@ -292,7 +304,8 @@ class AnalyticController extends Controller
             ? Carbon::now()
             : Carbon::create($year)->endOfYear();
 
-        $trx_by_month = Transaction::where('user_id', $auth_user->id)
+        $trx_by_month = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$start, $end])
             ->select([
                 DB::raw('MONTH(created_at) as month'),
@@ -357,7 +370,8 @@ class AnalyticController extends Controller
 
         $serviceTypes = ['airtime_top_up', 'data_top_up', 'credit_token'];
 
-        $current_by_service = Transaction::where('user_id', $auth_user->id)
+        $current_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$start, $end])
             ->whereIn('service_type', $serviceTypes)
             ->select([
@@ -369,7 +383,8 @@ class AnalyticController extends Controller
             ->get()
             ->keyBy('service_type');
 
-        $prev_by_service = Transaction::where('user_id', $auth_user->id)
+        $prev_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+            ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$prev_start, $prev_end])
             ->whereIn('service_type', $serviceTypes)
             ->select([
