@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('estate_id');
             $table->unsignedBigInteger('mod_feature_id');
             $table->unsignedSmallInteger('status');
+            $table->unique(['estate_id', 'mod_feature_id']);
             $table->timestamps();
         });
     }

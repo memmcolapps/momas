@@ -418,7 +418,6 @@ class TransactionController extends Controller
 
     public function all_transactions(request $request)
     {
-
         $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get();
         return response()->json([
             'status' => true,

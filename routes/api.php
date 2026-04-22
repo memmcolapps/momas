@@ -56,7 +56,7 @@ Route::any('pos/eod', [PosController::class, 'get_all_transaction']);
 // Authenticated Routes
 // ─────────────────────────────────────────────
 
-Route::group(['middleware' => ['auth:api', 'acess']], function () {
+Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], function () {
 
     Route::post('balance', [ProfileController::class, 'balance']);
     Route::get('features', [FeatureController::class, 'features']);
@@ -120,14 +120,11 @@ Route::group(['middleware' => ['auth:api', 'acess']], function () {
         Route::post('set-default', [EstateController::class, 'set_default_estate']);
     });
 
-    // ── Feature::TOP_UP ──────────────────────
-    Route::group(['defaults' => ['feature' => \App\Constants\Feature::TOP_UP]], function () {
-        Route::post('pay', [TransactionController::class, 'make_payment']);
-        Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
-        Route::get('arrears', [TransactionController::class, 'arrears']);
-        Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
-        Route::get('get-trx', [TransactionController::class, 'get_trx']);
-    });
+    Route::post('pay', [TransactionController::class, 'make_payment']);
+    Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
+    Route::get('arrears', [TransactionController::class, 'arrears']);
+    Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
+    Route::get('get-trx', [TransactionController::class, 'get_trx']);
 
     // ── Feature::ANALYSIS ────────────────────
     Route::group(['defaults' => ['feature' => \App\Constants\Feature::ANALYSIS]], function () {

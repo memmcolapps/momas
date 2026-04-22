@@ -353,6 +353,7 @@ class Meter extends Model
                 'status' => 2,
                 'vatAmount' => $vatAmount,
                 'tariff_amount' => $tariffAmount,
+                'tariff_id' => $tariff_id,
             ]);
 
 

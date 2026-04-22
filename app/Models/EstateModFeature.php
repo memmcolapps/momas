@@ -18,9 +18,9 @@ class EstateModFeature extends Model
     ];
 
 
-    protected const AVAILABLE_STATUS = 1;
-    protected const UNAVAILABLE_STATUS = 0;
-    protected const TEMPORARY_DOWNTIME_STATUS = 2;
+    public const AVAILABLE_STATUS = 1;
+    public const UNAVAILABLE_STATUS = 0;
+    public const TEMPORARY_DOWNTIME_STATUS = 2;
 
     public function isAvailable() {
         return $this->status === self::AVAILABLE_STATUS;
@@ -49,5 +49,13 @@ class EstateModFeature extends Model
         }
 
         return $query->where('estate_id', $user->estate_id);
+    }
+
+    public function scopeByStatus($query, $status = self::AVAILABLE_STATUS) {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByEstate($query, $estate) {
+        return $query->where('estate_id', $estate->id);
     }
 }

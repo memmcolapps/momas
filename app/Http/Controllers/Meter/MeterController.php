@@ -247,7 +247,7 @@ class MeterController extends Controller
         if ($estate_id == null) {
             return back()->with('error', "User not attached to any estate");
         }
-        $title = Tariff::where('estate_id', $user_info->estate_id)->first()->title ?? null;
+        $title = Tariff::where('estate_id', $user_info->estate_id)->where('amount', '!=', null)->first()->title ?? null;
         if ($title == null) {
             return back()->with('error', "Set a tariff for estate selected");
         }
