@@ -6,14 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessPaystackWebhook;
 use App\Models\CreditToken;
 use App\Models\Estate;
+use App\Models\Logger;
 use App\Models\MeterToken;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
-use App\Models\Logger;
 use App\Models\VirtualAccountTransaction;
 use App\Services\PaystackPaymentService;
+use App\Services\RequestActionHandler;
 use App\Services\StandardResponse;
 use Carbon\Carbon;
 use Exception;
@@ -870,6 +871,17 @@ class TransactionController extends Controller
             Transaction::where('trx_id', $transactionData['reference'])->update(['status' => 3]);
 
             $ref = $transactionData['reference'];
+            $trx = Transaction::where('trx_id', $ref)->first();
+
+            if ($trx) {
+                $action_payload = json_decode($trx->action_payload);
+
+                if ($action_payload->action == 'momas_meter_web') {
+                    RequestActionHandler::handleRequestAction($trx->trx_id);
+
+                    return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
+                }
+            }
             ProcessPaystackWebhook::dispatch($transactionData['reference']);
 
             if ($access_point === 'mobile') {
