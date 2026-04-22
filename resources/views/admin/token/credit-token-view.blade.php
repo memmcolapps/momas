@@ -661,9 +661,9 @@
                                             @foreach($credit_tokens as $data)
 
                                                 <tr>
-                                                    <a href="view-user?id={{$data->user?->id ?? null}}">
-                                                        {{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}
-                                                    </a>
+                                                    <td>
+                                                        <a href="view-user?id={{$data->user?->id ?? null}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
+                                                    </td>
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
