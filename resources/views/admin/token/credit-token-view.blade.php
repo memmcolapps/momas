@@ -694,9 +694,9 @@
                                                                 }
                                                             </script>
 
-                                                        @elseif($data->status == 0)
+                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-tamper-token?trx_id={{$data->trx_id}}"
+                                                            <a href="retry-generate-credit-token?trx_id={{$data->trx_id}}"
                                                                onclick="return confirmgenertetoken();"
                                                                class="btn btn-secondary">Generate Token</a>
                                                             <script>
