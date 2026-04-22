@@ -212,7 +212,7 @@
                                     </div>
                                     <hr>
                                     <div class="card-body">
-                                        <table id="datatable-buttons"
+                                        <table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
                                             <tr>
@@ -302,6 +302,11 @@
 
                                             </tfoot>
                                         </table><!-- end table -->
+
+                                        <!-- ADD THIS -->
+                                        <div class="d-flex justify-content-end mt-3">
+                                            {{ $credit_tokens->links() }}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -633,7 +638,7 @@
                                     </div>
                                     <hr>
                                     <div class="card-body">
-                                        <table id="datatable-buttons"
+                                        <table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
                                             <tr>
@@ -656,9 +661,9 @@
                                             @foreach($credit_tokens as $data)
 
                                                 <tr>
-                                                    <td>
-                                                        <a href="view-user?id={{$data->id}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
-                                                    </td>
+                                                    <a href="view-user?id={{$data->user?->id ?? null}}">
+                                                        {{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}
+                                                    </a>
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
@@ -720,6 +725,11 @@
 
                                             </tfoot>
                                         </table><!-- end table -->
+
+                                        <!-- ADD THIS -->
+                                        <div class="d-flex justify-content-end mt-3">
+                                            {{ $credit_tokens->links() }}
+                                        </div>
                                     </div>
                                 </div>
 
