@@ -17,6 +17,7 @@ use App\Models\UtilitiesPayment;
 use App\Models\VirtualAccountTransaction;
 use App\Services\FlutterwavePaymentService;
 use App\Services\PaystackPaymentService;
+use App\Services\RequestActionHandler;
 use App\Services\StandardResponse;
 use Carbon\Carbon;
 use Exception;
@@ -405,6 +406,35 @@ class TransactionController extends Controller
                     'url' => url('') . "/pay-remita?amount=$request->amount&trx_id=$trx_id&email=$email"
                 ], 200);
             }
+
+
+            if ($request->pay_type === 'wallet') {
+                $trx_id = "TRX" . random_int(0000000, 9999999);
+                $email = Auth::user()->email;
+
+
+                if (Auth::user()->main_wallet < $request->amount) {
+
+                    return StandardResponse::error(403, 'Insufficient Funds', []);
+                }
+
+
+                Auth::user()->debitWallet($request->amount);
+
+                $trx = new Transaction();
+                $trx->user_id = Auth::id();
+                $trx->pay_type = "wallet";
+                $trx->amount = $request->amount;
+                $trx->service_type = $request->service;
+                $trx->trx_id = $trx_id;
+                $trx->save();
+
+                return response()->json([
+                    'status' => "success",
+                    'ref' => $trx_id,
+                ], 200);
+
+            }
         } catch (Exception $e) {
             return StandardResponse::error(500, 'An Error Occurred', [], debug: [
                 'error' => $e->getMessage(),
@@ -735,6 +765,17 @@ class TransactionController extends Controller
             Transaction::where('trx_id', $transactionData['reference'])->update(['status' => 3]);
 
             $ref = $transactionData['reference'];
+            $trx = Transaction::where('trx_id', $ref)->first();
+
+            if ($trx) {
+                $action_payload = json_decode($trx->action_payload);
+
+                if ($action_payload->action == 'momas_meter_web') {
+                    RequestActionHandler::handleRequestAction($trx->trx_id);
+
+                    return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
+                }
+            }
             ProcessPaystackWebhook::dispatch($transactionData['reference']);
 
             if ($access_point === 'mobile') {

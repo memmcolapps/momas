@@ -334,6 +334,9 @@ class Meter extends Model
 
             $token = $token_gen['data']['token'];
 
+            $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+            $tariffAmount = $tariffState->amount ?? 0;
+
 
             $cdt = CreditToken::updateOrCreate([
                 'trx_id' => $trx_id,
@@ -351,9 +354,9 @@ class Meter extends Model
                 'estate_name' => $user->estate_name,
                 'token' => $token,
                 'status' => 2,
-                'vatAmount' => $vatAmount,
+                'vatAmount' => $vat,
                 'tariff_amount' => $tariffAmount,
-                'tariff_id' => $tariff_id,
+                'tariff_id' => $tariff_id
             ]);
 
 

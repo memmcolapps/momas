@@ -213,6 +213,7 @@
                                     <hr>
                                     <div class="card-body">
                                         <table id=""
+                                        <table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
                                             <tr>
@@ -302,6 +303,11 @@
 
                                             </tfoot>
                                         </table><!-- end table -->
+
+                                        <!-- ADD THIS -->
+                                        <div class="d-flex justify-content-end mt-3">
+                                            {{ $credit_tokens->links() }}
+                                        </div>
 
                                         <!-- ADD THIS -->
                                         <div class="d-flex justify-content-end mt-3">
@@ -661,9 +667,9 @@
                                             @foreach($credit_tokens as $data)
 
                                                 <tr>
-                                                    <a href="view-user?id={{$data->user?->id ?? null}}">
-                                                        {{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}
-                                                    </a>
+                                                    <td>
+                                                        <a href="view-user?id={{$data->user?->id ?? null}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
+                                                    </td>
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
                                                     <td>{{number_format($data->amount, 2)}}</td>
@@ -694,9 +700,9 @@
                                                                 }
                                                             </script>
 
-                                                        @elseif($data->status == 0)
+                                                         @elseif($data->status == 0)
 
-                                                            <a href="retry-generate-tamper-token?trx_id={{$data->trx_id}}"
+                                                            <a href="retry-generate-credit-token?trx_id={{$data->trx_id}}"
                                                                onclick="return confirmgenertetoken();"
                                                                class="btn btn-secondary">Generate Token</a>
                                                             <script>
@@ -725,6 +731,11 @@
 
                                             </tfoot>
                                         </table><!-- end table -->
+
+                                        <!-- ADD THIS -->
+                                        <div class="d-flex justify-content-end mt-3">
+                                            {{ $credit_tokens->links() }}
+                                        </div>
 
                                         <!-- ADD THIS -->
                                         <div class="d-flex justify-content-end mt-3">

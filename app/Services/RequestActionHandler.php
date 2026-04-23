@@ -103,7 +103,7 @@ class RequestActionHandler {
 
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
         // dump("meter_with_uid->", $meter->id);
-        dump($meter);
+        // dump($meter);
 
         $tariffId = $action_payload['tariff_id'];
         $unit = $action_payload['vend_amount_kw_per_naira'];
