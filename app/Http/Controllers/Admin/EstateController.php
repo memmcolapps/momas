@@ -23,6 +23,8 @@ class EstateController extends Controller
         $data['estate_list'] = Estate::paginate(20);
         $data['estate'] = Estate::count();
 
+
+
         return view('admin/estate/index', $data);
 
     }
@@ -30,7 +32,14 @@ class EstateController extends Controller
 
     public function estate_new(request $request)
     {
-        return view('admin/estate/create');
+        $data['estate_features'] = ModFeature::select([
+                'title',
+                'slug',
+                'status'
+            ])
+            ->get();
+
+        return view('admin/estate/create', $data);
     }
 
 
@@ -99,6 +108,25 @@ class EstateController extends Controller
         $org->ptype = $request->ptype;
         $org->status = 2;
         $org->save();
+
+        $estateId = $org->id;
+        $features = ModFeature::all();
+
+        foreach ($features as $feature) {
+            $slug = $feature->slug;
+            if ($request->has($slug)) {
+                $status = $request->input($slug);
+                EstateModFeature::updateOrCreate(
+                    [
+                        'estate_id' => $estateId,
+                        'mod_feature_id' => $feature->id
+                    ],
+                    ['status' => $status]
+                );
+            }
+        }
+
+
 
 
         return redirect('admin/estate')->with('message', 'Estate created successfully');
