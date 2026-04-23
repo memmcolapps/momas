@@ -244,6 +244,7 @@ class Meter extends Model
                 'status' => 2,
                 'vatAmount' => $vat,
                 'tariff_amount' => $tariffAmount,
+                'tariff_id' => $tariff_id
             ]);
 
             // dump("got here meter:227");
