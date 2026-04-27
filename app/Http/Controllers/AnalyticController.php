@@ -199,6 +199,7 @@ class AnalyticController extends Controller
             ServiceTypeConstants::AIRTIME_TOP_UP,
             ServiceTypeConstants::DATA_TOP_UP,
             ServiceTypeConstants::CREDIT_TOKEN,
+            ServiceTypeConstants::CREDIT_TOKEN_OTHERS,
             ServiceTypeConstants::CABLE_SUBSCRIPTION,
         ];
 
@@ -368,7 +369,13 @@ class AnalyticController extends Controller
         $prev_start = Carbon::create($year - 1)->startOfYear();
         $prev_end   = Carbon::create($year - 1)->endOfYear();
 
-        $serviceTypes = ['airtime_top_up', 'data_top_up', 'credit_token'];
+        $serviceTypes = [
+            ServiceTypeConstants::AIRTIME_TOP_UP,
+            ServiceTypeConstants::DATA_TOP_UP,
+            ServiceTypeConstants::CREDIT_TOKEN,
+            ServiceTypeConstants::CREDIT_TOKEN_OTHERS,
+            ServiceTypeConstants::CABLE_SUBSCRIPTION,
+        ];
 
         $current_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)

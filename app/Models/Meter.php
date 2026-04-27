@@ -214,7 +214,7 @@ class Meter extends Model
 
         if ($receiver_meterNo) {
             $other_meter = self::where('meterNo', $receiver_meterNo)
-                ->where('estate_id', $this->estate_id)
+                // ->where('estate_id', $this->estate_id)
                 ->first();
 
             if (!$other_meter) {
@@ -260,13 +260,14 @@ class Meter extends Model
             $email = $user->email;
 
             $service = $other_meter ? "CREDIT TOKEN PURCHASE(OTHERS)" : "CREDIT TOKEN PURCHASE";
+            $service_type = $other_meter ? ServiceTypeConstants::CREDIT_TOKEN_OTHERS : ServiceTypeConstants::CREDIT_TOKEN;
 
 
             $meter = $other_meter ?? $this;
 
 
             if (! $meter->isActive() || ($receiver_meterNo && ! $this->isActive())) {
-                throw new Exception("Meter is unable from carrying out operations");
+                throw new Exception("Meter is unable to carrying out operations");
             }
 
 
@@ -306,10 +307,9 @@ class Meter extends Model
 
             $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $meter->NeedKCT);
 
-
             Transaction::where('trx_id', $trx_id)->update([
                 'service' => $service,
-                'service_type' => ServiceTypeConstants::CREDIT_TOKEN,
+                'service_type' => $service_type,
                 'tariff_id' => $tariff_id,
                 'unit_amount' => $vending_amount,
                 // 'vat' => $vatAmount,
@@ -317,7 +317,7 @@ class Meter extends Model
 
 
             if ( ! $token_gen['success']) {
-                dump('Failed Meter: 317');
+                // dump('Failed Meter: 317');
                 Transaction::where('trx_id', $trx_id)->update([
                     'note' => 'token generation failed',
                     'status' => 3,

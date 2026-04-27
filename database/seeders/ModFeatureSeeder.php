@@ -11,12 +11,12 @@ class ModFeatureSeeder extends Seeder
     {
         $features = [
             [
-                'title' => 'Momas Meter',
+                'title' => 'Buy Token',
                 'slug' => 'momas_meter',
                 'description' => 'Access to momas meter services',
             ],
             [
-                'title' => 'Other Meter',
+                'title' => 'Buy Token(Others)',
                 'slug' => 'other_meter',
                 'description' => 'Access to other meter providers',
             ],

@@ -1,6 +1,7 @@
 <?php
 
 
+use App\Models\Estate;
 use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\OauthAccessToken;
@@ -187,6 +188,20 @@ if (!function_exists('meter')) {
 
         $meter = Meter::where('user_id', Auth::id())->first()->makeHidden(['created_at', 'updated_at']) ?? [];
         return $meter;
+    }
+}
+
+if (!function_exists('estate')) {
+
+    function estate()
+    {
+
+        $estate = Estate::where('id', Auth::user()->estate_id)->first();
+
+        if (! $estate || ! $estate->isAcive()) {
+            return collect([]);
+        }
+        return $estate;
     }
 }
 
@@ -744,5 +759,19 @@ if (! function_exists('get_user_arrears')) {
                     'all_history' => $all_history
                 ];
         }
+    }
+}
+
+
+if (! function_exists('get_user')) {
+    function get_user($email, $meterNo) {
+
+        $is_email_reset = $email ? true : false;
+
+        return User::when(
+            $is_email_reset,
+            fn($q) => $q->where('email', $email),
+            fn($q) => $q->where('meterNo', $meterNo)
+        )->first();
     }
 }

@@ -20,7 +20,7 @@ class EstateController extends Controller
 {
     public function estate_index(request $request)
     {
-        $data['estate_list'] = Estate::paginate(20);
+        $data['estate_list'] = Estate::latest()->paginate(20);
         $data['estate'] = Estate::count();
 
 
@@ -107,6 +107,7 @@ class EstateController extends Controller
         $org->account_no = $request->account_no;
         $org->ptype = $request->ptype;
         $org->status = 2;
+        $org->admin_fee = $request->estate_admin_fee;
         $org->save();
 
         $estateId = $org->id;
@@ -237,6 +238,7 @@ class EstateController extends Controller
             'charge_fee_precent' => $request->charge_fee_precent,
             'pos_tariff_id' => $request->pos_tariff_id,
             'serial_no' => $request->serial_no,
+            'admin_fee' => $request->estate_admin_fee,
 
         ]);
         return redirect('admin/estate')->with('message', 'Estate updated successfully');

@@ -130,6 +130,11 @@
 
                                 </div>
 
+                                <div class="col-xl-3 col-sm-12">
+                                    <label class="my-2">Estate Admin Fee</label>
+                                    <input type="number" name="estate_admin_fee"  class="form-control" >
+                                </div>
+
 
                             </div>
 

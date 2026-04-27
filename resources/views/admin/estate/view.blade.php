@@ -343,6 +343,11 @@
                                         <input type="number" value="{{$org->charge_fee_flat}}" name="charge_fee_flat"  class="form-control" >
                                     </div>
 
+                                    <div class="col-xl-3 col-sm-12">
+                                        <label class="my-2">Estate Admin Fee</label>
+                                        <input type="number" value="{{$org->admin_fee}}" name="estate_admin_fee"  class="form-control" >
+                                    </div>
+
 
                                 </div>
 

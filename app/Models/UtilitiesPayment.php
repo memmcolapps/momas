@@ -27,7 +27,7 @@ class UtilitiesPayment extends Model implements Auditable
         return $this->belongsTo(Estate::class);
     }
 
-    protected $fillable = ['type', 'amount', 'duration', 'next_due_date', 'estate_id', 'total_amount', 'customer_id', 'estate_id'];
+    protected $fillable = ['type', 'amount', 'duration', 'next_due_date', 'estate_id', 'total_amount', 'estate_id', 'user_id'];
 
 
     protected $casts = [
