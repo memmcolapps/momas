@@ -47,19 +47,5 @@ class ProcessPaystackWebhook implements ShouldQueue
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
         ]);
-        try {
-            $trx = Transaction::where('trx_id', $this->reference)->firstOrFail();
-            $action_payload = json_decode($trx->action_payload, true);
-            if ($action_payload['action'] === 'momas_meter') {
-                $trx = Transaction::where('trx_id', $this->reference)->firstOrFail();
-                $user = User::where('id', $trx->user_id)->firstOrFail();
-
-                $user->creditWallet($trx->amount);
-            }
-        } catch (Exception $e) {
-
-            Logger::error("Failed to Credit User: {$user->id} wallet reason: {$e->getMessage()}");
-
-        }
     }
 }

@@ -36,78 +36,25 @@ class TokenController extends Controller
 
     public function credit_token_index()
     {
-
-
         if (Auth::user()->role == 0) {
-
-
             $data['estate'] = Estate::all();
-            $data['tariff'] = TarrifState::where('estate_id', user()->estate_id)->get();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
             $data['preview'] = null;
-            $data['credit_tokens'] = CreditToken::latest()->paginate('50');
-            $data['credit_tokens_select'] = CreditToken::join('users', 'users.id', '=', 'credit_tokens.user_id')
-                ->latest()
-                ->select([
-                    'users.first_name',
-                    'users.last_name',
-                    'users.estate_name',
-                    'credit_tokens.meterNo',
-                    'credit_tokens.amount',
-                    'credit_tokens.tariff_id',
-                    'credit_tokens.unitKwh',
-                    'credit_tokens.status',
-                    'credit_tokens.created_at',
-                    'credit_tokens.user_id',
-                    'credit_tokens.trx_id',
-                    'credit_tokens.status',
-                ])->paginate('50');
-
-            // foreach ($data['credit_tokens'] as $data) {
-            //     if ($data->trx_id == 'MOMAS-794791327-162eebca') {
-            //         Logger::info("You tested", $data->toArray());
-            //     }
-            // }
-
-            Logger::info('credit_token_index data prepared', [
-                'user_id' => Auth::id(),
-                'estate_count' => $data['estate']->count(),
-                'tariff_count' => $data['tariff']->count(),
-                'preview' => $data['preview'],
-                'credit_tokens' => [
-                    'current_page' => $data['credit_tokens']->currentPage(),
-                    'per_page' => $data['credit_tokens']->perPage(),
-                    'total' => $data['credit_tokens']->total(),
-                ],
-            ]);
+            $data['credit_tokens'] = CreditToken::latest()->paginate(20);
 
             return view('admin.token.credit-token-view', $data);
 
-
-        } elseif (Auth::user()->role == 1) {
-
-        } elseif (Auth::user()->role == 2) {
-
         } elseif (Auth::user()->role == 3) {
-
-
             $data['estate_id'] = Auth::user()->estate_id;
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
             $data['preview'] = null;
-            $data['tariff'] = TarrifState::where('estate_id', user()->estate_id)->get();
-            $data['credit_tokens'] = CreditToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['credit_tokens'] = CreditToken::latest()
+                ->where('estate_id', Auth::user()->estate_id)
+                ->paginate(20);
 
             return view('admin.token.credit-token-view', $data);
-
-
-        } elseif (Auth::user()->role == 4) {
-
-        } elseif (Auth::user()->role == 5) {
-
-        } else {
-
         }
-
-
     }
 
 
@@ -1578,6 +1525,10 @@ class TokenController extends Controller
                     $trx->status = 0;
                     $trx->action_payload = json_encode($action_payload);
 
+                    $trx->save();
+
+                    // dd($trx->toArray());
+
                     $cdt = CreditToken::create([
                         'trx_id' => $trx_id,
                         'user_id' => $action_payload['user_id'],
@@ -1599,8 +1550,6 @@ class TokenController extends Controller
                     'user_id' => Auth::id(),
                     'user_id2' => Auth::user()->id,
                     ]);
-
-                    $trx->save();
 
                     return redirect()->away($payment_init['data']['authorization_url']);
                 }
@@ -3760,7 +3709,9 @@ class TokenController extends Controller
 
                     $ck_transaction = Transaction::where('trx_id', $trx_id)->first()->status ?? null;
 
-                    // Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+                    if ($verify_result['is_successful']) {
+                        Transaction::where('trx_id', $trx_id)->update(['status' => 3]);
+                    }
                     // dd($request->all(), $trx_id);
                     $cdt = CreditToken::where('trx_id', $trx_id)->first();
                     $meterNo = $cdt->meterNo;
@@ -3793,7 +3744,7 @@ class TokenController extends Controller
 
                     }
 
-                    $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $verify="null");
+                    $meter->getNewToken($tariff_id, $trx_id, $verify="null");
 
 
 
@@ -5618,7 +5569,7 @@ class TokenController extends Controller
                     $data['tariff_amount'] = $trx_comp->tariff_amount;
                     $data['unit'] = $trx_comp->unitkwh;
                     $data['title'] = "Credit Token";
-                    $data['date'] = date('d-m-y h:i:s');
+                    $data['date'] = $trx_comp->created_at;
                     $data['meter_no'] = $trx_comp->meterNo;
                     $data['kct_token1'] = $kct_tokens[0] ?? null;
                     $data['kct_token2'] = $kct_tokens[1] ?? null;

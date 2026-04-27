@@ -2,1107 +2,244 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Constants\Feature;
+use App\Http\Controllers\Controller;
 use App\Models\Estate;
+use App\Models\EstateModFeature;
+use App\Models\Logger;
+use App\Models\ModFeature;
 use App\Models\Setting;
 use App\Models\Tariff;
-use App\Models\TariffState;
 use App\Models\TarrifState;
-use App\Models\UtilitiesPayment;
-use App\Models\Utitlity;
-use Carbon\Carbon;
 use App\Models\User;
-use App\Models\Meter;
+use App\Models\UtilitiesPayment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use App\Models\Logger;
-use Laravel\Passport\Passport;
-use App\Models\OauthAccessToken;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Laravel\Passport\Passport;
 
 class LoginController extends Controller
 {
-    //Tariffs state parameters corrected
-    // public function login(request $request)
-    // {
-
-    //     if($request->email == null) {
-    //         $credentials = request(['meterNo', 'password']);
-    //         $usr = User::where('meterNo', $request->meterNo)->first() ?? null;
-    //         $status = User::where('meterNo', $request->meterNo)->first()->status ?? null;
-
-    //         if($status == 9){
-    //             $message = "User does not exist";
-    //             $code = 401;
-    //             return error($message, $code);
-    //         }
-
-    //         if ($usr == null) {
-    //             $message = "User does not exist";
-    //             $code = 404;
-    //             return error($message, $code);
-    //         }
-
-    //         Passport::tokensExpireIn(Carbon::now()->addMinutes(20));
-    //         Passport::refreshTokensExpireIn(Carbon::now()->addMinutes(20));
-
-    //         if (!auth()->attempt($credentials)) {
-    //             $message = "Meter No or Password Incorrect";
-    //             $code = 422;
-    //             return error($message, $code);
-    //         }
-
-    //         flush_token();
-
-
-    //         //Updated to fetch data using estate id
-    //         // $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
-    //         //     ->where('user_id', Auth::id())
-    //         //     ->get();
-    //         // foreach ($tariffs as $tariff) {
-    //         //     $tariffState = TarrifState::where('tariff_id', $tariff->id)->first();
-    //         //     $tariff->amount = $tariffState ? $tariffState->amount : null;
-    //         // }
-
-    //         //Updated to fetch data using estate id
-    //         $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
-    //             ->where('estate_id', Auth::user()->estate_id)
-    //             ->get();
-    //         foreach ($tariffs as $tariff) {
-    //             $tariffState = TarrifState::where('tariff_id', $tariff->id)
-    //                 ->where('amount', '>', 0)
-    //                 ->first();
-    //             $tariff->amount = $tariffState ? $tariffState->amount : null;
-    //         }
-
-
-
-    //         $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->latest('created_at')
-    //             ->first();
-
-    //         if($admin_fee_get && $admin_fee_get->status == 2){
-    //             $admin_fee =  "1";
-    //         }else{
-    //             $admin_fee = "0";
-    //         }
-
-    //         $ck_utility = UtilitiesPayment::where('user_id', Auth::id())->where('type', 'utilities')->first();
-    //         if($ck_utility){
-
-
-
-
-
-
-    //         }else{
-
-    //             $utility_amount = Estate::where('id', Auth::user()->estate_id)->first()->total_utility_amount ?? 0;
-    //             $duration = Estate::where('id', Auth::user()->estate_id)->first()->duration ?? null;
-
-    //             if($duration == null ){
-    //                 $message = "Estate utility duration not set, Contact support";
-    //                 $code = 404;
-    //                 return error($message, $code);
-    //             }
-
-
-
-    //             $nextDueDate = Carbon::now();
-    //             switch ($duration) {
-    //                 case 'weekly':
-    //                     $nextDueDate->addWeek();
-    //                     break;
-    //                 case 'monthly':
-    //                     $nextDueDate->addMonth();
-    //                     break;
-    //                 case 'yearly':
-    //                     $nextDueDate->addYear();
-    //                     break;
-    //                 default:
-
-    //                     $mssage = "Unknown duration '{$duration}'";
-    //                     send_notification($mssage);
-
-    //             }
-
-    //             $utli = new UtilitiesPayment();
-    //             $utli->estate_id = Auth::user()->estate_id;
-    //             $utli->user_id = Auth::id();
-    //             $utli->amount = $utility_amount;
-    //             $utli->next_due_date = $nextDueDate;
-    //             $utli->duration = $duration;
-    //             $utli->type = "utilities";
-    //             $utli->total_amount = $utility_amount;
-    //             $utli->save();
-
-    //         }
-
-
-    //         //checkAdmin fee
-    //         $admin_fee_amount = Setting::where('id', 1)->first()->admin_fee;
-    //         $ck_admin_fee = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->first();
-
-    //         $ck_admin_fee_status = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->first()->status ?? null;
-
-    //         $former_admin_fee_date = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->first()->created_at ?? null;
-
-
-    //         if($ck_admin_fee){
-
-    //         }elseif($ck_admin_fee && $ck_admin_fee_status == 2 ){
-
-    //             $duration = "monthly";
-    //             $nextDueDate =  $former_admin_fee_date;
-    //             switch ($duration) {
-    //                 case 'weekly':
-    //                     $nextDueDate->addWeek();
-    //                     break;
-    //                 case 'monthly':
-    //                     $nextDueDate->addMonth();
-    //                     break;
-    //                 case 'yearly':
-    //                     $nextDueDate->addYear();
-    //                     break;
-    //                 default:
-    //                     $mssage = "Unknown duration '{$duration}'";
-    //                     send_notification($mssage);
-
-    //             }
-
-    //             $utli = new UtilitiesPayment();
-    //             $utli->estate_id = Auth::user()->estate_id;
-    //             $utli->user_id = Auth::id();
-    //             $utli->amount = $admin_fee_amount;
-    //             $utli->next_due_date = $nextDueDate;
-    //             $utli->duration = $duration;
-    //             $utli->total_amount = $admin_fee_amount;
-    //             $utli->type = "admin_fee";
-    //             $utli->save();
-
-
-    //         }elseif($ck_admin_fee && $ck_admin_fee_status == null){
-
-    //         $duration = "monthly";
-    //         $nextDueDate =  Carbon::now();
-    //         switch ($duration) {
-    //             case 'weekly':
-    //                 $nextDueDate->addWeek();
-    //                 break;
-    //             case 'monthly':
-    //                 $nextDueDate->addMonth();
-    //                 break;
-    //             case 'yearly':
-    //                 $nextDueDate->addYear();
-    //                 break;
-    //             default:
-    //                 $mssage = "Unknown duration '{$duration}'";
-    //                 send_notification($mssage);
-
-    //         }
-
-    //         $utli = new UtilitiesPayment();
-    //         $utli->estate_id = Auth::user()->estate_id;
-    //         $utli->user_id = Auth::id();
-    //         $utli->amount = $admin_fee_amount;
-    //         $utli->next_due_date = $nextDueDate;
-    //         $utli->duration = $duration;
-    //         $utli->total_amount = $admin_fee_amount;
-    //         $utli->type = "admin_fee";
-    //         $utli->save();
-
-
-    //     }else{
-
-    //             $duration = "monthly";
-    //             $nextDueDate =  Carbon::now();
-    //             switch ($duration) {
-    //                 case 'weekly':
-    //                     $nextDueDate->addWeek();
-    //                     break;
-    //                 case 'monthly':
-    //                     $nextDueDate->addMonth();
-    //                     break;
-    //                 case 'yearly':
-    //                     $nextDueDate->addYear();
-    //                     break;
-    //                 default:
-    //                     $mssage = "Unknown duration '{$duration}'";
-    //                     send_notification($mssage);
-
-    //             }
-
-    //             $utli = new UtilitiesPayment();
-    //             $utli->estate_id = Auth::user()->estate_id;
-    //             $utli->user_id = Auth::id();
-    //             $utli->amount = $admin_fee_amount;
-    //             $utli->next_due_date = $nextDueDate;
-    //             $utli->duration = $duration;
-    //             $utli->total_amount = $admin_fee_amount;
-    //             $utli->type = "admin_fee";
-    //             $utli->save();
-
-
-    //         }
-
-
-
-
-    //         $token = auth()->user()->createToken('API token')->accessToken;
-    //         $meter = meter();
-    //         $user = user();
-    //         $user['token'] = $token;
-    //         $user['meter'] = $meter;
-    //         $user['tariff'] = $tariffs;
-    //         $user['monthly_admin_fee'] = $admin_fee;
-
-
-
-
-
-
-    //         return response()->json([
-    //             'status' => true,
-    //             'user' => $user
-    //         ]);
-
-
-    //     }
-
-
-
-
-
-
-
-
-
-
-
-    //     if($request->meterNo == null) {
-    //         $credentials = request(['email', 'password']);
-
-    //         $usr = User::where('email', $request->email)->first() ?? null;
-    //         $status = User::where('email', $request->email)->first()->status ?? null;
-    //         if($status == 9){
-    //             $message = "User does not exist";
-    //             $code = 401;
-    //             return error($message, $code);
-    //         }
-
-    //         if ($usr == null) {
-    //             $message = "User does not exist";
-    //             $code = 404;
-    //             return error($message, $code);
-    //         }
-
-    //         Passport::tokensExpireIn(Carbon::now()->addMinutes(20));
-    //         Passport::refreshTokensExpireIn(Carbon::now()->addMinutes(20));
-
-    //         if (!auth()->attempt($credentials)) {
-    //             $message = "Email No or Password Incorrect";
-    //             $code = 422;
-    //             return error($message, $code);
-    //         }
-
-    //         flush_token();
-
-
-    //         $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
-    //             ->where('user_id', Auth::id())
-    //             ->get();
-    //         foreach ($tariffs as $tariff) {
-    //             $tariffState = TarrifState::where('tariff_id', $tariff->id)->first();
-    //             $tariff->amount = $tariffState ? $tariffState->amount : null;
-    //         }
-
-
-
-    //         $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->latest('created_at')
-    //             ->first();
-
-    //         if($admin_fee_get && $admin_fee_get->status == 2){
-    //             $admin_fee =  "1";
-    //         }else{
-    //             $admin_fee = "0";
-    //         }
-
-    //         $ck_utility = UtilitiesPayment::where('user_id', Auth::id())->where('type', 'utilities')->first();
-    //         if($ck_utility){
-
-
-
-
-
-
-    //         }else{
-
-    //             $utility_amount = Estate::where('id', Auth::user()->estate_id)->first()->total_utility_amount ?? 0;
-    //             $duration = Estate::where('id', Auth::user()->estate_id)->first()->duration ?? null;
-
-    //             if($duration == null){
-    //                 $message = "Estate utility duration not set, Contact support";
-    //                 $code = 404;
-    //                 return error($message, $code);
-    //             }
-
-    //             $nextDueDate = Carbon::now();
-    //             switch ($duration) {
-    //                 case 'weekly':
-    //                     $nextDueDate->addWeek();
-    //                     break;
-    //                 case 'monthly':
-    //                     $nextDueDate->addMonth();
-    //                     break;
-    //                 case 'yearly':
-    //                     $nextDueDate->addYear();
-    //                     break;
-    //                 default:
-    //                     $mssage = "Unknown duration '{$duration}'";
-    //                     send_notification($mssage);
-
-    //             }
-
-    //             $utli = new UtilitiesPayment();
-    //             $utli->estate_id = Auth::user()->estate_id;
-    //             $utli->user_id = Auth::id();
-    //             $utli->amount = $utility_amount;
-    //             $utli->next_due_date = $nextDueDate;
-    //             $utli->duration = $duration;
-    //             $utli->type = "utilities";
-    //             $utli->total_amount = $utility_amount;
-    //             $utli->save();
-
-    //         }
-
-
-    //         //checkAdmin fee
-    //         $admin_fee_amount = Setting::where('id', 1)->first()->admin_fee;
-    //         $ck_admin_fee = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->first();
-
-    //         $ck_admin_fee_status = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->first()->status ?? null;
-
-    //         $former_admin_fee_date = UtilitiesPayment::where('user_id', Auth::id())
-    //             ->where('type', 'admin_fee')
-    //             ->whereMonth('created_at', Carbon::now()->month)
-    //             ->whereYear('created_at', Carbon::now()->year)
-    //             ->first()->created_at ?? null;
-
-
-
-    //         if($ck_admin_fee){
-
-    //         }elseif($ck_admin_fee && $ck_admin_fee_status == 2){
-
-    //             $duration = "monthly";
-    //             $nextDueDate =  $former_admin_fee_date;
-    //             switch ($duration) {
-    //                 case 'weekly':
-    //                     $nextDueDate->addWeek();
-    //                     break;
-    //                 case 'monthly':
-    //                     $nextDueDate->addMonth();
-    //                     break;
-    //                 case 'yearly':
-    //                     $nextDueDate->addYear();
-    //                     break;
-    //                 default:
-    //                     $mssage = "Unknown duration '{$duration}'";
-    //                     send_notification($mssage);
-
-    //             }
-
-    //             $utli = new UtilitiesPayment();
-    //             $utli->estate_id = Auth::user()->estate_id;
-    //             $utli->user_id = Auth::id();
-    //             $utli->amount = $admin_fee_amount;
-    //             $utli->next_due_date = $nextDueDate;
-    //             $utli->duration = $duration;
-    //             $utli->total_amount = $admin_fee_amount;
-    //             $utli->type = "admin_fee";
-    //             $utli->save();
-
-
-    //         }elseif($ck_admin_fee && $ck_admin_fee_status == null){
-
-    //             $duration = "monthly";
-    //             $nextDueDate =  Carbon::now();
-    //             switch ($duration) {
-    //                 case 'weekly':
-    //                     $nextDueDate->addWeek();
-    //                     break;
-    //                 case 'monthly':
-    //                     $nextDueDate->addMonth();
-    //                     break;
-    //                 case 'yearly':
-    //                     $nextDueDate->addYear();
-    //                     break;
-    //                 default:
-    //                     $mssage = "Unknown duration '{$duration}'";
-    //                     send_notification($mssage);
-
-    //             }
-
-    //             $utli = new UtilitiesPayment();
-    //             $utli->estate_id = Auth::user()->estate_id;
-    //             $utli->user_id = Auth::id();
-    //             $utli->amount = $admin_fee_amount;
-    //             $utli->next_due_date = $nextDueDate;
-    //             $utli->duration = $duration;
-    //             $utli->total_amount = $admin_fee_amount;
-    //             $utli->type = "admin_fee";
-    //             $utli->save();
-
-
-    //         }
-
-    //         else{
-
-    //             $duration = "monthly";
-    //             $nextDueDate =  Carbon::now();
-    //             switch ($duration) {
-    //                 case 'weekly':
-    //                     $nextDueDate->addWeek();
-    //                     break;
-    //                 case 'monthly':
-    //                     $nextDueDate->addMonth();
-    //                     break;
-    //                 case 'yearly':
-    //                     $nextDueDate->addYear();
-    //                     break;
-    //                 default:
-    //                     $mssage = "Unknown duration '{$duration}'";
-    //                     send_notification($mssage);
-
-    //             }
-
-    //             $utli = new UtilitiesPayment();
-    //             $utli->estate_id = Auth::user()->estate_id;
-    //             $utli->user_id = Auth::id();
-    //             $utli->amount = $admin_fee_amount;
-    //             $utli->next_due_date = $nextDueDate;
-    //             $utli->duration = $duration;
-    //             $utli->total_amount = $admin_fee_amount;
-    //             $utli->type = "admin_fee";
-    //             $utli->save();
-
-
-    //         }
-
-
-
-    //         $token = auth()->user()->createToken('API token')->accessToken;
-    //         $meter = meter();
-    //         $user = user();
-    //         $user['token'] = $token;
-    //         $user['meter'] = $meter;
-    //         $user['tariff'] = $tariffs;
-    //         $user['monthly_admin_fee'] = $admin_fee;
-
-
-    //         return response()->json([
-    //             'status' => true,
-    //             'user' => $user
-    //         ]);
-
-    //     }
-
-
-    // }
-
-
-        public function login(request $request)
+    public function login(Request $request)
     {
+        // ─── 1. Resolve credentials ───────────────────────────────────────────────
+        $isEmailLogin  = !empty($request->email);
+        $isMeterLogin  = !empty($request->meterNo);
 
-        if($request->email == null) {
-            $credentials = request(['meterNo', 'password']);
-            $usr = User::where('meterNo', $request->meterNo)->first() ?? null;
-            $status = User::where('meterNo', $request->meterNo)->first()->status ?? null;
-
-            if($status == 9){
-                $message = "User does not exist";
-                $code = 401;
-                return error($message, $code);
-            }
-
-            if ($usr == null) {
-                $message = "User does not exist";
-                $code = 404;
-                return error($message, $code);
-            }
-
-            Passport::tokensExpireIn(Carbon::now()->addHours(2));
-            Passport::refreshTokensExpireIn(Carbon::now()->addHours(2));
-
-            if (!auth()->attempt($credentials)) {
-                $message = "Meter No or Password Incorrect";
-                $code = 422;
-                return error($message, $code);
-            }
-
-            flush_token();
-
-
-            //Updated to fetch data using estate id
-            // $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
-            //     ->where('user_id', Auth::id())
-            //     ->get();
-            // foreach ($tariffs as $tariff) {
-            //     $tariffState = TarrifState::where('tariff_id', $tariff->id)->first();
-            //     $tariff->amount = $tariffState ? $tariffState->amount : null;
-            // }
-
-            //Updated to fetch data using estate id
-            $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
-                ->where('estate_id', Auth::user()->estate_id)
-                ->get();
-            foreach ($tariffs as $tariff) {
-                $tariffState = TarrifState::where('tariff_id', $tariff->id)
-                    ->where('amount', '>', 0)
-                    ->first();
-                $tariff->amount = $tariffState ? $tariffState->amount : null;
-            }
-
-
-
-            $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->latest('created_at')
-                ->first();
-
-            if($admin_fee_get && $admin_fee_get->status == 2){
-                $admin_fee =  "1";
-            }else{
-                $admin_fee = "0";
-            }
-
-            $ck_utility = UtilitiesPayment::where('user_id', Auth::id())->where('type', 'utilities')->first();
-            $utility_amount = Estate::where('id', Auth::user()->estate_id)->first()->total_utility_amount ?? 0;
-            $duration = Estate::where('id', Auth::user()->estate_id)->first()->duration ?? null;
-
-            if($duration == null ){
-                $message = "Estate utility duration not set, Contact support";
-                $code = 404;
-                return error($message, $code);
-            }
-            if(!$ck_utility && $utility_amount > 0){
-
-                $nextDueDate = Carbon::now();
-                switch ($duration) {
-                    case 'weekly':
-                        $nextDueDate->addWeek();
-                        break;
-                    case 'monthly':
-                        $nextDueDate->addMonth();
-                        break;
-                    case 'yearly':
-                        $nextDueDate->addYear();
-                        break;
-                    default:
-
-                        $mssage = "Unknown duration '{$duration}'";
-                        send_notification($mssage);
-
-                }
-
-                $utli = new UtilitiesPayment();
-                $utli->estate_id = Auth::user()->estate_id;
-                $utli->user_id = Auth::id();
-                $utli->amount = $utility_amount;
-                $utli->next_due_date = $nextDueDate;
-                $utli->duration = $duration;
-                $utli->type = "utilities";
-                $utli->total_amount = $utility_amount;
-                $utli->save();
-
-            }
-
-
-            //checkAdmin fee
-            $admin_fee_amount = Setting::where('id', 1)->first()->admin_fee;
-            $ck_admin_fee = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->first();
-
-            $ck_admin_fee_status = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->first()->status ?? null;
-
-            $former_admin_fee_date = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->first()->created_at ?? null;
-
-            if ($admin_fee_amount > 0) {
-
-                    if($ck_admin_fee){
-
-                    }elseif($ck_admin_fee && $ck_admin_fee_status == 2){
-
-                        $duration = "monthly";
-                        $nextDueDate =  $former_admin_fee_date;
-                        switch ($duration) {
-                            case 'weekly':
-                                $nextDueDate->addWeek();
-                                break;
-                            case 'monthly':
-                                $nextDueDate->addMonth();
-                                break;
-                            case 'yearly':
-                                $nextDueDate->addYear();
-                                break;
-                            default:
-                                $mssage = "Unknown duration '{$duration}'";
-                                send_notification($mssage);
-
-                        }
-
-                        $utli = new UtilitiesPayment();
-                        $utli->estate_id = Auth::user()->estate_id;
-                        $utli->user_id = Auth::id();
-                        $utli->amount = $admin_fee_amount;
-                        $utli->next_due_date = $nextDueDate;
-                        $utli->duration = $duration;
-                        $utli->total_amount = $admin_fee_amount;
-                        $utli->type = "admin_fee";
-                        $utli->save();
-
-
-                    }elseif($ck_admin_fee && $ck_admin_fee_status == null){
-
-                    $duration = "monthly";
-                    $nextDueDate =  Carbon::now();
-                    switch ($duration) {
-                        case 'weekly':
-                            $nextDueDate->addWeek();
-                            break;
-                        case 'monthly':
-                            $nextDueDate->addMonth();
-                            break;
-                        case 'yearly':
-                            $nextDueDate->addYear();
-                            break;
-                        default:
-                            $mssage = "Unknown duration '{$duration}'";
-                            send_notification($mssage);
-
-                    }
-
-                    $utli = new UtilitiesPayment();
-                    $utli->estate_id = Auth::user()->estate_id;
-                    $utli->user_id = Auth::id();
-                    $utli->amount = $admin_fee_amount;
-                    $utli->next_due_date = $nextDueDate;
-                    $utli->duration = $duration;
-                    $utli->total_amount = $admin_fee_amount;
-                    $utli->type = "admin_fee";
-                    $utli->save();
-
-
-                }else{
-                        $duration = "monthly";
-                        $nextDueDate =  Carbon::now();
-                        switch ($duration) {
-                            case 'weekly':
-                                $nextDueDate->addWeek();
-                                break;
-                            case 'monthly':
-                                $nextDueDate->addMonth();
-                                break;
-                            case 'yearly':
-                                $nextDueDate->addYear();
-                                break;
-                            default:
-                                $mssage = "Unknown duration '{$duration}'";
-                                send_notification($mssage);
-
-                        }
-
-                        $utli = new UtilitiesPayment();
-                        $utli->estate_id = Auth::user()->estate_id;
-                        $utli->user_id = Auth::id();
-                        $utli->amount = $admin_fee_amount;
-                        $utli->next_due_date = $nextDueDate;
-                        $utli->duration = $duration;
-                        $utli->total_amount = $admin_fee_amount;
-                        $utli->type = "admin_fee";
-                        $utli->save();
-
-
-                    }
-            }
-
-
-            $token = auth()->user()->createToken('API token')->accessToken;
-            $meter = meter();
-            $user = user();
-            $user['token'] = $token;
-            $user['meter'] = $meter;
-            $user['tariff'] = $tariffs;
-            $user['monthly_admin_fee'] = $admin_fee;
-            $user['meter_status'] = $meter->status;
-
-            Logger::info('LOGIN DEBUG START', [
-
-                // Core identity
-                'meterNo' => $request->meterNo ?? null,
-                'user_status' => $status ?? null,
-                'meter_status' => $meter->status,
-
-                // Tariffs
-                'tariffs_exist' => isset($tariffs) && $tariffs->count() > 0 ? 'exists' : 'null',
-
-                // Admin fee checks
-                'admin_fee_get_exist' => $admin_fee_get ? 'exists' : 'null',
-                'admin_fee_get_status' => $admin_fee_get->status ?? null,
-                'admin_fee_flag' => $admin_fee ?? null,
-
-                'admin_fee_amount' => $admin_fee_amount ?? null,
-                'ck_admin_fee_exist' => $ck_admin_fee ? 'exists' : 'null',
-                'ck_admin_fee_status' => $ck_admin_fee_status ?? null,
-                'former_admin_fee_date' => $former_admin_fee_date ?? null,
-
-                // Utility checks
-                'ck_utility_exist' => $ck_utility ? 'exists' : 'null',
-                'utility_amount' => $utility_amount ?? null,
-                'utility_duration' => $duration ?? null,
-                'utility_next_due_date' => isset($nextDueDate) ? $nextDueDate->toDateTimeString() : null,
-
-                // Objects
-                'meter_object' => $meter ? 'exists' : 'null',
-                'user_object' => $user ? 'exists' : 'null',
-            ]);
-
-            Logger::info('LOGIN DEBUG END');
-
-
-            return response()->json([
-                'status' => true,
-                'user' => $user
-            ]);
+        if (!$isEmailLogin && !$isMeterLogin) {
+            return error("Email or Meter Number is required", 422);
         }
 
-
-
-
-
-
-
-
-
-
-
-        if($request->meterNo == null) {
-            $credentials = request(['email', 'password']);
-
-            $usr = User::where('email', $request->email)->first() ?? null;
-            $status = User::where('email', $request->email)->first()->status ?? null;
-            if($status == 9){
-                $message = "User does not exist";
-                $code = 401;
-                return error($message, $code);
-            }
-
-            if ($usr == null) {
-                $message = "User does not exist";
-                $code = 404;
-                return error($message, $code);
-            }
-
-            Passport::tokensExpireIn(Carbon::now()->addMinutes(20));
-            Passport::refreshTokensExpireIn(Carbon::now()->addMinutes(20));
-
-            if (!auth()->attempt($credentials)) {
-                $message = "Email No or Password Incorrect";
-                $code = 422;
-                return error($message, $code);
-            }
-
-            flush_token();
-
-
-            //Updated to fetch data using estate id
-            // $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
-            //     ->where('user_id', Auth::id())
-            //     ->get();
-            // foreach ($tariffs as $tariff) {
-            //     $tariffState = TarrifState::where('tariff_id', $tariff->id)->first();
-            //     $tariff->amount = $tariffState ? $tariffState->amount : null;
-            // }
-
-            //Updated to fetch data using estate id
-            $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
-                ->where('estate_id', Auth::user()->estate_id)
-                ->get();
-            foreach ($tariffs as $tariff) {
-                $tariffState = TarrifState::where('tariff_id', $tariff->id)
-                    ->where('amount', '>', 0)
-                    ->first();
-                $tariff->amount = $tariffState ? $tariffState->amount : null;
-            }
-
-
-
-
-            $admin_fee_get = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->latest('created_at')
-                ->first();
-
-            if($admin_fee_get && $admin_fee_get->status == 2){
-                $admin_fee =  "1";
-            }else{
-                $admin_fee = "0";
-            }
-
-            $ck_utility = UtilitiesPayment::where('user_id', Auth::id())->where('type', 'utilities')->first();
-            $utility_amount = Estate::where('id', Auth::user()->estate_id)->first()->total_utility_amount ?? 0;
-            $duration = Estate::where('id', Auth::user()->estate_id)->first()->duration ?? null;
-
-            if($duration == null){
-                $message = "Estate utility duration not set, Contact support";
-                $code = 404;
-                return error($message, $code);
-                }
-
-            if(!$ck_utility && $utility_amount > 0){
-
-                $nextDueDate = Carbon::now();
-                switch ($duration) {
-                    case 'weekly':
-                        $nextDueDate->addWeek();
-                        break;
-                    case 'monthly':
-                        $nextDueDate->addMonth();
-                        break;
-                    case 'yearly':
-                        $nextDueDate->addYear();
-                        break;
-                    default:
-                        $mssage = "Unknown duration '{$duration}'";
-                        send_notification($mssage);
-
-                }
-
-                $utli = new UtilitiesPayment();
-                $utli->estate_id = Auth::user()->estate_id;
-                $utli->user_id = Auth::id();
-                $utli->amount = $utility_amount;
-                $utli->next_due_date = $nextDueDate;
-                $utli->duration = $duration;
-                $utli->type = "utilities";
-                $utli->total_amount = $utility_amount;
-                $utli->save();
-
-            }
-
-
-            //checkAdmin fee
-            $admin_fee_amount = Setting::where('id', 1)->first()->admin_fee;
-            $ck_admin_fee = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->first();
-
-            $ck_admin_fee_status = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->first()->status ?? null;
-
-            $former_admin_fee_date = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->first()->created_at ?? null;
-
-
-            if ($admin_fee_amount > 0) {
-                if($ck_admin_fee){
-
-                }elseif($ck_admin_fee && $ck_admin_fee_status == 2){
-
-                    $duration = "monthly";
-                    $nextDueDate =  $former_admin_fee_date;
-                    switch ($duration) {
-                        case 'weekly':
-                            $nextDueDate->addWeek();
-                            break;
-                        case 'monthly':
-                            $nextDueDate->addMonth();
-                            break;
-                        case 'yearly':
-                            $nextDueDate->addYear();
-                            break;
-                        default:
-                            $mssage = "Unknown duration '{$duration}'";
-                            send_notification($mssage);
-
-                    }
-
-                    $utli = new UtilitiesPayment();
-                    $utli->estate_id = Auth::user()->estate_id;
-                    $utli->user_id = Auth::id();
-                    $utli->amount = $admin_fee_amount;
-                    $utli->next_due_date = $nextDueDate;
-                    $utli->duration = $duration;
-                    $utli->total_amount = $admin_fee_amount;
-                    $utli->type = "admin_fee";
-                    $utli->save();
-
-
-                }elseif($ck_admin_fee && $ck_admin_fee_status == null){
-
-                    $duration = "monthly";
-                    $nextDueDate =  Carbon::now();
-                    switch ($duration) {
-                        case 'weekly':
-                            $nextDueDate->addWeek();
-                            break;
-                        case 'monthly':
-                            $nextDueDate->addMonth();
-                            break;
-                        case 'yearly':
-                            $nextDueDate->addYear();
-                            break;
-                        default:
-                            $mssage = "Unknown duration '{$duration}'";
-                            send_notification($mssage);
-
-                    }
-
-                    $utli = new UtilitiesPayment();
-                    $utli->estate_id = Auth::user()->estate_id;
-                    $utli->user_id = Auth::id();
-                    $utli->amount = $admin_fee_amount;
-                    $utli->next_due_date = $nextDueDate;
-                    $utli->duration = $duration;
-                    $utli->total_amount = $admin_fee_amount;
-                    $utli->type = "admin_fee";
-                    $utli->save();
-
-
-                }
-
-                else{
-
-                    $duration = "monthly";
-                    $nextDueDate =  Carbon::now();
-                    switch ($duration) {
-                        case 'weekly':
-                            $nextDueDate->addWeek();
-                            break;
-                        case 'monthly':
-                            $nextDueDate->addMonth();
-                            break;
-                        case 'yearly':
-                            $nextDueDate->addYear();
-                            break;
-                        default:
-                            $mssage = "Unknown duration '{$duration}'";
-                            send_notification($mssage);
-
-                    }
-
-                    $utli = new UtilitiesPayment();
-                    $utli->estate_id = Auth::user()->estate_id;
-                    $utli->user_id = Auth::id();
-                    $utli->amount = $admin_fee_amount;
-                    $utli->next_due_date = $nextDueDate;
-                    $utli->duration = $duration;
-                    $utli->total_amount = $admin_fee_amount;
-                    $utli->type = "admin_fee";
-                    $utli->save();
-
-
-                }
-
-            }
-
-            $token = auth()->user()->createToken('API token')->accessToken;
-            $meter = meter();
-            $user = user();
-            $user['token'] = $token;
-            $user['meter'] = $meter;
-            $user['tariff'] = $tariffs;
-            $user['monthly_admin_fee'] = $admin_fee;
-
-             Logger::info('LOGIN DEBUG START', [
-
-                // Core identity
-                'meterNo' => $request->meterNo ?? null,
-                'user_status' => $status ?? null,
-
-                // Tariffs
-                'tariffs_exist' => isset($tariffs) && $tariffs->count() > 0 ? 'exists' : 'null',
-
-                // Admin fee checks
-                'admin_fee_get_exist' => $admin_fee_get ? 'exists' : 'null',
-                'admin_fee_get_status' => $admin_fee_get->status ?? null,
-                'admin_fee_flag' => $admin_fee ?? null,
-
-                'admin_fee_amount' => $admin_fee_amount ?? null,
-                'ck_admin_fee_exist' => $ck_admin_fee ? 'exists' : 'null',
-                'ck_admin_fee_status' => $ck_admin_fee_status ?? null,
-                'former_admin_fee_date' => $former_admin_fee_date ?? null,
-
-                // Utility checks
-                'ck_utility_exist' => $ck_utility ? 'exists' : 'null',
-                'utility_amount' => $utility_amount ?? null,
-                'utility_duration' => $duration ?? null,
-                'utility_next_due_date' => isset($nextDueDate) ? $nextDueDate->toDateTimeString() : null,
-
-                // Objects
-                'meter_object' => $meter ? 'exists' : 'null',
-                'user_object' => $user ? 'exists' : 'null',
-            ]);
-
-            Logger::info('LOGIN DEBUG END');
-
-
-            return response()->json([
-                'status' => true,
-                'user' => $user
-            ]);
-
+        $credentials = $isEmailLogin
+            ? $request->only('email', 'password')
+            : $request->only('meterNo', 'password');
+
+        // ─── 2. Find user ─────────────────────────────────────────────────────────
+        $usr = User::when($isEmailLogin,
+                fn($q) => $q->where('email', $request->email),
+                fn($q) => $q->where('meterNo', $request->meterNo)
+            )->first();
+
+        if ($usr === null) {
+            return error("User does not exist", 404);
         }
 
+        if ($usr->status == 9) {
+            return error("User does not exist", 401);
+        }
+
+        // ─── 3. Attempt auth ──────────────────────────────────────────────────────
+        Passport::tokensExpireIn(Carbon::now()->addHours(2));
+        Passport::refreshTokensExpireIn(Carbon::now()->addHours(2));
+
+        if (!auth()->attempt($credentials)) {
+            $field = $isEmailLogin ? "Email" : "Meter No";
+            return error("{$field} or Password Incorrect", 422);
+        }
+
+        flush_token();
+
+        // ─── 4. Shared context ────────────────────────────────────────────────────
+        $userId   = Auth::id();
+        $estateId = Auth::user()->estate_id;
+        $estate   = Estate::where('id', $estateId)->first();
+
+        $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
+            ->where('estate_id', $estateId)
+            ->get();
+
+        foreach ($tariffs as $tariff) {
+            $tariffState = TarrifState::where('tariff_id', $tariff->id)
+                ->where('amount', '>', 0)
+                ->first();
+            $tariff->amount = $tariffState?->amount;
+        }
+
+        $adminFeeAmount = $estate->getAdminFee();
+        $adminFeeFlag   = "0";
+        $meter          = meter();
+        $user           = user();
+        $utilityAmount  = $estate->total_utility_amount ?? 0;
+        $duration       = $estate->duration ?? null;
+        $mod_features   = [];
+
+        // ─── 5. Transaction: backfill utilities & admin fees ─────────────────────
+        DB::transaction(function () use (
+            $estateId, $userId, $tariffs, $adminFeeAmount,
+            &$adminFeeFlag, $meter, &$user, $utilityAmount,
+            $duration, &$mod_features
+        ) {
+            // ── Helper ────────────────────────────────────────────────────────────
+            $createPayment = function (string $type, float $amount, string $duration, Carbon $startDate) use ($userId, $estateId) {
+                $nextDueDate = $startDate->copy();
+
+                match ($duration) {
+                    'weekly'  => $nextDueDate->addWeek(),
+                    'monthly' => $nextDueDate->addMonth(),
+                    'yearly'  => $nextDueDate->addYear(),
+                    default   => send_notification("Unknown duration '{$duration}'"),
+                };
+
+                return UtilitiesPayment::create([
+                    'estate_id'     => $estateId,
+                    'user_id'       => $userId,
+                    'amount'        => $amount,
+                    'total_amount'  => $amount,
+                    'next_due_date' => $nextDueDate,
+                    'duration'      => $duration,
+                    'type'          => $type,
+                    'status'        => 0,
+                ]);
+            };
+
+            if ($duration === null) {
+                // Can't throw inside a transaction cleanly — flag it and handle after
+                // Alternatively, validate $duration before the transaction starts (recommended)
+                return;
+            }
+
+            // ── Utility backfill ──────────────────────────────────────────────────
+            if ($utilityAmount > 0) {
+                $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
+                    ->where('type', 'utilities')
+                    ->orderByDesc('created_at')
+                    ->value('created_at');
+
+                $backfillFrom = $lastUtilityDate
+                    ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
+                    : Carbon::parse(Auth::user()->created_at)->startOfMonth();
+
+                $now = Carbon::now()->startOfMonth();
+
+                while ($backfillFrom->lte($now)) {
+                    $exists = UtilitiesPayment::where('user_id', $userId)
+                        ->where('type', 'utilities')
+                        ->whereYear('created_at', $backfillFrom->year)
+                        ->whereMonth('created_at', $backfillFrom->month)
+                        ->exists();
+
+                    if (!$exists) {
+                        $createPayment('utilities', $utilityAmount, $duration, $backfillFrom->copy());
+                    }
+
+                    $backfillFrom->addMonth();
+                }
+            }
+
+            // ── Admin fee backfill ────────────────────────────────────────────────
+            if ($adminFeeAmount > 0) {
+                $lastAdminFeeDate = UtilitiesPayment::where('user_id', $userId)
+                    ->where('type', 'admin_fee')
+                    ->orderByDesc('created_at')
+                    ->value('created_at');
+
+                $backfillFrom = $lastAdminFeeDate
+                    ? Carbon::parse($lastAdminFeeDate)->addMonth()->startOfMonth()
+                    : Carbon::parse(Auth::user()->created_at)->startOfMonth();
+
+                $now = Carbon::now()->startOfMonth();
+
+                while ($backfillFrom->lte($now)) {
+                    $exists = UtilitiesPayment::where('user_id', $userId)
+                        ->where('type', 'admin_fee')
+                        ->whereYear('created_at', $backfillFrom->year)
+                        ->whereMonth('created_at', $backfillFrom->month)
+                        ->exists();
+
+                    if (!$exists) {
+                        $createPayment('admin_fee', $adminFeeAmount, 'monthly', $backfillFrom->copy());
+                    }
+
+                    $backfillFrom->addMonth();
+                }
+            }
+
+            // ── Admin fee paid flag (current month) ───────────────────────────────
+            $adminFeeFlag = UtilitiesPayment::where('user_id', $userId)
+                ->where('type', 'admin_fee')
+                ->whereMonth('created_at', Carbon::now()->month)
+                ->whereYear('created_at', Carbon::now()->year)
+                ->where('status', 2)
+                ->exists() ? "1" : "0";
+
+            // ── Build response user object ─────────────────────────────────────────
+            $token = auth()->user()->createToken('API token')->accessToken;
+
+            $user['token']             = $token;
+            $user['meter']             = $meter;
+            $user['tariff']            = $tariffs;
+            $user['monthly_admin_fee'] = $adminFeeFlag;
+            $user['meter_status']      = $meter->status;
+
+            // ── Mod features ──────────────────────────────────────────────────────
+            $features = EstateModFeature::byUser($user)
+                ->join('mod_features', 'mod_features.id', 'estate_mod_features.mod_feature_id')
+                ->select([
+                    'estate_mod_features.status',
+                    'estate_mod_features.estate_id',
+                    'mod_features.title',
+                    'mod_features.slug',
+                ])
+                ->get();
+
+            foreach ($features as $feature) {
+                $mod_features[$feature->slug] = $feature->status;
+
+                if (
+                    in_array($feature->slug, [Feature::MOMAS_METER, Feature::OTHER_METER])
+                    && $feature->status === ModFeature::AVAILABLE_STATUS
+                    && !$meter->isActive()
+                ) {
+                    $mod_features[$feature->slug] = 2;
+                }
+            }
+        });
+
+        // ─── 6. Guard: duration must be set (validate before transaction ideally) ─
+        if ($duration === null) {
+            return error("Estate utility duration not set, Contact support", 404);
+        }
+
+        // ─── 7. Log ───────────────────────────────────────────────────────────────
+        Logger::info('LOGIN DEBUG', [
+            'login_via'        => $isEmailLogin ? 'email' : 'meterNo',
+            'identifier'       => $isEmailLogin ? $request->email : $request->meterNo,
+            'user_status'      => $usr->status,
+            'meter_status'     => $meter->status,
+            'tariffs_exist'    => $tariffs->isNotEmpty(),
+            'admin_fee_amount' => $adminFeeAmount,
+            'admin_fee_paid'   => $adminFeeFlag,
+            'utility_amount'   => $utilityAmount,
+            'utility_duration' => $duration,
+        ]);
+
+        // ─── 8. Response ──────────────────────────────────────────────────────────
+        return response()->json([
+            'status'   => true,
+            'user'     => $user,
+            'features' => $mod_features,
+        ]);
     }
 
     public function delete_user(request $request)

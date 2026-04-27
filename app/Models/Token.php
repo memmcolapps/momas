@@ -20,5 +20,13 @@ class Token extends Model
         return $this->belongsTo(Estate::class);
     }
 
+    public function scopeByUser($query, $user) {
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        return $query->where('estate_id', $user->estate_id);
+    }
+
 
 }

@@ -226,9 +226,9 @@
                                                                                 </option>
                                                                                 <option value="paystack">Pay with Paystack
                                                                                 </option>
-                                                                                <option value="flutterwave">Pay with Flutterwave
-                                                                                </option>
-                                                                                <option value="enkpay">Pay with Enkpay</option>
+                                                                                {{-- <option value="flutterwave">Pay with Flutterwave
+                                                                                </option> --}}
+                                                                                {{-- <option value="enkpay">Pay with Enkpay</option> --}}
                                                                                 <!-- <option value="test_bypass">Payment Bypass (Testing Only)</option> -->
                                                                                 @if (app()->environment('staging'))
                                                                                     <option value="test_bypass">Payment Bypass (Testing Only)</option>
@@ -268,7 +268,7 @@
                                     </div>
                                     <hr>
                                     <div class="card-body">
-                                        <table id="datatable-buttons"
+                                        <table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
                                             <tr>
@@ -292,7 +292,7 @@
 
                                                 <tr>
                                                     <td>
-                                                        <a href="view-user?id={{$data->id}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
+                                                        <a href="view-user?id={{$data->user?->id ?? null}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
                                                     </td>
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
@@ -355,6 +355,11 @@
 
                                             </tfoot>
                                         </table><!-- end table -->
+
+                                    <!-- ADD THIS -->
+                                    <div class="d-flex justify-content-end mt-3">
+                                        {{ $credit_tokens->links() }}
+                                    </div>
                                     </div>
                                 </div>
 

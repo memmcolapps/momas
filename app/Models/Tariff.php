@@ -9,6 +9,12 @@ class Tariff extends Model
 {
     use HasFactory;
 
+    public const POWER_SOURCE = [
+        'Grid',
+        'Off Grid',
+        'Middle Of Grid'
+    ];
+
 
     public function estate()
     {

@@ -31,4 +31,9 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'paybeta' => [
+        'key' => env('PAYBETA_API_KEY'),
+        'base_url' => 'https://api.paybeta.ng/v2',
+    ],
+
 ];

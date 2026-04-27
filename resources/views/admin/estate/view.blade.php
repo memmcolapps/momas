@@ -1,3 +1,16 @@
+<?php
+
+    use App\Models\ModFeature;
+
+    $handled_status = ModFeature::HANDLED_STATUS;
+    // dd(array_keys($handled_status));
+    function statusValue ($status) {
+        return ModFeature::HANDLED_STATUS[$status];
+    }
+
+    // function statusString ($statuString)
+?>
+
 @extends('layouts.main')
 @section('content')
 
@@ -330,8 +343,69 @@
                                         <input type="number" value="{{$org->charge_fee_flat}}" name="charge_fee_flat"  class="form-control" >
                                     </div>
 
+                                    <div class="col-xl-3 col-sm-12">
+                                        <label class="my-2">Estate Admin Fee</label>
+                                        <input type="number" value="{{$org->admin_fee}}" name="estate_admin_fee"  class="form-control" >
+                                    </div>
+
 
                                 </div>
+
+
+                                <button type="submit" class="col-2 d-flex btn btn-primary my-4">
+                                    Update Info
+                                </button>
+
+
+                            </form>
+
+                        </div>
+
+
+                    </div>
+
+                    <div class="card">
+
+                        <div class="card-body">
+
+                            <form action="estate-feature-update" method="post">
+                                @csrf
+
+                                <div class="row">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="d-flex justify-content-start my-4">Features Toggle</h6>
+                                            <div class="d-flex justify-content-between">
+                                                <div class="justify-content-end">
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+
+                                    @foreach ($estate_features as $feature)
+                                    {{-- <?php dump($feature->toArray(), $org->id, $handled_status); ?> --}}
+                                        <div class="col-2">
+                                            <label class="my-2">{{ $feature->title }}</label>
+                                            <select type="text" name="{{ $feature->slug }}" value="{{ $feature->status }}" class="form-control" required>
+                                                @foreach (array_keys(ModFeature::HANDLED_STATUS) as $my_status)
+                                                    <option value="{{ $my_status }}"
+                                                        @selected($feature->status == $my_status)
+                                                    >
+                                                        {{ statusValue($my_status) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <input hidden name="id" value="{{$org->id}}" class="form-control" required>
+
+                                        </div>
+                                    @endforeach
+
+                                </div>
+
+                                <hr class="my-4">
 
 
                                 <button type="submit" class="col-2 d-flex btn btn-primary my-4">

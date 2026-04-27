@@ -7,8 +7,10 @@ use App\Models\Auditlog;
 use App\Models\Estate;
 use App\Models\Feature;
 use App\Models\KctMeterToken;
+use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\MeterToken;
+use App\Models\ModFeature;
 use App\Models\Organization;
 use App\Models\Setting;
 use App\Models\SpreadPayment;
@@ -23,7 +25,6 @@ use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Logger;
 
 class DashboardContoller extends Controller
 {
@@ -48,13 +49,13 @@ class DashboardContoller extends Controller
     }
 
 
-        public function index()
+    public function index()
     {
 
         Logger::info('Upadate of 2026-01-16 16:41:00');
         Logger::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
 
-        if (Auth::user()->role == 0) {
+        if (Auth::user()->isSuperAdmin()) {
         Logger::info('main-branch dummy Update of 2026-01-16 15:27:00');
 
             $data['users'] = User::where('status', 2)->count();
@@ -69,8 +70,8 @@ class DashboardContoller extends Controller
 
             return view('admin.dashboard', $data);
         } elseif (Auth::user()->role == 1) {
-        } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
+        } elseif (Auth::user()->isCustomer()) {
+        } elseif (Auth::user()->isEstateAdmin()) {
 
             $data['users'] = User::where([
                 'status' => 2,
@@ -96,7 +97,7 @@ class DashboardContoller extends Controller
             $data['title'] = "Dashboard | $estate_name ";
 
             return view('admin.dashboard', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -106,14 +107,14 @@ class DashboardContoller extends Controller
     public function list_users()
     {
 
-        if (Auth::user()->role == 0) {
+        if (Auth::user()->isSuperAdmin()) {
 
             $data['users'] = User::latest()->where('status', 2)->count();
             $data['users_lists'] = User::latest()->where('role', '!=', 2)->paginate('20');
             return view('admin/user/user-list', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
+        } elseif (Auth::user()->isEstateAdmin()) {
 
             $data['users'] = User::where([
                 'role' => 3,
@@ -124,7 +125,7 @@ class DashboardContoller extends Controller
                 'estate_id' => Auth::user()->estate_id,
             ])->ORwhere('role', 4)->paginate('20');
             return view('admin/user/user-list', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -135,7 +136,7 @@ class DashboardContoller extends Controller
     {
 
 
-        if (Auth::user()->role == 0) {
+        if (Auth::user()->isSuperAdmin()) {
 
             $data['users'] = User::latest()->where('status', 2)->where('role', 2)->count();
             $data['users_lists'] = User::latest()->where('role', 2)->paginate('20');
@@ -144,14 +145,14 @@ class DashboardContoller extends Controller
             return view('admin/user/customer-list', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
+        } elseif (Auth::user()->isEstateAdmin()) {
 
             $data['users'] = User::latest()->where('estate_id', Auth::user()->estate_id)->where('role', 2)->count();
             $data['users_lists'] = User::latest()->where('estate_id', Auth::user()->estate_id)->where('role', 2)->paginate('20');
             $data['estate'] = Estate::latest()->where('status', 2)->get();
 
             return view('admin/user/customer-list', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -162,7 +163,7 @@ class DashboardContoller extends Controller
     {
 
 
-        if (Auth::user()->role == 0) {
+        if (Auth::user()->isSuperAdmin()) {
 
             $data['estate'] = Estate::all();
             $data['meters'] = Meter::all();
@@ -175,7 +176,7 @@ class DashboardContoller extends Controller
             $data['meters'] = Meter::all();
 
             return view('admin/user/new-user', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -186,7 +187,7 @@ class DashboardContoller extends Controller
     {
 
 
-        if (Auth::user()->role == 0) {
+        if (Auth::user()->isSuperAdmin()) {
 
             $data['estate'] = Estate::all();
             // $data['meters'] = Meter::all();
@@ -194,14 +195,14 @@ class DashboardContoller extends Controller
             return view('admin/user/new-customer', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
+        } elseif (Auth::user()->isEstateAdmin()) {
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->first();
             // $data['meters'] = Meter::where('id', Auth::user()->estate_id)->get();
             $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)
-                              ->whereNull('user_id')
-                              ->get(); // Only unassigned meters for this estate
+                               ->whereNull('user_id')
+                               ->get(); // Only unassigned meters for this estate
             return view('admin/user/new-customer', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -367,9 +368,18 @@ class DashboardContoller extends Controller
     {
 
 
-        if (Auth::user()->role == 0) {
+        $auth_user = Auth::user();
+        $data['features'] = ModFeature::visibleToUser($auth_user)
+            ->select([
+                'status',
+                'title',
+                'slug'
+            ])
+            ->get();
+        if (Auth::user()->isSuperAdmin()) {
 
             $data['fea'] = Feature::where('id', 1)->first();
+
             $data['set'] = Setting::where('id', 1)->first();
 
             // Load utilities payments data for super admin
@@ -386,7 +396,7 @@ class DashboardContoller extends Controller
             $data['set'] = Setting::where('id', 1)->first();
             return view('admin/settings', $data);
         } elseif (Auth::user()->role == 2) {
-        } elseif (Auth::user()->role == 3) {
+        } elseif (Auth::user()->isEstateAdmin()) {
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
@@ -395,7 +405,7 @@ class DashboardContoller extends Controller
             $data['utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->get() ?? null;
 
             return view('admin/settings', $data);
-        } elseif (Auth::user()->role == 4) {
+        } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -447,7 +457,7 @@ class DashboardContoller extends Controller
     public function clearSingleUtilityPayment(Request $request)
     {
         // Super admin only check
-        if (Auth::user()->role != 0) {
+        if (!Auth::user()->isSuperAdmin()) {
             return redirect('admin/settings')->with('error', 'Unauthorized access');
         }
 
@@ -481,7 +491,7 @@ class DashboardContoller extends Controller
     public function editUtilityPayment(Request $request)
     {
         // Super admin only check
-        if (Auth::user()->role != 0) {
+        if (!Auth::user()->isSuperAdmin()) {
             return redirect('admin/settings')->with('error', 'Unauthorized access');
         }
 

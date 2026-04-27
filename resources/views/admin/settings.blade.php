@@ -1,3 +1,13 @@
+<?php
+
+    use App\Models\ModFeature;
+
+    function statusValue ($status) {
+        return ModFeature::HANDLED_STATUS[$status];
+    }
+?>
+
+
 @extends('layouts.main')
 @section('content')
 
@@ -173,6 +183,61 @@
 
                             </form>
 
+
+                        </div>
+
+
+                    </div>
+
+                    <div class="card">
+
+                        <div class="card-body">
+
+                            <form action="estate-feature-update" method="post">
+                                @csrf
+
+                                <div class="row">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="d-flex justify-content-start my-4">Features Toggle</h6>
+                                            <div class="d-flex justify-content-between">
+                                                <div class="justify-content-end">
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+
+                                    @foreach ($features as $feature)
+                                        <div class="col-2">
+                                            <label class="my-2">{{ $feature->title }}</label>
+                                            <select type="text" name="{{ $feature->slug }}" value="{{ $feature->status }}" class="form-control" required>
+                                                @foreach (array_keys(ModFeature::HANDLED_STATUS) as $status)
+                                                    <option value="{{ $status }}"
+                                                        @selected($feature->status == $status)
+                                                    >
+                                                        {{ statusValue($status) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            {{-- <input hidden name="id" value="{{$org->id}}" class="form-control" required> --}}
+
+                                        </div>
+                                    @endforeach
+
+                                </div>
+
+                                <hr class="my-4">
+
+
+                                <button type="submit" class="col-2 d-flex btn btn-primary my-4">
+                                    Update Features
+                                </button>
+
+
+                            </form>
 
                         </div>
 

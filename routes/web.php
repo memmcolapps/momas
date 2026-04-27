@@ -102,6 +102,7 @@ Route::get('/search-meter', [MeterController::class, 'searchMeter']);
 Route::any('pay-flutter', [TransactionController::class, 'flutter_payment']);
 Route::any('payment-check', [TransactionController::class, 'flutter_verify']);
 Route::any('paystack-check', [TransactionController::class, 'paystack_verify']);
+Route::any('payment-check', [TransactionController::class, 'paystack_verify']);
 Route::any('payment', [TokenController::class, 'payment']);
 Route::any('fund_wallet', [TransactionController::class, 'fund_wallet']);
 
@@ -176,6 +177,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('view-estate', [EstateController::class, 'estate_view']);
     Route::post('estate-update-info', [EstateController::class, 'estate_update']);
     Route::post('estate-update-utilities', [EstateController::class, 'estate_update_utilities']);
+    Route::post('estate-feature-update', [EstateController::class, 'estate_feature_update']);
     Route::post('update-duration', [EstateController::class, 'update_duration']);
     Route::get('estate-service', [EstateServiceController::class, 'index']);
     Route::get('new-service', [EstateServiceController::class, 'create_service']);

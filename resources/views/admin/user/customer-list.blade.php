@@ -147,7 +147,7 @@
                             </div>
 
                             <div class="card-body">
-                                <table id="datatable-buttons"
+                                <table id=""
                                     class="table table-striped table-bordered dt-responsive nowrap">
                                     <thead>
                                         <tr>
@@ -316,7 +316,7 @@
                             </div>
 
                             <div class="card-body">
-                                <table id="datatable-buttons"
+                                <table id=""
                                     class="table table-striped table-bordered dt-responsive nowrap">
                                     <thead>
                                         <tr>
