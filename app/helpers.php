@@ -775,3 +775,15 @@ if (! function_exists('get_user')) {
         )->first();
     }
 }
+
+
+if (! function_exists('generate_otp')) {
+    function generate_otp(int $length = 6): string {
+        return str_pad(
+            (string) random_int(0, pow(10, $length) - 1),
+            $length,
+            '0',
+            STR_PAD_LEFT
+        );
+    }
+}
