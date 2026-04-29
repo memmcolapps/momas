@@ -1311,7 +1311,7 @@ class MeterController extends Controller
         // Update meter: set status to blocked (3), remove user assignment and account number
         Meter::where('id', $request->id)->update([
             'status' => 0,  // 0 = Blocked status
-            'user_id' => null,
+            // 'user_id' => null,
             'AccountNo' => null
         ]);
 
@@ -1331,7 +1331,10 @@ class MeterController extends Controller
     function meter_activate(request $request)
     {
 
-        Meter::where('id', $request->id)->update(['status' => 2]);
+        $meter = Meter::where('id', $request->id)->first();
+        $user = User::where('id', $meter->user_id)->first();
+        Meter::where('id', $request->id)->update(['status' => 2, 'user_id' => $user->id]);
+        User::where('id', $meter->user_id)->update(['meterNo' => $meter->meterNo]);
 
         return redirect('/admin/meter-list')->with('message', 'Meter Activated successfully.');
 

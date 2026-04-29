@@ -119,12 +119,24 @@ class TransformerController extends Controller
 
 
 
-    public function view_transformer(request $request)
-    {
-        $data['trans'] = Transformer::where('id', $request->id)->first();
-        $data['estate'] = Estate::where('status', 2)->get();
+     public function view_transformer(request $request)
+     {
+         $data['trans'] = Transformer::where('id', $request->id)->first();
+         $data['estate'] = Estate::where('status', 2)->get();
 
-        return view('admin/transformer/transformer-view', $data);
+         return view('admin/transformer/transformer-view', $data);
+     }
 
-    }
+     public function transformer_deactivate(request $request)
+     {
+         Transformer::where('id', $request->id)->update(['status' => 1]); // Setting status to 1 for deactivated
+         return redirect('admin/transformer-list')->with('message', "Transformer deactivated successfully");
+     }
+
+     public function transformer_activate(request $request)
+     {
+         Transformer::where('id', $request->id)->update(['status' => 2]); // Setting status to 2 for active
+         return redirect('admin/transformer-list')->with('message', "Transformer activated successfully");
+     }
+}
 }

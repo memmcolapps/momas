@@ -98,30 +98,44 @@
                                 <tbody>
 
 
-                                @foreach($organization_list as $data)
+                                  @foreach($organization_list as $data)
+                                      @php
+                                          $isDisabled = $data->status != 2;
+                                          $rowClass = $isDisabled ? 'table-secondary' : '';
+                                      @endphp
+                                      <tr class="{{ $rowClass }}">
+                                          <td><a href="view-organization?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->title}}</a> </td>
+                                          <td>
+                                              @if($data->status == 2)
+                                                  <span class="badge text-bg-primary">Active</span>
+                                              @elseif($data->status == 0)
+                                                  <span class="badge text-bg-warning">Inactive</span>
+                                              @elseif($data->status == 3)
+                                                  <span class="badge text-bg-danger">Blocked</span>
+                                              @endif
 
-                                    <tr>
-                                        <td><a href="view-organization?id={{$data->id}}">{{$data->title}}</a> </td>
-                                        <td>
-                                            @if($data->status == 2)
-                                                <span class="badge text-bg-primary">Active</span>
-                                            @elseif($data->status == 0)
-                                                <span class="badge text-bg-warning">Inactive</span>
-                                            @elseif($data->status == 3)
-                                                <span class="badge text-bg-danger">Blocked</span>
-                                            @endif
+                                          </td>
+                                          <td>
+                                              @if($data->status == 2)
+                                                  <a href="organization-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                  <script>
+                                                      function confirmDeactivate() {
+                                                          return confirm('Are you sure you want to deactivate this item?');
+                                                      }
+                                                  </script>
+                                              @else
+                                                  <a href="organization-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                  <script>
+                                                      function confirmActivate() {
+                                                          return confirm('Are you sure you want to activate this item?');
+                                                      }
+                                                  </script>
+                                              @endif
+                                          </td>
 
-                                        </td>
-                                        <td><a href="organization-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger">Delete</a> </td>
-                                        <script>
-                                            function confirmDelete() {
-                                                return confirm('Are you sure you want to delete this item?');
-                                            }
-                                        </script>
+                                      </tr>
 
-                                    </tr>
-
-                                @endforeach
+                                  @endforeach
 
 
                                 </tbody><!-- end tbody -->

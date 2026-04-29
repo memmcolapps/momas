@@ -181,6 +181,8 @@ if (!function_exists('meter')) {
 
         $ck_meter = Meter::where('user_id', Auth::id())->first() ?? null;
 
+        // dd($ck_meter);
+
         if ($ck_meter == null) {
             return [];
         }

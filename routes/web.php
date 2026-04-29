@@ -220,6 +220,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('view-organization', [DashboardContoller::class, 'organization_view']);
     Route::post('organization-update', [DashboardContoller::class, 'organization_update']);
     Route::get('organization-delete', [DashboardContoller::class, 'organization_delete']);
+    Route::get("organization-deactivate", [DashboardContoller::class, "organization_deactivate"]);
+    Route::get("organization-activate", [DashboardContoller::class, "organization_activate"]);
     Route::post('set-percentage', [DashboardContoller::class, 'set_percentage']);
 
 
@@ -262,6 +264,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('add-new-transformer', [TransformerController::class, 'add_new_transformer']);
     Route::post('update-transformer', [TransformerController::class, 'update_transformer']);
     Route::get('transformer-delete', [TransformerController::class, 'delete_transformer']);
+    Route::get("transformer-deactivate", [TransformerController::class, "transformer_deactivate"]);
+    Route::get("transformer-activate", [TransformerController::class, "transformer_activate"]);
 
 
     Route::get('settings', [DashboardContoller::class, 'settings']);
