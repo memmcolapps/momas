@@ -137,8 +137,8 @@ class RegisterController extends Controller
 
         $validator = Validator::make($request->all(), [
             'action' => ['required', 'string'],
-            'email' => ['required_without:meterNo', 'email'],
-            'meterNo' => ['required_without:email', 'string'],
+            'email' => ['required_without:meterNo', 'nullable', 'email'],
+            'meterNo' => ['required_without:email', 'nullable', 'string'],
         ]);
 
         if ($validator->fails()) {
@@ -294,8 +294,8 @@ class RegisterController extends Controller
 
         $validator = Validator::make($request->all(), [
             'code' => ['required', 'string'],
-            'email' => ['required_without:meterNo', 'email'],
-            'meterNo' => ['required_without:email', 'string']
+            'email' => ['required_without:meterNo', 'nullable', 'email'],
+            'meterNo' => ['required_without:email', 'nullable', 'string']
         ]);
 
         if ($validator->fails()) {
