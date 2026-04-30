@@ -256,6 +256,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('meter-activate', [MeterController::class, 'meter_activate']);
     Route::get('meter-deactivate', [MeterController::class, 'meter_deactivate']);
     Route::get('meter-block', [MeterController::class, 'meter_block']);
+    Route::get('meter-unblock', [MeterController::class, 'meter_unblock']);
 
 
     Route::get('transformer-list', [TransformerController::class, 'list_transformer']);
@@ -293,6 +294,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('update-the-tariff', [TariffController::class, 'update_the_tariff']);
     Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
     Route::post('update-tariff-index', [TariffController::class, 'update_tariff_index']);
+    Route::get("tariff-deactivate", [TariffController::class, "tariff_deactivate"]);
+    Route::get("tariff-activate", [TariffController::class, "tariff_activate"]);
 
 
     Route::post('update-nepa', [TariffController::class, 'update_nepa']);

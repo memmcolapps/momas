@@ -103,7 +103,6 @@
                                         <th scope="col" class="cursor-pointer">Email</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer desc">Action</th>
-                                        <th scope="col" class="cursor-pointer desc">Action</th>
 
 
                                     </tr>
@@ -113,6 +112,9 @@
 
                                       @foreach($services as $data)
                                           @php
+                                            //   if ($data->status == 0) {
+                                            //     dd($data->toArray());
+                                            //   }
                                               $isDisabled = $data->status != 2;
                                               $rowClass = $isDisabled ? 'table-secondary' : '';
                                           @endphp
@@ -364,7 +366,6 @@
                                         <th scope="col" class="cursor-pointer">Email</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer desc">Action</th>
-                                        <th scope="col" class="cursor-pointer desc">Action</th>
 
 
                                     </tr>
@@ -392,12 +393,23 @@
                                                  @endif
 
                                              </td>
-                                             <td><a href="service-deactivate?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-warning">Deactivate</a></td>
-                                             <script>
-                                                 function confirmDelete() {
-                                                     return confirm('Are you sure you want to deactivate this item?');
-                                                 }
-                                             </script>
+                                             <td>
+                                                  @if($data->status == 2)
+                                                      <a href="service-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                      <script>
+                                                          function confirmDeactivate() {
+                                                              return confirm('Are you sure you want to deactivate this item?');
+                                                          }
+                                                      </script>
+                                                  @else
+                                                      <a href="service-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                      <script>
+                                                          function confirmActivate() {
+                                                              return confirm('Are you sure you want to activate this item?');
+                                                          }
+                                                      </script>
+                                                  @endif
+                                              </td>
 
                                          </tr>
 

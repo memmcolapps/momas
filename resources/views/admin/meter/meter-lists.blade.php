@@ -229,10 +229,6 @@
                                         <th scope="col" class="cursor-pointer">Customer</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer">Date Added</th>
-                                        @if(Auth::user()->role == 0)
-                                            <th scope="col" class="cursor-pointer desc">Action</th>
-                                        @endif
-
                                         <th scope="col" class="cursor-pointer desc">Action</th>
 
 
@@ -265,73 +261,29 @@
 
                                              </td>
                                              <td>{{$data->created_at}}</td>
-
-                                              @if(Auth::user()->role == 0)
                                                   <td>
                                                       @if($data->status == 2)
-                                                          <a href="meter-deactivate?id={{$data->id}}"
-                                                             onclick="return confirmDeactivate();"
-                                                             class="btn btn-warning">Deactivate</a>
+                                                          <a href="meter-block?id={{$data->id}}"
+                                                             onclick="return confirmBlock();"
+                                                             class="btn btn-warning">Block Meter</a>
                                                           <script>
-                                                              function confirmDeactivate() {
-                                                                  return confirm('Are you sure you want to deactivate this item?');
+                                                              function confirmBlock() {
+                                                                  return confirm('Are you sure you want to block this meter?');
                                                               }
                                                           </script>
                                                       @else
-                                                          <a href="meter-activate?id={{$data->id}}"
-                                                             onclick="return confirmActivate();"
-                                                             class="btn btn-primary">Activate</a>
+                                                          <a href="meter-unblock?id={{$data->id}}"
+                                                             onclick="return confirmUnblock();"
+                                                             class="btn btn-primary">Unblock</a>
                                                           <script>
-                                                              function confirmActivate() {
-                                                                  return confirm('Are you sure you want to activate this item?');
+                                                              function confirmUnblock() {
+                                                                  return confirm('Are you sure you want to unblock this meter?');
                                                               }
                                                           </script>
                                                       @endif
                                                   </td>
-                                              @endif
 
-                                             <td>
-                                                 @if($data->status == 2)
-                                                     <a href="meter-deactivate?id={{$data->id}}"
-                                                        {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}
-                                                        onclick="return confirmDeactivate();" class="btn btn-warning btn-sm mb-1">Deactivate</a>
-                                                     <a href="meter-block?id={{$data->id}}"
-                                                        {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}
-                                                        onclick="return confirmBlock();" class="btn btn-dark btn-sm mb-1">Block Meter</a>
 
-                                                     <script>
-                                                         function confirmDeactivate() {
-                                                             return confirm('Are you sure you want to deactivate this meter? This will unassign the customer and set meter to inactive status.');
-                                                         }
-                                                         function confirmBlock() {
-                                                             return confirm('Are you sure you want to BLOCK this meter?');
-                                                         }
-                                                     </script>
-                                                 @elseif($data->status == 3)
-                                                     <a href="meter-activate?id={{$data->id}}"
-                                                        {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}
-                                                        onclick="return confirmActivate();" class="btn btn-primary btn-sm mb-1">Activate</a>
-                                                     <span class="text-muted small d-block">Meter is inactive</span>
-
-                                                     <script>
-                                                         function confirmActivate() {
-                                                             return confirm('Are you sure you want to activate this meter?');
-                                                         }
-                                                     </script>
-                                                 @else
-                                                     {{-- status 0 = blocked --}}
-                                                     <a href="meter-activate?id={{$data->id}}"
-                                                        {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}
-                                                        onclick="return confirmActivate();" class="btn btn-primary btn-sm mb-1">Unblock</a>
-                                                     <span class="text-muted small d-block">Meter is blocked</span>
-
-                                                     <script>
-                                                         function confirmActivate() {
-                                                             return confirm('Are you sure you want to unblock this meter?');
-                                                         }
-                                                     </script>
-                                                 @endif
-                                             </td>
 
                                          </tr>
 
@@ -571,10 +523,6 @@
                                         <th scope="col" class="cursor-pointer">Customer</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer">Date Added</th>
-                                        @if(Auth::user()->role == 0)
-                                            <th scope="col" class="cursor-pointer desc">Action</th>
-                                        @endif
-
                                         <th scope="col" class="cursor-pointer desc">Action</th>
 
 
@@ -583,83 +531,57 @@
                                     <tbody>
 
 
-                                    @foreach($meter_lists as $data)
+                                     @foreach($meter_lists as $data)
+                                         @php
+                                             $isDisabled = $data->status != 2;
+                                             $rowClass = $isDisabled ? 'table-secondary' : '';
+                                         @endphp
+                                         <tr class="{{ $rowClass }}">
+                                             <td><a href="view-meter?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->meterNo}} </a></td>
+                                             <td>
+                                                 {{strtoupper($data->meterModel)}}
+                                             </td>
+                                             <td>{{$data->estate->title ?? "Name"}}</td>
+                                             <td>{{$data->user->first_name ?? "No user"}} {{$data->user->last_name ?? "attached"}}</td>
 
-                                        <tr>
-                                            <!-- <td><a href="view-meter?id={{$data->id}}"> {{$data->meterNo}} </a></td> -->
-                                            <td> {{$data->meterNo}} </td>
+                                             <td>
+                                                 @if($data->status == 2)
+                                                     <span class="badge text-bg-primary">Active</span>
+                                                 @elseif($data->status == 0)
+                                                     <span class="badge text-bg-danger">Blocked</span>
+                                                 @elseif($data->status == 3)
+                                                     <span class="badge text-bg-warning">Inactive</span>
+                                                 @endif
 
-                                            <td>
-                                                {{strtoupper($data->meterModel)}}
-                                            </td>
-                                            <td>{{$data->estate->title ?? "Name"}}</td>
-                                            <td>{{$data->user->first_name ?? "No user"}} {{$data->user->last_name ?? "attached"}}</td>
+                                             </td>
+                                             <td>{{$data->created_at}}</td>
+                                                  <td>
+                                                      @if($data->status == 2)
+                                                          <a href="meter-block?id={{$data->id}}"
+                                                             onclick="return confirmBlock();"
+                                                             class="btn btn-warning">Block Meter</a>
+                                                          <script>
+                                                              function confirmBlock() {
+                                                                  return confirm('Are you sure you want to block this meter?');
+                                                              }
+                                                          </script>
+                                                      @else
+                                                          <a href="meter-unblock?id={{$data->id}}"
+                                                             onclick="return confirmUnblock();"
+                                                             class="btn btn-primary">Unblock</a>
+                                                          <script>
+                                                              function confirmUnblock() {
+                                                                  return confirm('Are you sure you want to unblock this meter?');
+                                                              }
+                                                          </script>
+                                                      @endif
+                                                  </td>
 
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <span class="badge text-bg-primary">Active</span>
-                                                @elseif($data->status == 0)
-                                                    <span class="badge text-bg-danger">Blocked</span>
-                                                @elseif($data->status == 3)
-                                                    <span class="badge text-bg-warning">Inactive</span>
-                                                @endif
 
-                                            </td>
-                                            <td>{{$data->created_at}}</td>
 
-                                            @if(Auth::user()->role == 0)
-                                                <td><a href="meter-delete?id={{$data->id}}"
-                                                       onclick="return confirmDelete();"
-                                                       class="btn btn-danger">Delete</a></td>
-                                                <script>
-                                                    function confirmDelete() {
-                                                        return confirm('Are you sure you want to delete this item?');
-                                                    }
-                                                </script>
-                                            @endif
+                                         </tr>
 
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <a href="meter-deactivate?id={{$data->id}}"
-                                                       onclick="return confirmDeactivate();" class="btn btn-warning btn-sm mb-1">Deactivate</a>
-                                                    <a href="meter-block?id={{$data->id}}"
-                                                       onclick="return confirmBlock();" class="btn btn-dark btn-sm mb-1">Block Meter</a>
-
-                                                    <script>
-                                                        function confirmDeactivate() {
-                                                            return confirm('Are you sure you want to deactivate this meter? This will unassign the customer and set meter to inactive status.');
-                                                        }
-                                                        function confirmBlock() {
-                                                            return confirm('Are you sure you want to BLOCK this meter?');
-                                                        }
-                                                    </script>
-                                                @elseif($data->status == 3)
-                                                    <a href="meter-activate?id={{$data->id}}"
-                                                       onclick="return confirmActivate();" class="btn btn-primary btn-sm mb-1">Activate</a>
-                                                    <span class="text-muted small d-block">Meter is inactive</span>
-
-                                                    <script>
-                                                        function confirmActivate() {
-                                                            return confirm('Are you sure you want to activate this meter?');
-                                                        }
-                                                    </script>
-                                                @else
-                                                    {{-- status 0 = blocked --}}
-                                                    <a href="meter-activate?id={{$data->id}}"
-                                                       onclick="return confirmActivate();" class="btn btn-primary btn-sm mb-1">Unblock</a>
-                                                    <span class="text-muted small d-block">Meter is blocked</span>
-
-                                                    <script>
-                                                        function confirmActivate() {
-                                                            return confirm('Are you sure you want to unblock this meter?');
-                                                        }
-                                                    </script>
-                                                @endif
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
+                                     @endforeach
 
 
                                     </tbody><!-- end tbody -->

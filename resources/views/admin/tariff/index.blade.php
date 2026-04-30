@@ -289,14 +289,23 @@
 
                                              </td>
                                              <td>{{$data->created_at}}</td>
-                                             <td><a href="tariff-deactivate?id={{$data->id}}"  onclick="return confirmDelete();" class="btn btn-warning">Deactivate</a>
-                                                 <script>
-
-                                                     function confirmDelete() {
-                                                         return confirm('Are you sure you want to deactivate this item?');
-                                                     }
-                                                 </script>
-                                             </td>
+                                             <td>
+                                              @if($data->status == 2)
+                                                  <a href="tariff-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                  <script>
+                                                      function confirmDeactivate() {
+                                                          return confirm('Are you sure you want to deactivate this item?');
+                                                      }
+                                                  </script>
+                                              @else
+                                                  <a href="tariff-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                  <script>
+                                                      function confirmActivate() {
+                                                          return confirm('Are you sure you want to activate this item?');
+                                                      }
+                                                  </script>
+                                              @endif
+                                          </td>
 
                                          </tr>
 

@@ -100,10 +100,13 @@ class RegisterController extends Controller
 
             DB::beginTransaction();
 
+
             $user->update([
                 'password' => bcrypt($request->password),
-                'password_update_count' => $user->password_update_count + 1
             ]);
+
+            $user->password_update_count += 1;
+            $user->save();
 
             Logger::info('User update password successfully', [
                 'user_id' => $user->id,

@@ -1296,35 +1296,34 @@ class MeterController extends Controller
     }
 
 
-    public
-    function meter_deactivate(request $request)
-    {
-        $meter = Meter::where('id', $request->id)->first();
+    // public
+    // function meter_deactivate(request $request)
+    // {
+    //     $meter = Meter::where('id', $request->id)->first();
 
-        if (!$meter) {
-            return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
-        }
+    //     if (!$meter) {
+    //         return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
+    //     }
 
-        // Get the user_id before nullifying
-        $user_id = $meter->user_id;
+    //     // Get the user_id before nullifying
+    //     $user_id = $meter->user_id;
 
-        // Update meter: set status to blocked (3), remove user assignment and account number
-        Meter::where('id', $request->id)->update([
-            'status' => 0,  // 0 = Blocked status
-            // 'user_id' => null,
-            'AccountNo' => null
-        ]);
+    //     // Update meter: set status to blocked (3), remove user assignment and account number
+    //     Meter::where('id', $request->id)->update([
+    //         'status' => 0,  // 0 = Blocked status
+    //         // 'AccountNo' => null
+    //     ]);
 
-        // If meter was assigned to a customer, remove meter reference from customer
-        if ($user_id) {
-            User::where('id', $user_id)->update([
-                'meterNo' => null
-            ]);
-        }
+    //     // If meter was assigned to a customer, remove meter reference from customer
+    //     if ($user_id) {
+    //         User::where('id', $user_id)->update([
+    //             'meterNo' => null
+    //         ]);
+    //     }
 
-        return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
+    //     return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
 
-    }
+    // }
 
 
     public
@@ -1347,6 +1346,13 @@ class MeterController extends Controller
         Meter::where('id', $request->id)->update(['status' => 0]);
 
         return redirect('/admin/meter-list')->with('message', 'Meter blocked successfully.');
+    }
+
+    public function meter_unblock(request $request)
+    {
+        Meter::where('id', $request->id)->update(['status' => 2]);
+
+        return redirect('/admin/meter-list')->with('message', 'Meter Unblocked successfully.');
     }
 
     public

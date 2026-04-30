@@ -19,8 +19,8 @@ class TransformerController extends Controller
 
         if(Auth::user()->role == 0){
 
-            $data['transformer_list'] = Transformer::latest()->where('status', 2)->paginate(20);
-            $data['transformer'] = Transformer::latest()->where('status', 2)->count();
+            $data['transformer_list'] = Transformer::latest()->paginate(20);
+            $data['transformer'] = Transformer::latest()->count();
             return view('admin/transformer/transformer-list', $data);
 
         } elseif(Auth::user()->role == 1){
@@ -29,8 +29,8 @@ class TransformerController extends Controller
 
         } elseif(Auth::user()->role == 3){
 
-            $data['transformer_list'] = Transformer::latest()->where('Estate_id', Auth::user()->estate_id)->where('status', 2)->paginate(20);
-            $data['transformer'] = Transformer::latest()->where('Estate_id', Auth::user()->estate_id)->where('status', 2)->count();
+            $data['transformer_list'] = Transformer::latest()->where('Estate_id', Auth::user()->estate_id)->paginate(20);
+            $data['transformer'] = Transformer::latest()->where('Estate_id', Auth::user()->estate_id)->count();
             return view('admin/transformer/transformer-list', $data);
 
 
@@ -138,5 +138,4 @@ class TransformerController extends Controller
          Transformer::where('id', $request->id)->update(['status' => 2]); // Setting status to 2 for active
          return redirect('admin/transformer-list')->with('message', "Transformer activated successfully");
      }
-}
 }

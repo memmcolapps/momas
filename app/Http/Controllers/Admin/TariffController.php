@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Auditlog;
 use App\Models\Estate;
+use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\MeterToken;
 use App\Models\Tariff;
@@ -15,6 +16,7 @@ use App\Models\User;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TariffController extends Controller
 {
@@ -47,7 +49,7 @@ class TariffController extends Controller
             $data['tariffis'] = Tariff::latest()->latest()->where('estate_id', Auth::user()->estate_id)->get();
             $data['tarifftariffis'] = Tariff::where('estate_id', Auth::user()->estate_id)->count();
             // $data['estate']  = Estate::all();
-             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get(); 
+             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
 
             return view('admin/tariff/index', $data);
 
@@ -82,7 +84,7 @@ class TariffController extends Controller
     } else {
         return redirect('admin/admin-dashboard')->with('error', 'Unauthorized access');
     }
-    
+
     // Get all used indices per estate - pass to view
     $data['used_indices_by_estate'] = Tariff::select('estate_id', 'tariff_index')
                                            ->get()
@@ -147,7 +149,7 @@ class TariffController extends Controller
         if (!$tariff) {
             return back()->with('error', 'Tariff not found');
         }
-    
+
         // Estate admins can only delete tariffs from their estate
         if(Auth::user()->role == 3) {
             if($tariff->estate_id != Auth::user()->estate_id) {
@@ -499,42 +501,69 @@ class TariffController extends Controller
     }
 
 
-    public function update_tariff_index(Request $request)
-    {
-        // Validate the request
-        $request->validate([
-            'tariff_id' => 'required|exists:tariffs,id',
-            'tariff_index' => 'required|integer|min:1|max:99'
-        ]);
+      public function update_tariff_index(Request $request)
+      {
+          // Validate the request
+          $request->validate([
+              'tariff_id' => 'required|exists:tariffs,id',
+              'tariff_index' => 'required|integer|min:1|max:99'
+          ]);
 
-        $tariff = Tariff::find($request->tariff_id);
+          $tariff = Tariff::find($request->tariff_id);
 
-        if (!$tariff) {
-            return back()->with('error', 'Tariff not found');
-        }
+          if (!$tariff) {
+              return back()->with('error', 'Tariff not found');
+          }
 
-        // Authorization check - Estate admins can only update tariffs from their estate
-        if(Auth::user()->role == 3) {
-            if($tariff->estate_id != Auth::user()->estate_id) {
-                return back()->with('error', 'You can only update tariffs from your estate');
+          // Authorization check - Estate admins can only update tariffs from their estate
+          if(Auth::user()->role == 3) {
+              if($tariff->estate_id != Auth::user()->estate_id) {
+                  return back()->with('error', 'You can only update tariffs from your estate');
+              }
+          }
+
+          // Check if tariff_index already exists for another tariff in the same estate
+          $existingTariff = Tariff::where('estate_id', $tariff->estate_id)
+              ->where('tariff_index', $request->tariff_index)
+              ->where('id', '!=', $tariff->id)
+              ->first();
+
+          if ($existingTariff) {
+              return back()->with('error', "Tariff index {$request->tariff_index} is already used by tariff: {$existingTariff->title}");
+          }
+
+          // Update the tariff index
+          $tariff->tariff_index = $request->tariff_index;
+          $tariff->save();
+
+          return back()->with('message', "Tariff index updated successfully to {$request->tariff_index}");
+       }
+
+        public function tariff_deactivate(request $request)
+        {
+            // Authorization check
+            if(Auth::user()->role == 3) {
+                $tariff = Tariff::find($request->id);
+                if($tariff && $tariff->estate_id != Auth::user()->estate_id) {
+                    return back()->with('error', 'You can only deactivate tariffs from your estate');
+                }
             }
+
+            Tariff::where('id', $request->id)->update(['status' => 1]); // Setting status to 1 for deactivated
+            return redirect()->back()->with('message', "Tariff deactivated successfully");
         }
 
-        // Check if tariff_index already exists for another tariff in the same estate
-        $existingTariff = Tariff::where('estate_id', $tariff->estate_id)
-            ->where('tariff_index', $request->tariff_index)
-            ->where('id', '!=', $tariff->id)
-            ->first();
+        public function tariff_activate(request $request)
+        {
+            // Authorization check
+            if(Auth::user()->role == 3) {
+                $tariff = Tariff::find($request->id);
+                if($tariff && $tariff->estate_id != Auth::user()->estate_id) {
+                    return back()->with('error', 'You can only activate tariffs from your estate');
+                }
+            }
 
-        if ($existingTariff) {
-            return back()->with('error', "Tariff index {$request->tariff_index} is already used by tariff: {$existingTariff->title}");
+            Tariff::where('id', $request->id)->update(['status' => 2]); // Setting status to 2 for active
+            return redirect()->back()->with('message', "Tariff activated successfully");
         }
-
-        // Update the tariff index
-        $tariff->tariff_index = $request->tariff_index;
-        $tariff->save();
-
-        return back()->with('message', "Tariff index updated successfully to {$request->tariff_index}");
     }
-
-}
