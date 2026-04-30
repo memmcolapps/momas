@@ -22,28 +22,33 @@ class FeatureController extends Controller
         $features =  EstateModFeature::byUser($auth_user)
             ->join('mod_features', 'mod_features.id', 'estate_mod_features.mod_feature_id')
             ->select([
-                    'estate_mod_features.status',
+                    'estate_mod_features.status as estate_status',
                     'estate_mod_features.estate_id',
                     'mod_features.title',
-                    'mod_features.slug'
+                    'mod_features.slug',
+                    'mod_features.status as mod_status'
                 ])
             ->get();
 
 
         $mod_features = [];
 
-        // dd($features->toArray(), [\App\Constants\Feature::MOMAS_METER, \App\Constants\Feature::OTHER_METER]);
-
         foreach ($features as $feature) {
-            $mod_features[$feature->slug] = $feature->status;
+            $final_status = $feature->mod_status;
 
-            if (
-                in_array($feature->slug, [\App\Constants\Feature::MOMAS_METER, \App\Constants\Feature::OTHER_METER])
-                && $feature->status = ModFeature::AVAILABLE_STATUS
-                && ! $meter->isActive()
-            ) {
-                $mod_features[$feature->slug] = 2;
+            if ($feature->mod_status == ModFeature::AVAILABLE_STATUS) {
+                $final_status = $feature->estate_status;
+
+                if (
+                    in_array($feature->slug, [\App\Constants\Feature::MOMAS_METER, \App\Constants\Feature::OTHER_METER])
+                    && $feature->estate_status == ModFeature::AVAILABLE_STATUS
+                    && ! $meter->isActive()
+                ) {
+                    $final_status = ModFeature::TEMPORARY_DOWNTIME_STATUS;
+                }
             }
+
+            $mod_features[$feature->slug] = $final_status;
         }
 
 

@@ -103,7 +103,6 @@
                                         <th scope="col" class="cursor-pointer">Email</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer desc">Action</th>
-                                        <th scope="col" class="cursor-pointer desc">Action</th>
 
 
                                     </tr>
@@ -111,61 +110,51 @@
                                     <tbody>
 
 
-                                    @foreach($services as $data)
+                                      @foreach($services as $data)
+                                          @php
+                                            //   if ($data->status == 0) {
+                                            //     dd($data->toArray());
+                                            //   }
+                                              $isDisabled = $data->status != 2;
+                                              $rowClass = $isDisabled ? 'table-secondary' : '';
+                                          @endphp
+                                          <tr class="{{ $rowClass }}">
+                                              <td><a href="view-service?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->service_title}}</a></td>
+                                              <td>{{$data->estate->title}} </td>
+                                              <td>{{$data->professional_name}} </td>
+                                              <td><a href="tel:{{$data->phone}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}> {{$data->professional_phone}}</a></td>
+                                              <td>{{$data->professional_email}}</td>
+                                              <td>
+                                                  @if($data->status == 2)
+                                                      <span class="badge text-bg-primary">Active</span>
+                                                  @elseif($data->status == 0)
+                                                      <span class="badge text-bg-warning">Inactive</span>
+                                                  @elseif($data->status == 3)
+                                                      <span class="badge text-bg-danger">Blocked</span>
+                                                  @endif
 
-                                        <tr>
-                                            <td><a href="view-service?id={{$data->id}}">{{$data->service_title}}</a></td>
-                                            <td>{{$data->estate->title}} </td>
-                                            <td>{{$data->professional_name}} </td>
-                                            <td><a href="tel:{{$data->phone}}"> {{$data->professional_phone}}</a></td>
-                                            <td>{{$data->professional_email}}</td>
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <span class="badge text-bg-primary">Active</span>
-                                                @elseif($data->status == 0)
-                                                    <span class="badge text-bg-warning">Inactive</span>
-                                                @elseif($data->status == 3)
-                                                    <span class="badge text-bg-danger">Blocked</span>
-                                                @endif
+                                              </td>
+                                              <td>
+                                                  @if($data->status == 2)
+                                                      <a href="service-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                      <script>
+                                                          function confirmDeactivate() {
+                                                              return confirm('Are you sure you want to deactivate this item?');
+                                                          }
+                                                      </script>
+                                                  @else
+                                                      <a href="service-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                      <script>
+                                                          function confirmActivate() {
+                                                              return confirm('Are you sure you want to activate this item?');
+                                                          }
+                                                      </script>
+                                                  @endif
+                                              </td>
 
-                                            </td>
-                                            <td><a href="service-delete?id={{$data->id}}" onclick="return confirmDelete();"
-                                                   class="btn btn-danger">Delete</a></td>
-                                            <script>
-                                                function confirmDelete() {
-                                                    return confirm('Are you sure you want to delete this item?');
-                                                }
-                                            </script>
+                                          </tr>
 
-
-                                            @if($data->status == 2)
-                                                <td><a href="service-deactivate?id={{$data->id}}"
-                                                       onclick="return confirmupdated();" class="btn btn-warning">Deactivate
-                                                        Service</a>
-
-                                                    <script>
-                                                        function confirmupdated() {
-                                                            return confirm('Are you sure you want to deactivate this Service?');
-                                                        }
-                                                    </script>
-                                                </td>
-                                            @else
-
-                                                <td><a href="service-activate?id={{$data->id}}"
-                                                       onclick="return confirmupdate();" class="btn btn-primary">Activate
-                                                        Service</a>
-
-                                                    <script>
-                                                        function confirmupdate() {
-                                                            return confirm('Are you sure you want to activate this Service?');
-                                                        }
-                                                    </script>
-                                                </td>
-                                            @endif
-
-                                        </tr>
-
-                                    @endforeach
+                                      @endforeach
 
 
                                     </tbody><!-- end tbody -->
@@ -377,7 +366,6 @@
                                         <th scope="col" class="cursor-pointer">Email</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer desc">Action</th>
-                                        <th scope="col" class="cursor-pointer desc">Action</th>
 
 
                                     </tr>
@@ -385,60 +373,47 @@
                                     <tbody>
 
 
-                                    @foreach($services as $data)
+                                     @foreach($services as $data)
+                                         @php
+                                             $isDisabled = $data->status != 2;
+                                             $rowClass = $isDisabled ? 'table-secondary' : '';
+                                         @endphp
+                                         <tr class="{{ $rowClass }}">
+                                             <td><a href="view-service?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->service_title}}</a></td>
+                                             <td>{{$data->professional_name}} </td>
+                                             <td><a href="tel:{{$data->phone}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}> {{$data->professional_phone}}</a></td>
+                                             <td>{{$data->professional_email}}</td>
+                                             <td>
+                                                 @if($data->status == 2)
+                                                     <span class="badge text-bg-primary">Active</span>
+                                                 @elseif($data->status == 0)
+                                                     <span class="badge text-bg-warning">Inactive</span>
+                                                 @elseif($data->status == 3)
+                                                     <span class="badge text-bg-danger">Blocked</span>
+                                                 @endif
 
-                                        <tr>
-                                            <td><a href="view-service?id={{$data->id}}">{{$data->service_title}}</a></td>
-                                            <td>{{$data->professional_name}} </td>
-                                            <td><a href="tel:{{$data->phone}}"> {{$data->professional_phone}}</a></td>
-                                            <td>{{$data->professional_email}}</td>
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <span class="badge text-bg-primary">Active</span>
-                                                @elseif($data->status == 0)
-                                                    <span class="badge text-bg-warning">Inactive</span>
-                                                @elseif($data->status == 3)
-                                                    <span class="badge text-bg-danger">Blocked</span>
-                                                @endif
+                                             </td>
+                                             <td>
+                                                  @if($data->status == 2)
+                                                      <a href="service-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                      <script>
+                                                          function confirmDeactivate() {
+                                                              return confirm('Are you sure you want to deactivate this item?');
+                                                          }
+                                                      </script>
+                                                  @else
+                                                      <a href="service-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                      <script>
+                                                          function confirmActivate() {
+                                                              return confirm('Are you sure you want to activate this item?');
+                                                          }
+                                                      </script>
+                                                  @endif
+                                              </td>
 
-                                            </td>
-                                            <td><a href="service-delete?id={{$data->id}}" onclick="return confirmDelete();"
-                                                   class="btn btn-danger">Delete</a></td>
-                                            <script>
-                                                function confirmDelete() {
-                                                    return confirm('Are you sure you want to delete this item?');
-                                                }
-                                            </script>
+                                         </tr>
 
-
-                                            @if($data->status == 2)
-                                                <td><a href="service-deactivate?id={{$data->id}}"
-                                                       onclick="return confirmupdated();" class="btn btn-warning">Deactivate
-                                                        Service</a>
-
-                                                    <script>
-                                                        function confirmupdated() {
-                                                            return confirm('Are you sure you want to deactivate this Service?');
-                                                        }
-                                                    </script>
-                                                </td>
-                                            @else
-
-                                                <td><a href="service-activate?id={{$data->id}}"
-                                                       onclick="return confirmupdate();" class="btn btn-primary">Activate
-                                                        Service</a>
-
-                                                    <script>
-                                                        function confirmupdate() {
-                                                            return confirm('Are you sure you want to activate this Service?');
-                                                        }
-                                                    </script>
-                                                </td>
-                                            @endif
-
-                                        </tr>
-
-                                    @endforeach
+                                     @endforeach
 
 
                                     </tbody><!-- end tbody -->

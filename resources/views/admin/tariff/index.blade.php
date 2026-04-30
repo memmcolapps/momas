@@ -104,36 +104,47 @@
                                     <tbody>
 
 
-                                    @foreach($tariffis as $data)
+                                  @foreach($tariffis as $data)
+                                      @php
+                                          $isDisabled = $data->status != 2;
+                                          $rowClass = $isDisabled ? 'table-secondary' : '';
+                                      @endphp
+                                      <tr class="{{ $rowClass }}">
+                                          <td>{{$data->type}}</td>
+                                          <td><a href="view-tariff?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->title ?? "name"}}</a> </td>
+                                          <td>{{$data->estate->title ?? "name"}}</td>
+                                          <td>
+                                              @if($data->status == 2)
+                                                  <span class="badge text-bg-primary">Active</span>
+                                              @elseif($data->status == 0)
+                                                  <span class="badge text-bg-warning">Inactive</span>
+                                              @elseif($data->status == 3)
+                                                  <span class="badge text-bg-danger">Blocked</span>
+                                              @endif
 
-                                        <tr>
+                                          </td>
+                                          <td>{{$data->created_at }}</td>
+                                          <td>
+                                              @if($data->status == 2)
+                                                  <a href="tariff-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                  <script>
+                                                      function confirmDeactivate() {
+                                                          return confirm('Are you sure you want to deactivate this item?');
+                                                      }
+                                                  </script>
+                                              @else
+                                                  <a href="tariff-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                  <script>
+                                                      function confirmActivate() {
+                                                          return confirm('Are you sure you want to activate this item?');
+                                                      }
+                                                  </script>
+                                              @endif
+                                          </td>
 
-                                            <td>{{$data->type}}</td>
-                                            <td><a href="view-tariff?id={{$data->id}}">{{$data->title ?? "name"}}</a> </td>
-                                            <td>{{$data->estate->title ?? "name"}}</td>
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <span class="badge text-bg-primary">Active</span>
-                                                @elseif($data->status == 0)
-                                                    <span class="badge text-bg-warning">Inactive</span>
-                                                @elseif($data->status == 3)
-                                                    <span class="badge text-bg-danger">Blocked</span>
-                                                @endif
+                                      </tr>
 
-                                            </td>
-                                            <td>{{$data->created_at }}</td>
-                                            <td><a href="delete-tariff?id={{$data->id}}"  onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
-                                                <script>
-
-                                                    function confirmDelete() {
-                                                        return confirm('Are you sure you want to delete this item?');
-                                                    }
-                                                </script>
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
+                                  @endforeach
 
 
                                     </tbody><!-- end tbody -->
@@ -258,35 +269,47 @@
                                     <tbody>
 
 
-                                    @foreach($tariffis as $data)
+                                     @foreach($tariffis as $data)
+                                         @php
+                                             $isDisabled = $data->status != 2;
+                                             $rowClass = $isDisabled ? 'table-secondary' : '';
+                                         @endphp
+                                         <tr class="{{ $rowClass }}">
+                                             <td>{{$data->tariff_index}}</td>
+                                             <td><a href="view-tariff?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->title ?? "name"}}</a> </td>
+                                             <td>{{$data->estate->title ?? "name"}}</td>
+                                             <td>
+                                                 @if($data->status == 2)
+                                                     <span class="badge text-bg-primary">Active</span>
+                                                 @elseif($data->status == 0)
+                                                     <span class="badge text-bg-warning">Inactive</span>
+                                                 @elseif($data->status == 3)
+                                                     <span class="badge text-bg-danger">Blocked</span>
+                                                 @endif
 
-                                        <tr>
-                                            <td>{{$data->tariff_index}}</td>
-                                            <td><a href="view-tariff?id={{$data->id}}">{{$data->title ?? "name"}}</a> </td>
-                                            <td>{{$data->estate->title ?? "name"}}</td>
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <span class="badge text-bg-primary">Active</span>
-                                                @elseif($data->status == 0)
-                                                    <span class="badge text-bg-warning">Inactive</span>
-                                                @elseif($data->status == 3)
-                                                    <span class="badge text-bg-danger">Blocked</span>
-                                                @endif
+                                             </td>
+                                             <td>{{$data->created_at}}</td>
+                                             <td>
+                                              @if($data->status == 2)
+                                                  <a href="tariff-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                  <script>
+                                                      function confirmDeactivate() {
+                                                          return confirm('Are you sure you want to deactivate this item?');
+                                                      }
+                                                  </script>
+                                              @else
+                                                  <a href="tariff-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                  <script>
+                                                      function confirmActivate() {
+                                                          return confirm('Are you sure you want to activate this item?');
+                                                      }
+                                                  </script>
+                                              @endif
+                                          </td>
 
-                                            </td>
-                                            <td>{{$data->created_at}}</td>
-                                            <td><a href="delete-tariff?id={{$data->id}}"  onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
-                                                <script>
+                                         </tr>
 
-                                                    function confirmDelete() {
-                                                        return confirm('Are you sure you want to delete this item?');
-                                                    }
-                                                </script>
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
+                                     @endforeach
 
 
                                     </tbody><!-- end tbody -->

@@ -22,6 +22,7 @@ class SecretToken extends Model
         'token_hash',
         'expires_at',
         'attempts',
+        'type',
     ];
 
     /**

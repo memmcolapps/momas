@@ -30,6 +30,7 @@ Route::post('validate-email', [RegisterController::class, 'validate_email']);
 Route::post('register', [RegisterController::class, 'register']);
 Route::post('reset-password', [LoginController::class, 'reset_password']);
 Route::post('reset-password', [RegisterController::class, 'reset_password']);
+Route::post('update-password', [RegisterController::class, 'update_password']);
 Route::post('delete-user', [LoginController::class, 'delete_user']);
 
 Route::post('validate', [MeterController::class, 'validate_meter']);
@@ -57,6 +58,8 @@ Route::any('pos/eod', [PosController::class, 'get_all_transaction']);
 // ─────────────────────────────────────────────
 
 Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], function () {
+
+    Route::post('update-password', [RegisterController::class, 'update_password']);
 
     Route::post('balance', [ProfileController::class, 'balance']);
     Route::get('features', [FeatureController::class, 'features']);

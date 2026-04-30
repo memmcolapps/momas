@@ -181,6 +181,8 @@ if (!function_exists('meter')) {
 
         $ck_meter = Meter::where('user_id', Auth::id())->first() ?? null;
 
+        // dd($ck_meter);
+
         if ($ck_meter == null) {
             return [];
         }
@@ -773,5 +775,17 @@ if (! function_exists('get_user')) {
             fn($q) => $q->where('email', $email),
             fn($q) => $q->where('meterNo', $meterNo)
         )->first();
+    }
+}
+
+
+if (! function_exists('generate_otp')) {
+    function generate_otp(int $length = 6): string {
+        return str_pad(
+            (string) random_int(0, pow(10, $length) - 1),
+            $length,
+            '0',
+            STR_PAD_LEFT
+        );
     }
 }

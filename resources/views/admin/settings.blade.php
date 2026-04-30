@@ -193,7 +193,7 @@
 
                         <div class="card-body">
 
-                            <form action="estate-feature-update" method="post">
+                             <form action="feature-update" method="post">
                                 @csrf
 
                                 <div class="row">

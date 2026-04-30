@@ -362,5 +362,21 @@ class EstateController extends Controller
         return back()->with('message', 'Features updated successfully');
     }
 
+    public function feature_update(Request $request)
+    {
+        $features = ModFeature::all();
+
+        foreach ($features as $feature) {
+            $slug = $feature->slug;
+            if ($request->has($slug)) {
+                $status = $request->input($slug);
+                ModFeature::where('id', $feature->id)->update(['status' => $status]);
+            }
+        }
+
+        return back()->with('message', 'Features updated successfully');
+    }
+
+
 
 }

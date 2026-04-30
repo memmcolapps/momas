@@ -102,27 +102,40 @@
                                     <tbody>
 
 
-                                    @foreach($transformer_list as $data)
+                                      @foreach($transformer_list as $data)
+                                          @php
+                                            // dd($data->toArray());
+                                              $isDisabled = $data->Status != 2;
+                                              $rowClass = $isDisabled ? 'table-secondary' : '';
+                                          @endphp
+                                          <tr class="{{ $rowClass }}">
+                                              <td>{{$data->id ?? "id"}}</td>
+                                              <td><a href="view-transformer?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->Title}}</a></td>
+                                              <td>{{$data->State ?? "state"}}</td>
+                                              <td>{{$data->City ?? "city"}}</td>
+                                              <td>{{$data->Capacity ?? "Capacity"}} KVA</td>
+                                              <td>{{$data->created_at}}</td>
+                                              <td>
+                                                  @if($data->Status == 2)
+                                                      <a href="transformer-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                      <script>
+                                                          function confirmDeactivate() {
+                                                              return confirm('Are you sure you want to deactivate this item?');
+                                                          }
+                                                      </script>
+                                                  @else
+                                                      <a href="transformer-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                      <script>
+                                                          function confirmActivate() {
+                                                              return confirm('Are you sure you want to activate this item?');
+                                                          }
+                                                      </script>
+                                                  @endif
+                                              </td>
 
-                                        <tr>
-                                            <td>{{$data->id ?? "id"}}</td>
-                                            <td><a href="view-transformer?id={{$data->id}}">{{$data->Title}}</a></td>
-                                            <td>{{$data->State ?? "state"}}</td>
-                                            <td>{{$data->City ?? "city"}}</td>
-                                            <td>{{$data->Capacity ?? "Capacity"}} KVA</td>
-                                            <td>{{$data->created_at}}</td>
-                                            <td><a href="transformer-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
+                                          </tr>
 
-                                                <script>
-                                                    function confirmDelete() {
-                                                        return confirm('Are you sure you want to delete this item?');
-                                                    }
-                                                </script>
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
+                                      @endforeach
 
 
                                     </tbody><!-- end tbody -->
@@ -248,27 +261,39 @@
                                     <tbody>
 
 
-                                    @foreach($transformer_list as $data)
+                                     @foreach($transformer_list as $data)
+                                         @php
+                                             $isDisabled = $data->Status != 2;
+                                             $rowClass = $isDisabled ? 'table-secondary' : '';
+                                         @endphp
+                                         <tr class="{{ $rowClass }}">
+                                             <td><a href="view-transformer?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->Title}}</a></td>
+                                             <td>{{$data->State ?? "state"}}</td>
+                                             <td>{{$data->City ?? "city"}}</td>
+                                             <td>{{$data->estate ?? "Estate"}}</td>
+                                             <td>{{$data->Capacity ?? "Capacity"}} KVA</td>
+                                             <td>{{$data->created_at}}</td>
+                                             <td>
+                                                 @if($data->Status == 2)
+                                                     <a href="transformer-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                     <script>
+                                                         function confirmDeactivate() {
+                                                             return confirm('Are you sure you want to deactivate this item?');
+                                                         }
+                                                     </script>
+                                                 @else
+                                                     <a href="transformer-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                     <script>
+                                                         function confirmActivate() {
+                                                             return confirm('Are you sure you want to activate this item?');
+                                                         }
+                                                     </script>
+                                                 @endif
+                                             </td>
 
-                                        <tr>
-                                            <td><a href="view-transformer?id={{$data->id}}">{{$data->Title}}</a></td>
-                                            <td>{{$data->State ?? "state"}}</td>
-                                            <td>{{$data->City ?? "city"}}</td>
-                                            <td>{{$data->estate ?? "Estate"}}</td>
-                                            <td>{{$data->Capacity ?? "Capacity"}} KVA</td>
-                                            <td>{{$data->created_at}}</td>
-                                            <td><a href="transformer-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
+                                         </tr>
 
-                                                <script>
-                                                    function confirmDelete() {
-                                                        return confirm('Are you sure you want to delete this item?');
-                                                    }
-                                                </script>
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
+                                     @endforeach
 
 
                                     </tbody><!-- end tbody -->
