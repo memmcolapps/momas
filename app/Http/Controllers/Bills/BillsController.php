@@ -136,6 +136,10 @@ class BillsController extends Controller
             ]);
 
             User::where('id', Auth::id())->increment('main_wallet', (int) $amount);
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'wallet_creditted' => $amount,
+                'status' => 1,
+            ]);
             $message = "Airtime Purchase not successful, Try again later";
             $code = 422;
             return error($message, $code);
@@ -144,6 +148,10 @@ class BillsController extends Controller
         $message = $response;
         // send_notification($message);
         User::where('id', Auth::id())->increment('main_wallet', (int) $amount);
+        Transaction::where('trx_id', $request->trx_id)->update([
+            'wallet_creditted' => $amount,
+            'status' => 1,
+        ]);
 
         Logger::error("An Error Occurred", [
             'user_id' => $auth_user->id,
@@ -408,6 +416,10 @@ class BillsController extends Controller
                 ]);
 
                 User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+                Transaction::where('trx_id', $request->ref)->update([
+                    'wallet_creditted' => $request->amount,
+                    'status' => 1,
+                ]);
                 $message = $response;
                 send_notification($message);
                 $message = "Cable Purchase not successful, Try again later";
@@ -527,6 +539,11 @@ class BillsController extends Controller
 
             $this->paybetaService->popDataBundleCache($request->service_id);
 
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'wallet_creditted' => $value_left,
+                'status' => 1,
+            ]);
+
             return StandardResponse::error(200, 'Data Bundle You Selected Doesn\'t exist', []);
         }
 
@@ -545,6 +562,11 @@ class BillsController extends Controller
 
 
         $value_left > 0 && $auth_user->creditWallet($value_left);
+
+        Transaction::where('trx_id', $request->trx_id)->update([
+            'wallet_creditted' => $value_left,
+            'status' => 3,
+        ]);
 
 
         $response = $this->paybetaService->purchaseData(
@@ -579,6 +601,10 @@ class BillsController extends Controller
         $errorMessage = $response['message'] ?? '';
         if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
             User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'wallet_creditted' => $request->amount,
+                'status' => 1,
+            ]);
             $message = "Data Purchase not successful, Try again later";
             $code = 422;
             return error($message, $code);
