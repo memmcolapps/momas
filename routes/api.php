@@ -134,6 +134,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::get('get-token-purchase-by-month', [AnalyticController::class, 'getTokenPurchaseByMonth']);
         Route::get('get-analysis', [AnalyticController::class, 'getAnalyticsPage']);
         Route::get('get-trx-chart', [AnalyticController::class, 'filterTransactionChartData']);
+        Route::get('get-analysis-summary', [AnalyticController::class, 'getAnalyticsSummary']);
         Route::get('get-utility-metrics', [AnalyticController::class, 'filterUtilityMetrics']);
         Route::get('get-token-report', [AnalyticController::class, 'filterAccessTokens']);
     });

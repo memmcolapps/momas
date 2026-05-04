@@ -26,6 +26,7 @@ class Transaction extends Model
         'unit_amount',
         'status',
         'note',
+        'wallet_creditted',
     ];
 
 
@@ -42,6 +43,7 @@ class Transaction extends Model
         'e_charges' => 'integer',
         'charge' => 'integer',
         'resolve' => 'integer',
+        'wallet_creditted' => 'decimal:2',
     ];
 
     protected $hidden = [
