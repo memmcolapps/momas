@@ -76,10 +76,13 @@ class MeterController extends Controller
     public function validate_mobile_meter(request $request)
     {
         $validator = Validator::make($request->all(), [
-            'estateId' => ['required', 'exists:estates,id'],
+            'estateId' => [
+                'required',
+                Rule::exists('estates', 'id')->where('status', 2),
+                ],
             'meterNo'  => [
                 'required',
-                Rule::exists('meters', 'meterNo')->where('estate_id', $request->estateId),
+                Rule::exists('meters', 'meterNo'),
             ]
         ]);
 
@@ -89,6 +92,8 @@ class MeterController extends Controller
                 'validation_error' => $validator->errors(),
             ]);
         }
+
+
 
 
         $user = User::where('meterNo', $request->meterNo)->first() ?? null;

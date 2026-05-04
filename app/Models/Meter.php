@@ -321,6 +321,7 @@ class Meter extends Model
                 Transaction::where('trx_id', $trx_id)->update([
                     'note' => 'token generation failed',
                     'status' => 3,
+                    'wallet_creditted' => $vending_amount,
                 ]);
 
 
