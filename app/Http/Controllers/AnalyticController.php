@@ -166,31 +166,33 @@ class AnalyticController extends Controller
             $year_start = Carbon::create($input_year, $input_month)->startOfMonth();
             $month_start = $year_start;
             $transaction_month_start = $year_start;
+            $now = Carbon::create($input_year, $input_month)->endOfMonth();
         } elseif ($input_year) {
             $year_start = Carbon::create($input_year)->startOfYear();
             $month_start = $year_start;
             $transaction_month_start = $year_start;
+            $now = Carbon::create($input_year)->endOfYear();
         } else {
             $year_start = Carbon::now()->startOfYear();
             $month_start = $year_start;
             $transaction_month_start = Carbon::now()->startOfMonth();
         }
 
-        $last_month_start = Carbon::now()->subMonth()->startOfMonth();
-        $last_month_end = Carbon::now()->subMonth()->endOfMonth();
+        $last_year_start = Carbon::now()->subYear()->startOfMonth();
+        $last_year_end = Carbon::now()->subYear()->endOfMonth();
 
-        $total_month_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+        $total_year_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$transaction_month_start, $now])
+            ->whereBetween('created_at', [$year_start, $now])
             ->sum('amount');
 
-        $last_month_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+        $last_year_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$last_month_start, $last_month_end])
+            ->whereBetween('created_at', [$last_year_start, $last_year_end])
             ->sum('amount');
 
-        $month_change_percent = $last_month_sum > 0
-            ? round((($total_month_sum - $last_month_sum) / $last_month_sum) * 100, 1)
+        $year_change_percent = $last_year_sum > 0
+            ? round((($total_year_sum - $last_year_sum) / $last_year_sum) * 100, 1)
             : 0;
 
         $trx_by_month = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
@@ -223,7 +225,7 @@ class AnalyticController extends Controller
             ServiceTypeConstants::CABLE_SUBSCRIPTION,
         ];
 
-        $this_month_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+        $this_year_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$year_start, $now])
             ->whereIn('service_type', $serviceTypes)
@@ -236,9 +238,9 @@ class AnalyticController extends Controller
             ->get()
             ->keyBy('service_type');
 
-        $last_month_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+        $last_year_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$last_month_start, $last_month_end])
+            ->whereBetween('created_at', [$last_year_start, $last_year_end])
             // ->whereIn('service_type', $serviceTypes)
             ->select([
                 'service_type',
@@ -267,7 +269,7 @@ class AnalyticController extends Controller
         }
 
         $tokens = Token::where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$month_start, $now])
+            ->whereBetween('created_at', [$year_start, $now])
             ->select([
                 'status',
                 DB::raw('COUNT(*) as count'),
@@ -287,10 +289,10 @@ class AnalyticController extends Controller
         }
 
         return StandardResponse::success(200, 'Fetched Analytics', [
-            'total_month_amount' => (float) $total_month_sum,
-            'month_change_percent' => $month_change_percent,
+            'total_year_amount' => (float) $total_year_sum,
+            'year_change_percent' => $year_change_percent,
             'year' => (string) $current_year,
-            'month_trend' => $month_change_percent >= 0 ? 'up' : 'down',
+            'year_trend' => $year_change_percent >= 0 ? 'up' : 'down',
             'months' => $byYear,
             'services' => $byServiceType,
             'token_breakdown' => $breakdown,
@@ -333,31 +335,33 @@ class AnalyticController extends Controller
             $year_start = Carbon::create($input_year, $input_month)->startOfMonth();
             $month_start = $year_start;
             $transaction_month_start = $year_start;
+            $now = Carbon::create($input_year, $input_month)->endOfMonth();
         } elseif ($input_year) {
             $year_start = Carbon::create($input_year)->startOfYear();
             $month_start = $year_start;
             $transaction_month_start = $year_start;
+            $now = Carbon::create($input_year)->endOfYear();
         } else {
             $year_start = Carbon::now()->startOfYear();
             $month_start = $year_start;
             $transaction_month_start = Carbon::now()->startOfMonth();
         }
 
-        $last_month_start = Carbon::now()->subMonth()->startOfMonth();
-        $last_month_end = Carbon::now()->subMonth()->endOfMonth();
+        $last_year_start = Carbon::now()->subYear()->startOfMonth();
+        $last_year_end = Carbon::now()->subYear()->endOfMonth();
 
-        $total_month_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+        $total_year_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)
             ->whereBetween('created_at', [$transaction_month_start, $now])
             ->sum('amount');
 
-        $last_month_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
+        $last_year_sum = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$last_month_start, $last_month_end])
+            ->whereBetween('created_at', [$last_year_start, $last_year_end])
             ->sum('amount');
 
-        $month_change_percent = $last_month_sum > 0
-            ? round((($total_month_sum - $last_month_sum) / $last_month_sum) * 100, 1)
+        $year_change_percent = $last_year_sum > 0
+            ? round((($total_year_sum - $last_year_sum) / $last_year_sum) * 100, 1)
             : 0;
 
         $serviceTypes = [
@@ -383,7 +387,7 @@ class AnalyticController extends Controller
 
         $last_month_by_service = Transaction::byStatus(TransactionConstants::TRANSACTION_COMPLETE)
             ->where('user_id', $auth_user->id)
-            ->whereBetween('created_at', [$last_month_start, $last_month_end])
+            ->whereBetween('created_at', [$last_year_start, $last_year_end])
             ->select([
                 'service_type',
                 DB::raw('SUM(amount) as total_amount'),
@@ -431,10 +435,10 @@ class AnalyticController extends Controller
         }
 
         return StandardResponse::success(200, 'Fetched Analytics Summary', [
-            'total_month_amount' => (float) $total_month_sum,
-            'month_change_percent' => $month_change_percent,
-            'year' => (string) $current_year,
-            'month_trend' => $month_change_percent >= 0 ? 'up' : 'down',
+            'total_year_amount' => (float) $total_year_sum,
+            'year_change_percent' => $year_change_percent,
+            'year' => (string) $input_year,
+            'year_trend' => $year_change_percent >= 0 ? 'up' : 'down',
             'services' => $byServiceType,
             'token_breakdown' => $breakdown,
             'available_years' => $available_years,
