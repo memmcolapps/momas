@@ -48,7 +48,7 @@ class FeatureController extends Controller
                 }
             }
 
-            $mod_features[$feature->slug] = $final_status;
+            $mod_features[$feature->slug] = (int) $final_status;
         }
 
 
