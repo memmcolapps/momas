@@ -355,6 +355,10 @@ class TransactionController extends Controller
                 // If action payload is not passed do not assign user id and maintain backward compatibilty with previous designs
                 if ($action_payload) {
                     $action_payload['user_id'] = Auth::user()->id;
+                } else {
+                    $action_payload = [
+                        'action' => $request->service_type,
+                    ];
                 }
 
                 $trx = new Transaction();
@@ -729,84 +733,98 @@ class TransactionController extends Controller
 
     public function paystack_verify(request $request)
     {
-        // $message = "paystack=" . json_encode($request->all());
+        try {
+            // $message = "paystack=" . json_encode($request->all());
         // send_notification($message);
 
         // dd($request->all());
-        $transactionId = $request->reference;
-        $trx = Transaction::where('trx_id', $transactionId)->first();
-        $provider = $trx?->pay_type;
+            $transactionId = $request->reference;
+            $trx = Transaction::where('trx_id', $transactionId)->first();
+            $provider = $trx?->pay_type;
 
-        // dd($trx->toArray());
+            // dd($trx->toArray());
 
-        // Use PaystackPaymentService to verify transaction
-        $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
-        $verificationResult = $paymentService->verifyTransaction($transactionId);
+            // Use PaystackPaymentService to verify transaction
+            $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
+            $verificationResult = $paymentService->verifyTransaction($transactionId);
 
-        if (! $verificationResult['status']) {
-            // if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
-            //     return StandardResponse::error(code: 404, message: 'Invalid ref: transaction not found');
-            // }
+            if (! $verificationResult['status']) {
+                // if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
+                //     return StandardResponse::error(code: 404, message: 'Invalid ref: transaction not found');
+                // }
 
-            return StandardResponse::error(code: 500, message: 'An Error Occurred');
-        }
-
-        $access_point = $request->header('Access-Point') ?? 'web';
-        $payment_status = $verificationResult['payment_status'];
-        $transactionData = $verificationResult['data'];
-        $ck_transaction = Transaction::where('trx_id', $transactionData['reference'])->first()->status ?? null;
-
-        if ($ck_transaction === 2) {
-            // Already processed
-            return response()->json(['message' => 'Already processed']);
-        }
-
-        if ($payment_status == 'success') {
-            Transaction::where('trx_id', $transactionData['reference'])->update(['status' => 3]);
-
-            $ref = $transactionData['reference'];
-            $trx = Transaction::where('trx_id', $ref)->first();
-
-            if ($trx) {
-                $action_payload = json_decode($trx->action_payload);
-
-                if ($action_payload->action == 'momas_meter_web') {
-                    RequestActionHandler::handleRequestAction($trx->trx_id);
-
-                    return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
-                }
+                return StandardResponse::error(code: 500, message: 'An Error Occurred');
             }
-            ProcessPaystackWebhook::dispatch($transactionData['reference']);
 
+            $access_point = $request->header('Access-Point') ?? 'web';
+            $payment_status = $verificationResult['payment_status'];
+            $transactionData = $verificationResult['data'];
+            $ck_transaction = Transaction::where('trx_id', $transactionData['reference'])->first()->status ?? null;
+
+            if ($ck_transaction === 2) {
+                // Already processed
+                return response()->json(['message' => 'Already processed']);
+            }
+
+            if ($payment_status == 'success') {
+                Transaction::where('trx_id', $transactionData['reference'])->update(['status' => 3]);
+
+                $ref = $transactionData['reference'];
+                $trx = Transaction::where('trx_id', $ref)->first();
+
+                if ($trx) {
+                    $action_payload = json_decode($trx->action_payload);
+
+                    if ($action_payload?->action == 'momas_meter_web') {
+                        RequestActionHandler::handleRequestAction($trx->trx_id);
+
+                        return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
+                    }
+                }
+                ProcessPaystackWebhook::dispatch($transactionData['reference']);
+
+                if ($access_point === 'mobile') {
+                    return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [
+                        'payment_status' => $payment_status,
+                        'ref' => $ref,
+                    ]);
+                }
+
+                // Web Access
+                $url = url('') . "/payment?ref=$ref&status=success";
+                return redirect($url);
+            }
+
+            $trx = Transaction::where('trx_id', $transactionData['reference'])->first();
+            $ref = $trx->trx_id;
+
+            $trx->status = 1;
+            $trx->save();
+
+            // If status != success;
             if ($access_point === 'mobile') {
-                return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [
+                return StandardResponse::success(code: 200, message: 'Payment Failed', data: [
                     'payment_status' => $payment_status,
                     'ref' => $ref,
                 ]);
             }
 
-            // Web Access
-            $url = url('') . "/payment?ref=$ref&status=success";
+            // Web access
+            $url = url('') . "/payment?ref=$ref&status=failure";
             return redirect($url);
-        }
+        } catch (Exception $e) {
+            Logger::error('An Error Occurred', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
 
-        $trx = Transaction::where('trx_id', $transactionData['reference'])->first();
-        $ref = $trx->trx_id;
-
-        $trx->status = 1;
-        $trx->save();
-
-        // If status != success;
-        if ($access_point === 'mobile') {
-            return StandardResponse::success(code: 200, message: 'Payment Failed', data: [
-                'payment_status' => $payment_status,
-                'ref' => $ref,
+            return StandardResponse::error(500, "An Error Occurred", [], [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
         }
-
-        // Web access
-        $url = url('') . "/payment?ref=$ref&status=failure";
-        return redirect($url);
     }
 
 
