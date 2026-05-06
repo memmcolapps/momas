@@ -452,7 +452,12 @@ class TransactionController extends Controller
 
     public function all_transactions(request $request)
     {
-        $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get();
+        $trx = Transaction::latest()
+            ->where('user_id', Auth::id())
+            ->where('status', '!=', 0)
+            ->take(1000)
+            ->get();
+
         return response()->json([
             'status' => true,
             'data' => $trx,
@@ -575,7 +580,7 @@ class TransactionController extends Controller
                 'users.first_name',
                 'users.last_name'
             ])
-            ->where('users.id', $trx_x_token['user_id'])
+            ->where('users.meterNo', $trx_x_token['receiver_meterNo'] ?? $trx_x_token['meterNo'] ?? $trx_x_token['user_id'])
             ->first();
 
         $receipt = array_merge($trx_x_token, (array) $user_x_estate);

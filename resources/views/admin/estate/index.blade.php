@@ -95,7 +95,6 @@
                                     <th scope="col" class="cursor-pointer">Lga</th>
                                     <th scope="col" class="cursor-pointer">Status</th>
                                     <th scope="col" class="cursor-pointer desc">Action</th>
-                                    <th scope="col" class="cursor-pointer desc">Action</th>
 
 
                                 </tr>

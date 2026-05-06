@@ -86,6 +86,16 @@ class Logger extends Model
         ]);
     }
 
+    public static function critical(string $message, array $context = []): ?Logger
+    {
+        $context = self::addUserInfo($context);
+        return Logger::create([
+            'level' => 'critical',
+            'message' => $message,
+            'context' => $context
+        ]);
+    }
+
     /**
      * Add user firstname and lastname to log context if user is authenticated
      */

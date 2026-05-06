@@ -55,7 +55,9 @@ class RequestActionHandler {
             'momas_meter_web' => 1,
             'momas_tamper_token' => 1,
             'momas_kct_token' => 1,
-            'momas_clear_credit_token' => 1
+            'momas_clear_credit_token' => 1,
+            'admin_fee' => 1,
+            'utilities' => 1,
         ]);
 
         if ($actionables[$action['action']] != 1) {
