@@ -571,7 +571,10 @@ class TransactionController extends Controller
             $trx_x_token['kct_tokens'] = null;
         }
 
-        $user_x_estate = DB::table('users')
+        $value = $trx_x_token['receiver_meterNo']
+            ?? $trx_x_token['meterNo'] ?? null;
+
+        $query = DB::table('users')
             ->join('estates', 'estates.id', '=', 'users.estate_id')
             ->select([
                 'users.email',
@@ -579,9 +582,15 @@ class TransactionController extends Controller
                 'estates.title',
                 'users.first_name',
                 'users.last_name'
-            ])
-            ->where('users.meterNo', $trx_x_token['receiver_meterNo'] ?? $trx_x_token['meterNo'] ?? $trx_x_token['user_id'])
-            ->first();
+            ]);
+
+        if ($value) {
+            $query->where('users.meterNo', $value);
+        } else {
+            $query->where('users.id', $trx_x_token['user_id']);
+        }
+
+        $user_x_estate = $query->first();
 
         $receipt = array_merge($trx_x_token, (array) $user_x_estate);
 
