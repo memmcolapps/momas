@@ -409,16 +409,38 @@ class BillsController extends Controller
 
             $status = $response['status'] ?? null;
 
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
-                'service' => "Cable Purchase {$service}",
-                'status' => TransactionConstants::TRANSACTION_COMPLETE,
-            ]);
-
             if ($status === 'successful') {
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
+                    'service' => "Cable Purchase {$service}",
+                    'status' => TransactionConstants::TRANSACTION_COMPLETE,
+                ]);
                 DB::commit();
                 $message = "Cable Purchase successful";
                 return success($message);
+            }
+
+            // Handle ambiguous "Server Error" response from Paybeta
+            if (isset($response['message']) && stripos($response['message'], 'Server Error') !== false) {
+                // Paybeta bug: transaction likely went through, do NOT refund
+                // Flag for manual review instead
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'status' => TransactionConstants::PENDING_REVIEW,
+                    'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
+                ]);
+
+                DB::commit();
+
+                Logger::critical("Paybeta ambiguous response - DO NOT auto-refund", [
+                    'trx_id' => $request->trx_id,
+                    'decoder_no' => $request->decoder_no ?? null,
+                    'phone' => $request->phone ?? null,
+                    'amount' => $amount,
+                    'service' => $service,
+                    'response' => $response,
+                ]);
+
+                return StandardResponse::error(202, 'Your transaction is being verified, please wait.', []);
             }
 
             $errorMessage = $response['message'] ?? '';
@@ -609,23 +631,46 @@ class BillsController extends Controller
                 'data' => $response
             ]);
 
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'service_type' => ServiceTypeConstants::DATA_TOP_UP,
-                'service' => "Data Purchase {$network}",
-                'status' => TransactionConstants::TRANSACTION_COMPLETE,
-            ]);
-
             $status = $response['status'] ?? null;
 
             if ($status === 'successful') {
-                $message = "Data Purchase successful";
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'service_type' => ServiceTypeConstants::DATA_TOP_UP,
+                    'service' => "Data Purchase {$network}",
+                    'status' => TransactionConstants::TRANSACTION_COMPLETE,
+                ]);
                 DB::commit();
+                $message = "Data Purchase successful";
                 return success($message);
+            }
+
+            // Handle ambiguous "Server Error" response from Paybeta
+            if (isset($response['message']) && stripos($response['message'], 'Server Error') !== false) {
+                // Paybeta bug: transaction likely went through, do NOT refund
+                // Flag for manual review instead
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'status' => TransactionConstants::PENDING_REVIEW,
+                    'service_type' => ServiceTypeConstants::DATA_TOP_UP,
+                ]);
+
+                DB::commit();
+
+                Logger::critical("Paybeta ambiguous response - DO NOT auto-refund", [
+                    'trx_id' => $request->trx_id,
+                    'phone' => $request->phone,
+                    'amount' => $amount,
+                    'network' => $network,
+                    'variation_code' => $request->variation_code,
+                    'response' => $response,
+                ]);
+
+                return StandardResponse::error(202, 'Your transaction is being verified, please wait.', []);
             }
 
             $errorMessage = $response['message'] ?? '';
 
             User::where('id', $auth_user->id)->first()->creditWallet($amount);
+
             Transaction::where('trx_id', $request->trx_id)->update([
                 'wallet_creditted' => $amount,
                 'status' => 3,
