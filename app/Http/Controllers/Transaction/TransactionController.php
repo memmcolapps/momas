@@ -532,7 +532,7 @@ class TransactionController extends Controller
         }
 
         $selectFields = [
-            'COALESCE(credit_tokens.receiver_meterNo, credit_tokens.meterNo) as meterNo',
+            DB::raw('COALESCE(credit_tokens.receiver_meterNo, credit_tokens.meterNo) as meterNo'),
             // 'credit_tokens.receiver_meterNo',
             'transactions.updated_at',
             'transactions.trx_id',
