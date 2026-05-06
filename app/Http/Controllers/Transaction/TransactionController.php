@@ -580,7 +580,7 @@ class TransactionController extends Controller
                 'users.first_name',
                 'users.last_name'
             ])
-            ->where('users.meterNo', $trx_x_token['receiver_meterNo'] ?? $trx_x_token['meterNo'])
+            ->where('users.meterNo', $trx_x_token['receiver_meterNo'] ?? $trx_x_token['meterNo'] ?? $trx_x_token['user_id'])
             ->first();
 
         $receipt = array_merge($trx_x_token, (array) $user_x_estate);

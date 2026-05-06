@@ -8,4 +8,5 @@ class TransactionConstants
     public const SERVICE_PENDING = 3;
     public const PAYMENT_FAILED = 1;
     public const TRANSACTION_COMPLETE = 2;
+    public const PENDING_REVIEW = 4;
 }

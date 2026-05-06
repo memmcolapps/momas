@@ -210,8 +210,6 @@ class Meter extends Model
         $action='momas_meter'
     ) {
 
-        throw new Exception('DEBUGGING');
-
         $other_meter = null;
 
         if ($receiver_meterNo) {
@@ -229,173 +227,190 @@ class Meter extends Model
         $user = User::where('id', $this->user_id)->firstOrFail();
 
 
-        DB::transaction(function () use (
-            $tariff_id,
-            $trx_id,
-            $verify,
-            $user,
-            $receiver_meterNo,
-            $other_meter,
-            $action
-        ) {
-            $trx = Transaction::where('trx_id', $trx_id)
-                ->firstOrFail();
+        try {
+            DB::transaction(function () use (
+                $tariff_id,
+                $trx_id,
+                $verify,
+                $user,
+                $receiver_meterNo,
+                $other_meter,
+                $action
+            ) {
+                $trx = Transaction::where('trx_id', $trx_id)
+                    ->firstOrFail();
 
-            // Calculate token values using the dedicated method
+                // Calculate token values using the dedicated method
 
-            $calculatedValues = $this->calculateTokenValues($tariff_id, $trx);
+                $calculatedValues = $this->calculateTokenValues($tariff_id, $trx);
 
-            // Extract calculated values
-            $tariffAmount = $calculatedValues['tariffAmount'];
-            $vat = $calculatedValues['vat'];
-            $fixedCharge = $calculatedValues['fixedCharge'];
-            $percn = $calculatedValues['serviceFee'];
-            $afterServiceFee = $calculatedValues['afterServiceFee'];
-            $estateFee = $calculatedValues['estateFee'];
-            $afterEstateFee = $calculatedValues['afterEstateFee'];
-            $afterFixedCharge = $calculatedValues['afterFixedCharge'];
-            $vatAmount = $calculatedValues['vatAmount'];
-            $vending_amount = $calculatedValues['vending_amount'];
-            $unit = $calculatedValues['unit'];
-
-
-            $email = $user->email;
-
-            $service = $other_meter ? "CREDIT TOKEN PURCHASE(OTHERS)" : "CREDIT TOKEN PURCHASE";
-            $service_type = $other_meter ? ServiceTypeConstants::CREDIT_TOKEN_OTHERS : ServiceTypeConstants::CREDIT_TOKEN;
+                // Extract calculated values
+                $tariffAmount = $calculatedValues['tariffAmount'];
+                $vat = $calculatedValues['vat'];
+                $fixedCharge = $calculatedValues['fixedCharge'];
+                $percn = $calculatedValues['serviceFee'];
+                $afterServiceFee = $calculatedValues['afterServiceFee'];
+                $estateFee = $calculatedValues['estateFee'];
+                $afterEstateFee = $calculatedValues['afterEstateFee'];
+                $afterFixedCharge = $calculatedValues['afterFixedCharge'];
+                $vatAmount = $calculatedValues['vatAmount'];
+                $vending_amount = $calculatedValues['vending_amount'];
+                $unit = $calculatedValues['unit'];
 
 
-            $meter = $other_meter ?? $this;
+                $email = $user->email;
+
+                $service = $other_meter ? "CREDIT TOKEN PURCHASE(OTHERS)" : "CREDIT TOKEN PURCHASE";
+                $service_type = $other_meter ? ServiceTypeConstants::CREDIT_TOKEN_OTHERS : ServiceTypeConstants::CREDIT_TOKEN;
 
 
-            if (! $meter->isActive() || ($receiver_meterNo && ! $this->isActive())) {
-                throw new Exception("Meter is unable to carrying out operations");
-            }
+                $meter = $other_meter ?? $this;
 
 
-            if ($trx->status === 2) {
-                throw new Exception ("Transaction already completed please restart a new transaction to generate token");
-            }
-
-            $paystack_engine = new PaystackPaymentService();
-
-            $verifier_engine = match ($verify) {
-                "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
-                "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
-                "null" => fn($arg) => [
-                    'is_successful' => true,
-                    'status' => true,
-                    'data' => [],
-                ],
-            };
+                if (! $meter->isActive() || ($receiver_meterNo && ! $this->isActive())) {
+                    throw new Exception("Meter is unable to carrying out operations");
+                }
 
 
-            if ($trx->status === 0) {
-                $verify = $verifier_engine($trx_id);
+                if ($trx->status === 2) {
+                    throw new Exception ("Transaction already completed please restart a new transaction to generate token");
+                }
 
-                if (! $verify['is_successful']) {
+                $paystack_engine = new PaystackPaymentService();
+
+                $verifier_engine = match ($verify) {
+                    "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
+                    "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
+                    "null" => fn($arg) => [
+                        'is_successful' => true,
+                        'status' => true,
+                        'data' => [],
+                    ],
+                };
+
+
+                if ($trx->status === 0) {
+                    $verify = $verifier_engine($trx_id);
+
+                    if (! $verify['is_successful']) {
+                        throw new Exception("Transaction Failed");
+                    }
+                }
+
+                if ($trx->status === 1) {
                     throw new Exception("Transaction Failed");
                 }
-            }
-
-            if ($trx->status === 1) {
-                throw new Exception("Transaction Failed");
-            }
 
 
-            $need_kct = $meter->NeedKCT;
+                $need_kct = $meter->NeedKCT;
 
-            $tariff_index = Tariff::where('id', $tariff_id)->first()->tariff_index ?? null;
+                $tariff_index = Tariff::where('id', $tariff_id)->first()->tariff_index ?? null;
 
-            $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $meter->NeedKCT);
+                $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $meter->NeedKCT);
 
-            Transaction::where('trx_id', $trx_id)->update([
-                'service' => $service,
-                'service_type' => $service_type,
-                'tariff_id' => $tariff_id,
-                'unit_amount' => $vending_amount,
-                // 'vat' => $vatAmount,
-            ]);
-
-
-            if ( ! $token_gen['success']) {
-                // dump('Failed Meter: 317');
                 Transaction::where('trx_id', $trx_id)->update([
-                    'note' => 'token generation failed',
-                    'status' => 3,
-                    'wallet_creditted' => $vending_amount,
+                    'service' => $service,
+                    'service_type' => $service_type,
+                    'tariff_id' => $tariff_id,
+                    'unit_amount' => $vending_amount,
+                    // 'vat' => $vatAmount,
                 ]);
 
 
-                if ($action == 'momas_meter') {
-                    User::where('id', $this->user_id)->first()->creditWallet($vending_amount);
+                if ( ! $token_gen['success']) {
+                    // dump('Failed Meter: 317');
+                    Transaction::where('trx_id', $trx_id)->update([
+                        'note' => 'token generation failed',
+                        'status' => 3,
+                        'wallet_creditted' => $vending_amount,
+                    ]);
+
+
+                    if ($action == 'momas_meter') {
+                        User::where('id', $this->user_id)->first()->creditWallet($trx->vending_amount ?? $trx->amount);
+                    }
+
+                    throw new Exception("Vending server not connected, Retry again on transaction history");
                 }
 
-                throw new Exception("Vending server not connected, Retry again on transaction history");
+
+                $token = $token_gen['data']['token'];
+
+                $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+                $tariffAmount = $tariffState->amount ?? 0;
+
+
+                $cdt = CreditToken::updateOrCreate([
+                    'trx_id' => $trx_id,
+                    'user_id' => $this->user_id,
+                    'meterNo' => $this->meterNo,
+                ],
+                    [
+                    'amount' => $vending_amount,
+                    'amount_charged' => $vending_amount,
+                    'customer_email' => $email,
+                    'receiver_meterNo' => $receiver_meterNo,
+                    'unitkwh' => $unit,
+                    'vat' => $vat,
+                    'estate_id' => $this->estate_id,
+                    'estate_name' => $user->estate_name,
+                    'token' => $token,
+                    'status' => 2,
+                    'vatAmount' => $vat,
+                    'tariff_amount' => $tariffAmount,
+                    'tariff_id' => $tariff_id
+                ]);
+
+
+                if ($need_kct) {
+
+                    // dump('entered needkct meter:240');
+                    $kct_tokens = $token_gen['data']['kct_token'];
+
+                    $met = new MeterToken();
+                    $met->user_id = $this->user_id;
+                    $met->trx_id = $trx_id;
+                    $met->meterNo = $this->meterNo;
+                    $met->token = $token;
+                    $met->amount = $total_paid ?? 0;
+                    $met->unit = $unit;
+                    $met->kct_tokens = $kct_tokens[0] . "," . $kct_tokens[1];
+                    $met->vat = $vat;
+                    $met->estate_id = $this->estate_id;
+                    $met->status = 2;
+                    $met->receiver_meterNo = $receiver_meterNo;
+                    $met->save();
+
+
+                    $kct_token1 = $kct_tokens[0];
+                    $kct_token2 = $kct_tokens[1];
+
+                    $data2['kct_token1'] = $kct_tokens[0];
+                    $data2['kct_token2'] = $kct_tokens[1];
+
+                    send_kct_email_token($email, $token, $vending_amount, $kct_token1, $kct_token2);
+
+                }
+
+                Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
+
+            });
+        } catch (Exception $e) {
+
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+            $amount = $trx->vending_amount ?? $trx->amount;
+
+            if ($action == 'momas_meter') {
+                User::where('id', $this->user_id)->first()->creditWallet($amount);
+
+                Transaction::where('trx_id', $trx_id)->update([
+                    'wallet_creditted' => $amount,
+                    'status' => 3,
+                ]);
             }
 
-
-            $token = $token_gen['data']['token'];
-
-            $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
-            $tariffAmount = $tariffState->amount ?? 0;
-
-
-            $cdt = CreditToken::updateOrCreate([
-                'trx_id' => $trx_id,
-                'user_id' => $this->user_id,
-                'meterNo' => $this->meterNo,
-            ],
-                [
-                'amount' => $vending_amount,
-                'amount_charged' => $vending_amount,
-                'customer_email' => $email,
-                'receiver_meterNo' => $receiver_meterNo,
-                'unitkwh' => $unit,
-                'vat' => $vat,
-                'estate_id' => $this->estate_id,
-                'estate_name' => $user->estate_name,
-                'token' => $token,
-                'status' => 2,
-                'vatAmount' => $vat,
-                'tariff_amount' => $tariffAmount,
-                'tariff_id' => $tariff_id
-            ]);
-
-
-            if ($need_kct) {
-
-                // dump('entered needkct meter:240');
-                $kct_tokens = $token_gen['data']['kct_token'];
-
-                $met = new MeterToken();
-                $met->user_id = $this->user_id;
-                $met->trx_id = $trx_id;
-                $met->meterNo = $this->meterNo;
-                $met->token = $token;
-                $met->amount = $total_paid ?? 0;
-                $met->unit = $unit;
-                $met->kct_tokens = $kct_tokens[0] . "," . $kct_tokens[1];
-                $met->vat = $vat;
-                $met->estate_id = $this->estate_id;
-                $met->status = 2;
-                $met->receiver_meterNo = $receiver_meterNo;
-                $met->save();
-
-
-                $kct_token1 = $kct_tokens[0];
-                $kct_token2 = $kct_tokens[1];
-
-                $data2['kct_token1'] = $kct_tokens[0];
-                $data2['kct_token2'] = $kct_tokens[1];
-
-                send_kct_email_token($email, $token, $vending_amount, $kct_token1, $kct_token2);
-
-            }
-
-            Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
-
-        });
+            throw $e;
+        }
     }
 
     /**
