@@ -766,6 +766,12 @@ class MeterController extends Controller
             $receiver_meterNo = $request->receiver_meterNo;
             $auth_user = Auth::user();
 
+            // $tariff_id = $action_payload['tariff_id'];
+            // $unit = $action_payload['vend_amount_kw_per_naira'];
+            // $vat = $action_payload['vat_amount'];
+            // $vending_amount = $action_payload['vending_amount'];
+            // $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
+
             if (!$trx_id) {
                 return StandardResponse::error(422, "Transaction reference missing");
             }
@@ -778,6 +784,16 @@ class MeterController extends Controller
             }
 
             $trx = Transaction::where('trx_id', $trx_id)->where('user_id', Auth::user()->id)->first();
+
+            $action_payload = [
+                'tariff_id'=> $tariff_id,
+                'receiver_meterNo' => $receiver_meterNo,
+            ];
+
+            $existing_payload = json_decode($trx->action_payload, true);
+
+            $payload = array_merge($action_payload, $existing_payload);
+            Transaction::where('trx_id', $trx_id)->update(['action_payload' => json_encode($payload)]);
 
             if (!$trx) {
                 return StandardResponse::error(404, 'Resource not found: Invalid transaction reference', []);

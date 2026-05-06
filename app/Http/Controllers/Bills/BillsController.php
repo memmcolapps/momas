@@ -150,7 +150,7 @@ class BillsController extends Controller
         User::where('id', Auth::id())->increment('main_wallet', (int) $amount);
         Transaction::where('trx_id', $request->trx_id)->update([
             'wallet_creditted' => $amount,
-            'status' => 1,
+            'status' => 3,
         ]);
 
         Logger::error("An Error Occurred", [
@@ -347,7 +347,15 @@ class BillsController extends Controller
                     'cable_bouquet' => $this->paybetaService->getCableBouquets($request->service_id),
                 ]);
 
+                User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+                Transaction::where('trx_id', $request->ref)->update([
+                    'wallet_creditted' => $request->amount,
+                    'status' => 3,
+                ]);
+
                 $this->paybetaService->popCableBouquetCache($request->service_id);
+
+
 
                 return StandardResponse::success(200, 'Cable Bouquet You Selected Doesn\'t exist', []);
             }
@@ -418,7 +426,7 @@ class BillsController extends Controller
                 User::where('id', Auth::id())->increment('main_wallet', $request->amount);
                 Transaction::where('trx_id', $request->ref)->update([
                     'wallet_creditted' => $request->amount,
-                    'status' => 1,
+                    'status' => 3,
                 ]);
                 $message = $response;
                 send_notification($message);
@@ -427,7 +435,16 @@ class BillsController extends Controller
                 return error($message, $code);
             }
 
-            $message = $response;
+
+            User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+            Transaction::where('trx_id', $request->ref)->update([
+                'wallet_creditted' => $request->amount,
+                'status' => 3,
+            ]);
+            $message = 'Cable Purchase not successful, Try again later';
+
+            $code = 422;
+            return error($message, $code);
             // send_notification($message);
         } catch (Exception $e) {
 
@@ -541,7 +558,7 @@ class BillsController extends Controller
 
             Transaction::where('trx_id', $request->trx_id)->update([
                 'wallet_creditted' => $value_left,
-                'status' => 1,
+                'status' => 3,
             ]);
 
             return StandardResponse::error(200, 'Data Bundle You Selected Doesn\'t exist', []);
@@ -599,16 +616,15 @@ class BillsController extends Controller
 
         // Handle failure cases
         $errorMessage = $response['message'] ?? '';
-        if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
-            User::where('id', Auth::id())->increment('main_wallet', $request->amount);
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'wallet_creditted' => $request->amount,
-                'status' => 1,
-            ]);
-            $message = "Data Purchase not successful, Try again later";
-            $code = 422;
-            return error($message, $code);
-        }
+
+        User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+        Transaction::where('trx_id', $request->trx_id)->update([
+            'wallet_creditted' => $request->amount,
+            'status' => 3,
+        ]);
+        $message = "Data Purchase not successful, Try again later";
+        $code = 422;
+        return error($message, $code);
 
         // $message = $response;
         // send_notification($message);

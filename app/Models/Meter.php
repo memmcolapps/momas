@@ -210,6 +210,8 @@ class Meter extends Model
         $action='momas_meter'
     ) {
 
+        throw new Exception('DEBUGGING');
+
         $other_meter = null;
 
         if ($receiver_meterNo) {

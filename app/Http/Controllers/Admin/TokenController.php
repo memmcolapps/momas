@@ -3741,10 +3741,13 @@ class TokenController extends Controller
                         $unit = $action_payload['vend_amount_kw_per_naira'];
                         $vat = $action_payload['vat_amount'];
                         $vending_amount = $action_payload['vending_amount'];
-
+                        $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
                     }
 
-                    $meter->getNewToken($tariff_id, $trx_id, $verify="null");
+                    $access_point = $request->header('Access-Point') ?? 'web';
+                    $action = $access_point == 'mobile' ? 'momas_meter' : 'momas_meter_web';
+
+                    $meter->getNewToken($tariff_id, $trx_id, $verify="null", $receiver_meterNo=$receiver_meterNo, $action=$action);
 
 
 
