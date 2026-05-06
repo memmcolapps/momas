@@ -609,14 +609,6 @@ class BillsController extends Controller
             }
 
 
-            User::where('id', $auth_user->id)->first()->creditWallet($amount);
-
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'wallet_creditted' => $amount,
-                'status' => 3,
-            ]);
-
-
             $response = $this->paybetaService->purchaseData(
                 $network,
                 $request->phone,
