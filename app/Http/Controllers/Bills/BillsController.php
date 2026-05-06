@@ -135,7 +135,7 @@ class BillsController extends Controller
                     'response' => $response,
                 ]);
 
-                return StandardResponse::error(202, 'Your transaction is being verified, please wait.', []);
+                return StandardResponse::success(202, 'Your transaction is being verified, please wait.', []);
             }
 
             $errorMessage = $response['message'] ?? '';
