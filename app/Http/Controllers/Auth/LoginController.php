@@ -45,7 +45,7 @@ class LoginController extends Controller
             return error("User does not exist", 404);
         }
 
-        if ($usr->status == 9) {
+        if ($usr->status == 0) {
             return error("User does not exist", 401);
         }
 
