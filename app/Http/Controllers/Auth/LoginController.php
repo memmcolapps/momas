@@ -46,7 +46,7 @@ class LoginController extends Controller
         }
 
         if ($usr->status == 0) {
-            return error("User does not exist", 401);
+            return error("Your Account has been deactivated reach out to your estate admin for help", 403);
         }
 
         // ─── 3. Attempt auth ──────────────────────────────────────────────────────
