@@ -24,6 +24,7 @@ use App\Services\TokenGenerationService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -356,6 +357,7 @@ class MeterController extends Controller
 
     public function buy_meter_token(request $request)
     {
+        DB::beginTransaction();
         try {
             $validator = Validator::make($request->all(), [
                 'tariff_id' => 'required|integer|exists:tariffs,id',
@@ -406,7 +408,7 @@ class MeterController extends Controller
 
             if ($trx->status === 0) {
                 $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
-                $verifier->verifyTransaction($trx->trx_id);
+                $verifier = $verifier->verifyTransaction($trx->trx_id);
 
                 if (! $verifier['is_successful']) {
 
@@ -463,24 +465,17 @@ class MeterController extends Controller
             // Receipt
             // ============================
 
-            $receipt = [
-                'full_name'               => Auth::user()->first_name . " " . Auth::user()->last_name,
-                'trx_id'                  => $trx_id,
-                'meterNo'                 => $meter->meterNo,
-                'token'                   => $token,
-                'amount'                  => (string) $total_paid,
-                'estate'                  => $estate->title ?? null,
-                'vending_amount'          => (string) round($credit->amount ?? 0, 2),
-                'vat_amount'              => (string) round($credit->vatAmount ?? 0, 2),
-                'vend_amount_kw_per_naira'=> (string) round($credit->unitkwh ?? 0, 2),
-                'status'                  => $credit->status ?? 2
-            ];
+            $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id);
+
+            DB::commit();
 
             return StandardResponse::success(code: 200, message: 'Bought token successfully', data:[
                 'receipt' => $receipt,
             ]);
 
         } catch (Exception $e) {
+            DB::rollBack();
+
             Logger::error('MeterController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(code: 500, message: 'An Error Occured', debug: [
                 'error' => $e->getMessage(),
