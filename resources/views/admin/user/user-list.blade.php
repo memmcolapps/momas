@@ -483,10 +483,6 @@
                                         <th scope="col" class="cursor-pointer">Designation</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer desc">Date Registered</th>
-                                        @if(Auth::user()->role == 3)
-                                            <th scope="col" class="cursor-pointer desc">Action</th>
-                                        @endif
-
                                         <th scope="col" class="cursor-pointer desc">Action</th>
 
 
@@ -528,17 +524,6 @@
 
                                             </td>
                                             <td>{{$data->created_at}}</td>
-
-                                            @if(Auth::user()->role == 3)
-                                                <td><a href="user-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
-
-                                                    <script>
-                                                        function confirmDelete() {
-                                                            return confirm('Are you sure you want to delete this item?');
-                                                        }
-                                                    </script>
-                                                </td>
-                                            @endif
 
                                             @if($data->status == 2)
                                                 <td><a href="user-deactivate?id={{$data->id}}"  onclick="return confirmupdate();" class="btn btn-warning">Deactivate User</a>

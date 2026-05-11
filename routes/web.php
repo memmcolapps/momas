@@ -158,7 +158,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('add-new-customer', [DashboardContoller::class, 'add_new_customer']);
     Route::get('get-unassigned-meters', [DashboardContoller::class, 'get_unassigned_meters']);
 
-    Route::get('user-delete', [DashboardContoller::class, 'delete_user']);
+    // Route::get('user-delete', [DashboardContoller::class, 'delete_user']);
     Route::get('view-user', [DashboardContoller::class, 'view_user']);
     Route::post('update-user', [DashboardContoller::class, 'update_user']);
     Route::post('update_user_email', [DashboardContoller::class, 'update_user_email']);
