@@ -1,5 +1,5 @@
 @php use Illuminate\Support\Facades\Auth; @endphp
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 
@@ -24,7 +24,7 @@
             border: 1px solid #ccc;
             max-height: 150px;
             overflow-y: auto;
-            display: none; /* Initially hidden */
+            display: none;
             position: absolute;
             background-color: white;
             width: 100%;
@@ -48,7 +48,6 @@
 <!-- Begin page -->
 <div id="app-layout">
 
-
     <!-- Topbar Start -->
     <div class="topbar-custom">
         <div class="container-fluid">
@@ -66,37 +65,29 @@
 
                 <ul class="list-unstyled topnav-menu mb-0 d-flex align-items-center">
 
-
                     <li class="dropdown notification-list topbar-dropdown">
                         <a class="nav-link dropdown-toggle nav-user me-0" data-bs-toggle="dropdown"
                            href="analytics.html#" role="button" aria-haspopup="false" aria-expanded="false">
                             <img src="{{url('')}}/public/asset/ass/images/users/user-5.jpg" alt="user-image"
                                  class="rounded-circle">
                             <span class="pro-user-name ms-1">
-                                        Admin <i class="mdi mdi-chevron-down"></i>
-                                    </span>
+                                Admin <i class="mdi mdi-chevron-down"></i>
+                            </span>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end profile-dropdown ">
-                            <!-- item-->
+                        <div class="dropdown-menu dropdown-menu-end profile-dropdown">
                             <div class="dropdown-header noti-title">
                                 <h6 class="text-overflow m-0">Welcome !</h6>
                             </div>
-
-                            <!-- item-->
                             <a class='dropdown-item notify-item' href='/logout'>
                                 <i class="mdi mdi-location-exit fs-16 align-middle"></i>
                                 <span>Logout</span>
                             </a>
-
-
                         </div>
                     </li>
 
                 </ul>
             </div>
-
         </div>
-
     </div>
     <!-- end Topbar -->
 
@@ -109,23 +100,24 @@
 
                 <div class="logo-box">
                     <a class='logo logo-light' href='index.html'>
-                                <span class="logo-sm">
-                                    <img src="{{url('')}}/public/asset/ass/images/logo-sm.png" alt="" height="22">
-                                </span>
+                        <span class="logo-sm">
+                            <img src="{{url('')}}/public/asset/ass/images/logo-sm.png" alt="" height="22">
+                        </span>
                         <span class="logo-lg">
-                                    <img src="{{url('')}}/public/asset/ass/images/logo-light.png" alt="" height="24">
-                                </span>
+                            <img src="{{url('')}}/public/asset/ass/images/logo-light.png" alt="" height="24">
+                        </span>
                     </a>
                     <a class='logo logo-dark' href='index.html'>
-                                <span class="logo-sm">
-                                    <img src="{{url('')}}/public/asset/ass/images/logo-sm.png" alt="" height="22">
-                                </span>
+                        <span class="logo-sm">
+                            <img src="{{url('')}}/public/asset/ass/images/logo-sm.png" alt="" height="22">
+                        </span>
                         <span class="logo-lg">
-                                    <img src="{{url('')}}/public/asset/ass/images/logo-dark.png" alt="" height="24">
-                                </span>
+                            <img src="{{url('')}}/public/asset/ass/images/logo-dark.png" alt="" height="24">
+                        </span>
                     </a>
                 </div>
 
+                {{-- ===================== ROLE 0: Super Admin ===================== --}}
                 @if(Auth::user()->role == 0)
                     <ul id="side-menu">
 
@@ -145,7 +137,6 @@
                             </a>
                         </li>
 
-
                         <li>
                             <a class='tp-link' href="transformer-list">
                                 <i data-feather="box"></i>
@@ -160,15 +151,12 @@
                             </a>
                         </li>
 
-
-
                         <li>
                             <a class='tp-link' href="meter-list">
                                 <i data-feather="cpu"></i>
                                 <span> Meter </span>
                             </a>
                         </li>
-
 
                         <li>
                             <a class='tp-link' href="customers">
@@ -177,31 +165,12 @@
                             </a>
                         </li>
 
-
-{{--                        <li>--}}
-{{--                            <a class='tp-link' href="organization">--}}
-{{--                                <i data-feather="folder"></i>--}}
-{{--                                <span> Organization </span>--}}
-{{--                            </a>--}}
-{{--                        </li>--}}
-
-
-
-
-
-
-
-
                         <li>
                             <a class='tp-link' href="estate-service">
                                 <i data-feather="layers"></i>
                                 <span> Estate Service </span>
                             </a>
                         </li>
-
-
-
-
 
                         <li>
                             <a href="charts-mixed.html#sidebar1" data-bs-toggle="collapse">
@@ -213,7 +182,7 @@
                             <div class="collapse" id="sidebar1">
                                 <ul class="nav-second-level">
                                     <li>
-                                        <a class='tp-link' href='credit-token'>Credit Token </a>
+                                        <a class='tp-link' href='credit-token'>Credit Token</a>
                                     </li>
                                 </ul>
                             </div>
@@ -226,11 +195,10 @@
                                 </ul>
                             </div>
 
-
                             <div class="collapse" id="sidebar1">
                                 <ul class="nav-second-level">
                                     <li>
-                                        <a class='tp-link' href='tamper-token'> Clear Tamper Token </a>
+                                        <a class='tp-link' href='tamper-token'>Clear Tamper Token</a>
                                     </li>
                                 </ul>
                             </div>
@@ -238,20 +206,11 @@
                             <div class="collapse" id="sidebar1">
                                 <ul class="nav-second-level">
                                     <li>
-                                        <a class='tp-link' href='clear-credit-token'> Clear Credit Token </a>
+                                        <a class='tp-link' href='clear-credit-token'>Clear Credit Token</a>
                                     </li>
                                 </ul>
                             </div>
-
-                            {{-- <div class="collapse" id="sidebar1">
-                                <ul class="nav-second-level">
-                                    <li>
-                                        <a class='tp-link' href='compensation-token'> Compensation Token  </a>
-                                    </li>
-                                </ul>
-                            </div> --}}
                         </li>
-
 
                         <li>
                             <a class='tp-link' href="pos-index">
@@ -260,7 +219,6 @@
                             </a>
                         </li>
 
-
                         <li>
                             <a class='tp-link' href="access-token">
                                 <i data-feather="lock"></i>
@@ -268,14 +226,12 @@
                             </a>
                         </li>
 
-
                         <li>
                             <a class='tp-link' href="users-list">
                                 <i data-feather="users"></i>
                                 <span> Users </span>
                             </a>
                         </li>
-
 
                         <li>
                             <a href="charts-mixed.html#sidebarBaseui" data-bs-toggle="collapse">
@@ -285,35 +241,13 @@
                             </a>
                             <div class="collapse" id="sidebarBaseui">
                                 <ul class="nav-second-level">
-                                    <li>
-                                        <a class='tp-link' href='report-transaction'>Transactions</a>
-                                    </li>
-
-                                    <li>
-                                        <a class='tp-link' href='meter-transaction-report'>Meter Transactions</a>
-                                    </li>
-
-                                    <li>
-                                        <a class='tp-link' href='utility-payment'>Utility Payments</a>
-                                    </li>
-
-                                    <li>
-                                        <a class='tp-link' href='enkpay-payment'>Enkpay Payments</a>
-                                    </li>
-
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-meter'>Meter</a>--}}
-                                    {{--                                    </li>--}}
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-customers'>Customer</a>--}}
-                                    {{--                                    </li>--}}
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-tariff'>Tariff</a>--}}
-                                    {{--                                    </li>--}}
+                                    <li><a class='tp-link' href='report-transaction'>Transactions</a></li>
+                                    <li><a class='tp-link' href='meter-transaction-report'>Meter Transactions</a></li>
+                                    <li><a class='tp-link' href='utility-payment'>Utility Payments</a></li>
+                                    <li><a class='tp-link' href='enkpay-payment'>Enkpay Payments</a></li>
                                 </ul>
                             </div>
                         </li>
-
 
                         <li>
                             <a href="charts-mixed.html#sidebarBaseui2" data-bs-toggle="collapse">
@@ -323,25 +257,11 @@
                             </a>
                             <div class="collapse" id="sidebarBaseui2">
                                 <ul class="nav-second-level">
-                                    <li>
-                                        <a class='tp-link' href='tariff_audit'>Tariff</a>
-                                    </li>
-                                    <li>
-                                        <a class='tp-link' href='utility_pay_audit'>Utility Payment</a>
-                                    </li>
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-meter'>Meter</a>--}}
-                                    {{--                                    </li>--}}
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-customers'>Customer</a>--}}
-                                    {{--                                    </li>--}}
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-tariff'>Tariff</a>--}}
-                                    {{--                                    </li>--}}
+                                    <li><a class='tp-link' href='tariff_audit'>Tariff</a></li>
+                                    <li><a class='tp-link' href='utility_pay_audit'>Utility Payment</a></li>
                                 </ul>
                             </div>
                         </li>
-
 
                         <li>
                             <a class='tp-link' href="settings">
@@ -350,10 +270,15 @@
                             </a>
                         </li>
 
-
                     </ul>
+
+                {{-- ===================== ROLE 1 ===================== --}}
                 @elseif(Auth::user()->role == 1)
+
+                {{-- ===================== ROLE 2 ===================== --}}
                 @elseif(Auth::user()->role == 2)
+
+                {{-- ===================== ROLE 3: Estate Admin (feature-gated) ===================== --}}
                 @elseif(Auth::user()->role == 3)
                     <ul id="side-menu">
 
@@ -366,14 +291,12 @@
                             </a>
                         </li>
 
-
                         <li>
                             <a class='tp-link' href="transformer-list">
                                 <i data-feather="box"></i>
                                 <span> Transformer </span>
                             </a>
                         </li>
-
 
                         <li>
                             <a class='tp-link' href="meter-list">
@@ -396,26 +319,17 @@
                             </a>
                         </li>
 
+                        {{-- Estate Service: only shown when status is available (1) --}}
+                        @if(($mod_features['services'] ?? 0) == 1)
+                            <li>
+                                <a class='tp-link' href="estate-service">
+                                    <i data-feather="layers"></i>
+                                    <span> Estate Service </span>
+                                </a>
+                            </li>
+                        @endif
 
-                        <li>
-                            <a class='tp-link' href="estate-service">
-                                <i data-feather="layers"></i>
-                                <span> Estate Service </span>
-                            </a>
-                        </li>
-
-
-
-
-
-{{--                        <li>--}}
-{{--                            <a class='tp-link' href="tariff-list">--}}
-{{--                                <i data-feather="divide-square"></i>--}}
-{{--                                <span> Tariff </span>--}}
-{{--                            </a>--}}
-{{--                        </li>--}}
-
-
+                        {{-- Meter Token: always shown regardless of feature status --}}
                         <li>
                             <a href="charts-mixed.html#sidebar1" data-bs-toggle="collapse">
                                 <i data-feather="zap"></i>
@@ -427,63 +341,42 @@
                                 $ptype = \App\Models\Estate::where('id', Auth::user()->estate_id)->first()->ptype;
                             @endphp
 
-
-                            @if($ptype == 2 || $ptype == 3 )
+                            @if($ptype == 2 || $ptype == 3)
                                 <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li>
-                                            <a class='tp-link' href='credit-token'>Credit Token </a>
-                                        </li>
+                                        <li><a class='tp-link' href='credit-token'>Credit Token</a></li>
                                     </ul>
                                 </div>
 
                                 <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li>
-                                            <a class='tp-link' href='kct-token'>Key Change Token</a>
-                                        </li>
-                                    </ul>
-                                </div>
-
-
-                                <div class="collapse" id="sidebar1">
-                                    <ul class="nav-second-level">
-                                        <li>
-                                            <a class='tp-link' href='tamper-token'> Clear Tamper Token </a>
-                                        </li>
+                                        <li><a class='tp-link' href='kct-token'>Key Change Token</a></li>
                                     </ul>
                                 </div>
 
                                 <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li>
-                                            <a class='tp-link' href='clear-credit-token'> Clear Credit Token </a>
-                                        </li>
+                                        <li><a class='tp-link' href='tamper-token'>Clear Tamper Token</a></li>
                                     </ul>
                                 </div>
 
-                                {{-- <div class="collapse" id="sidebar1">
+                                <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li>
-                                            <a class='tp-link' href='compensation-token'> Compensation Token  </a>
-                                        </li>
+                                        <li><a class='tp-link' href='clear-credit-token'>Clear Credit Token</a></li>
                                     </ul>
-                                </div> --}}
-
-
-                            @else
+                                </div>
                             @endif
-
-
                         </li>
 
-                        <li>
-                            <a class='tp-link' href="access-token">
-                                <i data-feather="lock"></i>
-                                <span> Access Token </span>
-                            </a>
-                        </li>
-
+                        {{-- Access Token: only shown when status is available (1) --}}
+                        @if(($mod_features['access_token'] ?? 0) == 1)
+                            <li>
+                                <a class='tp-link' href="access-token">
+                                    <i data-feather="lock"></i>
+                                    <span> Access Token </span>
+                                </a>
+                            </li>
+                        @endif
 
                         <li>
                             <a class='tp-link' href="users-list">
@@ -491,7 +384,6 @@
                                 <span> Users </span>
                             </a>
                         </li>
-
 
                         <li>
                             <a href="charts-mixed.html#sidebarBaseui" data-bs-toggle="collapse">
@@ -501,34 +393,11 @@
                             </a>
                             <div class="collapse" id="sidebarBaseui">
                                 <ul class="nav-second-level">
-                                    <li>
-                                        <a class='tp-link' href='report-transaction'>Transactions</a>
-                                    </li>
-
-                                    <li>
-                                        <a class='tp-link' href='meter-transaction-report'>Meter Transactions</a>
-                                    </li>
-
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-meters'>Meters</a>--}}
-                                    {{--                                    </li>--}}
-
-                                    <!-- <li>
-                                        <a class='tp-link' href='meter-tokens'>Meter Tokens</a>
-                                    </li> -->
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-meter'>Meter</a>--}}
-                                    {{--                                    </li>--}}
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-customers'>Customer</a>--}}
-                                    {{--                                    </li>--}}
-                                    {{--                                    <li>--}}
-                                    {{--                                        <a class='tp-link' href='report-tariff'>Tariff</a>--}}
-                                    {{--                                    </li>--}}
+                                    <li><a class='tp-link' href='report-transaction'>Transactions</a></li>
+                                    <li><a class='tp-link' href='meter-transaction-report'>Meter Transactions</a></li>
                                 </ul>
                             </div>
                         </li>
-
 
                         <li>
                             <a class='tp-link' href="settings">
@@ -537,13 +406,16 @@
                             </a>
                         </li>
 
-
                     </ul>
+
+                {{-- ===================== ROLE 4 ===================== --}}
                 @elseif(Auth::user()->role == 4)
+
+                {{-- ===================== ROLE 5 ===================== --}}
                 @elseif(Auth::user()->role == 5)
+
                 @else
                 @endif
-
 
             </div>
             <!-- End Sidebar -->
@@ -578,7 +450,6 @@
 
     </div>
 
-
     <script>
         let sessionLifetime = {{ config('session.lifetime') }} * 60 * 1000;
         let warningTime = sessionLifetime - (5 * 60 * 1000);
@@ -592,14 +463,8 @@
         }, sessionLifetime);
     </script>
 
-
-    <!-- ============================================================== -->
-    <!-- End Page content -->
-    <!-- ============================================================== -->
-
 </div>
 <!-- END wrapper -->
-
 
 <!-- Vendor -->
 <script src="{{url('')}}/public/asset/ass/libs/jquery/jquery.min.js"></script>
@@ -612,39 +477,21 @@
 
 <!-- Datatables js -->
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net/js/jquery.dataTables.min.js"></script>
-
-<!-- dataTables.bootstrap5 -->
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-bs5/js/dataTables.bootstrap5.min.js"></script>
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-buttons/js/dataTables.buttons.min.js"></script>
-
-<!-- buttons.colVis -->
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-buttons/js/buttons.colVis.min.js"></script>
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-buttons/js/buttons.flash.min.js"></script>
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-buttons/js/buttons.html5.min.js"></script>
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-buttons/js/buttons.print.min.js"></script>
-
-<!-- buttons.bootstrap5 -->
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-buttons-bs5/js/buttons.bootstrap5.min.js"></script>
-
-<!-- dataTables.keyTable -->
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-keytable/js/dataTables.keyTable.min.js"></script>
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-keytable-bs5/js/keyTable.bootstrap5.min.js"></script>
-
-<!-- dataTable.responsive -->
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-responsive-bs5/js/responsive.bootstrap5.min.js"></script>
-
-<!-- dataTables.select -->
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-select/js/dataTables.select.min.js"></script>
 <script src="{{url('')}}/public/asset/ass/libs/datatables.net-select-bs5/js/select.bootstrap5.min.js"></script>
-
-<!-- Datatable Demo App Js -->
 <script src="{{url('')}}/public/asset/ass/js/pages/datatable.init.js"></script>
-
-<!-- App js-->
 <script src="{{url('')}}/public/asset/ass/js/app.js"></script>
 
-
 </body>
-
 </html>
