@@ -132,6 +132,10 @@ class PaystackPaymentService implements PaymentServiceInterface
             $responseData = $response->json();
 
             if ($response->failed() || !($responseData['status'] ?? false)) {
+                Logger::warning('Paystack Failed for unknown reasons', [
+                    'paystack_response' => $response->json(),
+                ]);
+
                 return [
                     'status' => false,
                     'message' => $responseData['message'] ?? 'Payment initialization failed',
@@ -146,6 +150,13 @@ class PaystackPaymentService implements PaymentServiceInterface
                 'reference' => $transactionRef,
             ];
         } catch (Exception $e) {
+
+            Logger::warning('An Error Occurred', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
             return [
                 'status' => false,
                 'message' => 'Payment initialization failed: ' . $e->getMessage(),

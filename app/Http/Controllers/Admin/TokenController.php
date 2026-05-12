@@ -1487,7 +1487,9 @@ class TokenController extends Controller
                 $status = $payment_init['status'];
 
                 if (! $status) {
-                    Logger::warning("Payment init by {$customer_email} Failed");
+                    Logger::warning("Payment init by {$customer_email} Failed", [
+                        'payment_engine' => $payment_init,
+                    ]);
                     return redirect('/admin/credit-token')->with(
                         'error',
                         $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option"

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Constants\ServiceTypeConstants;
 use App\Constants\TransactionConstants;
+use App\Events\MeterTokenGenerated;
 use App\Services\PaystackPaymentService;
 use App\Services\TokenGenerationService;
 use App\Services\VatCalculator;
@@ -339,7 +340,6 @@ class Meter extends Model
                 $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
                 $tariffAmount = $tariffState->amount ?? 0;
 
-
                 $cdt = CreditToken::updateOrCreate([
                     'trx_id' => $trx_id,
                     'user_id' => $this->user_id,
@@ -361,38 +361,37 @@ class Meter extends Model
                     'tariff_id' => $tariff_id
                 ]);
 
-
+                $kct_token1 = $kct_token2 = null;
                 if ($need_kct) {
-
-                    // dump('entered needkct meter:240');
                     $kct_tokens = $token_gen['data']['kct_token'];
-
-                    $met = new MeterToken();
-                    $met->user_id = $this->user_id;
-                    $met->trx_id = $trx_id;
-                    $met->meterNo = $this->meterNo;
-                    $met->token = $token;
-                    $met->amount = $total_paid ?? 0;
-                    $met->unit = $unit;
-                    $met->kct_tokens = $kct_tokens[0] . "," . $kct_tokens[1];
-                    $met->vat = $vat;
-                    $met->estate_id = $this->estate_id;
-                    $met->status = 2;
-                    $met->receiver_meterNo = $receiver_meterNo;
-                    $met->save();
-
-
                     $kct_token1 = $kct_tokens[0];
                     $kct_token2 = $kct_tokens[1];
 
-                    $data2['kct_token1'] = $kct_tokens[0];
-                    $data2['kct_token2'] = $kct_tokens[1];
-
-                    send_kct_email_token($email, $token, $vending_amount, $kct_token1, $kct_token2);
-
+                    MeterToken::create([
+                        'user_id' => $this->user_id,
+                        'trx_id' => $trx_id,
+                        'meterNo' => $this->meterNo,
+                        'token' => $token,
+                        'amount' => $total_paid ?? 0,
+                        'unit' => $unit,
+                        'kct_tokens' => $kct_tokens[0] . "," . $kct_tokens[1],
+                        'vat' => $vat,
+                        'estate_id' => $this->estate_id,
+                        'status' => 2,
+                        'receiver_meterNo' => $receiver_meterNo,
+                    ]);
                 }
 
                 Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
+
+                MeterTokenGenerated::dispatch(
+                    $cdt,
+                    $trx->amount,
+                    $kct_token1,
+                    $kct_token2,
+                    $receiver_meterNo,
+                    $receiver_meterNo ? 'CREDIT TOKEN PURCHASE(OTHERS)' : null
+                );
 
             });
         } catch (Exception $e) {
