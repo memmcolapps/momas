@@ -320,11 +320,10 @@ class Meter extends Model
 
                 if ( ! $token_gen['success']) {
                     // dump('Failed Meter: 317');
-                    Transaction::where('trx_id', $trx_id)->update([
-                        'note' => 'token generation failed',
-                        'status' => 3,
-                        'wallet_creditted' => $vending_amount,
-                    ]);
+Transaction::where('trx_id', $trx_id)->update([
+                         'note' => 'token generation failed',
+                         'status' => 3,
+                     ]);
 
 
                     if ($action == 'momas_meter') {
@@ -402,10 +401,9 @@ class Meter extends Model
             if ($action == 'momas_meter') {
                 User::where('id', $this->user_id)->first()->creditWallet($amount);
 
-                Transaction::where('trx_id', $trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 3,
-                ]);
+Transaction::where('trx_id', $trx_id)->update([
+                     'status' => 3,
+                 ]);
             }
 
             throw $e;

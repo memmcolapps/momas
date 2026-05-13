@@ -147,10 +147,9 @@ class BillsController extends Controller
 
                 User::where('id', $auth_user->id)->first()->creditWallet($amount);
 
-                Transaction::where('trx_id', $request->trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 1,
-                ]);
+Transaction::where('trx_id', $request->trx_id)->update([
+                     'status' => 1,
+                 ]);
 
                 DB::commit();
 
@@ -159,16 +158,14 @@ class BillsController extends Controller
                 return error($message, $code);
             }
 
-            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+User::where('id', $auth_user->id)->first()->creditWallet($amount);
+             Transaction::where('trx_id', $request->trx_id)->update([
+                 'status' => 3,
+             ]);
 
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'wallet_creditted' => $amount,
-                'status' => 3,
-            ]);
+             DB::commit();
 
-            DB::commit();
-
-            Logger::error("An Error Occurred", [
+             Logger::error("An Error Occurred", [
                 'user_id' => $auth_user->id,
                 'error' => $response,
             ]);
@@ -177,14 +174,12 @@ class BillsController extends Controller
         } catch (Exception $e) {
             DB::rollBack();
 
-            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+User::where('id', $auth_user->id)->first()->creditWallet($amount);
+             Transaction::where('trx_id', $request->trx_id)->update([
+                 'status' => 3,
+             ]);
 
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'wallet_creditted' => $amount,
-                'status' => 3,
-            ]);
-
-            Logger::error("Airtime Purchase Exception", [
+             Logger::error("Airtime Purchase Exception", [
                 'user_id' => $auth_user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTrace(),
@@ -368,13 +363,12 @@ class BillsController extends Controller
                     'cable_bouquet' => $this->paybetaService->getCableBouquets($request->service_id),
                 ]);
 
-                User::where('id', $auth_user->id)->first()->creditWallet($amount);
-                Transaction::where('trx_id', $request->trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 3,
-                ]);
+User::where('id', $auth_user->id)->first()->creditWallet($amount);
+                 Transaction::where('trx_id', $request->trx_id)->update([
+                     'status' => 3,
+                 ]);
 
-                $this->paybetaService->popCableBouquetCache($request->service_id);
+                 $this->paybetaService->popCableBouquetCache($request->service_id);
 
                 DB::commit();
 
@@ -420,81 +414,32 @@ class BillsController extends Controller
                 return success($message);
             }
 
-            // Handle ambiguous "Server Error" response from Paybeta
-            if (isset($response['message']) && stripos($response['message'], 'Server Error') !== false) {
-                // Paybeta bug: transaction likely went through, do NOT refund
-                // Flag for manual review instead
-                Transaction::where('trx_id', $request->trx_id)->update([
-                    'status' => TransactionConstants::PENDING_REVIEW,
-                    'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
-                ]);
+// Handle ambiguous "Server Error" response from Paybeta
+             if (isset($response['message']) && stripos($response['message'], 'Server Error') !== false) {
+                 // Paybeta bug: transaction likely went through, do NOT refund
+                 // Flag for manual review instead
+                 Transaction::where('trx_id', $request->trx_id)->update([
+                     'status' => 3,
+                 ]);
 
-                DB::commit();
+                 DB::commit();
 
-                Logger::critical("Paybeta ambiguous response - DO NOT auto-refund", [
-                    'trx_id' => $request->trx_id,
-                    'decoder_no' => $request->decoder_no ?? null,
-                    'phone' => $request->phone ?? null,
-                    'amount' => $amount,
-                    'service' => $service,
-                    'response' => $response,
-                ]);
-
-                return StandardResponse::error(202, 'Your transaction is being verified, please wait.', []);
-            }
-
-            $errorMessage = $response['message'] ?? '';
-            if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
-
-                Logger::error("Cable Bouquet Purchase fail due to insufficient balance", [
-                    'user_id' => Auth::id(),
-                    'decoder_no/phone(for_showmax)' => $request->decoder_no ?? $request->phone,
-                ]);
-
-                User::where('id', $auth_user->id)->first()->creditWallet($amount);
-                Transaction::where('trx_id', $request->trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 3,
-                ]);
-
-                DB::commit();
-
-                $message = $response;
-                send_notification($message);
-                $message = "Cable Purchase not successful, Try again later";
+                 $message = "Cable Purchase not successful, Try again later";
                 $code = 422;
                 return error($message, $code);
             }
 
 
-            User::where('id', $auth_user->id)->first()->creditWallet($amount);
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'wallet_creditted' => $amount,
-                'status' => 3,
-            ]);
+User::where('id', $auth_user->id)->first()->creditWallet($amount);
+             Transaction::where('trx_id', $request->trx_id)->update([
+                 'status' => 3,
+             ]);
+         } catch (Exception $e) {
 
-            DB::commit();
-
-            $message = 'Cable Purchase not successful, Try again later';
-
-            $code = 422;
-            return error($message, $code);
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            if ($amount > 0) {
-                User::where('id', $auth_user->id)->first()->creditWallet($amount);
-
-                Transaction::where('trx_id', $request->trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 3,
-                ]);
-            }
-
-            Logger::error($e->getMessage(), [
-                'user_id' => $auth_user->id,
-                'trace' => $e->getTrace(),
-            ]);
+             Logger::error($e->getMessage(), [
+                 'user_id' => $auth_user->id,
+                 'trace' => $e->getTrace(),
+             ]);
 
             return StandardResponse::error(500, "An Error Occurred", [], [
                 'message' => $e->getMessage(),
@@ -598,10 +543,9 @@ class BillsController extends Controller
 
                 $this->paybetaService->popDataBundleCache($request->service_id);
 
-                Transaction::where('trx_id', $request->trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 3,
-                ]);
+Transaction::where('trx_id', $request->trx_id)->update([
+                     'status' => 3,
+                 ]);
 
                 DB::commit();
 
@@ -661,31 +605,29 @@ class BillsController extends Controller
 
             $errorMessage = $response['message'] ?? '';
 
-            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+User::where('id', $auth_user->id)->first()->creditWallet($amount);
 
-            Transaction::where('trx_id', $request->trx_id)->update([
-                'wallet_creditted' => $amount,
-                'status' => 3,
-            ]);
+             Transaction::where('trx_id', $request->trx_id)->update([
+                 'status' => 3,
+             ]);
 
-            DB::commit();
+             DB::commit();
 
-            $message = "Data Purchase not successful, Try again later";
+             $message = "Data Purchase not successful, Try again later";
             $code = 422;
             return error($message, $code);
         } catch (Exception $e) {
             DB::rollBack();
 
-            if ($amount > 0) {
-                User::where('id', $auth_user->id)->first()->creditWallet($amount);
+if ($amount > 0) {
+                 User::where('id', $auth_user->id)->first()->creditWallet($amount);
 
-                Transaction::where('trx_id', $request->trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 3,
-                ]);
-            }
+                 Transaction::where('trx_id', $request->trx_id)->update([
+                     'status' => 3,
+                 ]);
+             }
 
-            Logger::error("Data Purchase Exception", [
+             Logger::error("Data Purchase Exception", [
                 'user_id' => $auth_user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTrace(),
