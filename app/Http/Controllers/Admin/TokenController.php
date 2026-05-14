@@ -3745,7 +3745,7 @@ class TokenController extends Controller
 
                     }
 
-                    $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $verify="null");
+                    $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, verify: "null");
 
 
 
