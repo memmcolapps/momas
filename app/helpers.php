@@ -654,24 +654,30 @@ if (! function_exists('handle_pay_arrears')) {
         }
 
         $amount = $trx->amount;
-        $utilities = $admin_fee_sum = UtilitiesPayment::where('user_id', $user_id)
-            ->orderBy('created_at', 'asc')
-            ->where('status', '!=', 2)
-            ->where('type', '=', $type)
-            ->get();
+        $utilities = collect();
 
-        // dd($utilities, $type);
-        foreach($utilities as $node) {
-            if ($amount < $node->amount) {
-                break;
+        DB::transaction(function () use (&$amount, $user_id, $type, $trx, &$utilities) {
+            $pendingUtilities = UtilitiesPayment::where('user_id', $user_id)
+                ->where('status', '!=', 2)
+                ->where('type', '=', $type)
+                ->orderBy('created_at', 'asc')
+                ->lockForUpdate()
+                ->get();
+
+            foreach($pendingUtilities as $node) {
+                if ($amount < $node->amount) {
+                    break;
+                }
+
+                $amount -= $node->amount;
+                UtilitiesPayment::where('id', $node->id)->update(['status' => 2]);
             }
 
-            $amount -= $node->amount;
-            UtilitiesPayment::where('id', $node->id)->update(['status' => 2]);
-        }
+            $trx->vending_amount = $amount;
+            $trx->save();
 
-        $trx->vending_amount = $amount;
-        $trx->save();
+            $utilities = $pendingUtilities;
+        });
 
 
         return $return_amount ? $amount : $utilities;

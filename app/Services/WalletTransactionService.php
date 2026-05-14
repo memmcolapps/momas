@@ -22,6 +22,7 @@ class WalletTransactionService
             $user->main_wallet += $trx->amount;
             $user->save();
 
+            $trx->wallet_creditted = $trx->amount;
             $trx->status = TransactionConstants::PAYMENT_COMPLETED;
             $trx->save();
         });
@@ -67,6 +68,7 @@ class WalletTransactionService
             $user->main_wallet -= $trx->amount;
             $user->save();
 
+            $trx->wallet_creditted = 0;
             $trx->status = TransactionConstants::TRANSACTION_COMPLETE;
             $trx->save();
         });
@@ -87,6 +89,9 @@ class WalletTransactionService
         $user = User::where('id', $trx->user_id)->lockForUpdate()->first();
 
         $user->main_wallet += $trx->amount;
+            $user->save();
+
+            $trx->wallet_creditted = $trx->amount;
         $user->save();
 
         $trx->status = TransactionConstants::PAYMENT_COMPLETED;

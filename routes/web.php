@@ -55,7 +55,7 @@ Route::get('/fetch-tariff', [MeterController::class, 'fetchTariff']);
 
 
 Route::get('/clear', function(){
-    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    // \Illuminate\Support\Facades\Artisan::call('optimize:clear');
 });
 
 
@@ -103,8 +103,8 @@ Route::any('pay-flutter', [TransactionController::class, 'flutter_payment']);
 Route::any('payment-check', [TransactionController::class, 'flutter_verify']);
 Route::any('paystack-check', [TransactionController::class, 'paystack_verify']);
 Route::any('payment-check', [TransactionController::class, 'paystack_verify']);
-Route::any('payment', [TokenController::class, 'payment']);
-Route::any('fund_wallet', [TransactionController::class, 'fund_wallet']);
+Route::any('payment', [TokenController::class, 'payment'])->middleware('auth');
+Route::any('fund_wallet', [TransactionController::class, 'fund_wallet'])->middleware('auth');
 
 
 Route::any('set-2fa', [AuthController::class, 'set_2fa']);

@@ -147,7 +147,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
 
 Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
 Route::post('paystack-webhook', [TransactionController::class, 'paystackWebhook'])->name('paystack.webhook');
-Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
+// Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
 
 // ─────────────────────────────────────────────
 // Log Routes

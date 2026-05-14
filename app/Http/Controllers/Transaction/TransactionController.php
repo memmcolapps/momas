@@ -787,6 +787,12 @@ class TransactionController extends Controller
                 $trx = Transaction::where('trx_id', $ref)->first();
 
                 if ($trx) {
+                    DB::transaction(function () use ($trx) {
+                        $user = User::where('id', $trx->user_id)->lockForUpdate()->first();
+                        $user->creditWallet($trx->amount);
+                        $trx->wallet_creditted = $trx->amount;
+                        $trx->save();
+                    });
                     $action_payload = json_decode($trx->action_payload);
 
                     if ($action_payload?->action == 'momas_meter_web') {
@@ -1750,11 +1756,6 @@ class TransactionController extends Controller
 
             Logger::info("Paystack Webhook: Event={$event}, Reference={$reference}, Result=" . json_encode($result));
 
-            // Update transaction status based on the event
-            if (isset($payload['data']['reference'])) {
-                $this->updateTransactionFromWebhook($payload);
-            }
-
             // Return 200 OK to acknowledge receipt of the webhook
             // Paystack expects this response to stop retrying the webhook
             return response()->json([
@@ -1771,59 +1772,6 @@ class TransactionController extends Controller
                 'status' => false,
                 'message' => 'Webhook processing failed: ' . $e->getMessage()
             ], 500);
-        }
-    }
-
-    /**
-     * Update transaction status based on webhook data
-     *
-     * @param array $payload
-     * @return void
-     */
-    protected function updateTransactionFromWebhook(array $payload): void
-    {
-        $event = $payload['event'] ?? '';
-        $data = $payload['data'] ?? [];
-        $reference = $data['reference'] ?? '';
-
-        if (empty($reference)) {
-            return;
-        }
-
-        // Find the transaction by or trx_id
-        $transaction = Transaction::where('trx_id', $reference)
-            ->first();
-
-        if (!$transaction) {
-            Logger::warning("Paystack Webhook: Transaction not found for reference: {$reference}");
-            return;
-        }
-
-        // if ($transaction->status == 2 || $transaction->status == 3) {
-        //     Logger::warning("Paystack Webhook: Transaction duplicate call for reference: {$reference}");
-        //     return;
-        // }
-
-        switch ($event) {
-            case 'charge.success':
-                $transaction->status = 3; // Payment Completed Action yet to be taken
-                $transaction->save();
-                Logger::info("Paystack Webhook: Transaction {$reference} marked as paid");
-
-                ProcessPaystackWebhook::dispatch($reference);
-                break;
-
-            case 'charge.failed':
-                $transaction->status = 1; // Failed
-                $transaction->save();
-                Logger::info("Paystack Webhook: Transaction {$reference} marked as failed");
-                break;
-
-            case 'charge.pending':
-                $transaction->status = 0; // Pending
-                $transaction->save();
-                Logger::info("Paystack Webhook: Transaction {$reference} marked as pending");
-                break;
         }
     }
 

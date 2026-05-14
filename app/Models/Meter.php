@@ -381,7 +381,8 @@ Transaction::where('trx_id', $trx_id)->update([
                     ]);
                 }
 
-                Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
+                $user->debitWallet($trx->vending_amount ?? $trx->amount);
+                Transaction::where('trx_id', $trx_id)->update(['status' => '2', 'wallet_creditted' => 0]);
 
                 MeterTokenGenerated::dispatch(
                     $cdt,
@@ -396,14 +397,10 @@ Transaction::where('trx_id', $trx_id)->update([
         } catch (Exception $e) {
 
             $trx = Transaction::where('trx_id', $trx_id)->first();
-            $amount = $trx->vending_amount ?? $trx->amount;
 
             if ($action == 'momas_meter') {
-                User::where('id', $this->user_id)->first()->creditWallet($amount);
-
-Transaction::where('trx_id', $trx_id)->update([
-                     'status' => 3,
-                 ]);
+                $trx->status = 3;
+                $trx->save();
             }
 
             throw $e;
@@ -498,7 +495,9 @@ Transaction::where('trx_id', $trx_id)->update([
             ]);
 
             // Update transaction status
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+            $trxUser = User::find($trx->user_id);
+            $trxUser->debitWallet($trx->amount);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
         });
 
         return true;
@@ -609,7 +608,9 @@ Transaction::where('trx_id', $trx_id)->update([
             ]);
 
             // Update transaction status
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+            $trxUser = User::find($trx->user_id);
+            $trxUser->debitWallet($trx->amount);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
         });
 
         return true;
@@ -715,7 +716,9 @@ Transaction::where('trx_id', $trx_id)->update([
             ]);
 
             // Update transaction status
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+            $trxUser = User::find($trx->user_id);
+            $trxUser->debitWallet($trx->amount);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
         });
 
         return true;
