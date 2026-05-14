@@ -264,7 +264,6 @@ class Meter extends Model
                 $service = $other_meter ? "CREDIT TOKEN PURCHASE(OTHERS)" : "CREDIT TOKEN PURCHASE";
                 $service_type = $other_meter ? ServiceTypeConstants::CREDIT_TOKEN_OTHERS : ServiceTypeConstants::CREDIT_TOKEN;
 
-
                 $meter = $other_meter ?? $this;
 
 
@@ -294,13 +293,33 @@ class Meter extends Model
                     $verify = $verifier_engine($trx_id);
 
                     if (! $verify['is_successful']) {
+                        Logger::error('verify_transaction failed', [
+                            'message' => 'Buggy verify transaction failure - verify should never fail at this point',
+                            'trx' => $trx,
+                            'trx_id' => $trx->id,
+                        ]);
+
                         throw new Exception("Transaction Failed");
                     }
                 }
 
                 if ($trx->status === 1) {
+                    Logger::error('verify_transaction failed', [
+                        'message' => 'Payment failed',
+                        'trx' => $trx,
+                        'trx_id' => $trx->id,
+                    ]);
+
                     throw new Exception("Transaction Failed");
                 }
+
+
+            // dump('Passed trx ver');
+
+            $need_kct = $this->NeedKCT;
+
+            $tariff_index = Tariff::where('id', $tariff_id)->first()->tariff_index ?? null;
+            $token_gen = TokenGenerationService::generateMeterToken($this, $tariff_index, $unit, $this->NeedKCT);
 
 
                 $need_kct = $meter->NeedKCT;
