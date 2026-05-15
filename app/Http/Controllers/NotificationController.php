@@ -12,13 +12,13 @@ class NotificationController extends Controller
 
 
         return StandardResponse::success(200, 'Fetched Version successfully', [
-            'description' => "Experience a faster, more reliable app. We've improved our payment system, redesigned the interface for smooth navigation, and added smart loading indicators so you're never left waiting. Jump in and get going.",
-            'minimum_version' => '1.0.2',
-            'latest_version' => '1.1.0',
-            'last_update_date' => '2026-04-02',
-            'app_size' => '26.1mb',
-            'play_store_url' => 'https://play.google.com/store/apps/details?id=com.memmcol.momaspayplus',
-            'app_store_url' => 'https://apps.apple.com/us/app/momaspay-plus/id6743942353',
+            'description' => config('constants.app_update_data.app_update_description'),
+            'minimum_version' => config('constants.app_update_data.app_minimum_version'),
+            'latest_version' => config('constants.app_update_data.app_latest_version'),
+            'last_update_date' => config('constants.app_update_data.app_last_update_date'),
+            'app_size' => config('constants.app_update_data.app_size'),
+            'play_store_url' => config('constants.app_update_data.app_playstore_url'),
+            'app_store_url' => config('constants.app_update_data.app_appstore_url'),
         ]);
     }
 }
