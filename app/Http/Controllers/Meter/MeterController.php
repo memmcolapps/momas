@@ -77,10 +77,10 @@ class MeterController extends Controller
     public function validate_mobile_meter(request $request)
     {
         $validator = Validator::make($request->all(), [
-            'estateId' => [
-                'required',
-                Rule::exists('estates', 'id')->where('status', 2),
-                ],
+            // 'estateId' => [
+            //     'required',
+            //     Rule::exists('estates', 'id')->where('status', 2),
+            //     ],
             'meterNo'  => [
                 'required',
                 Rule::exists('meters', 'meterNo'),
@@ -90,18 +90,20 @@ class MeterController extends Controller
         if ($validator->fails()) {
 
             return StandardResponse::error(422, 'Validation Error', [
-                'validation_error' => $validator->errors(),
+                'error' => $validator->errors(),
             ]);
         }
 
 
 
 
+
+
         $user = User::where('meterNo', $request->meterNo)->first() ?? null;
-        $get_user_estate_id = User::where('meterNo', $request->meterNo)->first()->estate_id ?? null;
+        $get_user_estate_id = $user?->estate_id;
 
 
-        $meter = Meter::where('meterNo', $request->meterNo)->where('estate_id', $request->estateId)->first() ?? null;
+        $meter = Meter::where('meterNo', $request->meterNo)->where('estate_id', $get_user_estate_id)->first() ?? null;
         if ($meter == null) {
             $message = "Validation Failed, please check meter number or estate selected";
             $code = 422;
@@ -134,7 +136,7 @@ class MeterController extends Controller
 
         // $data['meter_type'] = $meter_type;
 
-        $es_id = $request->estateId ?? null;
+        $es_id = $get_user_estate_id;
         $duration = Estate::where('id', $es_id)->first()->duration ?? null;
 
         $estate_id = $es_id;
@@ -159,8 +161,8 @@ class MeterController extends Controller
 
         }
 
-        $min_pur = Estate::where('id', $request->estateId)->first()->min_pur ?? null;
-        $max_pur = Estate::where('id', $request->estateId)->first()->max_pur ?? null;
+        $min_pur = Estate::where('id', $get_user_estate_id)->first()->min_pur ?? null;
+        $max_pur = Estate::where('id', $get_user_estate_id)->first()->max_pur ?? null;
         $data['min_purchase'] = (int)$min_pur;
         $user_info = User::where('meterNo', $request->meterNo)->first();
         $estate_id = $user_info->estate_id ?? null;
