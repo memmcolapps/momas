@@ -15,5 +15,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(ModFeatureSeeder::class);
         $this->call(EstateModFeatureSeeder::class);
+        $this->call(AppSettingSeeder::class);
     }
 }

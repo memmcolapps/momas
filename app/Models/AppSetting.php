@@ -25,6 +25,7 @@ class AppSetting extends Model implements AuditableContract
      * @var array<string>
      */
     protected $fillable = [
+        'title',
         'key',
         'value',
         'description',
@@ -101,7 +102,7 @@ class AppSetting extends Model implements AuditableContract
                 return $default;
             }
 
-            return $setting->value;
+            return json_decode($setting->value);
         });
     }
 
@@ -114,9 +115,15 @@ class AppSetting extends Model implements AuditableContract
      * @param string|null $group
      * @return self
      */
-    public static function set(string $key, $value, ?string $description = null, ?string $group = null): self
+    public static function set(string $key, $value, ?string $title = null, ?string $description = null, ?string $group = null): self
     {
+        $value = json_encode($value);
+
         $data = ['value' => $value];
+
+        if ($title !== null) {
+            $data['title'] = $title;
+        }
 
         if ($description !== null) {
             $data['description'] = $description;
@@ -126,6 +133,7 @@ class AppSetting extends Model implements AuditableContract
             $data['group'] = $group;
         }
 
+        // dd($data);
         $setting = static::updateOrCreate(['key' => $key], $data);
 
         // Clear cache after update
