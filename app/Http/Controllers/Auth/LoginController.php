@@ -79,6 +79,7 @@ class LoginController extends Controller
         $adminFeeAmount = $estate->getAdminFee();
         $adminFeeFlag   = "0";
         $meter          = meter();
+        $meter = $meter ? $meter : null;
         $user           = user();
         $utilityAmount  = $estate->total_utility_amount ?? 0;
         $duration       = $estate->duration ?? null;
@@ -190,7 +191,7 @@ class LoginController extends Controller
             $user['meter']             = $meter;
             $user['tariff']            = $tariffs;
             $user['monthly_admin_fee'] = $adminFeeFlag;
-            $user['meter_status']      = $meter->status;
+            $user['meter_status']      = $meter?->status;
 
             // ── Mod features ──────────────────────────────────────────────────────
             $features =  EstateModFeature::byUser($user)
@@ -216,7 +217,7 @@ class LoginController extends Controller
                     if (
                         in_array($feature->slug, [\App\Constants\Feature::MOMAS_METER, \App\Constants\Feature::OTHER_METER])
                         && $feature->estate_status == ModFeature::AVAILABLE_STATUS
-                        && ! $meter->isActive()
+                        && ! $meter?->isActive()
                     ) {
                         $final_status = ModFeature::TEMPORARY_DOWNTIME_STATUS;
                     }
@@ -240,7 +241,7 @@ class LoginController extends Controller
             'login_via'        => $isEmailLogin ? 'email' : 'meterNo',
             'identifier'       => $isEmailLogin ? $request->email : $request->meterNo,
             'user_status'      => $usr->status,
-            'meter_status'     => $meter->status,
+            'meter_status'     => $meter?->status,
             'tariffs_exist'    => $tariffs->isNotEmpty(),
             'admin_fee_amount' => $adminFeeAmount,
             'admin_fee_paid'   => $adminFeeFlag,
