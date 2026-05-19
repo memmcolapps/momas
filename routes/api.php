@@ -140,6 +140,8 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::get('get-token-report', [AnalyticController::class, 'filterAccessTokens']);
     });
 
+    Route::post('app-version', [AppSettingController::class, 'updateAppVersion']);
+
 });
 
 // ─────────────────────────────────────────────
@@ -147,7 +149,6 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
 // ─────────────────────────────────────────────
 
 Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
-Route::post('app-version', [AppSettingController::class, 'updateAppVersion']);
 Route::post('paystack-webhook', [TransactionController::class, 'paystackWebhook'])->name('paystack.webhook');
 Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
 
