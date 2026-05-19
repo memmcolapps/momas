@@ -187,7 +187,7 @@ class MeterController extends Controller
         $tariffs = Tariff::where('estate_id', $user_info->estate_id)->get();
 
 
-        $data['customer_name'] = $user->first_name . " " . $user->last_name;
+        $data['customer_name'] = $user->first_name . " " . $user->last_name . ' | ' . $user->estate_name;
         $data['address'] = $user->address . ", " . $user->city . ", " . $user->state;
         $data['tariffs'] = $tariffs;
 
