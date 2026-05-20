@@ -28,6 +28,9 @@ class LoginController extends Controller
         $isMeterLogin  = !empty($request->meterNo);
 
         if (!$isEmailLogin && !$isMeterLogin) {
+            Logger::warning('Login attempt missing credentials', [
+                'via' => $isEmailLogin ? 'email' : 'meter',
+            ]);
             return error("Email or Meter Number is required", 422);
         }
 
@@ -42,10 +45,19 @@ class LoginController extends Controller
             )->first();
 
         if ($usr === null) {
+            Logger::warning('Login attempt: user not found', [
+                'login_via'  => $isEmailLogin ? 'email' : 'meterNo',
+                'identifier' => $isEmailLogin ? $request->email : $request->meterNo,
+            ]);
             return error("User does not exist", 404);
         }
 
         if ($usr->status == 0) {
+            Logger::warning('Login attempt: user account deactivated', [
+                'user_id'  => $usr->id,
+                'login_via' => $isEmailLogin ? 'email' : 'meterNo',
+                'identifier' => $isEmailLogin ? $request->email : $request->meterNo,
+            ]);
             return error("Your Account has been deactivated reach out to your estate admin for help", 403);
         }
 
@@ -55,6 +67,11 @@ class LoginController extends Controller
 
         if (!auth()->attempt($credentials)) {
             $field = $isEmailLogin ? "Email" : "Meter No";
+            Logger::warning('Login attempt: invalid credentials', [
+                'user_id'   => $usr->id,
+                'login_via' => $isEmailLogin ? 'email' : 'meterNo',
+                'identifier' => $isEmailLogin ? $request->email : $request->meterNo,
+            ]);
             return error("{$field} or Password Incorrect", 422);
         }
 
@@ -86,154 +103,160 @@ class LoginController extends Controller
         $mod_features   = [];
 
         // ─── 5. Transaction: backfill utilities & admin fees ─────────────────────
-        DB::transaction(function () use (
-            $estateId, $userId, $tariffs, $adminFeeAmount,
-            &$adminFeeFlag, $meter, &$user, $utilityAmount,
-            $duration, &$mod_features
-        ) {
-            // ── Helper ────────────────────────────────────────────────────────────
-            $createPayment = function (string $type, float $amount, string $duration, Carbon $startDate) use ($userId, $estateId) {
-                $nextDueDate = $startDate->copy();
+        try {
+            DB::transaction(function () use (
+                $estateId, $userId, $tariffs, $adminFeeAmount,
+                &$adminFeeFlag, $meter, &$user, $utilityAmount,
+                $duration, &$mod_features
+            ) {
+                // ── Helper ────────────────────────────────────────────────────────────
+                $createPayment = function (string $type, float $amount, string $duration, Carbon $startDate) use ($userId, $estateId) {
+                    $nextDueDate = $startDate->copy();
 
-                match ($duration) {
-                    'weekly'  => $nextDueDate->addWeek(),
-                    'monthly' => $nextDueDate->addMonth(),
-                    'yearly'  => $nextDueDate->addYear(),
-                    default   => send_notification("Unknown duration '{$duration}'"),
+                    match ($duration) {
+                        'weekly'  => $nextDueDate->addWeek(),
+                        'monthly' => $nextDueDate->addMonth(),
+                        'yearly'  => $nextDueDate->addYear(),
+                        default   => send_notification("Unknown duration '{$duration}'"),
+                    };
+
+                    return UtilitiesPayment::create([
+                        'estate_id'     => $estateId,
+                        'user_id'       => $userId,
+                        'amount'        => $amount,
+                        'total_amount'  => $amount,
+                        'next_due_date' => $nextDueDate,
+                        'duration'      => $duration,
+                        'type'          => $type,
+                        'status'        => 0,
+                    ]);
                 };
 
-                return UtilitiesPayment::create([
-                    'estate_id'     => $estateId,
-                    'user_id'       => $userId,
-                    'amount'        => $amount,
-                    'total_amount'  => $amount,
-                    'next_due_date' => $nextDueDate,
-                    'duration'      => $duration,
-                    'type'          => $type,
-                    'status'        => 0,
-                ]);
-            };
+                if ($duration === null) {
+                    throw new \RuntimeException('Estate utility duration not set');
+                }
 
-            if ($duration === null) {
-                // Can't throw inside a transaction cleanly — flag it and handle after
-                // Alternatively, validate $duration before the transaction starts (recommended)
-                return;
-            }
-
-            // ── Utility backfill ──────────────────────────────────────────────────
-            if ($utilityAmount > 0) {
-                $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
-                    ->where('type', 'utilities')
-                    ->orderByDesc('created_at')
-                    ->value('created_at');
-
-                $backfillFrom = $lastUtilityDate
-                    ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
-                    : Carbon::parse(Auth::user()->created_at)->startOfMonth();
-
-                $now = Carbon::now()->startOfMonth();
-
-                while ($backfillFrom->lte($now)) {
-                    $exists = UtilitiesPayment::where('user_id', $userId)
+                // ── Utility backfill ──────────────────────────────────────────────────
+                if ($utilityAmount > 0) {
+                    $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
                         ->where('type', 'utilities')
-                        ->whereYear('created_at', $backfillFrom->year)
-                        ->whereMonth('created_at', $backfillFrom->month)
-                        ->exists();
+                        ->orderByDesc('created_at')
+                        ->value('created_at');
 
-                    if (!$exists) {
-                        $createPayment('utilities', $utilityAmount, $duration, $backfillFrom->copy());
+                    $backfillFrom = $lastUtilityDate
+                        ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
+                        : Carbon::parse(Auth::user()->created_at)->startOfMonth();
+
+                    $now = Carbon::now()->startOfMonth();
+
+                    while ($backfillFrom->lte($now)) {
+                        $exists = UtilitiesPayment::where('user_id', $userId)
+                            ->where('type', 'utilities')
+                            ->whereYear('created_at', $backfillFrom->year)
+                            ->whereMonth('created_at', $backfillFrom->month)
+                            ->exists();
+
+                        if (!$exists) {
+                            $createPayment('utilities', $utilityAmount, $duration, $backfillFrom->copy());
+                        }
+
+                        $backfillFrom->addMonth();
                     }
-
-                    $backfillFrom->addMonth();
                 }
-            }
 
-            // ── Admin fee backfill ────────────────────────────────────────────────
-            if ($adminFeeAmount > 0) {
-                $lastAdminFeeDate = UtilitiesPayment::where('user_id', $userId)
-                    ->where('type', 'admin_fee')
-                    ->orderByDesc('created_at')
-                    ->value('created_at');
-
-                $backfillFrom = $lastAdminFeeDate
-                    ? Carbon::parse($lastAdminFeeDate)->addMonth()->startOfMonth()
-                    : Carbon::parse(Auth::user()->created_at)->startOfMonth();
-
-                $now = Carbon::now()->startOfMonth();
-
-                while ($backfillFrom->lte($now)) {
-                    $exists = UtilitiesPayment::where('user_id', $userId)
+                // ── Admin fee backfill ────────────────────────────────────────────────
+                if ($adminFeeAmount > 0) {
+                    $lastAdminFeeDate = UtilitiesPayment::where('user_id', $userId)
                         ->where('type', 'admin_fee')
-                        ->whereYear('created_at', $backfillFrom->year)
-                        ->whereMonth('created_at', $backfillFrom->month)
-                        ->exists();
+                        ->orderByDesc('created_at')
+                        ->value('created_at');
 
-                    if (!$exists) {
-                        $createPayment('admin_fee', $adminFeeAmount, 'monthly', $backfillFrom->copy());
-                    }
+                    $backfillFrom = $lastAdminFeeDate
+                        ? Carbon::parse($lastAdminFeeDate)->addMonth()->startOfMonth()
+                        : Carbon::parse(Auth::user()->created_at)->startOfMonth();
 
-                    $backfillFrom->addMonth();
-                }
-            }
+                    $now = Carbon::now()->startOfMonth();
 
-            // ── Admin fee paid flag (current month) ───────────────────────────────
-            $adminFeeFlag = UtilitiesPayment::where('user_id', $userId)
-                ->where('type', 'admin_fee')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->where('status', 2)
-                ->exists() ? "1" : "0";
+                    while ($backfillFrom->lte($now)) {
+                        $exists = UtilitiesPayment::where('user_id', $userId)
+                            ->where('type', 'admin_fee')
+                            ->whereYear('created_at', $backfillFrom->year)
+                            ->whereMonth('created_at', $backfillFrom->month)
+                            ->exists();
 
-            // ── Build response user object ─────────────────────────────────────────
-            $token = auth()->user()->createToken('API token')->accessToken;
+                        if (!$exists) {
+                            $createPayment('admin_fee', $adminFeeAmount, 'monthly', $backfillFrom->copy());
+                        }
 
-            $user['token']             = $token;
-            $user['meter']             = $meter;
-            $user['tariff']            = $tariffs;
-            $user['monthly_admin_fee'] = $adminFeeFlag;
-            $user['meter_status']      = $meter?->status;
-
-            // ── Mod features ──────────────────────────────────────────────────────
-            $features =  EstateModFeature::byUser($user)
-                ->join('mod_features', 'mod_features.id', 'estate_mod_features.mod_feature_id')
-                ->select([
-                        'estate_mod_features.status as estate_status',
-                        'estate_mod_features.estate_id',
-                        'mod_features.title',
-                        'mod_features.slug',
-                        'mod_features.status as mod_status'
-                    ])
-                ->get();
-
-
-            $mod_features = [];
-
-            foreach ($features as $feature) {
-                $final_status = $feature->mod_status;
-
-                if ($feature->mod_status == ModFeature::AVAILABLE_STATUS) {
-                    $final_status = $feature->estate_status;
-
-                    if (
-                        in_array($feature->slug, [\App\Constants\Feature::MOMAS_METER, \App\Constants\Feature::OTHER_METER])
-                        && $feature->estate_status == ModFeature::AVAILABLE_STATUS
-                        && ! $meter?->isActive()
-                    ) {
-                        $final_status = ModFeature::TEMPORARY_DOWNTIME_STATUS;
+                        $backfillFrom->addMonth();
                     }
                 }
 
-                $mod_features[$feature->slug] = (int) $final_status;
+                // ── Admin fee paid flag (current month) ───────────────────────────────
+                $adminFeeFlag = UtilitiesPayment::where('user_id', $userId)
+                    ->where('type', 'admin_fee')
+                    ->whereMonth('created_at', Carbon::now()->month)
+                    ->whereYear('created_at', Carbon::now()->year)
+                    ->where('status', 2)
+                    ->exists() ? "1" : "0";
+
+                // ── Build response user object ─────────────────────────────────────────
+                $token = auth()->user()->createToken('API token')->accessToken;
+
+                $user['token']             = $token;
+                $user['meter']             = $meter;
+                $user['tariff']            = $tariffs;
+                $user['monthly_admin_fee'] = $adminFeeFlag;
+                $user['meter_status']      = $meter?->status;
+
+                // ── Mod features ──────────────────────────────────────────────────────
+                $features =  EstateModFeature::byUser($user)
+                    ->join('mod_features', 'mod_features.id', 'estate_mod_features.mod_feature_id')
+                    ->select([
+                            'estate_mod_features.status as estate_status',
+                            'estate_mod_features.estate_id',
+                            'mod_features.title',
+                            'mod_features.slug',
+                            'mod_features.status as mod_status'
+                        ])
+                    ->get();
+
+
+                $mod_features = [];
+
+                foreach ($features as $feature) {
+                    $final_status = $feature->mod_status;
+
+                    if ($feature->mod_status == ModFeature::AVAILABLE_STATUS) {
+                        $final_status = $feature->estate_status;
+
+                        if (
+                            in_array($feature->slug, [\App\Constants\Feature::MOMAS_METER, \App\Constants\Feature::OTHER_METER])
+                            && $feature->estate_status == ModFeature::AVAILABLE_STATUS
+                            && ! $meter?->isActive()
+                        ) {
+                            $final_status = ModFeature::TEMPORARY_DOWNTIME_STATUS;
+                        }
+                    }
+
+                    $mod_features[$feature->slug] = (int) $final_status;
+                }
+            });
+
+            if (empty($mod_features)) {
+                $mod_features = null;
             }
-        });
-
-        if (empty($mod_features)) {
-            $mod_features = null;
-        }
-
-        // ─── 6. Guard: duration must be set (validate before transaction ideally) ─
-        if ($duration === null) {
-            return error("Estate utility duration not set, Contact support", 404);
+        } catch (\Throwable $e) {
+            Logger::error('Login: transaction failed', [
+                'user_id'     => $userId,
+                'estate_id'   => $estateId,
+                'login_via'   => $isEmailLogin ? 'email' : 'meterNo',
+                'identifier'  => $isEmailLogin ? $request->email : $request->meterNo,
+                'exception'   => $e->getMessage(),
+                'file'        => $e->getFile(),
+                'line'        => $e->getLine(),
+            ]);
+            return error("Server error occurred, please try again later", 500);
         }
 
         // ─── 7. Log ───────────────────────────────────────────────────────────────
