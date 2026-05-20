@@ -3749,7 +3749,7 @@ class TokenController extends Controller
                     $access_point = $request->header('Access-Point') ?? 'web';
                     $action = $access_point == 'mobile' ? 'momas_meter' : 'momas_meter_web';
 
-                    $meter->getNewToken($tariff_id, $trx_id, $verify="null", $receiver_meterNo=$receiver_meterNo, $action=$action);
+                    $meter->getNewToken($tariff_id, $trx_id, verify:"null", receiver_meterNo:$receiver_meterNo, action:$action);
 
 
 
