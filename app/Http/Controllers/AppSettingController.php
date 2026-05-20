@@ -3,13 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppSetting;
+use App\Models\Logger;
 use App\Services\StandardResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AppSettingController extends Controller
 {
     public function updateAppVersion(Request $request)
     {
+
+        $auth_user = Auth::user();
+
+        if (! $auth_user->isSuperAdmin()) {
+            Logger::error('User without the required permission tried to update setting', [
+                'user_id' => $auth_user->id,
+                'request' => $request->all(),
+            ]);
+
+            return StandardResponse::error(403, 'You do not have the required permissions to perform this action', []);
+        }
+
         $request->validate([
             'app_minimum_version'    => 'nullable|string',
             'app_latest_version'     => 'nullable|string',
