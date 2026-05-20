@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\MeterTokenGenerated;
+use App\Models\Logger;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 
@@ -10,6 +11,11 @@ class SendMeterTokenEmailNotification
 {
     public function handle(MeterTokenGenerated $event): void
     {
+        Logger::info('SendMeterTokenEmailNotification triggered', [
+            'token_id' => $event->creditToken->id ?? null,
+            'meter_no' => $event->recipientMeterNo,
+        ]);
+
         $creditToken = $event->creditToken;
         $email = $creditToken->customer_email;
         $token = $creditToken->token;
