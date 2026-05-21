@@ -102,6 +102,7 @@ Route::get('/search-meter', [MeterController::class, 'searchMeter']);
 Route::any('pay-flutter', [TransactionController::class, 'flutter_payment']);
 Route::any('payment-check', [TransactionController::class, 'flutter_verify']);
 Route::any('paystack-check', [TransactionController::class, 'paystack_verify']);
+Route::any('payment-check', [TransactionController::class, 'paystack_verify']);
 Route::any('payment', [TokenController::class, 'payment']);
 Route::any('fund_wallet', [TransactionController::class, 'fund_wallet']);
 
@@ -157,7 +158,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('add-new-customer', [DashboardContoller::class, 'add_new_customer']);
     Route::get('get-unassigned-meters', [DashboardContoller::class, 'get_unassigned_meters']);
 
-    Route::get('user-delete', [DashboardContoller::class, 'delete_user']);
+    // Route::get('user-delete', [DashboardContoller::class, 'delete_user']);
     Route::get('view-user', [DashboardContoller::class, 'view_user']);
     Route::post('update-user', [DashboardContoller::class, 'update_user']);
     Route::post('update_user_email', [DashboardContoller::class, 'update_user_email']);
@@ -176,6 +177,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('view-estate', [EstateController::class, 'estate_view']);
     Route::post('estate-update-info', [EstateController::class, 'estate_update']);
     Route::post('estate-update-utilities', [EstateController::class, 'estate_update_utilities']);
+    Route::post('estate-feature-update', [EstateController::class, 'estate_feature_update']);
+    Route::post('feature-update', [EstateController::class, 'feature_update']);
     Route::post('update-duration', [EstateController::class, 'update_duration']);
     Route::get('estate-service', [EstateServiceController::class, 'index']);
     Route::get('new-service', [EstateServiceController::class, 'create_service']);
@@ -217,6 +220,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('view-organization', [DashboardContoller::class, 'organization_view']);
     Route::post('organization-update', [DashboardContoller::class, 'organization_update']);
     Route::get('organization-delete', [DashboardContoller::class, 'organization_delete']);
+    Route::get("organization-deactivate", [DashboardContoller::class, "organization_deactivate"]);
+    Route::get("organization-activate", [DashboardContoller::class, "organization_activate"]);
     Route::post('set-percentage', [DashboardContoller::class, 'set_percentage']);
 
 
@@ -251,6 +256,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('meter-activate', [MeterController::class, 'meter_activate']);
     Route::get('meter-deactivate', [MeterController::class, 'meter_deactivate']);
     Route::get('meter-block', [MeterController::class, 'meter_block']);
+    Route::get('meter-unblock', [MeterController::class, 'meter_unblock']);
 
 
     Route::get('transformer-list', [TransformerController::class, 'list_transformer']);
@@ -259,6 +265,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('add-new-transformer', [TransformerController::class, 'add_new_transformer']);
     Route::post('update-transformer', [TransformerController::class, 'update_transformer']);
     Route::get('transformer-delete', [TransformerController::class, 'delete_transformer']);
+    Route::get("transformer-deactivate", [TransformerController::class, "transformer_deactivate"]);
+    Route::get("transformer-activate", [TransformerController::class, "transformer_activate"]);
 
 
     Route::get('settings', [DashboardContoller::class, 'settings']);
@@ -286,6 +294,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('update-the-tariff', [TariffController::class, 'update_the_tariff']);
     Route::post('update-tariffstate', [TariffController::class, 'update_tariffstate']);
     Route::post('update-tariff-index', [TariffController::class, 'update_tariff_index']);
+    Route::get("tariff-deactivate", [TariffController::class, "tariff_deactivate"]);
+    Route::get("tariff-activate", [TariffController::class, "tariff_activate"]);
 
 
     Route::post('update-nepa', [TariffController::class, 'update_nepa']);

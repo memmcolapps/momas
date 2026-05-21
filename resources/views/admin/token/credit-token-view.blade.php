@@ -638,7 +638,7 @@
                                     </div>
                                     <hr>
                                     <div class="card-body">
-                                        <table id=""
+                                        <<table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
                                             <tr>
@@ -649,6 +649,7 @@
                                                 <th scope="col" class="cursor-pointer">Tariff Index</th>
                                                 <th scope="col" class="cursor-pointer desc">Unit</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
+                                                {{-- <th scope="col" class="cursor-pointer desc">TRX_ID</th> --}}
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
 
@@ -677,8 +678,10 @@
                                                         @elseif($data->status == 3)
                                                             <span class="badge text-bg-danger">Declined</span>
                                                         @endif
+                                                        {{-- {{ $data->status . ' - ' . $data->trx_id  }} --}}
 
                                                     </td>
+                                                    {{-- <td>{{$data->trx_id}}</td> --}}
                                                     <td>{{$data->created_at}}</td>
 
 
@@ -694,7 +697,7 @@
                                                                 }
                                                             </script>
 
-                                                         @elseif($data->status == 0)
+                                                        @elseif($data->status == 0)
 
                                                             <a href="retry-generate-credit-token?trx_id={{$data->trx_id}}"
                                                                onclick="return confirmgenertetoken();"

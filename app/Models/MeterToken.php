@@ -24,6 +24,7 @@ class MeterToken extends Model
         'vat',
         'estate_id',
         'status',
+        'receiver_meterNo',
     ];
 
     public function estate()

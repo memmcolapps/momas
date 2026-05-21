@@ -2,15 +2,17 @@
 
 namespace App\Services;
 
+use App\Contracts\PaymentServiceInterface;
+use App\Models\Logger;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use App\Models\Logger;
 use InvalidArgumentException;
 
-class PaystackPaymentService {
+class PaystackPaymentService implements PaymentServiceInterface
+{
     protected $paystack_public;
     protected $paystack_secret;
     protected $payment_endpoint;
@@ -130,6 +132,10 @@ class PaystackPaymentService {
             $responseData = $response->json();
 
             if ($response->failed() || !($responseData['status'] ?? false)) {
+                Logger::warning('Paystack Failed for unknown reasons', [
+                    'paystack_response' => $response->json(),
+                ]);
+
                 return [
                     'status' => false,
                     'message' => $responseData['message'] ?? 'Payment initialization failed',
@@ -144,6 +150,13 @@ class PaystackPaymentService {
                 'reference' => $transactionRef,
             ];
         } catch (Exception $e) {
+
+            Logger::warning('An Error Occurred', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
             return [
                 'status' => false,
                 'message' => 'Payment initialization failed: ' . $e->getMessage(),
@@ -158,7 +171,7 @@ class PaystackPaymentService {
      * @param string $transactionId The transaction reference to verify
      * @return array Verification result
      */
-    public function verifyTransaction(string $transactionId): array
+    public function verifyTransaction(string | int $transactionId): array
     {
         try {
             $response = Http::withHeaders([

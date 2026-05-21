@@ -85,7 +85,7 @@
                         </div>
 
                         <div class="card-body">
-                            <table id="datatable-buttons"
+                            <table id=""
                                    class="table table-striped table-bordered dt-responsive nowrap">
                                 <thead>
                                 <tr>
@@ -95,63 +95,53 @@
                                     <th scope="col" class="cursor-pointer">Lga</th>
                                     <th scope="col" class="cursor-pointer">Status</th>
                                     <th scope="col" class="cursor-pointer desc">Action</th>
-                                    <th scope="col" class="cursor-pointer desc">Action</th>
 
 
                                 </tr>
                                 </thead>
-                                <tbody>
+                                 <tbody>
 
+                                      @foreach($estate_list as $data)
+                                          @php
+                                              $isDisabled = $data->status != 2;
+                                              $rowClass = $isDisabled ? 'table-secondary' : '';
+                                          @endphp
+                                          <tr class="{{ $rowClass }}">
+                                              <td><a href="view-estate?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->title}}</a> </td>
+                                              <td>{{$data->state}}</td>
+                                              <td>{{$data->city}}</td>
+                                              <td>{{$data->lga}}</td>
+                                              <td>
+                                                  @if($data->status == 2)
+                                                      <span class="badge text-bg-primary">Active</span>
+                                                  @elseif($data->status == 0)
+                                                      <span class="badge text-bg-warning">Inactive</span>
+                                                  @elseif($data->status == 3)
+                                                      <span class="badge text-bg-danger">Blocked</span>
+                                                  @endif
 
-                                @foreach($estate_list as $data)
+                                              </td>
+                                              <td>
+                                                  @if($data->status == 2)
+                                                      <a href="estate-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                      <script>
+                                                          function confirmDeactivate() {
+                                                              return confirm('Are you sure you want to deactivate this item?');
+                                                          }
+                                                      </script>
+                                                  @else
+                                                      <a href="estate-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                      <script>
+                                                          function confirmActivate() {
+                                                              return confirm('Are you sure you want to activate this item?');
+                                                          }
+                                                      </script>
+                                                  @endif
+                                              </td>
 
-                                    <tr>
-                                        <td><a href="view-estate?id={{$data->id}}">{{$data->title}}</a> </td>
-                                        <td>{{$data->state}}</td>
-                                        <td>{{$data->city}}</td>
-                                        <td>{{$data->lga}}</td>
-                                        <td>
-                                            @if($data->status == 2)
-                                                <span class="badge text-bg-primary">Active</span>
-                                            @elseif($data->status == 0)
-                                                <span class="badge text-bg-warning">Inactive</span>
-                                            @elseif($data->status == 3)
-                                                <span class="badge text-bg-danger">Blocked</span>
-                                            @endif
+                                          </tr>
 
-                                        </td>
-                                        <td><a href="estate-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger">Delete</a> </td>
-                                        <script>
-                                            function confirmDelete() {
-                                                return confirm('Are you sure you want to delete this item?');
-                                            }
-                                        </script>
-
-
-                                        @if($data->status == 2)
-                                            <td><a href="estate-deactivate?id={{$data->id}}"  onclick="return confirmupdate();" class="btn btn-warning">Deactivate Estate</a>
-
-                                                <script>
-                                                    function confirmupdate() {
-                                                        return confirm('Are you sure you want to deactivate this estate?');
-                                                    }
-                                                </script>
-                                            </td>
-                                        @else
-
-                                            <td><a href="estate-activate?id={{$data->id}}"  onclick="return confirmupdate();" class="btn btn-primary">Activate Estate</a>
-
-                                                <script>
-                                                    function confirmupdate() {
-                                                        return confirm('Are you sure you want to activate this estate?');
-                                                    }
-                                                </script>
-                                            </td>
-                                        @endif
-
-                                    </tr>
-
-                                @endforeach
+                                      @endforeach
 
 
                                 </tbody><!-- end tbody -->

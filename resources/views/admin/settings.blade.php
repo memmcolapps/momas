@@ -1,3 +1,13 @@
+<?php
+
+    use App\Models\ModFeature;
+
+    function statusValue ($status) {
+        return ModFeature::HANDLED_STATUS[$status];
+    }
+?>
+
+
 @extends('layouts.main')
 @section('content')
 
@@ -39,140 +49,51 @@
 
                         <div class="card-body">
 
-                            <form action="features" method="post">
+                             <form action="feature-update" method="post">
                                 @csrf
 
                                 <div class="row">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="d-flex justify-content-start my-4">Features Toggle</h6>
+                                            <div class="d-flex justify-content-between">
+                                                <div class="justify-content-end">
+                                                </div>
 
-                                    <h6 class="d-flex justify-content-start my-4">Project Features</h6>
-
-                                    <div class="col-2">
-                                        <label class="my-2">Momas Meter</label>
-                                        <select type="text" name="momas_meter" class="form-control" required>
-                                            @if($fea->momas_meter == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->momas_meter == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
+                                            </div>
+                                        </div>
 
                                     </div>
 
 
-                                    <div class="col-2">
-                                        <label class="my-2">Other Meter</label>
-                                        <select type="text" name="other_meter" class="form-control" required>
-                                            @if($fea->other_meter == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->other_meter == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
+                                    @foreach ($features as $feature)
+                                        <div class="col-2">
+                                            <label class="my-2">{{ $feature->title }}</label>
+                                            <select type="text" name="{{ $feature->slug }}" value="{{ $feature->status }}" class="form-control" required>
+                                                @foreach (array_keys(ModFeature::HANDLED_STATUS) as $status)
+                                                    <option value="{{ $status }}"
+                                                        @selected($feature->status == $status)
+                                                    >
+                                                        {{ statusValue($status) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            {{-- <input hidden name="id" value="{{$org->id}}" class="form-control" required> --}}
 
-                                    </div>
-
-
-                                    <div class="col-2">
-                                        <label class="my-2">Print Token</label>
-                                        <select type="text" name="print_token" class="form-control" required>
-                                            @if($fea->print_token == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->print_token == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
-
-                                    </div>
-
-                                    <div class="col-2">
-                                        <label class="my-2">Access Token</label>
-                                        <select type="text" name="access_token" class="form-control" required>
-                                            @if($fea->access_token == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->access_token == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
-
-                                    </div>
-
-                                    <div class="col-2">
-                                        <label class="my-2">Services</label>
-                                        <select type="text" name="services" class="form-control" required>
-                                            @if($fea->services == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->services == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
-
-                                    </div>
-
-                                    <div class="col-2">
-                                        <label class="my-2">Bill Payment</label>
-                                        <select type="text" name="bill_payment" class="form-control" required>
-                                            @if($fea->bill_payment == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->bill_payment == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
-
-                                    </div>
-
-                                    <div class="col-2">
-                                        <label class="my-2">Support</label>
-                                        <select type="text" name="support" class="form-control" required>
-                                            @if($fea->support == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->support == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
-
-                                    </div>
-
-                                    <div class="col-2">
-                                        <label class="my-2">Analysis</label>
-                                        <select type="text" name="analysis" class="form-control" required>
-                                            @if($fea->analysis == 1)
-                                                <option value="1">ON</option>
-                                            @elseif($fea->analysis == 0)
-                                                <option value="0">OFF</option>
-                                            @endif
-                                            <option value="1">ON</option>
-                                            <option value="0">OFF</option>
-                                        </select>
-
-                                    </div>
-
+                                        </div>
+                                    @endforeach
 
                                 </div>
 
-
                                 <hr class="my-4">
 
-                                <button type="submit" class="col-2 d-flex btn btn-primary">
+
+                                <button type="submit" class="col-2 d-flex btn btn-primary my-4">
                                     Update Features
                                 </button>
 
 
                             </form>
-
 
                         </div>
 

@@ -147,7 +147,7 @@
                             </div>
 
                             <div class="card-body">
-                                <table id="datatable-buttons"
+                                <table id=""
                                     class="table table-striped table-bordered dt-responsive nowrap">
                                     <thead>
                                         <tr>
@@ -167,43 +167,58 @@
                                     <tbody>
 
 
-                                        @foreach ($users_lists as $data)
-                                            <tr>
-                                                <td><a href="view-user?id={{ $data->id }}">{{ $data->first_name }}</a>
-                                                </td>
-                                                <td><a href="view-user?id={{ $data->id }}">{{ $data->last_name }}</a>
-                                                </td>
-                                                <td>{{ $data->phone }}</td>
-                                                <td>{{ $data->email }}</td>
-                                                <td>{{ $data->estate_name }}</td>
+                                          @foreach ($users_lists as $data)
+                                              @php
+                                                  $isDisabled = $data->status != 2;
+                                                  $rowClass = $isDisabled ? 'table-secondary' : '';
+                                              @endphp
+                                              <tr class="{{ $rowClass }}">
+                                                  <td><a href="view-user?id={{ $data->id }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{ $data->first_name }}</a>
+                                                  </td>
+                                                  <td><a href="view-user?id={{ $data->id }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{ $data->last_name }}</a>
+                                                  </td>
+                                                  <td>{{ $data->phone }}</td>
+                                                  <td>{{ $data->email }}</td>
+                                                  <td>{{ $data->estate_name }}</td>
 
-                                                <td>
-                                                    @if ($data->status == 2)
-                                                        <span class="badge text-bg-primary">Active</span>
-                                                    @elseif($data->status == 3)
-                                                        <span class="badge text-bg-dark">Banned</span>
-                                                    @elseif($data->status == 0)
-                                                        <span class="badge text-bg-warning">Pending</span>
-                                                    @endif
+                                                  <td>
+                                                      @if ($data->status == 2)
+                                                          <span class="badge text-bg-primary">Active</span>
+                                                      @elseif($data->status == 3)
+                                                          <span class="badge text-bg-dark">Banned</span>
+                                                      @elseif($data->status == 0)
+                                                          <span class="badge text-bg-warning">Pending</span>
+                                                      @endif
 
-                                                </td>
-                                                <td>{{ $data->created_at }}</td>
+                                                  </td>
+                                                  <td>{{ $data->created_at }}</td>
 
-                                                @if (Auth::user()->role == 0)
-                                                    <td><a href="user-delete?id={{ $data->id }}"
-                                                            onclick="return confirmDelete();"
-                                                            class="btn btn-danger">Delete</a>
+                                                  @if (Auth::user()->role == 0)
+                                                      <td>
+                                                          @if($data->status == 2)
+                                                              <a href="user-deactivate?id={{ $data->id }}"
+                                                                  onclick="return confirmDeactivate();"
+                                                                  class="btn btn-warning">Deactivate</a>
+                                                              <script>
+                                                                  function confirmDeactivate() {
+                                                                      return confirm('Are you sure you want to deactivate this item?');
+                                                                  }
+                                                              </script>
+                                                          @else
+                                                              <a href="user-activate?id={{ $data->id }}"
+                                                                  onclick="return confirmActivate();"
+                                                                  class="btn btn-primary">Activate</a>
+                                                              <script>
+                                                                  function confirmActivate() {
+                                                                      return confirm('Are you sure you want to activate this item?');
+                                                                  }
+                                                              </script>
+                                                          @endif
+                                                      </td>
+                                                  @endif
 
-                                                        <script>
-                                                            function confirmDelete() {
-                                                                return confirm('Are you sure you want to delete this item?');
-                                                            }
-                                                        </script>
-                                                    </td>
-                                                @endif
-
-                                            </tr>
-                                        @endforeach
+                                              </tr>
+                                          @endforeach
 
 
                                     </tbody><!-- end tbody -->
@@ -316,7 +331,7 @@
                             </div>
 
                             <div class="card-body">
-                                <table id="datatable-buttons"
+                                <table id=""
                                     class="table table-striped table-bordered dt-responsive nowrap">
                                     <thead>
                                         <tr>

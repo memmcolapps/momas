@@ -1,3 +1,13 @@
+<?php
+    use App\Models\ModFeature;
+
+    $handled_status = array_keys(ModFeature::HANDLED_STATUS);
+
+    function statusValue ($status) {
+        return ModFeature::HANDLED_STATUS[$status];
+    }
+?>
+
 @extends('layouts.main')
 @section('content')
 
@@ -120,8 +130,48 @@
 
                                 </div>
 
+                                <div class="col-xl-3 col-sm-12">
+                                    <label class="my-2">Estate Admin Fee</label>
+                                    <input type="number" name="estate_admin_fee"  class="form-control" >
+                                </div>
+
 
                             </div>
+
+                            {{-- <hr class="my-4"> --}}
+
+                            <div class="row">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="d-flex justify-content-start my-4">Features Toggle</h6>
+                                            <div class="d-flex justify-content-between">
+                                                <div class="justify-content-end">
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+
+                                    @foreach ($estate_features as $feature)
+                                    {{-- <?php dump($feature->toArray(), $org->id, $handled_status); ?> --}}
+                                        <div class="col-2">
+                                            <label class="my-2">{{ $feature->title }}</label>
+                                            <select type="text" name="{{ $feature->slug }}" value="{{ $feature->status }}" class="form-control" required>
+                                                @foreach ($handled_status as $my_status)
+                                                    <option value="{{ $my_status }}"
+                                                        @selected($feature->status == $my_status)
+                                                    >
+                                                        {{ statusValue($my_status) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+
+                                        </div>
+                                    @endforeach
+
+                                </div>
 
 
                             <hr class="my-4">

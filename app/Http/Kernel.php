@@ -77,6 +77,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'acess' => \App\Http\Middleware\Acess::class,
         'blockaccess' => \App\Http\Middleware\Blockaccess::class,
+        'feature_control' => \App\Http\Middleware\FeatureControlMiddleware::class,
 
     ];
 }

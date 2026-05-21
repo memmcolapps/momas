@@ -117,80 +117,65 @@
                                     <tbody>
 
 
-                                    @foreach($users_lists as $data)
+                                      @foreach($users_lists as $data)
+                                          @php
+                                              $isDisabled = $data->status != 2;
+                                              $rowClass = $isDisabled ? 'table-secondary' : '';
+                                          @endphp
+                                          <tr class="{{ $rowClass }}">
+                                              <td><a href="view-user?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->first_name}}</a></td>
+                                              <td><a href="view-user?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->last_name}}</a></td>
+                                              <td>{{$data->phone}}</td>
+                                              <td>{{$data->email}}</td>
+                                              <td>
+                                                  @if($data->role == 2)
+                                                      <span class="badge text-bg-primary">Customer</span>
+                                                  @elseif($data->role == 3)
+                                                      <span class="badge text-bg-dark">Estate Admin</span>
+                                                  @elseif($data->role == 0)
+                                                      <span class="badge text-bg-dark">Super Admin</span>
+                                                  @elseif($data->role == 1)
+                                                      <span class="badge text-bg-dark"> Admin</span>
+                                                  @elseif($data->role == 4)
+                                                      <span class="badge text-bg-warning">Estate Staff</span>
+                                                  @endif
 
-                                        <tr>
-                                            <td><a href="view-user?id={{$data->id}}">{{$data->first_name}}</a></td>
-                                            <td><a href="view-user?id={{$data->id}}">{{$data->last_name}}</a></td>
-                                            <td>{{$data->phone}}</td>
-                                            <td>{{$data->email}}</td>
-                                            <td>
-                                                @if($data->role == 2)
-                                                    <span class="badge text-bg-primary">Customer</span>
-                                                @elseif($data->role == 3)
-                                                    <span class="badge text-bg-dark">Estate Admin</span>
-                                                @elseif($data->role == 0)
-                                                    <span class="badge text-bg-dark">Super Admin</span>
-                                                @elseif($data->role == 1)
-                                                    <span class="badge text-bg-dark"> Admin</span>
-                                                @elseif($data->role == 4)
-                                                    <span class="badge text-bg-warning">Estate Staff</span>
-                                                @endif
+                                              </td>
+                                              <td>
+                                                  @if($data->status == 2)
+                                                      <span class="badge text-bg-primary">Active</span>
+                                                  @elseif($data->status == 3)
+                                                      <span class="badge text-bg-dark">Banned</span>
+                                                  @elseif($data->status == 0)
+                                                      <span class="badge text-bg-warning">Pending</span>
+                                                  @endif
 
-                                            </td>
-                                            <td>
-                                                @if($data->status == 2)
-                                                    <span class="badge text-bg-primary">Active</span>
-                                                @elseif($data->status == 3)
-                                                    <span class="badge text-bg-dark">Banned</span>
-                                                @elseif($data->status == 0)
-                                                    <span class="badge text-bg-warning">Pending</span>
-                                                @endif
+                                              </td>
+                                              <td>{{$data->created_at}}</td>
 
-                                            </td>
-                                            <td>{{$data->created_at}}</td>
+                                              @if(Auth::user()->role == 0 || Auth::user()->role == 3)
+                                                  <td>
+                                                      @if($data->status == 2)
+                                                          <a href="user-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                          <script>
+                                                              function confirmDeactivate() {
+                                                                  return confirm('Are you sure you want to deactivate this item?');
+                                                              }
+                                                          </script>
+                                                      @else
+                                                          <a href="user-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                          <script>
+                                                              function confirmActivate() {
+                                                                  return confirm('Are you sure you want to activate this item?');
+                                                              }
+                                                          </script>
+                                                      @endif
+                                                  </td>
+                                              @endif
 
-                                            @if(Auth::user()->role == 0)
-                                                <td><a href="user-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
+                                          </tr>
 
-                                                    <script>
-                                                        function confirmDelete() {
-                                                            return confirm('Are you sure you want to delete this item?');
-                                                        }
-                                                    </script>
-                                                </td>
-                                            @endif
-
-                                            @if($data->status == 2)
-                                                <td><a href="user-deactivate?id={{$data->id}}"  onclick="return confirmupdate();" class="btn btn-warning">Deactivate User</a>
-
-                                                    <script>
-                                                        function confirmupdate() {
-                                                            return confirm('Are you sure you want to deactivate this user?');
-                                                        }
-                                                    </script>
-
-
-
-                                                </td>
-                                            @else
-
-                                                <td><a href="user-activate?id={{$data->id}}"  onclick="return confirmupdate();" class="btn btn-primary">Activate User</a>
-
-                                                    <script>
-                                                        function confirmupdate() {
-                                                            return confirm('Are you sure you want to activate this user?');
-                                                        }
-                                                    </script>
-
-
-
-                                                </td>
-                                            @endif
-
-                                        </tr>
-
-                                    @endforeach
+                                      @endforeach
 
 
                                     </tbody><!-- end tbody -->
@@ -498,10 +483,6 @@
                                         <th scope="col" class="cursor-pointer">Designation</th>
                                         <th scope="col" class="cursor-pointer">Status</th>
                                         <th scope="col" class="cursor-pointer desc">Date Registered</th>
-                                        @if(Auth::user()->role == 3)
-                                            <th scope="col" class="cursor-pointer desc">Action</th>
-                                        @endif
-
                                         <th scope="col" class="cursor-pointer desc">Action</th>
 
 
@@ -543,17 +524,6 @@
 
                                             </td>
                                             <td>{{$data->created_at}}</td>
-
-                                            @if(Auth::user()->role == 3)
-                                                <td><a href="user-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
-
-                                                    <script>
-                                                        function confirmDelete() {
-                                                            return confirm('Are you sure you want to delete this item?');
-                                                        }
-                                                    </script>
-                                                </td>
-                                            @endif
 
                                             @if($data->status == 2)
                                                 <td><a href="user-deactivate?id={{$data->id}}"  onclick="return confirmupdate();" class="btn btn-warning">Deactivate User</a>

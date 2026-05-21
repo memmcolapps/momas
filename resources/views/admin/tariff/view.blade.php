@@ -439,7 +439,7 @@
 
                                             <!-- <label class="my-1">Vat %</label>
                                             <input type="text" value="{{$estate->first()->estate_vat ?? '1.075'}}" class="form-control mb-3" name="vat" readonly> -->
-                                            
+
                                             <!-- <div class="form-check my-3">
                                                 <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_estate" value="1" checked>
                                                 <label class="form-check-label" for="apply_vat_estate">
@@ -648,7 +648,7 @@
                                                                 <!-- <input type="number" class="form-control mb-3" -->
                                                                        <!-- value="{{$data->vat}}" name="vat" readonly> -->
                                                                 <div class="form-check my-3">
-                                                                    <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_update_{{$data->id}}" value="1" 
+                                                                    <input class="form-check-input" type="checkbox" name="apply_vat" id="apply_vat_update_{{$data->id}}" value="1"
                                                                            {{ $data->vat > 0 ? 'checked' : '' }}
                                                                            data-original-state="{{ $data->vat > 0 ? '1' : '0' }}">
                                                                     <label class="form-check-label" for="apply_vat_update_{{$data->id}}">
@@ -784,11 +784,11 @@
 <script>
     /**
  * Tariff Rate Date Management Script
- * 
+ *
  * Dynamically controls the "Effective Date To" field based on the "Never Expire" selection:
  * - When "Never Expire" = "Yes": Disables and clears the end date field (tariffs run indefinitely)
  * - When "Never Expire" = "No": Enables the end date field as required (tariffs have expiration)
- * 
+ *
  * Applies to both Super Admin (role 0) and Estate Admin (role 3) tariff creation modals.
  * Prevents user confusion and form validation errors by enforcing proper date field behavior.
  */
@@ -824,7 +824,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-</script>    
+</script>
 
 @endsection
 

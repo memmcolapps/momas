@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Estate;
+use App\Models\EstateModFeature;
 use App\Models\Meter;
+use App\Models\ModFeature;
 use App\Models\Setting;
 use App\Models\Tariff;
 use App\Models\User;
@@ -12,13 +14,16 @@ use App\Models\Utitlity;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class EstateController extends Controller
 {
     public function estate_index(request $request)
     {
-        $data['estate_list'] = Estate::paginate(20);
+        $data['estate_list'] = Estate::latest()->paginate(20);
         $data['estate'] = Estate::count();
+
+
 
         return view('admin/estate/index', $data);
 
@@ -27,7 +32,14 @@ class EstateController extends Controller
 
     public function estate_new(request $request)
     {
-        return view('admin/estate/create');
+        $data['estate_features'] = ModFeature::select([
+                'title',
+                'slug',
+                'status'
+            ])
+            ->get();
+
+        return view('admin/estate/create', $data);
     }
 
 
@@ -95,7 +107,27 @@ class EstateController extends Controller
         $org->account_no = $request->account_no;
         $org->ptype = $request->ptype;
         $org->status = 2;
+        $org->admin_fee = $request->estate_admin_fee;
         $org->save();
+
+        $estateId = $org->id;
+        $features = ModFeature::all();
+
+        foreach ($features as $feature) {
+            $slug = $feature->slug;
+            if ($request->has($slug)) {
+                $status = $request->input($slug);
+                EstateModFeature::updateOrCreate(
+                    [
+                        'estate_id' => $estateId,
+                        'mod_feature_id' => $feature->id
+                    ],
+                    ['status' => $status]
+                );
+            }
+        }
+
+
 
 
         return redirect('admin/estate')->with('message', 'Estate created successfully');
@@ -105,9 +137,7 @@ class EstateController extends Controller
     public function estate_view(request $request)
     {
 
-
         if (Auth::user()->role == 0) {
-
             try {
                 $client = new Client();
 
@@ -129,6 +159,10 @@ class EstateController extends Controller
 
             $data['org'] = Estate::where('id', $request->id)->first();
 
+            if (! isset($data['org'])) {
+                return redirect(url('admin/estate'))->with('error', 'Estate Not Found');
+            }
+
             $data['paystackbank'] = $banks;
 
 
@@ -138,6 +172,17 @@ class EstateController extends Controller
             $data['utility'] = Utitlity::where('estate_id', $request->id)->get() ?? null;
             $data['total_meters'] = Meter::where('estate_id', $request->id)->count() ?? null;
             $data['customers'] = User::where('estate_id', $request->id)->count() ?? null;
+            $data['estate_features'] = ModFeature::query()
+                ->leftJoin('estate_mod_features', function ($join) use ($data) {
+                    $join->on('mod_features.id', '=', 'estate_mod_features.mod_feature_id')
+                        ->where('estate_mod_features.estate_id', $data['org']->id);
+                })
+                ->select([
+                    'mod_features.title',
+                    'mod_features.slug',
+                    DB::raw('COALESCE(estate_mod_features.status, mod_features.status) as status'),
+                ])
+                ->get();
 
 
         } elseif (Auth::user()->role == 1) {
@@ -193,6 +238,7 @@ class EstateController extends Controller
             'charge_fee_precent' => $request->charge_fee_precent,
             'pos_tariff_id' => $request->pos_tariff_id,
             'serial_no' => $request->serial_no,
+            'admin_fee' => $request->estate_admin_fee,
 
         ]);
         return redirect('admin/estate')->with('message', 'Estate updated successfully');
@@ -293,6 +339,44 @@ class EstateController extends Controller
 
 
     }
+
+    public function estate_feature_update(Request $request)
+    {
+        $estateId = $request->input('id');
+        $features = ModFeature::all();
+
+        foreach ($features as $feature) {
+            $slug = $feature->slug;
+            if ($request->has($slug)) {
+                $status = $request->input($slug);
+                EstateModFeature::updateOrCreate(
+                    [
+                        'estate_id' => $estateId,
+                        'mod_feature_id' => $feature->id
+                    ],
+                    ['status' => $status]
+                );
+            }
+        }
+
+        return back()->with('message', 'Features updated successfully');
+    }
+
+    public function feature_update(Request $request)
+    {
+        $features = ModFeature::all();
+
+        foreach ($features as $feature) {
+            $slug = $feature->slug;
+            if ($request->has($slug)) {
+                $status = $request->input($slug);
+                ModFeature::where('id', $feature->id)->update(['status' => $status]);
+            }
+        }
+
+        return back()->with('message', 'Features updated successfully');
+    }
+
 
 
 }

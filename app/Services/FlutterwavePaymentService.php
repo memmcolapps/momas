@@ -2,15 +2,16 @@
 
 namespace App\Services;
 
+use App\Contracts\PaymentServiceInterface;
+use App\Models\Logger;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use App\Models\Logger;
 use InvalidArgumentException;
 
-class FlutterwavePaymentService
+class FlutterwavePaymentService implements PaymentServiceInterface
 {
     protected string $flutterwave_public;
     protected string $flutterwave_secret;
@@ -45,15 +46,15 @@ class FlutterwavePaymentService
             throw new Exception('Cannot find required keys to initialize Flutterwave');
         }
 
-        if (empty($settings->flutterwave_public) || empty($settings->flutterwave_secret)) {
-            throw new Exception('Flutterwave API keys are not configured');
-        }
-
         $this->flutterwave_env = $this->isTestEnvironment() ? 'test' : 'live';
 
+        if (! $this->flutterwave_env === 'test') {
+            if (empty($settings->flutterwave_public) || empty($settings->flutterwave_secret)) {
+                throw new Exception('Flutterwave API keys are not configured');
+            }
+        }
+
         if ($this->flutterwave_env === 'test') {
-            // BUG FIX #1: Use env test keys in non-production; fall back to DB keys
-            // if the env vars are not set so initialisation does not silently break.
             $this->flutterwave_public = env('FLUTTERWAVE_TEST_PUBLIC_KEY', $settings->flutterwave_public);
             $this->flutterwave_secret = env('FLUTTERWAVE_TEST_SECRET_KEY', $settings->flutterwave_secret);
         } else {
@@ -145,7 +146,7 @@ class FlutterwavePaymentService
             'tx_ref'       => $transactionRef,
             'amount'       => (int) $data['amount'],   // Flutterwave expects whole units, not kobo
             'currency'     => 'NGN',
-            'redirect_url' => $data['redirect_url'] ?? url('/flutterwave-check'),
+            'redirect_url' => url('') . "/payment-check",
             'customer'     => [
                 'email'       => $data['email'],
                 'name'        => $data['customer_name']  ?? '',
@@ -271,6 +272,269 @@ class FlutterwavePaymentService
             return [
                 'valid'   => false,
                 'message' => 'Subaccount validation failed: ' . $e->getMessage(),
+                'data'    => null,
+            ];
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Bank listing
+    // -------------------------------------------------------------------------
+
+    /**
+     * Fetch the list of banks for a given country.
+     *
+     * Use this to populate a dropdown for users to select their bank before
+     * creating a subaccount. The returned code field (e.g. "044") is what
+     * you pass as account_bank in createSubaccount.
+     *
+     * @param  string $country  Country code e.g. "NG", "GH", "US", "KE", "UG", "RW", "TZ"
+     * @return array{status: bool, message: string, data?: array|null}
+     *
+     * @throws RuntimeException when the API call fails
+     */
+    public function getBanks(string $country): array
+    {
+        if (empty($country)) {
+            throw new InvalidArgumentException('Country code is required');
+        }
+
+        try {
+            $response     = Http::withHeaders($this->defaultHeaders())
+                ->get("https://api.flutterwave.com/v3/banks/{$country}");
+            $responseData = $response->json();
+
+            if ($response->failed() || ($responseData['status'] ?? '') !== 'success') {
+                return [
+                    'status'  => false,
+                    'message' => $responseData['message'] ?? 'Failed to fetch banks',
+                    'data'    => null,
+                ];
+            }
+
+            return [
+                'status'  => true,
+                'message' => 'Banks retrieved successfully',
+                'data'    => $responseData['data'] ?? [],
+            ];
+        } catch (Exception $e) {
+            Logger::error('Flutterwave getBanks exception: ' . $e->getMessage());
+
+            return [
+                'status'  => false,
+                'message' => 'Failed to fetch banks: ' . $e->getMessage(),
+                'data'    => null,
+            ];
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Bank account verification
+    // -------------------------------------------------------------------------
+
+    /**
+     * Verify a bank account to confirm it belongs to the expected owner.
+     *
+     * This is a recommended safety step to call before creating a subaccount.
+     * It validates that the account number and bank code match the provided
+     * account name, helping prevent errors in subaccount creation.
+     *
+     * Required $data keys:
+     *   - account_bank   (string) Bank code (e.g., "044")
+     *   - account_number (string) Bank account number
+     *   - account_name   (string) Expected account holder name (for comparison)
+     *
+     * @param  array $data
+     * @return array{status: bool, message: string, data?: array|null, verified?: bool}
+     *
+     * @throws InvalidArgumentException when required parameters are absent
+     */
+    public function verifyBankAccount(array $data): array
+    {
+        $requiredParameters = ['account_bank', 'account_number'];
+
+        $missingParameters = array_diff($requiredParameters, array_keys($data));
+
+        if (! empty($missingParameters)) {
+            throw new InvalidArgumentException(
+                'Missing required parameters: ' . implode(', ', $missingParameters)
+            );
+        }
+
+        try {
+            $response     = Http::withHeaders($this->defaultHeaders())
+                ->post('https://api.flutterwave.com/v3/accounts/resolve', [
+                    'account_bank' => $data['account_bank'],
+                    'account_number' => $data['account_number'],
+                ]);
+            $responseData = $response->json();
+
+            if ($response->failed() || ($responseData['status'] ?? '') !== 'success') {
+                return [
+                    'status'    => false,
+                    'message'   => $responseData['message'] ?? 'Account verification failed',
+                    'data'      => null,
+                    'verified'  => false,
+                ];
+            }
+
+            // Flutterwave returns the resolved account name in the response
+            $resolvedData = $responseData['data'] ?? [];
+            $resolvedName = $resolvedData['account_name'] ?? '';
+
+            // If an account_name was provided, compare it with the resolved name
+            $verified = true;
+            $message  = 'Account verified successfully';
+
+            if (! empty($data['account_name']) && ! empty($resolvedName)) {
+                // Case-insensitive comparison with normalized spaces
+                $normalizedExpected = strtolower(preg_replace('/\s+/', ' ', trim($data['account_name'])));
+                $normalizedResolved = strtolower(preg_replace('/\s+/', ' ', trim($resolvedName)));
+
+                if ($normalizedExpected !== $normalizedResolved) {
+                    $verified = false;
+                    $message  = 'Account name mismatch: expected "' . $data['account_name'] . '" but got "' . $resolvedName . '"';
+                }
+            }
+
+            return [
+                'status'   => true,
+                'message'  => $message,
+                'data'     => $resolvedData,
+                'verified' => $verified,
+            ];
+        } catch (Exception $e) {
+            Logger::error('Flutterwave verifyBankAccount exception: ' . $e->getMessage());
+
+            return [
+                'status'   => false,
+                'message'  => 'Account verification failed: ' . $e->getMessage(),
+                'data'     => null,
+                'verified' => false,
+            ];
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Sub-account creation
+    // -------------------------------------------------------------------------
+
+    /**
+     * Create a new Flutterwave sub-account for split payments.
+     *
+     * Required $data keys:
+     *   - account_bank   (string) Bank code (e.g., "044" for Access Bank Nigeria)
+     *   - account_number (string) Merchant's bank account number or IBAN
+     *   - business_name  (string) Subaccount business name
+     *   - business_mobile (string) Business phone number
+     *   - country        (string) Country code (e.g., "NG", "GH", "UG", "RW", "TZ", "US")
+     *   - split_type     (string) "percentage" or "flat"
+     *   - split_value    (float) Commission ratio/amount (e.g., 0.2 for 20%)
+     *
+     * Optional $data keys:
+     *   - email                (string) Business email
+     *   - meta                 (array)  Additional metadata (US requires: swiftCode, routingNumber)
+     *   - bank_branch          (string) Required for GH, TZ, RW, UG
+     *   - swift_code           (string) Required for SEPA countries
+     *   - is_f4b_account       (bool)   Set true to split into another Flutterwave merchant
+     *                                     (use merchant ID as account_number)
+     *
+     * @param  array $data
+     * @return array{status: bool, message: string, subaccount_id?: string, data?: array|null}
+     *
+     * @throws InvalidArgumentException when required parameters are absent
+     */
+    public function createSubaccount(array $data): array
+    {
+        $requiredParameters = [
+            'account_bank',
+            'account_number',
+            'business_name',
+            'business_mobile',
+            'country',
+            'split_type',
+            'split_value',
+        ];
+
+        $missingParameters = array_diff($requiredParameters, array_keys($data));
+
+        if (! empty($missingParameters)) {
+            throw new InvalidArgumentException(
+                'Missing required parameters: ' . implode(', ', $missingParameters)
+            );
+        }
+
+        // Validate split_type
+        if (! in_array($data['split_type'], ['percentage', 'flat'], true)) {
+            throw new InvalidArgumentException(
+                'split_type must be either "percentage" or "flat"'
+            );
+        }
+
+        // Build the request body
+        $dataBody = [
+            'account_bank'   => $data['account_bank'],
+            'account_number' => $data['account_number'],
+            'business_name'  => $data['business_name'],
+            'business_mobile' => $data['business_mobile'],
+            'country'        => $data['country'],
+            'split_type'     => $data['split_type'],
+            'split_value'    => (float) $data['split_value'],
+        ];
+
+        // Optional: email
+        if (! empty($data['email'])) {
+            $dataBody['email'] = $data['email'];
+        }
+
+        // Optional: meta (required for US accounts - swiftCode, routingNumber)
+        if (! empty($data['meta']) && is_array($data['meta'])) {
+            $dataBody['meta'] = $data['meta'];
+        }
+
+        // Optional: bank_branch (required for Ghana, Tanzania, Rwanda, Uganda)
+        if (! empty($data['bank_branch'])) {
+            $dataBody['bank_branch'] = $data['bank_branch'];
+        }
+
+        // Optional: swift_code (required for SEPA countries)
+        if (! empty($data['swift_code'])) {
+            $dataBody['swift_code'] = $data['swift_code'];
+        }
+
+        // Optional: is_f4b_account (set true to split into another Flutterwave merchant)
+        if (! empty($data['is_f4b_account'])) {
+            $dataBody['is_f4b_account'] = (bool) $data['is_f4b_account'];
+        }
+
+        try {
+            $response     = Http::withHeaders($this->defaultHeaders())
+                ->post('https://api.flutterwave.com/v3/subaccounts', $dataBody);
+            $responseData = $response->json();
+
+            if ($response->failed() || ($responseData['status'] ?? '') !== 'success') {
+                return [
+                    'status'  => false,
+                    'message' => $responseData['message'] ?? 'Subaccount creation failed',
+                    'data'    => $responseData['data'] ?? null,
+                ];
+            }
+
+            // Extract and return the subaccount_id (formatted like RS_FB312AA6C2C84A13421F3079E714F2CB)
+            $subaccountId = $responseData['data']['subaccount_id'] ?? null;
+
+            return [
+                'status'        => true,
+                'message'       => 'Subaccount created successfully',
+                'subaccount_id' => $subaccountId,
+                'data'          => $responseData['data'] ?? null,
+            ];
+        } catch (Exception $e) {
+            Logger::error('Flutterwave createSubaccount exception: ' . $e->getMessage());
+
+            return [
+                'status'  => false,
+                'message' => 'Subaccount creation failed: ' . $e->getMessage(),
                 'data'    => null,
             ];
         }

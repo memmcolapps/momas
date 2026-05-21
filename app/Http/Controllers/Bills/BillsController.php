@@ -2,326 +2,464 @@
 
 namespace App\Http\Controllers\Bills;
 
+use App\Constants\ServiceTypeConstants;
+use App\Constants\TransactionConstants;
+use App\Contracts\PaymentServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Models\Logger;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\PaybetaService;
+use App\Services\StandardResponse;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Logger;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class BillsController extends Controller
 {
+    protected PaybetaService $paybetaService;
+
+    public function __construct(PaybetaService $paybetaService)
+    {
+        $this->paybetaService = $paybetaService;
+    }
 
     public function buy_airtime(request $request)
     {
-
-        $token = token();
-        $databody = array(
-            "service_id" => $request->service_id,
-            "amount" => $request->amount,
-            "phone" => $request->phone,
-        );
-
-        $body = json_encode($databody);
-        $curl = curl_init();
-
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://web.sprintpay.online/api/buy-ng-airtime',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => array(
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token,
-            ),
-        ));
-
-        $var = curl_exec($curl);
-        curl_close($curl);
-        $var = json_decode($var);
-        $status = $var->status ?? null;
-
-        Logger::info("Airtime purchase triggered by " . Carbon::now()->toIsoString(), [
-            'data' => $var
+        $validator = Validator::make($request->all(), [
+            'trx_id' => 'required|string|exists:transactions,trx_id',
+            'phone' => 'required|numeric',
+            'service_id' => 'required|string|in:mtn,glo,airtel,9mobile,etisalat'
         ]);
 
-
-
-
-        if ($status == true) {
-
-            Transaction::where('trx_id', $request->ref)->update(['service_type' => "Airtime Purchase", 'service' => "Airtime", 'status' => 2]);
-
-            $message = "Airtime Purchase successful";
-            return success($message);
-
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
         }
 
-        if ($status == false) {
+        $auth_user = Auth::user();
 
-            $message = $var;
-            send_notification($message);
+        $trx = Transaction::where('trx_id', $request->trx_id)
+            ->where('user_id', $auth_user->id)
+            ->first();
 
-            if ($var->message = "Insufficient Funds, Fund your main wallet") {
-                User::where('id', Auth::id())->increment('main_wallet', $request->amount);
+        if (! $trx || $trx?->status == 2 || $trx?->status == 4) {
+            return StandardResponse::error(404, 'Invalid transaction Id', []);
+        }
+
+        $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type]);
+
+        switch ($trx->status) {
+            case 0:
+                $verifier = $payment_engine->verifyTransaction($trx->trx_id);
+
+                if (! $verifier['is_successful']) {
+                    return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                }
+
+                $trx->status = 3;
+                $trx->save();
+                break;
+
+            case 1:
+                return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                break;
+
+            case 2:
+                return StandardResponse::error(403, 'Transaction Completed, restart a new transaction', []);
+                break;
+        }
+
+        $amount = $trx->amount;
+
+        $networkMap = [
+            'mtn' => 'mtn',
+            'glo' => 'glo',
+            'airtel' => 'airtel',
+            '9mobile' => '9mobile',
+            'etisalat' => '9mobile',
+        ];
+
+        $network = $networkMap[strtolower($request->service_id)] ?? $request->service_id;
+        $reference = $request->ref ?? uniqid('airtime_');
+
+        try {
+            DB::beginTransaction();
+
+            $response = $this->paybetaService->purchaseAirtime(
+                $network,
+                $request->phone,
+                $amount,
+                $reference
+            );
+
+            Logger::info("Airtime purchase triggered by {$auth_user->id} | " . Carbon::now()->toIsoString(), [
+                'data' => $response
+            ]);
+
+
+            $status = $response['status'] ?? null;
+
+            if ($status === 'successful') {
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'service_type' => ServiceTypeConstants::AIRTIME_TOP_UP,
+                    'service' => "Airtime Purchase {$network}",
+                    'status' => TransactionConstants::TRANSACTION_COMPLETE,
+                ]);
+
+                DB::commit();
+
+                $message = "Airtime Purchase successful";
+                return success($message);
+            } elseif (isset($response['message']) && stripos($response['message'], 'Server Error') !== false) {
+                // Paybeta bug: transaction likely went through, do NOT refund
+                // Flag for manual review instead
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'status' => TransactionConstants::PENDING_REVIEW, // new status
+                    'service_type' => ServiceTypeConstants::AIRTIME_TOP_UP,
+                    // 'meta' => json_encode(['provider_response' => $response]),
+                ]);
+
+                DB::commit();
+
+                // Alert yourself
+                Logger::critical("Paybeta ambiguous response - DO NOT auto-refund", [
+                    'trx_id' => $request->trx_id,
+                    'phone' => $request->phone,
+                    'amount' => $amount,
+                    'response' => $response,
+                ]);
+
+                return StandardResponse::success(202, 'Your transaction is being verified, please wait.', []);
+            }
+
+            $errorMessage = $response['message'] ?? '';
+            if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
+                Logger::error("Airtime Purchase fail due to insufficient balance", [
+                    'user_id' => Auth::id(),
+                    'phone' => $request->phone,
+                ]);
+
+                User::where('id', $auth_user->id)->first()->creditWallet($amount);
+
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'wallet_creditted' => $amount,
+                    'status' => 1,
+                ]);
+
+                DB::commit();
+
                 $message = "Airtime Purchase not successful, Try again later";
                 $code = 422;
                 return error($message, $code);
             }
 
+            User::where('id', $auth_user->id)->first()->creditWallet($amount);
 
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'wallet_creditted' => $amount,
+                'status' => 3,
+            ]);
+
+            DB::commit();
+
+            Logger::error("An Error Occurred", [
+                'user_id' => $auth_user->id,
+                'error' => $response,
+            ]);
+
+            return StandardResponse::error(500, 'An Error Occurred', $response);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'wallet_creditted' => $amount,
+                'status' => 3,
+            ]);
+
+            Logger::error("Airtime Purchase Exception", [
+                'user_id' => $auth_user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, 'An Error Occurred', ['message' => $e->getMessage()]);
         }
-
-        $message = $var;
-        send_notification($message);
-
     }
 
 
     public function get_data(request $request)
     {
+        try {
+            $networkMap = [
+                'mtn' => 'mtn',
+                'glo' => 'glo',
+                'airtel' => 'airtel',
+                '9mobile' => '9mobile',
+                'etisalat' => '9mobile',
+            ];
 
+            $service_ids = implode(',', array_keys($networkMap));
 
-        $token = token();
-        $databody = array();
-
-        $body = json_encode($databody);
-        $curl = curl_init();
-
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://web.sprintpay.online/api/get-data',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => array(
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token,
-            ),
-        ));
-
-        $var = curl_exec($curl);
-
-        curl_close($curl);
-        $var = json_decode($var);
-        $status = $var->status ?? null;
-
-
-        if ($status == true) {
-
-            return response()->json([
-                'status' => true,
-                'mtn_data' => $var->mtn_data,
-                'glo_data' => $var->glo_data,
-                'airtel_data' => $var->airtel_data,
-                '9mobile_data' => $var->ninemobile_data,
-                'smile_data' => $var->smile_data,
-                'spectranet_data' => $var->spectranet_data
+            $validator = Validator::make($request->all(), [
+                'service_id' => ['required', 'string', "in:$service_ids"],
             ]);
 
+            if ($validator->fails()) {
+
+                return StandardResponse::error(422, "Validator Errors", [
+                    "validator_error" => $validator->errors(),
+                ]);
+            }
+
+            $dataBundles = $this->paybetaService->getDataBundles($request->service_id);
+
+            return StandardResponse::success(200, 'Fetch Data Plan', [
+                'data_bundle' => $dataBundles['data']['packages'],
+                'service_id' => $request->service_id
+            ]);
+
+        } catch (Exception $e) {
+            Logger::error('Failed to fetch data plan', [
+                'user_id' => Auth::user()->id,
+                'service_id' => $request->service_id,
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, 'An Error, Occurred', [], [
+                'trace' => $e->getTrace(),
+            ]);
         }
-
-
-        $message = $var;
-        send_notification($message);
-
     }
 
 
     public function get_cable_plan(request $request)
-
     {
 
+        $serviceMap = [
+            'dstv' => 'dstv',
+            'gotv' => 'gotv',
+            'startimes' => 'startimes',
+            'showmax' => 'showmax',
+        ];
 
-        $token = token();
-        $databody = array();
+        $service_ids = implode(',', array_keys($serviceMap));
 
-        $body = json_encode($databody);
-        $curl = curl_init();
+        $validator = Validator::make($request->all(), [
+            'service_id' => ['required', 'string', "in:$service_ids"],
+        ]);
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://web.sprintpay.online/api/cable-plan',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => array(
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token,
-            ),
-        ));
+        $allCableBouquets = $this->paybetaService->getAllCableBouquets();
 
-        $var = curl_exec($curl);
-        curl_close($curl);
-        $var = json_decode($var);
-        $status = $var->status ?? null;
+        if ($validator->fails()) {
 
-
-        if ($status == true) {
-            return response()->json([
-                'status' => true,
-                'dstv' => $var->dstv,
-                'gotv' => $var->gotv,
-                'startimes' => $var->startimes,
-                'showmax' => $var->showmax,
+            return StandardResponse::error(422, "Validator Errors", [
+                "validator_error" => $validator->errors(),
             ]);
-
         }
 
-        $message = $var;
+        $cableBouquets = $this->paybetaService->getCableBouquets($request->service_id);
+
+        return StandardResponse::success(200, 'Fetch Data Plan', [
+            'cable_plans' => $cableBouquets['data']['packages'],
+            'service_id' => $request->service_id
+        ]);
+    }
+
+
+    public function validate_cable(request $request)
+    {
+        $serviceMap = [
+            'dstv' => 'dstv',
+            'gotv' => 'gotv',
+            'startimes' => 'startimes',
+            'showmax' => 'showmax',
+        ];
+
+        $service = $serviceMap[strtolower($request->decoder_type)] ?? $request->decoder_type;
+
+        $response = $this->paybetaService->validateCable(
+            $service,
+            $request->decoder_no
+        );
+
+        $status = $response['status'] ?? null;
+
+        if ($status === 'successful' || $status === true) {
+            return response()->json([
+                'status' => true,
+                'data' => $response['data'] ?? $response,
+            ]);
+        }
+
+        $message = $response;
         send_notification($message);
     }
 
 
-        public function validate_cable(request $request)
-        {
-            $token = token();
-            $databody = array(
-
-                'serviceid' => $request->decoder_type,
-                'biller_code' => $request->decoder_no
-
-            );
-
-            $body = json_encode($databody);
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://web.sprintpay.online/api/validate-cable',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'GET',
-                CURLOPT_POSTFIELDS => $body,
-                CURLOPT_HTTPHEADER => array(
-                    'Accept: application/json',
-                    'Content-Type: application/json',
-                    'Authorization: Bearer ' . $token,
-                ),
-            ));
-
-            $var = curl_exec($curl);
-
-
-            curl_close($curl);
-            $var = json_decode($var);
-            $status = $var->status ?? null;
-
-            if ($status == true) {
-                return response()->json([
-                    'status' => true,
-                    'data' => $var->data,
-
-                ]);
-
-            }
-
-            $message = $var;
-            send_notification($message);
-
-        }
-
-
-
     public function buy_cable(request $request)
     {
+        $auth_user = Auth::user();
+        $amount = 0;
 
-        $token = token();
+        try {
+            $serviceMap = [
+                'dstv' => 'dstv',
+                'gotv' => 'gotv',
+                'startimes' => 'startimes',
+                'showmax' => 'showmax',
+            ];
 
-        if ($request->quantity != null) {
+            $service = $serviceMap[strtolower($request->decoder_type)] ?? $request->decoder_type;
+            $reference = $request->ref ?? uniqid('cable_');
 
-            $databody = array(
+            $trx = Transaction::where('trx_id', $request->trx_id)
+                ->where('user_id', $auth_user->id)
+                ->first();
 
-                'billersCode' => $request->decoder_no,
-                'variation_code' => $request->variation_code,
-                'amount' => $request->amount,
-                'phone' => Auth::user()->phone,
-                'quantity' => $request->quantity,
+            if (! $trx) {
+                return StandardResponse::error(404, 'Invalid transaction Id', []);
+            }
 
+
+            $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type]);
+
+            switch ($trx->status) {
+                case 0:
+                    $verifier = $payment_engine->verifyTransaction($trx->trx_id);
+
+                    if (! $verifier['is_successful']) {
+                        return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                    }
+
+                    $trx->status = 3;
+                    $trx->save();
+                    break;
+
+                case 1:
+                    return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                    break;
+
+                case 2:
+                    return StandardResponse::error(403, 'Transaction Completed, restart a new transaction', []);
+                    break;
+            }
+
+            DB::beginTransaction();
+
+            $package = $this->paybetaService->getCablePackage(
+                $request->service_id,
+                $request->variation_code,
             );
 
-        }
+            if (! $package['search_success']) {
 
+                Logger::error("User $auth_user->id passed an invalid variation code poping stored cache", [
+                    'user_id' => $auth_user->id,
+                    'variation_code' => $request->variation_code,
+                    'service' => $request->service_id,
+                    'cable_bouquet' => $this->paybetaService->getCableBouquets($request->service_id),
+                ]);
 
-        if ($request->subscription_type != null) {
+                User::where('id', $auth_user->id)->first()->creditWallet($amount);
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'wallet_creditted' => $amount,
+                    'status' => 3,
+                ]);
 
-            $databody = array(
+                $this->paybetaService->popCableBouquetCache($request->service_id);
 
-                'billersCode' => $request->decoder_no,
-                'variation_code' => $request->variation_code,
-                'amount' => $request->amount,
-                'phone' => Auth::user()->phone,
-                'subscription_type' => $request->subscription_type,
+                DB::commit();
 
-            );
+                return StandardResponse::success(200, 'Cable Bouquet You Selected Doesn\'t exist', []);
+            }
 
-        }
+            $bundle_price = (double) $package['price'];
 
+            if (strtolower($request->decoder_type) === 'showmax') {
+                $response = $this->paybetaService->purchaseShowmax(
+                    $request->phone,
+                    $request->variation_code,
+                    $amount,
+                    $reference
+                );
+            } else {
+                $response = $this->paybetaService->purchaseCable(
+                    $service,
+                    $request->decoder_no,
+                    $request->variation_code,
+                    $amount,
+                    $reference
+                );
+            }
 
-        $body = json_encode($databody);
-        $curl = curl_init();
+            $user = Auth::user();
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://web.sprintpay.online/api/buy-cable',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => array(
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token,
-            ),
-        ));
+            Logger::info("Cable purchase triggered by {$user->id} | " . Carbon::now()->toIsoString(), [
+                'data' => $response,
+                'payload' => $request->all(),
+            ]);
 
-        $var = curl_exec($curl);
+            $status = $response['status'] ?? null;
 
-        curl_close($curl);
-        $var = json_decode($var);
+            if ($status === 'successful') {
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
+                    'service' => "Cable Purchase {$service}",
+                    'status' => TransactionConstants::TRANSACTION_COMPLETE,
+                ]);
+                DB::commit();
+                $message = "Cable Purchase successful";
+                return success($message);
+            }
 
+            // Handle ambiguous "Server Error" response from Paybeta
+            if (isset($response['message']) && stripos($response['message'], 'Server Error') !== false) {
+                // Paybeta bug: transaction likely went through, do NOT refund
+                // Flag for manual review instead
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'status' => TransactionConstants::PENDING_REVIEW,
+                    'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
+                ]);
 
-        $status = $var->status ?? null;
+                DB::commit();
 
-        Transaction::where('trx_id', $request->ref)->update(['service_type' => "Cable Purchase", 'service' => "Cable", 'status' => 2]);
+                Logger::critical("Paybeta ambiguous response - DO NOT auto-refund", [
+                    'trx_id' => $request->trx_id,
+                    'decoder_no' => $request->decoder_no ?? null,
+                    'phone' => $request->phone ?? null,
+                    'amount' => $amount,
+                    'service' => $service,
+                    'response' => $response,
+                ]);
 
+                return StandardResponse::error(202, 'Your transaction is being verified, please wait.', []);
+            }
 
-        if ($status == true) {
-            $message = "Cable Purchase successful";
-            return success($message);
+            $errorMessage = $response['message'] ?? '';
+            if (stripos($errorMessage, 'Insufficient') !== false || stripos($errorMessage, 'fund') !== false) {
 
-        }
+                Logger::error("Cable Bouquet Purchase fail due to insufficient balance", [
+                    'user_id' => Auth::id(),
+                    'decoder_no/phone(for_showmax)' => $request->decoder_no ?? $request->phone,
+                ]);
 
+                User::where('id', $auth_user->id)->first()->creditWallet($amount);
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'wallet_creditted' => $amount,
+                    'status' => 3,
+                ]);
 
+                DB::commit();
 
-        if ($status == false) {
-
-            if ($var->message = "Insufficient Funds, Fund your main wallet") {
-                User::where('id', Auth::id())->increment('main_wallet', $request->amount);
-                $message = $var;
+                $message = $response;
                 send_notification($message);
                 $message = "Cable Purchase not successful, Try again later";
                 $code = 422;
@@ -329,84 +467,233 @@ class BillsController extends Controller
             }
 
 
+            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'wallet_creditted' => $amount,
+                'status' => 3,
+            ]);
+
+            DB::commit();
+
+            $message = 'Cable Purchase not successful, Try again later';
+
+            $code = 422;
+            return error($message, $code);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            if ($amount > 0) {
+                User::where('id', $auth_user->id)->first()->creditWallet($amount);
+
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'wallet_creditted' => $amount,
+                    'status' => 3,
+                ]);
+            }
+
+            Logger::error($e->getMessage(), [
+                'user_id' => $auth_user->id,
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, "An Error Occurred", [], [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTrace(),
+            ]);
         }
     }
 
 
-    public
-        function buy_data(request $request)
-        {
+    public function buy_data(request $request)
+    {
+        $auth_user = Auth::user();
+        $amount = 0;
+        $validator = Validator::make($request->all(), [
+            'trx_id' => ['required', Rule::exists('transactions', 'trx_id')
+                ->where(function ($query) use ($auth_user) {
+                    $query->where('user_id', $auth_user->id);
+                }),
+            ],
+            'phone' => 'required|numeric',
+            'service_id' => 'required|string|in:mtn,glo,airtel,9mobile,etisalat',
+            'variation_code' => 'required|string',
+        ]);
 
-            $token = token();
-            $databody = array(
-                "service_id" => $request->service_id,
-                "amount" => $request->amount,
-                "phone" => $request->phone,
-                "variation_code" => $request->variation_code,
-                "variation_amount" => $request->amount,
-
-            );
-
-            $body = json_encode($databody);
-            $curl = curl_init();
-
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://web.sprintpay.online/api/buy-data',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => $body,
-                CURLOPT_HTTPHEADER => array(
-                    'Accept: application/json',
-                    'Content-Type: application/json',
-                    'Authorization: Bearer ' . $token,
-                ),
-            ));
-
-            $var = curl_exec($curl);
-            curl_close($curl);
-            $var = json_decode($var);
-            $status = $var->status ?? null;
-
-
-            Transaction::where('trx_id', $request->ref)->update(['service_type' => "Data Purchase", 'service' => "Data", 'status' => 2]);
-
-
-            if ($status == true) {
-                $message = "Data Purchase successful";
-                return success($message);
-
-            }
-
-            if ($status == false) {
-
-                if ($var->message = "Insufficient Funds, Fund your main wallet") {
-                    User::where('id', Auth::id())->increment('main_wallet', $request->amount);
-                    $message = "Data Purchase not successful, Try again later";
-                    $code = 422;
-                    return error($message, $code);
-                }
-
-
-            }
-
-            $message = $var;
-            send_notification($message);
-
-
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
         }
 
 
+        $networkMap = [
+            'mtn' => 'mtn',
+            'glo' => 'glo',
+            'airtel' => 'airtel',
+            '9mobile' => '9mobile',
+            'etisalat' => '9mobile',
+        ];
+
+        $network = $networkMap[strtolower($request->service_id)] ?? $request->service_id;
+        $reference = $request->ref ?? uniqid('data_');
+
+        $trx = Transaction::where('trx_id', $request->trx_id)
+            ->where('user_id', $auth_user->id)
+            ->first();
+
+        if (! $trx) {
+            return StandardResponse::error(404, 'Invalid transaction Id', []);
+        }
+
+
+        $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type]);
+
+        switch ($trx->status) {
+            case 0:
+                $verifier = $payment_engine->verifyTransaction($trx->trx_id);
+
+                if (! $verifier['is_successful']) {
+                    return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                }
+
+                $trx->status = 3;
+                $trx->save();
+                break;
+
+            case 1:
+                return StandardResponse::error(403, 'Transaction Failed: Please retry later', []);
+                break;
+
+            case 2:
+                return StandardResponse::error(403, 'Transaction Completed, restart a new transaction', []);
+                break;
+        }
+
+
+        // handle_pay_arrears($trx->trx_id, $auth_user->id, 'utilities');
+
+
+        $amount = $trx->amount;
+
+        try {
+            DB::beginTransaction();
+
+            $package = $this->paybetaService->getDataPackage(
+                $request->service_id,
+                $request->variation_code,
+            );
+
+            $bundle_price = (double) $package['price'];
+
+            if (! $package['search_success']) {
+
+                Logger::error("User $auth_user->id passed an invalid variation code poping stored cache", [
+                    'user_id' => $auth_user->id,
+                    'variation_code' => $request->variation_code,
+                    'network' => $request->service_id,
+                    'data_bundles' => $this->paybetaService->getDataBundles($request->service_id),
+                ]);
+
+                User::where('id', $auth_user->id)->first()->creditWallet($amount);
+
+                $this->paybetaService->popDataBundleCache($request->service_id);
+
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'wallet_creditted' => $amount,
+                    'status' => 3,
+                ]);
+
+                DB::commit();
+
+                return StandardResponse::error(200, 'Data Bundle You Selected Doesn\'t exist', []);
+            }
+
+
+            $response = $this->paybetaService->purchaseData(
+                $network,
+                $request->phone,
+                $request->variation_code,
+                $amount,
+                $reference
+            );
+
+            $user = Auth::user();
+
+            Logger::info("Data purchase triggered by {$user->id} amount: {$amount} code: {$request->variation_code} | " . Carbon::now()->toIsoString(), [
+                'data' => $response
+            ]);
+
+            $status = $response['status'] ?? null;
+
+            if ($status === 'successful') {
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'service_type' => ServiceTypeConstants::DATA_TOP_UP,
+                    'service' => "Data Purchase {$network}",
+                    'status' => TransactionConstants::TRANSACTION_COMPLETE,
+                ]);
+                DB::commit();
+                $message = "Data Purchase successful";
+                return success($message);
+            }
+
+            // Handle ambiguous "Server Error" response from Paybeta
+            if (isset($response['message']) && stripos($response['message'], 'Server Error') !== false) {
+                // Paybeta bug: transaction likely went through, do NOT refund
+                // Flag for manual review instead
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'status' => TransactionConstants::PENDING_REVIEW,
+                    'service_type' => ServiceTypeConstants::DATA_TOP_UP,
+                ]);
+
+                DB::commit();
+
+                Logger::critical("Paybeta ambiguous response - DO NOT auto-refund", [
+                    'trx_id' => $request->trx_id,
+                    'phone' => $request->phone,
+                    'amount' => $amount,
+                    'network' => $network,
+                    'variation_code' => $request->variation_code,
+                    'response' => $response,
+                ]);
+
+                return StandardResponse::error(202, 'Your transaction is being verified, please wait.', []);
+            }
+
+            $errorMessage = $response['message'] ?? '';
+
+            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'wallet_creditted' => $amount,
+                'status' => 3,
+            ]);
+
+            DB::commit();
+
+            $message = "Data Purchase not successful, Try again later";
+            $code = 422;
+            return error($message, $code);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            if ($amount > 0) {
+                User::where('id', $auth_user->id)->first()->creditWallet($amount);
+
+                Transaction::where('trx_id', $request->trx_id)->update([
+                    'wallet_creditted' => $amount,
+                    'status' => 3,
+                ]);
+            }
+
+            Logger::error("Data Purchase Exception", [
+                'user_id' => $auth_user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, 'An Error Occurred', ['message' => $e->getMessage()]);
+        }
+    }
+
 
 }
-
-
-
-
-
-

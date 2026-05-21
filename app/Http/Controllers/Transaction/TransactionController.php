@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Transaction;
 
+use App\Contracts\PaymentServiceInterface;
+use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessPaystackWebhook;
 use App\Models\CreditToken;
@@ -13,6 +15,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\VirtualAccountTransaction;
+use App\Services\FlutterwavePaymentService;
 use App\Services\PaystackPaymentService;
 use App\Services\RequestActionHandler;
 use App\Services\StandardResponse;
@@ -22,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class TransactionController extends Controller
@@ -30,99 +34,17 @@ class TransactionController extends Controller
     public function arrears(request $request)
     {
         try {
-            // Get all non-admin_fee records (status != 2)
-            $utilities = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('status', '!=', 2)
-                // ->where('type', '!=', 'admin_fee')
-                ->latest()
-                ->get();
-
-            // Get sum of all admin_fee records
-            // $admin_fees = UtilitiesPayment::where('user_id', Auth::id())
-            //     ->where('status', '!=', 2)
-            //     ->where('type', '=', 'admin_fee')
-            //     ->latest()
-            //     ->get();
-
-            // $most_recent_admin_fee = $admin_fees->first();
-
-            // $admin_fee_sum = $admin_fees->sum('amount');
-            $history = [];
-
-            // foreach ($utilities as $utility) {
-            //     if (! $utility) continue;
-
-            //     $history[$utility->type][] = [
-            //         'amount' => (string) $utility->amount,
-            //         'status' => (int) $utility->status,
-            //         'created_at' => $utility->created_at->toDateTimeString(),
-            //         'next_due_date' => $utility->nextDueDate ? $utility->nextDueDate->toDateTimeString() : null,
-            //     ];
-            // }
-
-            $admin_fee_sum = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('status', '!=', 2)
-                ->where('type', '=', 'admin_fee')
-                ->sum('amount');
-
-            $admin_fee_latest = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('status', '!=', 2)
-                ->where('type', '=', 'admin_fee')
-                ->latest()
-                ->first()
-                ?->toArray() ?? [];
-
-
-            $admin_fee_latest['amount'] = (string) $admin_fee_sum;
-
-            $utility_sum = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('status', '!=', 2)
-                ->where('type', '!=', 'admin_fee')
-                ->sum('amount');
-
-            $utility_latest = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('status', '!=', 2)
-                ->where('type', '!=', 'admin_fee')
-                ->latest()
-                ->first()
-                ?->toArray() ?? [];
-
-            $utility_latest['amount'] = (string) $utility_sum;
-
-            $all_history = UtilitiesPayment::where('user_id', Auth::id())
-                ->where('status', '!=', 2)
-                ->latest('type')
-                ->select('type', 'amount', 'status', 'created_at', 'next_due_date')
-                ->groupBy('type', 'amount', 'status', 'created_at', 'next_due_date')
-                ->get()
-                ->toArray();
-
-            // dd('got here');
-
-            $utility_latest['history'] = $all_history['utilities'] ?? [];
-            $admin_fee_latest['history'] = [];
-
-
-            foreach ($all_history as $history_item) {
-                $history_item['amount'] = (string) $history_item['amount'];
-
-                if ($history_item['type'] === 'admin_fee') {
-                    $admin_fee_latest['history'][] = $history_item;
-                    continue;
-                }
-
-                $utility_latest['history'][] = $history_item;
-            }
+            $arrearsData = get_user_arrears(Auth::id(), 'all');
 
             $other_trx = [
-                $utility_latest,
-                $admin_fee_latest,
+                $arrearsData['utility'],
+                $arrearsData['admin_fee'],
             ];
 
             return response()->json([
                 'status' => true,
                 'data' => $other_trx,
-                'all_history' => $all_history,
+                'all_history' => $arrearsData['all_history'],
             ]);
         } catch (Exception $e) {
             return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
@@ -182,22 +104,8 @@ class TransactionController extends Controller
 
 
 
-
-
-            $verify_result = [
-                'status' => false
-            ];
-
-            if ($trx->pay_type == 'wallet') {
-                $verify_result = [
-                    'status' => true
-                ];
-            }
-
-            if ($trx->pay_type == 'paystack') {
-                $verify_result = app(\App\Services\PaystackPaymentService::class)->verifyTransaction($request->ref);
-            }
-
+            $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $trx->pay_type ]);
+            $verify_result = $payment_engine->verifyTransaction($request->ref);
             Logger::info('Paystack verify response pay_arrears', ['response' => $verify_result]);
 
             if (!$verify_result['status']) {
@@ -212,7 +120,7 @@ class TransactionController extends Controller
             handle_pay_arrears($trx->trx_id, $user->id, $type);
 
 
-            $trx->service_type = "Arrears Payment";
+            $trx->service_type = $request->service_type;
             $trx->service = "Arrears";
             $trx->status = 2;
             $trx->updated_at = Carbon::now();
@@ -263,24 +171,8 @@ class TransactionController extends Controller
 
     public function flutter_payment(request $request)
     {
-
-//        $fl = Setting::where('id', 1)->first();
-//        $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
-//        $flkey['flutterwave_public'] = $fl->flutterwave_public;
-//        $pkkey['paystack_secret'] = $fl->paystack_secret;
-//        $pkkey['paystack_public'] = $fl->paystack_public;
-//
-//        $data['amount'] = $request->amount;
-//        $data['trx_id'] = $request->trx_id;
-//        $data['email'] = $request->email;
-//        $data['key'] = $flkey['flutterwave_public'];
-//
-//
-//        return view('flutter-pay', $data);
-
-
         $message = "flutterwave = " . json_encode($request->all());
-        send_notification($message);
+        // send_notification($message);
 
         $fl = Setting::where('id', 1)->first();
         $secretKey = $fl->flutterwave_secret;
@@ -323,179 +215,181 @@ class TransactionController extends Controller
 
     public function make_payment(request $request)
     {
-
         try {
+
+            $email = Auth::user()->email;
+            $phone = Auth::user()->phone ?? "012345678";
             $request_meta = $request->metadata ?? [];
-            if ($request->pay_type == 'flutterwave') {
-                $trx_id = "TRXFLW" . random_int(0000000, 9999999);
-                $email = Auth::user()->email;
-                $phone = Auth::user()->phone ?? "012345678";
-                $fl = Setting::where('id', 1)->first();
-                $secretKey = $fl->flutterwave_secret;
-                $fpublic = $fl->flutterwave_public;
-                $url = url('');
+            $auth_user = Auth::user();
 
-                $databody = array(
-                    'title' => 'Payment for services',
-                    'amount' => $request->amount,
-                    'currency' => 'NGN',
-                    'redirect_url' => $url . "/pay-flutter",
-                    'customer' => [
-                        'email' => $email,
-                        'phonenumber' => $phone,
-                        'name' => Auth::user()->first_name . " " . Auth::user()->last_name,
-                    ],
-                    'tx_ref' => $trx_id,
+            // if ($request->pay_type == 'flutterwave') {
+            //     $trx_id = "TRXFLW" . random_int(0000000, 9999999);
+            //     $fl = Setting::where('id', 1)->first();
+            //     $secretKey = $fl->flutterwave_secret;
+            //     $fpublic = $fl->flutterwave_public;
+            //     $url = url('');
 
-                );
+            //     $databody = array(
+            //         'title' => 'Payment for services',
+            //         'amount' => $request->amount,
+            //         'currency' => 'NGN',
+            //         'redirect_url' => $url . "/pay-flutter",
+            //         'customer' => [
+            //             'email' => $email,
+            //             'phonenumber' => $phone,
+            //             'name' => Auth::user()->first_name . " " . Auth::user()->last_name,
+            //         ],
+            //         'tx_ref' => $trx_id,
 
-                $body = json_encode($databody);
-                $curl = curl_init();
+            //     );
 
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => 'https://api.flutterwave.com/v3/payments',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => '',
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 0,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_CUSTOMREQUEST => 'POST',
-                    CURLOPT_POSTFIELDS => $body,
-                    CURLOPT_HTTPHEADER => array(
-                        'Accept: application/json',
-                        'Content-Type: application/json',
-                        'Authorization: Bearer ' . $secretKey,
-                    ),
-                ));
+            //     $body = json_encode($databody);
+            //     $curl = curl_init();
 
-                $var = curl_exec($curl);
-                curl_close($curl);
-                $var = json_decode($var);
-                $status = $var->status ?? null;
+            //     curl_setopt_array($curl, array(
+            //         CURLOPT_URL => 'https://api.flutterwave.com/v3/payments',
+            //         CURLOPT_RETURNTRANSFER => true,
+            //         CURLOPT_ENCODING => '',
+            //         CURLOPT_MAXREDIRS => 10,
+            //         CURLOPT_TIMEOUT => 0,
+            //         CURLOPT_FOLLOWLOCATION => true,
+            //         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            //         CURLOPT_CUSTOMREQUEST => 'POST',
+            //         CURLOPT_POSTFIELDS => $body,
+            //         CURLOPT_HTTPHEADER => array(
+            //             'Accept: application/json',
+            //             'Content-Type: application/json',
+            //             'Authorization: Bearer ' . $secretKey,
+            //         ),
+            //     ));
 
-
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->estate_id = Auth::user()->estate_id;
-                $trx->pay_type = "flutterwave";
-                $trx->service_type = $request->service;
-                $trx->amount = $request->amount;
-                $trx->trx_id = $trx_id;
-                $trx->save();
-
-                if ($status == "success") {
-                    return response()->json([
-                        'status' => true,
-                        'url' => $var->data->link
-                    ], 200);
-                }
+            //     $var = curl_exec($curl);
+            //     curl_close($curl);
+            //     $var = json_decode($var);
+            //     $status = $var->status ?? null;
 
 
-            }
+            //     $trx = new Transaction();
+            //     $trx->user_id = Auth::id();
+            //     $trx->estate_id = Auth::user()->estate_id;
+            //     $trx->pay_type = "flutterwave";
+            //     $trx->service_type = $request->service;
+            //     $trx->amount = $request->amount;
+            //     $trx->trx_id = $trx_id;
+            //     $trx->save();
+
+            //     if ($status == "success") {
+            //         return response()->json([
+            //             'status' => true,
+            //             'url' => $var->data->link
+            //         ], 200);
+            //     }
 
 
-            if ($request->pay_type === 'paystack') {
+            // }
+
+
+            if (in_array($request->pay_type, ['paystack', 'flutterwave', 'wallet'])) {
                 $est = Estate::where('id', Auth::user()->estate_id)->first();
                 $estate_id = Auth::user()->estate_id;
 
 
-                if (! $est) {
+                if (! $est && $request->pay_type !== 'wallet') {
                     Logger::warning("User with email: {$email} passed has invalid estate id on db estate_id: {$estate_id} ---->>>> ". Carbon::now()->toIsoString());
 
                     return StandardResponse::error(500, 'User estate_id is invalid', []);
                 }
-                // $fl = Setting::where('id', 1)->first();
-                // $flkey['flutterwave_secret'] = $fl->flutterwave_secret;
-                // $flkey['flutterwave_public'] = $fl->flutterwave_public;
-                // $paystackkey = $fl->paystack_secret;
-                // $pkkey['paystack_public'] = $fl->paystack_public;
+
+
                 $email = strtolower(trim(Auth::user()->email));
                 $now = Carbon::now();
 
-
-                // $databody = array(
-                //     "amount" => $request->amount * 100,
-                //     // "email" => $email,
-                //     "email" => strtolower(trim($$email)),
-                //     "ref" => $trx_id,
-                //     'callback_url' => url('') . "/paystack-check",
-                //     'subaccount' => $est->paystack_subaccount,
-                //     'metadata' => ["ref" => $trx_id],
-                // );
-
+                $provider_subaccount = match ($request->pay_type) {
+                    'paystack' => $est->paystack_subaccount ?? null,
+                    'flutterwave' => $est->flutterwave_subaccout ?? null,
+                    default => null,
+                };
 
                 $sub_account = $request->service_type === 'admin_fee' ?
                     'ACCT_nd2zcvugcv5zfqp' : // MEMMCOL admin_fee subaccount
-                    $est->paystack_subaccount;
+                    $provider_subaccount;
+
+                if (! $sub_account && in_array($request->pay_type, ['paystack', 'flutterwave'])) {
+                    Log::warning("User {$auth_user->id} transaction terminated due to absence of estate {$request->pay_type} subaccount id");
+
+                    return StandardResponse::error(
+                        422,
+                        "Transaction terminated due to absence of estate subaccount reach out to your estate admin"
+                    );
+                }
 
 
                 $databody = [
-                    "amount" => $request->amount * 100,
+                    "amount" => $request->pay_type === 'paystack' ? $request->amount * 100 : $request->amount,
                     "email" => $email,
-                    "sub_account" => $sub_account,
                     "metadata" => $request->meta,
                 ];
 
+                // Add sub_account only for payment providers that support it
+                if ($sub_account && in_array($request->pay_type, ['paystack', 'flutterwave'])) {
+                    $databody["sub_account"] = $sub_account;
+                }
 
-                $payment_init = app(PaystackPaymentService::class)->makePayment($databody);
+
+                $payment_engine = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $request->pay_type ]);
+
+                $payment_init = $payment_engine->makePayment($databody);
+
                 $status = $payment_init['status'];
+                // dd($payment_init);
                 if (! $status) {
                     Logger::warning("Payment init by {$email} Failed at: {$now}");
 
-                    return StandardResponse::success(200, "Payment not available at the moment, kindly select another payment option", []);
+                    return StandardResponse::success(200, $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option", $payment_init['data'] ?? []);
                 }
 
                 $trx_id = $payment_init['reference'];
                 $action_payload = $request->action_payload;
 
-                // $body = json_encode($databody);
-                // $curl = curl_init();
-
-                // curl_setopt_array($curl, array(
-                //     CURLOPT_URL => 'https://api.paystack.co/transaction/initialize',
-                //     CURLOPT_RETURNTRANSFER => true,
-                //     CURLOPT_ENCODING => '',
-                //     CURLOPT_MAXREDIRS => 10,
-                //     CURLOPT_TIMEOUT => 0,
-                //     CURLOPT_FOLLOWLOCATION => true,
-                //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                //     CURLOPT_CUSTOMREQUEST => 'POST',
-                //     CURLOPT_POSTFIELDS => $body,
-                //     CURLOPT_HTTPHEADER => array(
-                //         'Accept: application/json',
-                //         'Content-Type: application/json',
-                //         'Authorization: Bearer ' . $paystackkey,
-                //     ),
-                // ));
-
-                // $var = curl_exec($curl);
-                // curl_close($curl);
-                // $var = json_decode($var);
-                // $status = $var->status;
-
 
                 // If action payload is not passed do not assign user id and maintain backward compatibilty with previous designs
                 if ($action_payload) {
                     $action_payload['user_id'] = Auth::user()->id;
+                } else {
+                    $action_payload = [
+                        'action' => $request->service_type,
+                    ];
                 }
 
                 $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->pay_type = "paystack";
+                $trx->user_id = Auth::user()->id;
+                $trx->pay_type = $request->pay_type;
                 $trx->estate_id = Auth::user()->estate_id;
                 $trx->amount = $request->amount;
                 $trx->trx_id = $trx_id;
                 $trx->payment_ref = $trx_id;
                 $trx->service_type = $request->service_type;
-                $trx->status = 0;
+                $trx->status = $request->pay_type === 'wallet' ?
+                    TransactionStatus::SERVICE_PENDING->value :
+                    TransactionStatus::PAYMENT_PENDING->value;
                 $trx->action_payload = json_encode($action_payload);
                 $trx->save();
 
-                return StandardResponse::success(200, 'Paystack Payment initiation successful', [
+                // For wallet payments, return success immediately since payment is instant
+                if ($request->pay_type === 'wallet') {
+                    return StandardResponse::success(200, 'Wallet Payment completed successfully', [
+                        'status' => true,
+                        'transaction_status' => $trx->status,
+                        'ref' => $trx->trx_id,
+                        'data' => $payment_init['data'] ?? null,
+                    ]);
+                }
+
+                return StandardResponse::success(200, 'Payment initiation successful', [
                     'status' => true,
-                    'url' => $payment_init['data']['authorization_url'],
+                    'url' => $payment_init['data']['authorization_url'] ?? $payment_init['data']['link'],
                     'transaction_status' => $trx->status,
+                    'ref' => $trx->trx_id,
                 ]);
             }
 
@@ -537,7 +431,6 @@ class TransactionController extends Controller
                 $trx->amount = $request->amount;
                 $trx->service_type = $request->service;
                 $trx->trx_id = $trx_id;
-                $trx->status = 3;
                 $trx->save();
 
                 return response()->json([
@@ -559,8 +452,12 @@ class TransactionController extends Controller
 
     public function all_transactions(request $request)
     {
+        $trx = Transaction::latest()
+            ->where('user_id', Auth::id())
+            ->where('status', '!=', 0)
+            ->take(1000)
+            ->get();
 
-        $trx = Transaction::latest()->where('user_id', Auth::id())->take(1000)->get();
         return response()->json([
             'status' => true,
             'data' => $trx,
@@ -635,7 +532,8 @@ class TransactionController extends Controller
         }
 
         $selectFields = [
-            'credit_tokens.meterNo',
+            DB::raw("COALESCE(NULLIF(TRIM(credit_tokens.receiver_meterNo), ''), credit_tokens.meterNo) as meterNo"),
+            // 'credit_tokens.receiver_meterNo',
             'transactions.updated_at',
             'transactions.trx_id',
             'transactions.amount',
@@ -673,7 +571,10 @@ class TransactionController extends Controller
             $trx_x_token['kct_tokens'] = null;
         }
 
-        $user_x_estate = DB::table('users')
+        $value = $trx_x_token['receiver_meterNo']
+            ?? $trx_x_token['meterNo'] ?? null;
+
+        $query = DB::table('users')
             ->join('estates', 'estates.id', '=', 'users.estate_id')
             ->select([
                 'users.email',
@@ -681,9 +582,15 @@ class TransactionController extends Controller
                 'estates.title',
                 'users.first_name',
                 'users.last_name'
-            ])
-            ->where('users.id', $trx_x_token['user_id'])
-            ->first();
+            ]);
+
+        if ($value) {
+            $query->where('users.meterNo', $value);
+        } else {
+            $query->where('users.id', $trx_x_token['user_id']);
+        }
+
+        $user_x_estate = $query->first();
 
         $receipt = array_merge($trx_x_token, (array) $user_x_estate);
 
@@ -840,79 +747,98 @@ class TransactionController extends Controller
 
     public function paystack_verify(request $request)
     {
-        // $message = "paystack=" . json_encode($request->all());
+        try {
+            // $message = "paystack=" . json_encode($request->all());
         // send_notification($message);
 
-        $transactionId = $request->reference;
+        // dd($request->all());
+            $transactionId = $request->reference;
+            $trx = Transaction::where('trx_id', $transactionId)->first();
+            $provider = $trx?->pay_type;
 
-        // Use PaystackPaymentService to verify transaction
-        $paymentService = app(PaystackPaymentService::class);
-        $verificationResult = $paymentService->verifyTransaction($transactionId);
+            // dd($trx->toArray());
 
-        if (! $verificationResult['status']) {
-            if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
-                return StandardResponse::error(code: 404, message: 'Invalid ref: transaction not found');
+            // Use PaystackPaymentService to verify transaction
+            $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
+            $verificationResult = $paymentService->verifyTransaction($transactionId);
+
+            if (! $verificationResult['status']) {
+                // if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
+                //     return StandardResponse::error(code: 404, message: 'Invalid ref: transaction not found');
+                // }
+
+                return StandardResponse::error(code: 500, message: 'An Error Occurred');
             }
 
-            return StandardResponse::error(code: 500, message: 'An Error Occurred');
-        }
+            $access_point = $request->header('Access-Point') ?? 'web';
+            $payment_status = $verificationResult['payment_status'];
+            $transactionData = $verificationResult['data'];
+            $ck_transaction = Transaction::where('trx_id', $transactionData['reference'])->first()->status ?? null;
 
-        $access_point = $request->header('Access-Point') ?? 'web';
-        $payment_status = $verificationResult['payment_status'];
-        $transactionData = $verificationResult['data'];
-        $ck_transaction = Transaction::where('trx_id', $transactionData['reference'])->first()->status ?? null;
+            if ($ck_transaction === 2) {
+                // Already processed
+                return response()->json(['message' => 'Already processed']);
+            }
 
-        if ($ck_transaction === 2) {
-            // Already processed
-            return response()->json(['message' => 'Already processed']);
-        }
+            if ($payment_status == 'success') {
+                Transaction::where('trx_id', $transactionData['reference'])->update(['status' => 3]);
 
-        if ($payment_status == 'success') {
-            Transaction::where('trx_id', $transactionData['reference'])->update(['status' => 3]);
+                $ref = $transactionData['reference'];
+                $trx = Transaction::where('trx_id', $ref)->first();
 
-            $ref = $transactionData['reference'];
-            $trx = Transaction::where('trx_id', $ref)->first();
+                if ($trx) {
+                    $action_payload = json_decode($trx->action_payload);
 
-            if ($trx) {
-                $action_payload = json_decode($trx->action_payload);
+                    if ($action_payload?->action == 'momas_meter_web') {
+                        RequestActionHandler::handleRequestAction($trx->trx_id);
 
-                if ($action_payload->action == 'momas_meter_web') {
-                    RequestActionHandler::handleRequestAction($trx->trx_id);
-
-                    return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
+                        return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
+                    }
                 }
-            }
-            ProcessPaystackWebhook::dispatch($transactionData['reference']);
+                ProcessPaystackWebhook::dispatch($transactionData['reference']);
 
+                if ($access_point === 'mobile') {
+                    return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [
+                        'payment_status' => $payment_status,
+                        'ref' => $ref,
+                    ]);
+                }
+
+                // Web Access
+                $url = url('') . "/payment?ref=$ref&status=success";
+                return redirect($url);
+            }
+
+            $trx = Transaction::where('trx_id', $transactionData['reference'])->first();
+            $ref = $trx->trx_id;
+
+            $trx->status = 1;
+            $trx->save();
+
+            // If status != success;
             if ($access_point === 'mobile') {
-                return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [
+                return StandardResponse::success(code: 200, message: 'Payment Failed', data: [
                     'payment_status' => $payment_status,
                     'ref' => $ref,
                 ]);
             }
 
-            // Web Access
-            $url = url('') . "/payment?ref=$ref&status=success";
+            // Web access
+            $url = url('') . "/payment?ref=$ref&status=failure";
             return redirect($url);
-        }
+        } catch (Exception $e) {
+            Logger::error('An Error Occurred', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
 
-        $trx = Transaction::where('trx_id', $transactionData['reference'])->first();
-        $ref = $trx->trx_id;
-
-        $trx->status = 1;
-        $trx->save();
-
-        // If status != success;
-        if ($access_point === 'mobile') {
-            return StandardResponse::success(code: 200, message: 'Payment Failed', data: [
-                'payment_status' => $payment_status,
-                'ref' => $ref,
+            return StandardResponse::error(500, "An Error Occurred", [], [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
         }
-
-        // Web access
-        $url = url('') . "/payment?ref=$ref&status=failure";
-        return redirect($url);
     }
 
 
@@ -1873,10 +1799,10 @@ class TransactionController extends Controller
             return;
         }
 
-        if ($transaction->status == 2 || $transaction->status == 3) {
-            Logger::warning("Paystack Webhook: Transaction duplicate call for reference: {$reference}");
-            return;
-        }
+        // if ($transaction->status == 2 || $transaction->status == 3) {
+        //     Logger::warning("Paystack Webhook: Transaction duplicate call for reference: {$reference}");
+        //     return;
+        // }
 
         switch ($event) {
             case 'charge.success':
@@ -1902,77 +1828,6 @@ class TransactionController extends Controller
     }
 
     /**
-     * Trigger a mock Paystack webhook for testing purposes.
-     * Only available in staging and local environments.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    // public function triggerPaystackWebhook(Request $request)
-    // {
-    //     // Only allow in staging or local environments
-    //     $allowedEnvs = ['local', 'staging', 'stg'];
-    //     if (!in_array(env('APP_ENV'), $allowedEnvs)) {
-    //         return StandardResponse::error(403, 'This endpoint is only available in staging or local environments', []);
-    //     }
-
-    //     $validator = Validator::make($request->all(), [
-    //         'reference' => 'required|string',
-    //         'event' => 'required|string|in:charge.success,charge.failed,charge.pending,transfer.success,transfer.failed',
-    //         'amount' => 'nullable|integer|min:0',
-    //         'email' => 'nullable|email',
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         return StandardResponse::error(422, 'Validation error', [
-    //             'validation_error' => $validator->errors(),
-    //         ]);
-    //     }
-
-    //     $reference = $request->input('reference');
-    //     $event = $request->input('event');
-    //     $amount = $request->input('amount', 100000); // Default 1000 NGN in kobo
-    //     $email = $request->input('email', 'test@example.com');
-
-    //     // Build the webhook payload similar to what Paystack would send
-    //     $payload = [
-    //         'event' => $event,
-    //         'data' => [
-    //             'id' => rand(1000000, 9999999),
-    //             'reference' => $reference,
-    //             'amount' => $amount,
-    //             'currency' => 'NGN',
-    //             'status' => $this->mapEventToStatus($event),
-    //             'customer' => [
-    //                 'email' => $email,
-    //             ],
-    //             'created_at' => now()->toIso8601String(),
-    //         ],
-    //     ];
-
-    //     // Log the test webhook trigger
-    //     Logger::info("Test Paystack Webhook Triggered: Event={$event}, Reference={$reference}", [
-    //         'payload' => $payload,
-    //         'environment' => env('APP_ENV'),
-    //     ]);
-
-    //     // Handle the webhook using the existing handler
-    //     $result = PaystackPaymentService::handlePaystackWebhook($payload);
-
-    //     // Update transaction status based on the event
-    //     if (isset($payload['data']['reference'])) {
-    //         $this->updateTransactionFromWebhook($payload);
-    //     }
-
-    //     return StandardResponse::success(200, 'Test webhook triggered successfully', [
-    //         'event' => $event,
-    //         'reference' => $reference,
-    //         'payload' => $payload,
-    //         'result' => $result,
-    //     ]);
-    // }
-
-    /**
      * Map event type to Paystack status
      *
      * @param string $event
@@ -1991,10 +1846,11 @@ class TransactionController extends Controller
     public function triggerPaystackWebhook(Request $request)
     {
         $allowedEnvs = ['local', 'staging', 'stg'];
-        if (!in_array(app()->environment(), $allowedEnvs)) {
+        if (!in_array(env('APP_ENV'), $allowedEnvs)) {
             return StandardResponse::error(403, 'Only available in staging or local', []);
         }
 
+        // dd($request->all());
         $validator = Validator::make($request->all(), [
             'reference' => 'required|string',
             'event' => 'required|string|in:charge.success,charge.failed,charge.pending',

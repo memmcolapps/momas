@@ -55,7 +55,9 @@ class RequestActionHandler {
             'momas_meter_web' => 1,
             'momas_tamper_token' => 1,
             'momas_kct_token' => 1,
-            'momas_clear_credit_token' => 1
+            'momas_clear_credit_token' => 1,
+            'admin_fee' => 1,
+            'utilities' => 1,
         ]);
 
         if ($actionables[$action['action']] != 1) {
@@ -64,7 +66,9 @@ class RequestActionHandler {
         // dump("got here 41");
 
         $handler = match ($action['action']) {
-            'momas_meter', 'momas_meter_web' => fn() => $init->handleBuyTokenRequest(),
+            'momas_meter' => fn() => $init->handleBuyTokenRequest(),
+            'momas_meter_web' => fn() => $init->handleBuyTokenRequest(false, 'momas_meter_web'),
+            'momas_meter_other' => fn() => $init->handleBuyTokenRequest(true),
             'momas_tamper_token' => fn() => $init->handleBuyTamperTokenRequest(),
             'momas_kct_token' => fn() => $init->handleBuyKctTokenRequest(),
             'momas_clear_credit_token' => fn() => $init->handleBuyClearCreditTokenRequest(),
@@ -76,7 +80,7 @@ class RequestActionHandler {
 
 
 
-    protected function handleBuyTokenRequest($others=false) {
+    protected function handleBuyTokenRequest($others=false, $action='momas_meter') {
         // dump('handleBuyTokenRequest');
         // throw new Exception("Test Failure");
         $trx = Transaction::where('trx_id', $this->reference)
@@ -101,15 +105,17 @@ class RequestActionHandler {
 
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
         // dump("meter_with_uid->", $meter->id);
-        dump($meter);
+        // dump($meter);
 
         $tariffId = $action_payload['tariff_id'];
         $unit = $action_payload['vend_amount_kw_per_naira'];
         $vat = $action_payload['vat_amount'];
         $needKct = $meter->NeedKCT;
         $vending_amount = $action_payload['vending_amount'];
+        $reciever_meterNo = $action_payload['reciever_meterNo'] ?? null;
 
-        $meter->getNewToken($tariffId, $unit, $this->reference, $vat, $vending_amount, $verify='null');
+        dump ('Got here');
+        $meter->getNewToken($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 
         return true;
     }

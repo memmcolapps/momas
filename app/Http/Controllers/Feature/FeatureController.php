@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Feature;
 
 use App\Http\Controllers\Controller;
+use App\Models\EstateModFeature;
 use App\Models\Feature;
+use App\Models\ModFeature;
 use App\Models\Slider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,20 +17,45 @@ class FeatureController extends Controller
 
     public function features(){
 
-        $feature =  Feature::where('id', 1)->first()->makeHidden(['created_at', 'updated_at']);
-        $feature->bill_payment = 2;
-
+        $auth_user = Auth::user();
         $meter = meter();
-        if ($meter->status !== 2) {
-            $feature->momas_meter = 2;
-            $feature->other_meter = 2;
+        $features =  EstateModFeature::byUser($auth_user)
+            ->join('mod_features', 'mod_features.id', 'estate_mod_features.mod_feature_id')
+            ->select([
+                    'estate_mod_features.status as estate_status',
+                    'estate_mod_features.estate_id',
+                    'mod_features.title',
+                    'mod_features.slug',
+                    'mod_features.status as mod_status'
+                ])
+            ->get();
+
+
+        $mod_features = [];
+
+        foreach ($features as $feature) {
+            $final_status = $feature->mod_status;
+
+            if ($feature->mod_status == ModFeature::AVAILABLE_STATUS) {
+                $final_status = $feature->estate_status;
+
+                if (
+                    in_array($feature->slug, [\App\Constants\Feature::MOMAS_METER, \App\Constants\Feature::OTHER_METER])
+                    && $feature->estate_status == ModFeature::AVAILABLE_STATUS
+                    && ! $meter->isActive()
+                ) {
+                    $final_status = ModFeature::TEMPORARY_DOWNTIME_STATUS;
+                }
+            }
+
+            $mod_features[$feature->slug] = (int) $final_status;
         }
 
 
         return response()->json([
 
             'status' => true,
-            'feature' => $feature
+            'feature' => $mod_features,
 
         ]);
 

@@ -1488,9 +1488,8 @@ class TokenController extends Controller
 
                 if (! $status) {
                     Logger::warning("Payment init by {$customer_email} Failed", [
-                        "payment_instance" => $payment_init
+                        'payment_engine' => $payment_init,
                     ]);
-
                     return redirect('/admin/credit-token')->with(
                         'error',
                         $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option"
@@ -1528,6 +1527,10 @@ class TokenController extends Controller
                     $trx->status = 0;
                     $trx->action_payload = json_encode($action_payload);
 
+                    $trx->save();
+
+                    // dd($trx->toArray());
+
                     $cdt = CreditToken::create([
                         'trx_id' => $trx_id,
                         'user_id' => $action_payload['user_id'],
@@ -1549,8 +1552,6 @@ class TokenController extends Controller
                     'user_id' => Auth::id(),
                     'user_id2' => Auth::user()->id,
                     ]);
-
-                    $trx->save();
 
                     return redirect()->away($payment_init['data']['authorization_url']);
                 }
@@ -3742,10 +3743,13 @@ class TokenController extends Controller
                         $unit = $action_payload['vend_amount_kw_per_naira'];
                         $vat = $action_payload['vat_amount'];
                         $vending_amount = $action_payload['vending_amount'];
-
+                        $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
                     }
 
-                    $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, verify: "null");
+                    $access_point = $request->header('Access-Point') ?? 'web';
+                    $action = $access_point == 'mobile' ? 'momas_meter' : 'momas_meter_web';
+
+                    $meter->getNewToken($tariff_id, $trx_id, verify:"null", receiver_meterNo:$receiver_meterNo, action:$action);
 
 
 

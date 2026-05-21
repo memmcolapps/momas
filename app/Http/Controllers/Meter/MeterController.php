@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Meter;
 
+use App\Contracts\PaymentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Transaction\TransactionController;
 use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\KctMeterToken;
+use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\MeterRequest;
 use App\Models\MeterToken;
@@ -17,14 +19,15 @@ use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utitlity;
-use App\Models\Logger;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class MeterController extends Controller
 {
@@ -73,11 +76,34 @@ class MeterController extends Controller
 
     public function validate_mobile_meter(request $request)
     {
+        $validator = Validator::make($request->all(), [
+            // 'estateId' => [
+            //     'required',
+            //     Rule::exists('estates', 'id')->where('status', 2),
+            //     ],
+            'meterNo'  => [
+                'required',
+                Rule::exists('meters', 'meterNo'),
+            ]
+        ]);
+
+        if ($validator->fails()) {
+
+            return StandardResponse::error(422, 'Validation Error', [
+                'error' => $validator->errors(),
+            ]);
+        }
+
+
+
+
+
+
         $user = User::where('meterNo', $request->meterNo)->first() ?? null;
-        $get_user_estate_id = User::where('meterNo', $request->meterNo)->first()->estate_id ?? null;
+        $get_user_estate_id = $user?->estate_id;
 
 
-        $meter = Meter::where('meterNo', $request->meterNo)->where('estate_id', $request->estateId)->first() ?? null;
+        $meter = Meter::where('meterNo', $request->meterNo)->where('estate_id', $get_user_estate_id)->first() ?? null;
         if ($meter == null) {
             $message = "Validation Failed, please check meter number or estate selected";
             $code = 422;
@@ -110,8 +136,9 @@ class MeterController extends Controller
 
         // $data['meter_type'] = $meter_type;
 
-        $es_id = $request->estateId ?? null;
+        $es_id = $get_user_estate_id;
         $duration = Estate::where('id', $es_id)->first()->duration ?? null;
+
         $estate_id = $es_id;
         $user_id = $user->id;
 
@@ -134,8 +161,8 @@ class MeterController extends Controller
 
         }
 
-        $min_pur = Estate::where('id', $request->estateId)->first()->min_pur ?? null;
-        $max_pur = Estate::where('id', $request->estateId)->first()->max_pur ?? null;
+        $min_pur = Estate::where('id', $get_user_estate_id)->first()->min_pur ?? null;
+        $max_pur = Estate::where('id', $get_user_estate_id)->first()->max_pur ?? null;
         $data['min_purchase'] = (int)$min_pur;
         $user_info = User::where('meterNo', $request->meterNo)->first();
         $estate_id = $user_info->estate_id ?? null;
@@ -160,7 +187,7 @@ class MeterController extends Controller
         $tariffs = Tariff::where('estate_id', $user_info->estate_id)->get();
 
 
-        $data['customer_name'] = $user->first_name . " " . $user->last_name;
+        $data['customer_name'] = $user->first_name . " " . $user->last_name . ' | ' . $user->estate_name;
         $data['address'] = $user->address . ", " . $user->city . ", " . $user->state;
         $data['tariffs'] = $tariffs;
 
@@ -245,7 +272,7 @@ class MeterController extends Controller
         if ($estate_id == null) {
             return back()->with('error', "User not attached to any estate");
         }
-        $title = Tariff::where('estate_id', $user_info->estate_id)->first()->title ?? null;
+        $title = Tariff::where('estate_id', $user_info->estate_id)->where('amount', '!=', null)->first()->title ?? null;
         if ($title == null) {
             return back()->with('error', "Set a tariff for estate selected");
         }
@@ -284,19 +311,60 @@ class MeterController extends Controller
 
 
     }
+
+    public function calculate_token_fees(request $request) {
+
+        $auth_user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'tariff_id' => ['required', 'numeric', Rule::exists('tariff_states', 'tariff_id')
+                                                        ->where('estate_id', $auth_user->estate_id)
+                                                        ->where('status', 2)
+            ],
+            'trx_id' => ['required', 'string', Rule::exists('transactions', 'trx_id')
+                                                    ->where('user_id', $auth_user->id)
+            ],
+
+        ]);
+
+        if ($validator->fails()) {
+
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        $meter = meter();
+
+        if (!$meter->isActive()) {
+
+            Logger::error("User $auth_user->id failed to calculate meter fees for token due to blocked meter", [
+                'user_id' => $auth_user->id,
+                'meter' => $meter,
+                'trx_id' => $request->trx_id,
+            ]);
+
+            return StandardResponse::error(401, 'Meter blocked please reach out to estate admin for support', [], [
+                'user' => $auth_user,
+                'meter' => $meter,
+            ]);
+
+        }
+
+
+        $trx = Transaction::where('trx_id', $request->trx_id)->first();
+
+        $values = $meter->calculateTokenValues($request->tariff_id, $trx);
+    }
+
     public function buy_meter_token(request $request)
     {
+        DB::beginTransaction();
         try {
             $validator = Validator::make($request->all(), [
-                // 'meter_no' => 'required|string|max:255|exists:meters,meterNo',
-                'utility_amount' => 'nullable|numeric|min:0',
-                'total_paid_amount' => 'required|numeric|min:1',
-                'vend_amount_kw_per_naira' => 'required|numeric|min:0',
-                'vending_amount' => 'required|numeric|min:1',
-                'vat_amount' => 'required|numeric|min:0',
                 'tariff_id' => 'required|integer|exists:tariffs,id',
-                'trxref' => 'nullable|string',
-                'ref' => 'nullable|string',
+                'trxref' => 'required_without:ref|string',
+                'ref' => 'required_without:trxref|string',
             ]);
 
             if ($validator->fails()) {
@@ -304,33 +372,35 @@ class MeterController extends Controller
                     'validation_error' => $validator->errors()
                 ]);
             }
-            $amount = $request->amount;
-            // $meterNo = $request->meter_no;
-            $meterNo = Auth::user()->meterNo;
-            $trx = $request->trxref ?? $request->ref;
-            $utility_amount = $request->utility_amount;
-            $total_paid = $request->total_paid_amount;
-            $unit = $request->vend_amount_kw_per_naira;
-            $vendong_amount = $request->vending_amount;
-            $vat_amount = $request->vat_amount;
-            $tariff_id = $request->tariff_id;
-            $trx_id = $request->trxref ?? $request->ref;
 
+
+            $trx_id = $request->trxref ?? $request->ref;
+            $tariff_id = $request->tariff_id;
+            $utility_amount = $request->utility_amount ?? 0;
+            $auth_user = Auth::user();
+
+            if (!$trx_id) {
+                return StandardResponse::error(422, "Transaction reference missing");
+            }
+
+
+            // ============================
+            // Check Existing Transaction
+            // ============================
 
             $trx = Transaction::where('trx_id', $trx_id)->where('user_id', Auth::user()->id)->first();
 
-            if (! $trx) {
-
+            if (!$trx) {
                 return StandardResponse::error(404, 'Resource not found: Invalid transaction reference', []);
             }
 
-            if ($trx->status === 0 || $trx->status === 1) {
-
+            if ($trx->status === 1) {
                 return StandardResponse::error(403, 'Transaction yet to be verified or failed', []);
             }
 
             if ($trx->status === 2) {
-
+                // Transaction already completed - return existing receipt
+                $existingCredit = CreditToken::where('trx_id', $trx_id)->first();
                 $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id);
 
                 return StandardResponse::success(200, 'Transaction has previously been completed', [
@@ -338,172 +408,76 @@ class MeterController extends Controller
                 ]);
             }
 
-            $meter = Meter::where('MeterNo', $meterNo)->firstOrFail();
+            if ($trx->status === 0) {
+                $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
+                $verifier = $verifier->verifyTransaction($trx->trx_id);
 
+                if (! $verifier['is_successful']) {
+
+                    $trx->status = 1;
+                    $trx->save();
+                    Logger::warning("User {$auth_user->id} tried buying a token with a failed transaction {$trx->trx_id}");
+
+                    return StandardResponse::error(403, 'Payment failed please try again', []);
+                }
+            }
+
+            $meter = Meter::where('meterNo', Auth::user()->meterNo)
+                ->where('estate_id', Auth::user()->estate_id)
+                ->first();
+
+            if (!$meter) {
+                return StandardResponse::error(404, "Meter not found");
+            }
 
             if (! $meter->isActive()) {
-
                 return StandardResponse::error(403, 'Meter unable to perform this action reach out to your estate admin for support', []);
             }
 
-
-            $tariff_index = Tariff::where('id', $request->tariff_id)->first()->tariff_index ?? null;
             $estate = Estate::where('id', Auth::user()->estate_id)->first();
             $duration = $estate->duration ?? null;
-            $paid_utility = false;
-            if ($duration == "weekly" && $utility_amount > 0) {
 
-                UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
-                $paid_utility = true;
+            // ============================
+            // Optional Utility Settlement
+            // ============================
 
-            } elseif ($duration == "monthly" && $utility_amount > 0) {
-
-                UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
-                $paid_utility = true;
-
-            } elseif ($duration == "yearly" && $utility_amount > 0) {
-
-                UtilitiesPayment::where('user_id', Auth::id())->where('estate_id', Auth::user()->estate_id)->update(['status' => 2]);
-                $paid_utility = true;
-
+            if ($utility_amount > 0 && in_array($duration, ["weekly", "monthly", "yearly"])) {
+                handle_pay_arrears($trx_id, Auth::user()->id, 'utilities');
             }
 
+            // ============================
+            // Call getNewToken
+            // ============================
 
-            $need_kct = $meter->NeedKCT;
+            // Using "null" for verify since transaction is already verified
+            $meter->getNewToken(
+                $tariff_id,
+                $trx_id,
+                "null",
+                '',
+                'momas_meter'
+            );
 
+            // Get the created CreditToken to retrieve the token
+            $credit = CreditToken::where('trx_id', $trx_id)->first();
+            $token = $credit->token ?? null;
+            $total_paid = $trx->amount;
 
-            $estate_id = Auth::user()->estate_id;
-            $cdt = new CreditToken();
-            $cdt->user_id = Auth::user()->id;
-            $cdt->trx_id = $trx_id;
-            $cdt->meterNo = $meterNo;
-            $cdt->amount = $total_paid ?? 0;
-            $cdt->vat = $vat_amount ?? 0;
-            $cdt->estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title ?? "NAME";
-            $cdt->estate_id = $estate_id;
-            $cdt->tariff_id = TarrifState::where('estate_id', $estate_id)->where('status', 2)->first()->tariff_id;
-            $cdt->vatAmount = $vat_amount;
-            $cdt->costOfUnit = $request->vending_amount;
-            $cdt->tariffPerKWatt = $request->vend_amount_kw_per_naira;
-            $cdt->save();
+            // ============================
+            // Receipt
+            // ============================
 
+            $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id);
 
-            $token_gen = TokenGenerationService::generateMeterToken($meter, $tariff_index, $unit, $need_kct);
-            // dd($token_gen);
-
-
-            if (! $token_gen['success']) {
-                Transaction::where('trx_id', $trx_id)->update([
-                    'service' => "METER PURCHASE",
-                    'service_type' => "meter",
-                    'status' => 3,
-                    'tariff_id' => $request->tariff_id,
-                    'unit_amount' => $vendong_amount,
-                    'note' => 'kct generation failed' //$kct_response . "| " . json_encode($databody)
-                ]);
-
-
-                User::where('id', Auth::id())->first()->creditWallet($total_paid - $utility_amount);
-
-
-                return response()->json([
-
-                    'status' => false,
-                    'message' => "Vending server not connected, Retry again on transaction history",
-                ], 422);
-            }
-
-            $token = $token_gen['data']['token'];
-
-
-            $cdt->unitkwh = $request->vend_amount_kw_per_naira;
-            $cdt->token = $token;
-            $cdt->save();
-
-
-            $trx_history = Transaction::where('trx_id', $trx_id)->first();
-            if (! $trx_history) {
-                $trx_history = new Transaction();
-                $trx_history->amount = $total_paid;
-                $trx_history->pay_type = "pay_with_test";
-                $trx_history->trx_id = $trx_id;
-            }
-
-            if ($paid_utility) {
-                $trx_history->miscellaneous = "utility";
-                $trx_history->miscellaneous_trx_amount = $utility_amount;
-            }
-
-            $trx_history->service = config("constants.service.credit_token");
-            $trx_history->service_type = "credit_token";
-            $trx_history->unit_amount = $vendong_amount;
-            $trx_history->tariff_id = $request->tariff_id;
-            $trx_history->user_id = Auth::id();
-            $trx_history->status = 2;
-            $trx_history->save();
-
-
-            $data2['full_name'] = Auth::user()->first_name . " " . Auth::user()->last_name;
-            $data2['address'] = Auth::user()->address . "," . Auth::user()->city . "," . Auth::user()->state;
-            $data2['service'] = "MOMAS METER";
-            $data2['trx_id'] = $trx_id;
-            $data2['token'] = $token;
-            $data2['amount'] = (string) $total_paid;
-            $data2['meterNo'] = $request->meterNo;
-            $date['created_at'] = $cdt->created_at;
-            $date['updated_at'] = $cdt->updated_at;
-            // $data2['vat'] = $met->vatAmount;
-            $data2['email'] = Auth::user()->email;
-            $data2['title'] = $estate->title;
-            $data2['user_id'] = (string) Auth::user()->id;
-            $data2['status'] = $cdt->status;
-            $data2['miscellaneous'] = $trx_history->miscellaneous;
-            $data2['miscellaneous_trx_amount'] = $trx_history->miscellaneous_trx_amount;
-
-            $vend_amount = round($vendong_amount, 2);
-            $vatt = round($vat_amount, 2);
-            $uun = round($unit, 2);
-
-
-            $data2['vending_amount'] = "$vend_amount";
-            $data2['vat_amount'] = "$vatt";
-            $data2['vend_amount_kw_per_naira'] = "$uun";
-
-            $email = Auth::user()->email;
-
-            $kct_tokens = null;
-            if ($need_kct) {
-                $kct_tokens = $token['data']['kct_token'];
-
-                $met = new MeterToken();
-                $met->user_id = Auth::user()->id;
-                $met->trx_id = $trx_id;
-                $met->meterNo = $meterNo;
-                $met->token = $token;
-                $met->amount = $total_paid ?? 0;
-                $met->unit = $unit;
-                $met->kct_tokens = $kct_tokens[0] . "," . $kct_tokens[1];
-                $met->vat = $vat_amount;
-                $met->estate_id = Auth::user()->estate_id;
-                $met->status = 2;
-                $met->save();
-
-                $kct_token1 = $kct_tokens[0];
-                $kct_token2 = $kct_tokens[1];
-
-                $data2['kct_token1'] = $kct_tokens[0];
-                $data2['kct_token2'] = $kct_tokens[1];
-                send_kct_email_token($email, $token, $amount, $kct_token1, $kct_token2);
-            }
-
-            $meter->NeedKCT = 0;
-            $meter->save();
+            DB::commit();
 
             return StandardResponse::success(code: 200, message: 'Bought token successfully', data:[
-                'receipt' => $data2,
+                'receipt' => $receipt,
             ]);
 
         } catch (Exception $e) {
+            DB::rollBack();
+
             Logger::error('MeterController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(code: 500, message: 'An Error Occured', debug: [
                 'error' => $e->getMessage(),
@@ -512,6 +486,7 @@ class MeterController extends Controller
             ]);
         }
     }
+
 
     public function retry_meter_token(request $request)
     {
@@ -767,35 +742,32 @@ class MeterController extends Controller
 
     public function pay_for_others_meter_token(Request $request)
     {
-
-        return StandardResponse::error(code: 403, message: "Currently unavailable, contact support for more info");
         try {
-
             $validator = Validator::make($request->all(), [
-                'meter_no' => 'required|string|exists:meters,meterNo',
-                'total_paid_amount' => 'required|numeric|min:1',
-                'vend_amount_kw_per_naira' => 'required|numeric|min:0',
-                'vending_amount' => 'required|numeric|min:1',
-                'vat_amount' => 'required|numeric|min:0',
                 'tariff_id' => 'required|integer|exists:tariffs,id',
-                'trxref' => 'required|string',
-                'ref' => 'nullable|string',
+                'trxref' => 'required_without:ref|string',
+                'ref' => 'required_without:trxref|string',
+                'receiver_meterNo' => 'required|string',
                 'utility_amount' => 'nullable|numeric|min:0',
             ]);
 
             if ($validator->fails()) {
-                return StandardResponse::error(
-                    code: 422,
-                    message: 'Validation error',
-                    data: ['validation_error' => $validator->errors()]
-                );
+                return StandardResponse::error(code: 422, message: 'Validation error', data: [
+                    'validation_error' => $validator->errors()
+                ]);
             }
 
-            // ============================
-            // Use Gateway Reference
-            // ============================
-
             $trx_id = $request->trxref ?? $request->ref;
+            $tariff_id = $request->tariff_id;
+            $utility_amount = $request->utility_amount ?? 0;
+            $receiver_meterNo = $request->receiver_meterNo;
+            $auth_user = Auth::user();
+
+            // $tariff_id = $action_payload['tariff_id'];
+            // $unit = $action_payload['vend_amount_kw_per_naira'];
+            // $vat = $action_payload['vat_amount'];
+            // $vending_amount = $action_payload['vending_amount'];
+            // $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
 
             if (!$trx_id) {
                 return StandardResponse::error(422, "Transaction reference missing");
@@ -803,188 +775,77 @@ class MeterController extends Controller
 
             $buyer = Auth::user();
 
-            $meterNo        = $request->meter_no;
-            $total_paid     = $request->total_paid_amount;
-            $unit           = $request->vend_amount_kw_per_naira;
-            $vending_amount = $request->vending_amount;
-            $vat_amount     = $request->vat_amount;
-            $tariff_id      = $request->tariff_id;
-            $utility_amount = $request->utility_amount ?? 0;
+            $receiver_meter = Meter::where('meterNo', $receiver_meterNo)->first();
+            if (!$receiver_meter) {
+                return StandardResponse::error(404, "Receiver meter not found");
+            }
 
-            $meter = Meter::where('meterNo', $meterNo)
-                ->where('estate_id', Auth::user()->estate_id)
-                ->first();
+            $trx = Transaction::where('trx_id', $trx_id)->where('user_id', Auth::user()->id)->first();
+
+            $action_payload = [
+                'tariff_id'=> $tariff_id,
+                'receiver_meterNo' => $receiver_meterNo,
+            ];
+
+            $existing_payload = json_decode($trx->action_payload, true);
+
+            $payload = array_merge($action_payload, $existing_payload);
+            Transaction::where('trx_id', $trx_id)->update(['action_payload' => json_encode($payload)]);
+
+            if (!$trx) {
+                return StandardResponse::error(404, 'Resource not found: Invalid transaction reference', []);
+            }
+
+            if ($trx->status === 1) {
+                return StandardResponse::error(403, 'Transaction yet to be verified or failed', []);
+            }
+
+            if ($trx->status === 2) {
+                $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id, $receiver_meterNo);
+                return StandardResponse::success(200, 'Transaction has previously been completed', [
+                    'receipt' => $receipt,
+                ]);
+            }
+
+            if ($trx->status === 0) {
+                $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
+                $verifier->verifyTransaction($trx->trx_id);
+
+                if (! $verifier['is_successful']) {
+                    $trx->status = 1;
+                    $trx->save();
+                    Logger::warning("User {$auth_user->id} tried buying a token for another meter with a failed transaction {$trx->trx_id}");
+                    return StandardResponse::error(403, 'Payment failed please try again', []);
+                }
+            }
+
+            $meter = Meter::where('meterNo', Auth::user()->meterNo)->where('estate_id', Auth::user()->estate_id)->first();
+
             if (!$meter) {
-                return StandardResponse::error(404, "Meter not found Or Meter is not a part of your estate");
+                return StandardResponse::error(404, "Meter not found");
             }
 
-            $estate       = Estate::where('id', $meter->estate_id)->first();
-            $tariff_index = Tariff::where('id', $tariff_id)->value('tariff_index');
-
-            if (!$tariff_index) {
-                return StandardResponse::error(422, "Invalid tariff configuration");
+            if (! $meter->isActive()) {
+                return StandardResponse::error(403, 'Meter unable to perform this action reach out to your estate admin for support', []);
             }
 
-            // ============================
-            // Check Existing Transaction
-            // ============================
+            $estate = Estate::where('id', Auth::user()->estate_id)->first();
+            $duration = $estate->duration ?? null;
 
-            $trx_history = Transaction::where('trx_id', $trx_id)->first();
-
-            if (!$trx_history) {
-                $trx_history = new Transaction();
-                $trx_history->amount = $total_paid;
-                $trx_history->pay_type = "pay_with_test";
-                $trx_history->trx_id = $trx_id;
-                $trx_history->user_id = $buyer->id;
+            if ($utility_amount > 0 && in_array($duration, ["weekly", "monthly", "yearly"])) {
+                handle_pay_arrears($trx_id, Auth::user()->id, 'utilities');
             }
 
-            // ============================
-            // Optional Utility Settlement
-            // ============================
+            $meter->getNewToken($tariff_id, $trx_id, "null", $receiver_meterNo, 'momas_meter');
 
-            $paid_utility = false;
+            $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id, $receiver_meterNo);
 
-            if ($utility_amount > 0) {
-                UtilitiesPayment::where('estate_id', $meter->estate_id)
-                    ->where('user_id', $meter->user_id)
-                    ->where('status', 1)
-                    ->update(['status' => 2]);
-
-                $paid_utility = true;
-            }
-
-            // ============================
-            // Call Vending Server
-            // ============================
-
-            $databody = [
-                'meterType' => $meter->KRN2,
-                'meterNo'   => $meter->meterNo,
-                'sgc'       => (int) $meter->NewSGC,
-                'ti'        => $tariff_index,
-                'amount'    => $unit,
-            ];
-
-            $response = Http::withOptions([
-                'verify' => false,
-                'timeout' => 15,
-            ])->post('http://169.239.189.91:19071/tokenGen', $databody);
-
-            if (!$response->successful()) {
-                $trx_history->status = 3;
-                Auth::user()->creditWallet($total_paid - $utility_amount);
-                $trx_history->note   = "Vending server unreachable";
-                $trx_history->save();
-
-                return StandardResponse::error(422, "Vending server not reachable");
-            }
-
-            $responseData = json_decode($response->json(), true);
-
-            if (($responseData['code'] ?? null) !== "SUCCESS") {
-
-                $trx_history->status = 3;
-                Auth::user()->creditWallet($total_paid - $utility_amount);
-                $trx_history->note   = "Token generation failed";
-                $trx_history->save();
-
-                return StandardResponse::error(422, "Token generation failed: Your Credit has been added to your wallet");
-            }
-
-            $token = $responseData['tokens'][0];
-
-            // ============================
-            // Save CreditToken (UNDER BUYER)
-            // ============================
-
-            $credit = new CreditToken();
-            $credit->user_id     = $buyer->id;
-            $credit->trx_id      = $trx_id;
-            $credit->meterNo     = $meterNo;
-            $credit->token       = $token;
-            $credit->amount      = $total_paid;
-            $credit->vatAmount   = round($vat_amount, 2);
-            $credit->costOfUnit  = round($vending_amount, 2);
-            $credit->unitkwh     = round($unit, 2);
-            $credit->estate_id   = $meter->estate_id;
-            $credit->estate_name = $estate->title ?? "Unknown";
-            $credit->tariff_id   = $tariff_id;
-            $credit->status      = 2;
-            $credit->save();
-
-            // ============================
-            // Save MeterToken (UNDER BUYER)
-            // ============================
-
-            $meterToken = new MeterToken();
-            $meterToken->user_id   = $buyer->id;
-            $meterToken->trx_id    = $trx_id;
-            $meterToken->meterNo   = $meterNo;
-            $meterToken->token     = $token;
-            $meterToken->amount    = $total_paid;
-            $meterToken->unit      = round($unit, 2);
-            $meterToken->vat       = round($vat_amount, 2);
-            $meterToken->estate_id = $meter->estate_id;
-            $meterToken->status    = 2;
-            $meterToken->save();
-
-            // ============================
-            // Update or Create Transaction
-            // ============================
-
-            if ($paid_utility) {
-                $trx_history->miscellaneous = "utility";
-                $trx_history->miscellaneous_trx_amount = $utility_amount;
-            }
-
-            $trx_history->service      = 'METER PURCHASE (OTHERS)';
-            $trx_history->service_type = 'credit_token';
-            $trx_history->amount       = $total_paid;
-            $trx_history->unit_amount  = $vending_amount;
-            $trx_history->tariff_id    = $tariff_id;
-            $trx_history->status       = 2;
-            $trx_history->save();
-
-            // ============================
-            // Receipt
-            // ============================
-
-            $receipt = [
-                'full_name'               => $buyer->first_name . " " . $buyer->last_name,
-                'trx_id'                  => $trx_id,
-                'meterNo'                 => $meterNo,
-                'token'                   => $token,
-                'amount'                  => (string) $total_paid,
-                'estate'                  => $estate->title ?? null,
-                'vending_amount'          => (string) round($vending_amount, 2),
-                'vat_amount'              => (string) round($vat_amount, 2),
-                'vend_amount_kw_per_naira'=> (string) round($unit, 2),
-                'status'                  => 2
-            ];
-
-            return StandardResponse::success(
-                code: 200,
-                message: "Token purchased successfully",
-                data: ['receipt' => $receipt]
-            );
+            return StandardResponse::success(code: 200, message: "Purchased token for another meter successfully", data:['receipt' => $receipt]);
 
         } catch (\Exception $e) {
-
-            return StandardResponse::error(
-                code: 500,
-                message: 'An error occurred',
-                debug: [
-                    'error' => $e->getMessage(),
-                    'line'  => $e->getLine(),
-                    'file'  => $e->getFile(),
-                ]
-            );
+            return StandardResponse::error(code: 500, message: 'An error occurred', debug: ['error' => $e->getMessage(), 'line' => $e->getLine(), 'file' => $e->getFile()]);
         }
     }
-
-
-
 
     public
     function reprint_meter_token(request $request)
@@ -1453,42 +1314,44 @@ class MeterController extends Controller
     }
 
 
-    public
-    function meter_deactivate(request $request)
-    {
-        $meter = Meter::where('id', $request->id)->first();
+    // public
+    // function meter_deactivate(request $request)
+    // {
+    //     $meter = Meter::where('id', $request->id)->first();
 
-        if (!$meter) {
-            return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
-        }
+    //     if (!$meter) {
+    //         return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
+    //     }
 
-        // Get the user_id before nullifying
-        $user_id = $meter->user_id;
+    //     // Get the user_id before nullifying
+    //     $user_id = $meter->user_id;
 
-        // Update meter: set status to blocked (3), remove user assignment and account number
-        Meter::where('id', $request->id)->update([
-            'status' => 0,  // 0 = Blocked status
-            'user_id' => null,
-            'AccountNo' => null
-        ]);
+    //     // Update meter: set status to blocked (3), remove user assignment and account number
+    //     Meter::where('id', $request->id)->update([
+    //         'status' => 0,  // 0 = Blocked status
+    //         // 'AccountNo' => null
+    //     ]);
 
-        // If meter was assigned to a customer, remove meter reference from customer
-        if ($user_id) {
-            User::where('id', $user_id)->update([
-                'meterNo' => null
-            ]);
-        }
+    //     // If meter was assigned to a customer, remove meter reference from customer
+    //     if ($user_id) {
+    //         User::where('id', $user_id)->update([
+    //             'meterNo' => null
+    //         ]);
+    //     }
 
-        return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
+    //     return redirect('/admin/meter-list')->with('message', 'Meter Deactivated successfully.');
 
-    }
+    // }
 
 
     public
     function meter_activate(request $request)
     {
 
-        Meter::where('id', $request->id)->update(['status' => 2]);
+        $meter = Meter::where('id', $request->id)->first();
+        $user = User::where('id', $meter->user_id)->first();
+        Meter::where('id', $request->id)->update(['status' => 2, 'user_id' => $user->id]);
+        User::where('id', $meter->user_id)->update(['meterNo' => $meter->meterNo]);
 
         return redirect('/admin/meter-list')->with('message', 'Meter Activated successfully.');
 
@@ -1501,6 +1364,13 @@ class MeterController extends Controller
         Meter::where('id', $request->id)->update(['status' => 0]);
 
         return redirect('/admin/meter-list')->with('message', 'Meter blocked successfully.');
+    }
+
+    public function meter_unblock(request $request)
+    {
+        Meter::where('id', $request->id)->update(['status' => 2]);
+
+        return redirect('/admin/meter-list')->with('message', 'Meter Unblocked successfully.');
     }
 
     public

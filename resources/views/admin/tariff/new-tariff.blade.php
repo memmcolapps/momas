@@ -1,10 +1,16 @@
+<?php
+    use App\Models\Tariff;
+
+    $power_source = Tariff::POWER_SOURCE;
+?>
+
 @extends('layouts.main')
 @section('content')
 
-<div id="tariff-data" 
-     data-used-indices='@json($used_indices_by_estate ?? [])' 
-     data-user-role="{{ Auth::user()->role }}" 
-     data-user-estate-id="{{ Auth::user()->estate_id ?? '' }}" 
+<div id="tariff-data"
+     data-used-indices='@json($used_indices_by_estate ?? [])'
+     data-user-role="{{ Auth::user()->role }}"
+     data-user-estate-id="{{ Auth::user()->estate_id ?? '' }}"
      style="display: none;">
 </div>
 
@@ -85,11 +91,12 @@
                                         <label class="my-2">Source</label>
                                         <select class="form-control" name="tariff_source" required>
                                             <option value="">--Select Source--</option>
-                                            <option value="nepa">Nepa</option>
-                                            <option value="gen">Generator</option>
+                                            @foreach ($power_source as $source)
+                                                <option value="{{ $source }}">{{ $source }}</option>
+                                            @endforeach
                                         </select>
 
-                                        
+
 
                                     </div>
 
@@ -222,13 +229,18 @@
 
                                     </div>
 
-                                    <div class="col-xl-6 col-sm-12">
+                                    <div class="col-xl-4 col-sm-12">
                                         <label class="my-2">Source</label>
                                         <select class="form-control" name="tariff_source" required>
                                             <option value="">--Select Source--</option>
-                                            <option value="nepa">Nepa</option>
-                                            <option value="gen">Generator</option>
+                                            @foreach ($power_source as $source)
+                                                <option value="{{ $source }}">{{ $source }}</option>
+                                            @endforeach
                                         </select>
+
+
+
+                                    </div>
 
                                         <!-- <div class="form-check mt-2">
                                             <input class="form-check-input" type="checkbox"
@@ -237,7 +249,6 @@
                                                 Apply VAT
                                             </label>
                                         </div> -->
-                                    </div>
 
 
 
@@ -287,48 +298,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const estateSelect = document.querySelector('[name="estate_id"]');
     const tariffIndexSelect = document.getElementById('tariff_index_select');
     const dataContainer = document.getElementById('tariff-data');
-    
+
     // Get data from HTML attributes
     const usedIndicesByEstate = JSON.parse(dataContainer.dataset.usedIndices);
     const userRole = parseInt(dataContainer.dataset.userRole);
     const userEstateId = dataContainer.dataset.userEstateId;
-    
+
     function filterTariffIndices(estateId) {
         if (!tariffIndexSelect) return;
-        
+
         const usedIndices = usedIndicesByEstate[estateId] || [];
         const options = tariffIndexSelect.querySelectorAll('option');
-        
+
         options.forEach(option => {
             if (option.value === '') return; // Skip placeholder
-            
+
             if (usedIndices.includes(parseInt(option.value))) {
                 option.style.display = 'none';
             } else {
                 option.style.display = 'block';
             }
         });
-        
+
         // Reset selected value if it's now hidden
         if (tariffIndexSelect.selectedOptions[0] && tariffIndexSelect.selectedOptions[0].style.display === 'none') {
             tariffIndexSelect.value = '';
         }
     }
-    
+
     // For Super Admin - disable tariff index initially and enable after estate selection
     if (userRole === 0 && estateSelect && tariffIndexSelect) {
         // Initially disable tariff index dropdown
         tariffIndexSelect.disabled = true;
         tariffIndexSelect.innerHTML = '<option value="">Select estate first</option>';
-        
+
         estateSelect.addEventListener('change', function() {
             const selectedEstateId = this.value;
-            
+
             if (selectedEstateId && selectedEstateId !== '') {
                 // Enable tariff index dropdown and restore all options
                 tariffIndexSelect.disabled = false;
                 tariffIndexSelect.innerHTML = '<option value="">---Select Index-----</option>';
-                
+
                 // Add all indices back
                 for (let i = 1; i <= 99; i++) {
                     const option = document.createElement('option');
@@ -336,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     option.textContent = i;
                     tariffIndexSelect.appendChild(option);
                 }
-                
+
                 // Then filter out used ones
                 filterTariffIndices(selectedEstateId);
             } else {
@@ -346,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // For Estate Admin - filter immediately on page load
     if (userRole === 3 && userEstateId) {
         filterTariffIndices(userEstateId);

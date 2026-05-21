@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\EstateModFeature;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -62,7 +64,27 @@ class Estate extends Model
         return $this->hasMany(UtilitiesPayment::class);
     }
 
+    public function scopeByUser($query, $user) {
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        return $query->where('estate_id', $user->estate_id);
+    }
+
+    public function estateModFeature() {
+        return $this->hasMany(EstateModFeature::class, 'estate_id');
+    }
+
+    public function getAdminFee() {
+        return $this->admin_fee;
+    }
+
+    public function isActive() {
+        return true;
+    }
+
     protected $casts = [
-        'status' => 'integer',
-        ];
+    'status' => 'integer',
+    ];
 }

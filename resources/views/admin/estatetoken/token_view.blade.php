@@ -133,12 +133,10 @@
                                     <tr>
                                         <th scope="col" class="cursor-pointer">Customer Name</th>
                                         <th scope="col" class="cursor-pointer">Token No</th>
-                                        <th scope="col" class="cursor-pointer">Estate</th>
                                         <th scope="col" class="cursor-pointer">Visitors</th>
                                         <th scope="col" class="cursor-pointer">Email</th>
                                         <th scope="col" class="cursor-pointer">Date</th>
                                         <th scope="col" class="cursor-pointer desc">Status</th>
-                                        <th scope="col" class="cursor-pointer desc">Action</th>
                                         <th scope="col" class="cursor-pointer desc">Action</th>
 
 
@@ -150,16 +148,15 @@
                                     @foreach($token as $data)
 
                                         <tr>
-                                            <td>{{$data->user->first_name ?? "name"}}  {{$data->user->last_name ?? "name"}}</td>
-                                            <td>{{$data->token ?? "data"}}</td>
-                                            <td>{{$data->estate->title ?? "NAME"}}</td>
-                                            <td>{{$data->visitor  ?? "data"}}</td>
+                                            <td>{{$data->user->first_name ?? "NAME"}}  {{$data->user->last_name ?? "NAME"}}</td>
+                                            <td>{{$data->token}}</td>
+                                            <td>{{$data->visitor}}</td>
                                             @if($data->email != null)
-                                                <td>{{$data->email  ?? "data"}}</td>
+                                                <td>{{$data->email}}</td>
                                             @else
                                                 <td>No email provided</td>
                                             @endif
-                                            <td>{{$data->created_at  ?? "data"}}</td>
+                                            <td>{{$data->created_at}}</td>
                                             <td>
                                                 @if($data->status == 2)
                                                     <span class="badge text-bg-primary">Activated</span>
@@ -170,14 +167,6 @@
                                                 @endif
 
                                             </td>
-                                            <td><a href="token-delete?id={{$data->id}}"
-                                                   onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
-                                            </td>
-                                            <script>
-                                                function confirmDelete() {
-                                                    return confirm('Are you sure you want to delete this item?');
-                                                }
-                                            </script>
 
 
                                             @if($data->status == 2)
@@ -327,7 +316,6 @@
                                         <th scope="col" class="cursor-pointer">Date</th>
                                         <th scope="col" class="cursor-pointer desc">Status</th>
                                         <th scope="col" class="cursor-pointer desc">Action</th>
-                                        <th scope="col" class="cursor-pointer desc">Action</th>
 
 
                                     </tr>
@@ -357,14 +345,6 @@
                                                 @endif
 
                                             </td>
-                                            <td><a href="token-delete?id={{$data->id}}"
-                                                   onclick="return confirmDelete();" class="btn btn-danger">Delete</a>
-                                            </td>
-                                            <script>
-                                                function confirmDelete() {
-                                                    return confirm('Are you sure you want to delete this item?');
-                                                }
-                                            </script>
 
 
                                             @if($data->status == 2)
