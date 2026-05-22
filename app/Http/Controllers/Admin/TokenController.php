@@ -5556,6 +5556,7 @@ class TokenController extends Controller
             if ($request->type == "credit_token") {
 
                 $trx_comp = CreditToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $trx = Transaction::where('trx_id', $request->trx_id)->first();
                 $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
                 $met = MeterToken::where('trx_id', $request->trx_id)->first() ?? null;
                 $kct_tokens = $met ? explode(',', $met->kct_tokens) : null;
@@ -5568,7 +5569,7 @@ class TokenController extends Controller
                     $data['trx_id'] = $trx_comp->trx_id;
                     $data['token'] = $trx_comp->token;
                     $data['ref'] = $trx_comp->trx_id;
-                    $data['amount'] = $trx_comp->amount_charged;
+                    $data['amount'] = $trx->amount ?? $trx_comp->amount_charged;
                     $data['vat_amount'] = $trx_comp->vatAmount;
                     $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
                     $data['tariff_amount'] = $trx_comp->tariff_amount;
