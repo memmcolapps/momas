@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
+use Illuminate\Database\Connection;
+use Illuminate\Database\Connectors\SqlServerConnector;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +39,23 @@ class AppServiceProvider extends ServiceProvider
                 'wallet' => new WalletPaymentService(),
                 default => dd($provider) //throw new \Exception('Unsupported payment provider'),
             };
+        });
+
+        Connection::resolverFor('sqlsrv', function ($connection, $database, $prefix, $config) {
+            $connector = new class extends SqlServerConnector {
+                protected function getDsn(array $config): string
+                {
+                    $dsn = parent::getDsn($config);
+                    if (!empty($config['TrustServerCertificate'])) {
+                        $dsn .= ';TrustServerCertificate=1';
+                    }
+                    return $dsn;
+                }
+            };
+
+            $pdo = $connector->connect($config);
+
+            return new \Illuminate\Database\SqlServerConnection($pdo, $database, $prefix, $config);
         });
     }
 

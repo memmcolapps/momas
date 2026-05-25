@@ -128,7 +128,7 @@
                                     </select>
 
                                 </div>
-                                
+
                                 {{-- NEPA Tariffs --}}
                                 <div class="col-2">
                                     <label class="my-2">New NEPA Tariff</label>
@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
         genOld: '{{$meter->OldTariffDualID}}',
         genNew: '{{$meter->NewTariffDualID}}'
     };
-    
+
     // Handle dual tariff toggle
     if (dualTariffCheckbox) {
         dualTariffCheckbox.addEventListener('change', function() {
@@ -458,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dualTariffCheckbox.dispatchEvent(new Event('change'));
         }
     }
-    
+
     // Estate change handler
     if (estateSelect) {
         estateSelect.addEventListener('change', function() {
@@ -467,6 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetch(`/admin/get-estate-tariffs?estate_id=${estateId}`)
                     .then(response => response.json())
                     .then(data => {
+                        console.log(data.tariffs);
                         clearAndPopulateTariffSelects(data.tariffs);
                     })
                     .catch(error => {
@@ -497,11 +498,11 @@ document.addEventListener('DOMContentLoaded', function() {
             genNewSelect.innerHTML = '<option value="">Select Generator Tariff</option>';
         }
     }
-    
+
     function clearAndPopulateTariffSelects(tariffs) {
         const nepaTariffs = tariffs.filter(t => t.type === 'nepa');
         const genTariffs = tariffs.filter(t => t.type === 'gen');
-        
+
         // Clear and populate NEPA Old Tariff
         if (nepaOldSelect) {
             nepaOldSelect.innerHTML = '<option value="">Select NEPA Tariff</option>';
@@ -533,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Clear and populate Generator Old Tariff
         if (genOldSelect) {
             genOldSelect.innerHTML = '<option value="">Select Generator Tariff</option>';
@@ -568,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-            
+
 
 @elseif(Auth::user()->role == 1)
     {{-- ROLE 1 PLACEHOLDER --}}
