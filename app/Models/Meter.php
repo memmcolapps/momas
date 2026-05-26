@@ -359,7 +359,7 @@ class Meter extends Model
                 ],
                     [
                     'amount' => $vending_amount,
-                    'amount_charged' => $vending_amount,
+                    'amount_charged' => $trx->amount,
                     'customer_email' => $email,
                     'receiver_meterNo' => $receiver_meterNo,
                     'unitkwh' => $unit,
