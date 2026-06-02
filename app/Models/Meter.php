@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Constants\ServiceTypeConstants;
-use App\Constants\TransactionConstants;
 use App\Events\MeterTokenGenerated;
 use App\Services\PaystackPaymentService;
 use App\Services\TokenGenerationService;
@@ -11,9 +10,7 @@ use App\Services\VatCalculator;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class Meter extends Model
 {
@@ -314,14 +311,6 @@ class Meter extends Model
                 }
 
 
-            // dump('Passed trx ver');
-
-            $need_kct = $this->NeedKCT;
-
-            $tariff_index = Tariff::where('id', $tariff_id)->first()->tariff_index ?? null;
-            $token_gen = TokenGenerationService::generateMeterToken($this, $tariff_index, $unit, $this->NeedKCT);
-
-
                 $need_kct = $meter->NeedKCT;
 
                 $tariff_index = Tariff::where('id', $tariff_id)->first()->tariff_index ?? null;
@@ -365,7 +354,7 @@ Transaction::where('trx_id', $trx_id)->update([
                 ],
                     [
                     'amount' => $vending_amount,
-                    'amount_charged' => $vending_amount,
+                    'amount_charged' => $trx->amount,
                     'customer_email' => $email,
                     'receiver_meterNo' => $receiver_meterNo,
                     'unitkwh' => $unit,

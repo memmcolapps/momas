@@ -2,23 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppSetting;
 use App\Services\StandardResponse;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
-    public function checkAppVersion (Request $request) {
-        // Checks app version
+    public function checkAppVersion(Request $request)
+    {
+        $keys = [
+            'description'      => 'app_update_description',
+            'minimum_version'  => 'app_minimum_version',
+            'latest_version'   => 'app_latest_version',
+            'last_update_date' => 'app_last_update_date',
+            'app_size'         => 'app_size',
+            'play_store_url'   => 'app_playstore_url',
+            'app_store_url'    => 'app_appstore_url',
+        ];
 
+        $data = [];
+        foreach ($keys as $responseKey => $settingKey) {
+            $data[$responseKey] = AppSetting::get($settingKey)
+                ?? config("constants.app_update_data.{$settingKey}");
+        }
 
-        return StandardResponse::success(200, 'Fetched Version successfully', [
-            'description' => "Experience a faster, more reliable app. We've improved our payment system, redesigned the interface for smooth navigation, and added smart loading indicators so you're never left waiting. Jump in and get going.",
-            'minimum_version' => '1.0.2',
-            'latest_version' => '1.1.0',
-            'last_update_date' => '2026-04-02',
-            'app_size' => '26.1mb',
-            'play_store_url' => 'https://play.google.com/store/apps/details?id=com.memmcol.momaspayplus',
-            'app_store_url' => 'https://apps.apple.com/us/app/momaspay-plus/id6743942353',
-        ]);
+        return StandardResponse::success(200, 'Fetched Version successfully', $data);
     }
 }

@@ -11,13 +11,13 @@
             <div class="container-fluid">
 
 
-                <div class="py-3 d-flex align-items-sm-center flex-sm-row 
+                <div class="py-3 d-flex align-items-sm-center flex-sm-row
                 flex-column">
                     <div class="flex-grow-1">
                         <h4 class="fs-18 fw-semibold m-0">All Transactions Report </h4>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="export-transactions" class="btn btn-success btn-sm">
+                        <a href="export-transactions?from_date={{ $from ?? null }}&to_date={{ $to ?? null }}&status={{ $status ?? null }}&estate_id={{ $estate_id ?? null }}&transaction_type={{ $transaction_type ?? null }}&rrn={{ $rrn ?? null }}" class="btn btn-success btn-sm">
                             <i class="fas fa-file-excel me-1"></i> Export to Excel
                         </a>
                     </div>
@@ -104,15 +104,15 @@
                                         <div class="row">
                                             <div class="col-3">
                                                 <label>Date From</label>
-                                                <input type="date" class="form-control"  name="from">
+                                                <input type="date" class="form-control"  name="from" value="{{ $from ?? null }}">
                                             </div>
                                             <div class="col-3">
                                                 <label>Date To</label>
-                                                <input type="date" class="form-control"   name="to">
+                                                <input type="date" class="form-control"   name="to" value="{{ $to ?? null }}">
                                             </div>
                                             <div class="col-3">
                                                 <label>Transaction Type</label>
-                                                <select class="form-control" name="transaction_type">
+                                                <select class="form-control" name="transaction_type" value="{{ $transaction_type ?? null }}">
 
                                                     <option value="">Select type</option>
                                                     <option value="credit_token">Credit Token</option>
@@ -152,7 +152,11 @@
                                                         <option value="">Select Estate</option>
                                                         <option value="all">All Estate</option>
                                                         @foreach($estate as $data)
-                                                            <option value="{{$data->id}}">{{$data->title}}</option>
+                                                            @if (isset($estate_id) && $estate_id == $data->id)
+                                                                <option selected value="{{$data->id}}">{{$data->title}}</option>
+                                                            @else
+                                                                <option value="{{$data->id}}">{{$data->title}}</option>
+                                                            @endif
                                                         @endforeach
 
                                                     </select>
@@ -399,7 +403,7 @@
                         <h4 class="fs-18 fw-semibold m-0">Transaction Report | {{Auth::user()->estate_name}}</h4>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="export-transactions" class="btn btn-success btn-sm">
+                        <a href="export-transactions?from_date={{ $from ?? null }}&to_date={{ $to ?? null }}&status={{ $status ?? null }}&estate_id={{ $estate_id ?? null }}&transaction_type={{ $transaction_type ?? null }}&rrn={{ $rrn ?? null }}" class="btn btn-success btn-sm">
                             <i class="fas fa-file-excel me-1"></i> Export to Excel
                         </a>
                     </div>

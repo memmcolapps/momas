@@ -1487,7 +1487,11 @@ class TokenController extends Controller
                 $status = $payment_init['status'];
 
                 if (! $status) {
-                    Logger::warning("Payment init by {$customer_email} Failed");
+
+                    Logger::warning("Payment init by {$customer_email} Failed", [
+                        'payment_engine' => $payment_init,
+                    ]);
+
                     return redirect('/admin/credit-token')->with(
                         'error',
                         $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option"
@@ -3744,7 +3748,11 @@ class TokenController extends Controller
                         $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
                     }
 
-                    $meter->getNewToken($tariff_id, $unit, $trx_id, $vat, $vending_amount, $verify="null");
+
+                    $access_point = $request->header('Access-Point') ?? 'web';
+                    $action = $access_point == 'mobile' ? 'momas_meter' : 'momas_meter_web';
+
+                    $meter->getNewToken($tariff_id, $trx_id, verify:"null", receiver_meterNo:$receiver_meterNo, action:$action);
 
 
 
@@ -5551,6 +5559,7 @@ class TokenController extends Controller
             if ($request->type == "credit_token") {
 
                 $trx_comp = CreditToken::where('trx_id', $request->trx_id)->first() ?? null;
+                $trx = Transaction::where('trx_id', $request->trx_id)->first();
                 $user_comp = User::where('id', $trx_comp->user_id)->first() ?? null;
                 $met = MeterToken::where('trx_id', $request->trx_id)->first() ?? null;
                 $kct_tokens = $met ? explode(',', $met->kct_tokens) : null;
@@ -5563,7 +5572,7 @@ class TokenController extends Controller
                     $data['trx_id'] = $trx_comp->trx_id;
                     $data['token'] = $trx_comp->token;
                     $data['ref'] = $trx_comp->trx_id;
-                    $data['amount'] = $trx_comp->amount_charged;
+                    $data['amount'] = $trx->amount ?? $trx_comp->amount_charged;
                     $data['vat_amount'] = $trx_comp->vatAmount;
                     $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
                     $data['tariff_amount'] = $trx_comp->tariff_amount;

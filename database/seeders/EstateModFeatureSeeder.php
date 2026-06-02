@@ -18,7 +18,7 @@ class EstateModFeatureSeeder extends Seeder
         foreach ($estates as $estate) {
             foreach ($features as $feature) {
 
-                $default_status = EstateModFeature::UNAVAILABLE_STATUS;
+                $default_status = EstateModFeature::AVAILABLE_STATUS;
 
                 if ($feature->slug == Feature::MOMAS_METER) {
                     $default_status = EstateModFeature::AVAILABLE_STATUS;

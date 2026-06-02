@@ -22,4 +22,14 @@ return [
     'service' => [
         'credit_token' => 'CREDIT TOKEN PURCHASE'
     ],
+
+    'app_update_data' => [
+        'app_minimum_version' => env('APP_MINIMUM_VERSION'),
+        'app_latest_version' => env('APP_LATEST_VERSION'),
+        'app_last_update_date' => env('APP_LAST_UPDATE_DATE'),
+        'app_size' => env('APP_SIZE'),
+        'app_playstore_url' => env('APP_PLAYSTORE_URL'),
+        'app_appstore_url' => env('APP_APPSTORE_URL'),
+        'app_update_description' => env('APP_UPDATE_DESCRIPTION'),
+    ],
 ];

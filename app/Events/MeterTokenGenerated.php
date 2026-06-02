@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\CreditToken;
+use App\Models\Logger;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -31,5 +32,20 @@ class MeterTokenGenerated
         $this->kctToken2 = $kctToken2;
         $this->recipientMeterNo = $recipientMeterNo;
         $this->title = $title;
+    }
+
+    public static function dispatch(...$args)
+    {
+        $payload = count($args) === 1 && $args[0] instanceof self
+            ? $args[0]
+            : new static(...$args);
+
+        Logger::info('MeterTokenGenerated event dispatched', [
+            'token_id'   => $payload->creditToken->id ?? null,
+            'meter_no'   => $payload->recipientMeterNo,
+            'amount'     => $payload->vendingAmount,
+        ]);
+
+        return event($payload);
     }
 }
