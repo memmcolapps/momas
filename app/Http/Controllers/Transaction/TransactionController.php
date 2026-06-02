@@ -888,345 +888,63 @@ class TransactionController extends Controller
     }
 
 
-    public function search_trx(request $request)
+    public function search_trx(Request $request)
     {
-
-        if (Auth::user()->role == 0) {
-
-
-            $rrn = $request->rrn;
-            $startofday = $request->from;
-            $endofday = $request->to;
-            $transaction_type = $request->transaction_type;
-            $status = $request->status;
-            $estate_id = $request->estate_id;
-            $data['estate'] = Estate::all();
-
-
-            if ($startofday != null && $endofday != null && $rrn == null && $transaction_type == null && $status == null) {
-
-                $data['transactions'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->sum('amount') ?? 0;
-
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-            if ($rrn != null) {
-
-                $data['transactions'] = Transaction::where('trx_id', $rrn)->paginate(50);
-                $data['total'] = Transaction::where('trx_id', $rrn)->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-
-            }
-
-
-            if ($estate_id != null && $status != null) {
-
-                if ($estate_id == "all") {
-
-                    $data['transactions'] = Transaction::
-                    latest()
-                        ->where('status', $status)
-                        ->take(50000)
-                        ->paginate(50);
-
-                    $data['total'] = Transaction::where('status', $status)->sum('amount') ?? 0;
-
-                    return view('admin.report.transactionreport', $data);
-                }
-
-                $data['transactions'] = Transaction::where('estate_id', $estate_id)
-                    ->where('status', $status)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::where('estate_id', $estate_id)
-                    ->where('status', $status)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            if ($estate_id != null) {
-
-                if ($estate_id == "all") {
-
-                    $data['transactions'] = Transaction::
-                    latest()
-                        ->take(50000)
-                        ->paginate(50);
-
-                    $data['total'] = Transaction::sum('amount') ?? 0;
-
-
-                    return view('admin.report.transactionreport', $data);
-                }
-
-                $data['transactions'] = Transaction::where('estate_id', $estate_id)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::where('estate_id', $estate_id)
-                    ->sum('amount') ?? 0;
-
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            if ($estate_id != null) {
-
-                if ($estate_id == "all") {
-
-                    $data['transactions'] = Transaction::
-                    latest()
-                        ->take(50000)
-                        ->paginate(50);
-
-                    $data['total'] = Transaction::sum('amount') ?? 0;
-
-
-                    return view('admin.report.transactionreport', $data);
-                }
-
-                $data['transactions'] = Transaction::where('estate_id', $estate_id)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::where('estate_id', $estate_id)
-                    ->sum('amount') ?? 0;
-
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            if ($startofday != null && $endofday != null && $rrn == null && $transaction_type != null && $status == null) {
-
-
-                $data['transactions'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->latest()
-                    ->take(50000)
-                    ->where('service_type', $transaction_type)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->where('service_type', $transaction_type)
-                    ->sum('amount') ?? 0;
-
-
-                return view('admin.report.transactionreport', $data);
-
-
-            }
-
-
-            if ($startofday != null && $endofday != null && $rrn == null && $transaction_type != null && $status != null) {
-                $data['transactions'] = Transaction::latest()->take(50000)->whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])->
-                where([
-                    'status' => $status,
-                    'service_type' => $transaction_type,
-                ])->paginate('50') ?? null;
-
-
-                $data['total'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])->
-                where([
-                    'status' => $status,
-                    'service_type' => $transaction_type,
-                ])->sum('amount') ?? 0;
-
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
+        $user = Auth::user();
+        $rrn = $request->rrn;
+        $startofday = $request->from;
+        $endofday = $request->to;
+        $transaction_type = $request->transaction_type;
+        $status = $request->status;
+        $estate_id = $request->estate_id;
+
+        // Bail early if nothing was provided
+        $hasInput = $rrn || $startofday || $endofday || $transaction_type || $status || $estate_id;
+        if (!$hasInput) {
             return back()->with('error', 'Select a field');
-
         }
 
+        $data['estate'] = Estate::all();
 
-        if (Auth::user()->role == 3) {
+        // Base query — role-scoped at the top level
+        $baseQuery = Transaction::query()
+            ->when($user->role === 3, fn($q) =>
+                $q->where('estate_id', $user->estate_id)
+            )
+            ->when($user->role === 0 && $estate_id && $estate_id !== 'all', fn($q) =>
+                $q->where('estate_id', $estate_id)
+            );
 
-            $rrn = $request->rrn;
-            $startofday = $request->from;
-            $endofday = $request->to;
-            $transaction_type = $request->transaction_type;
-            $status = $request->status;
+        // Apply filters via chained when() — one condition per filter
+        $query = (clone $baseQuery)
+            ->when($rrn, fn($q) =>
+                $q->where('trx_id', $rrn)
+            )
+            ->when($startofday && $endofday, fn($q) =>
+                $q->whereBetween('created_at', [
+                    $startofday . ' 00:00:00',
+                    $endofday . ' 23:59:59',
+                ])
+            )
+            ->when($transaction_type, fn($q) =>
+                $q->where('service_type', $transaction_type)
+            )
+            ->when($status, fn($q) =>
+                $q->where('status', $status)
+            );
 
-            if ($startofday != null && $endofday != null && $rrn == null && $transaction_type == null && $status == null) {
+        $data['transactions'] = (clone $query)->latest()->take(50000)->paginate(50);
+        $data['total'] = (clone $query)->sum('amount') ?? 0;
 
-                $data['transactions'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->latest()
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->take(50000)
-                    ->paginate(50);
+        // Pass filter state back to the view
+        $data['from'] = $startofday;
+        $data['to'] = $endofday;
+        $data['transaction_type'] = $transaction_type;
+        $data['trx_id'] = $rrn;
+        $data['estate_id'] = $estate_id;
+        $data['status'] = $status;
 
-                $data['total'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            if ($startofday != null && $endofday != null && $rrn == null && $transaction_type != null && $status == null) {
-
-
-                $data['transactions'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->where('service_type', $transaction_type)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->where('service_type', $transaction_type)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            if ($startofday != null && $endofday != null && $rrn == null && $transaction_type != null && $status != null) {
-                $data['transactions'] = Transaction::latest()->take(50000)->whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])->
-                where([
-                    'status' => $status,
-                    'service_type' => $transaction_type,
-                    'estate_id' => Auth::user()->estate_id
-                ])->paginate('50') ?? null;
-
-
-                $data['total'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])->
-                where([
-                    'status' => $status,
-                    'service_type' => $transaction_type,
-                    'estate_id' => Auth::user()->estate_id
-
-                ])->sum('amount') ?? 0;
-
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            // Filter by RRN (Transaction ID) only
-            if ($rrn != null) {
-
-                $data['transactions'] = Transaction::where('trx_id', $rrn)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->paginate(50);
-                $data['total'] = Transaction::where('trx_id', $rrn)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            // Filter by status only
-            if ($status != null && $startofday == null && $endofday == null && $rrn == null && $transaction_type == null) {
-
-                $data['transactions'] = Transaction::where('status', $status)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::where('status', $status)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            // Filter by transaction type only
-            if ($transaction_type != null && $startofday == null && $endofday == null && $rrn == null && $status == null) {
-
-                $data['transactions'] = Transaction::where('service_type', $transaction_type)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::where('service_type', $transaction_type)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            // Filter by date range + status
-            if ($startofday != null && $endofday != null && $rrn == null && $transaction_type == null && $status != null) {
-
-                $data['transactions'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->where('status', $status)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59'])
-                    ->where('status', $status)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            // Filter by transaction type + status
-            if ($transaction_type != null && $status != null && $startofday == null && $endofday == null && $rrn == null) {
-
-                $data['transactions'] = Transaction::where('service_type', $transaction_type)
-                    ->where('status', $status)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->latest()
-                    ->take(50000)
-                    ->paginate(50);
-
-                $data['total'] = Transaction::where('service_type', $transaction_type)
-                    ->where('status', $status)
-                    ->where('estate_id', Auth::user()->estate_id)
-                    ->sum('amount') ?? 0;
-
-                return view('admin.report.transactionreport', $data);
-
-            }
-
-
-            return back()->with('error', 'Select a field');
-
-
-        }
-
-
+        return view('admin.report.transactionreport', $data);
     }
 
     public function get_account_details(request $request)
