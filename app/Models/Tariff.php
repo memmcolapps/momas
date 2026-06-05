@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Tariff extends Model
 {
+    protected $fillable = [
+        'title',
+        'tariff_index',
+        'estate_id',
+        'status',
+        'created_at',
+        'updated_at',
+    ];
     use HasFactory;
 
     public const POWER_SOURCE = [

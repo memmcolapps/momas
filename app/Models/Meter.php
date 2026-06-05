@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Constants\ServiceTypeConstants;
-use App\Constants\TransactionConstants;
 use App\Events\MeterTokenGenerated;
 use App\Services\PaystackPaymentService;
 use App\Services\TokenGenerationService;
@@ -11,9 +10,7 @@ use App\Services\VatCalculator;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class Meter extends Model
 {
@@ -264,7 +261,6 @@ class Meter extends Model
                 $service = $other_meter ? "CREDIT TOKEN PURCHASE(OTHERS)" : "CREDIT TOKEN PURCHASE";
                 $service_type = $other_meter ? ServiceTypeConstants::CREDIT_TOKEN_OTHERS : ServiceTypeConstants::CREDIT_TOKEN;
 
-
                 $meter = $other_meter ?? $this;
 
 
@@ -332,11 +328,10 @@ class Meter extends Model
 
                 if ( ! $token_gen['success']) {
                     // dump('Failed Meter: 317');
-                    Transaction::where('trx_id', $trx_id)->update([
-                        'note' => 'token generation failed',
-                        'status' => 3,
-                        'wallet_creditted' => $vending_amount,
-                    ]);
+Transaction::where('trx_id', $trx_id)->update([
+                         'note' => 'token generation failed',
+                         'status' => 3,
+                     ]);
 
 
                     if ($action == 'momas_meter') {
@@ -394,7 +389,8 @@ class Meter extends Model
                     ]);
                 }
 
-                Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
+                $user->debitWallet($trx->vending_amount ?? $trx->amount);
+                Transaction::where('trx_id', $trx_id)->update(['status' => '2', 'wallet_creditted' => 0]);
 
                 MeterTokenGenerated::dispatch(
                     $cdt,
@@ -409,15 +405,10 @@ class Meter extends Model
         } catch (Exception $e) {
 
             $trx = Transaction::where('trx_id', $trx_id)->first();
-            $amount = $trx->vending_amount ?? $trx->amount;
 
             if ($action == 'momas_meter') {
-                User::where('id', $this->user_id)->first()->creditWallet($amount);
-
-                Transaction::where('trx_id', $trx_id)->update([
-                    'wallet_creditted' => $amount,
-                    'status' => 3,
-                ]);
+                $trx->status = 3;
+                $trx->save();
             }
 
             throw $e;
@@ -512,7 +503,9 @@ class Meter extends Model
             ]);
 
             // Update transaction status
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+            $trxUser = User::find($trx->user_id);
+            $trxUser->debitWallet($trx->amount);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
         });
 
         return true;
@@ -623,7 +616,9 @@ class Meter extends Model
             ]);
 
             // Update transaction status
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+            $trxUser = User::find($trx->user_id);
+            $trxUser->debitWallet($trx->amount);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
         });
 
         return true;
@@ -729,7 +724,9 @@ class Meter extends Model
             ]);
 
             // Update transaction status
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+            $trxUser = User::find($trx->user_id);
+            $trxUser->debitWallet($trx->amount);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
         });
 
         return true;

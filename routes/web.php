@@ -1,8 +1,9 @@
 <?php
 
 use App\Exports\CustomerExport;
-use App\Exports\MeterExport;
 use App\Exports\Meter\Export;
+use App\Exports\MeterExport;
+use App\Exports\UtilitiesPaymentsExport;;
 use App\Http\Controllers\AccessToken\AccessTokenConroller;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\AuthController;
@@ -14,17 +15,16 @@ use App\Http\Controllers\Admin\MeterImportController;
 use App\Http\Controllers\Admin\TariffController;
 use App\Http\Controllers\Admin\TokenController;
 use App\Http\Controllers\AuditlogController;
-use App\Http\Controllers\Estate\EstateServiceController;
 use App\Http\Controllers\Estate\CustomerImportController as EstateCustomerImportController;
+use App\Http\Controllers\Estate\EstateServiceController;
 use App\Http\Controllers\Meter\MeterController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\Transaction\TransactionController;
 use App\Http\Controllers\Transformer\TransformerController;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\UtilitiesPaymentsExport;;
-use Illuminate\Support\Facades\Response;
 
 
 
@@ -55,7 +55,7 @@ Route::get('/fetch-tariff', [MeterController::class, 'fetchTariff']);
 
 
 Route::get('/clear', function(){
-    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    // \Illuminate\Support\Facades\Artisan::call('optimize:clear');
 });
 
 
@@ -103,8 +103,8 @@ Route::any('pay-flutter', [TransactionController::class, 'flutter_payment']);
 Route::any('payment-check', [TransactionController::class, 'flutter_verify']);
 Route::any('paystack-check', [TransactionController::class, 'paystack_verify']);
 Route::any('payment-check', [TransactionController::class, 'paystack_verify']);
-Route::any('payment', [TokenController::class, 'payment']);
-Route::any('fund_wallet', [TransactionController::class, 'fund_wallet']);
+Route::any('payment', [TokenController::class, 'payment'])->middleware('auth');
+Route::any('fund_wallet', [TransactionController::class, 'fund_wallet'])->middleware('auth');
 
 
 Route::any('set-2fa', [AuthController::class, 'set_2fa']);

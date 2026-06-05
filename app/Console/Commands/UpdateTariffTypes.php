@@ -12,14 +12,14 @@ class UpdateTariffTypes extends Command
      *
      * @var string
      */
-    protected $signature = 'tariff:update-types';
+    protected $signature = 'tariff:update-types {--revert}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Update tariff type values: nepa -> Grid, gen -> Off Grid';
+    protected $description = 'Update tariff type values between nepa/gen and Grid/Off Grid';
 
     /**
      * Execute the console command.
@@ -28,19 +28,46 @@ class UpdateTariffTypes extends Command
      */
     public function handle()
     {
-        $this->info('Starting tariff type update...');
+        $revert = $this->option('revert');
 
-        // Update tariffs with type containing 'nepa' (case-insensitive) to 'Grid'
-        $nepaCount = Tariff::whereRaw('LOWER(type) LIKE ?', ['%nepa%'])->update(['type' => 'Grid']);
-        $this->info("Updated {$nepaCount} tariffs with 'nepa' to 'Grid'");
+        $this->info(
+            $revert
+                ? 'Starting tariff type revert...'
+                : 'Starting tariff type update...'
+        );
 
-        // Update tariffs with type containing 'gen' (case-insensitive) to 'Off Grid'
-        $genCount = Tariff::whereRaw('LOWER(type) LIKE ?', ['%gen%'])->update(['type' => 'Off Grid']);
-        $this->info("Updated {$genCount} tariffs with 'gen' to 'Off Grid'");
+        if ($revert) {
+            // Grid -> nepa
+            $gridCount = Tariff::whereRaw('LOWER(type) = ?', ['grid'])
+                ->update(['type' => 'nepa']);
 
-        $total = $nepaCount + $genCount;
+            $this->info("Updated {$gridCount} tariffs from 'Grid' to 'nepa'");
+
+            // Off Grid -> gen
+            $offGridCount = Tariff::whereRaw('LOWER(type) = ?', ['off grid'])
+                ->update(['type' => 'gen']);
+
+            $this->info("Updated {$offGridCount} tariffs from 'Off Grid' to 'gen'");
+
+            $total = $gridCount + $offGridCount;
+        } else {
+            // nepa -> Grid
+            $nepaCount = Tariff::whereRaw('LOWER(type) LIKE ?', ['%nepa%'])
+                ->update(['type' => 'Grid']);
+
+            $this->info("Updated {$nepaCount} tariffs with 'nepa' to 'Grid'");
+
+            // gen -> Off Grid
+            $genCount = Tariff::whereRaw('LOWER(type) LIKE ?', ['%gen%'])
+                ->update(['type' => 'Off Grid']);
+
+            $this->info("Updated {$genCount} tariffs with 'gen' to 'Off Grid'");
+
+            $total = $nepaCount + $genCount;
+        }
+
         $this->info("Total tariffs updated: {$total}");
 
-        return 0;
+        return self::SUCCESS;
     }
 }

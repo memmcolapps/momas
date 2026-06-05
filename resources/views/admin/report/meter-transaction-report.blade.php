@@ -95,6 +95,7 @@
                                 <div class="d-flex justify-content-between">
                                     <h5 class="card-title text-black mb-0">All Meter Transactions</h5>
                                     <a href="export-metertransactions" class="btn btn-success btn-sm">
+                                    <a href="export-transactions?from_date={{ $from ?? null }}&to_date={{ $to ?? null }}" class="btn btn-success btn-sm">
                                         <i class="fas fa-file-excel me-1"></i> Export to Excel
                                     </a>
                                 </div>
@@ -252,15 +253,15 @@
                                         <div class="row">
                                             <div class="col-4">
                                                 <label>Date From</label>
-                                                <input type="date" class="form-control" name="from">
+                                                <input type="date" class="form-control" name="from" value="{{ $from_date ?? null }}">
                                             </div>
                                             <div class="col-4">
                                                 <label>Date To</label>
-                                                <input type="date" class="form-control" name="to">
+                                                <input type="date" class="form-control" name="to" value="{{ $to_date ?? null }}">
                                             </div>
                                             <div class="col-4">
                                                 <label>Meter Number</label>
-                                                <input type="text" class="form-control" name="meter_no" placeholder="Enter meter number">
+                                                <input type="text" class="form-control" name="meter_no" placeholder="Enter meter number" value="{{ $meterNo ?? null }}">
                                             </div>
                                         </div>
                                         <div class="row my-3">
@@ -282,7 +283,7 @@
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
                                     <h5 class="card-title text-black mb-0">Meter Transactions</h5>
-                                    <a href="export-metertransactions" class="btn btn-success btn-sm">
+                                    <a href="export-metertransactions?from_date={{ $from_date ?? null }}&to_date={{ $to_date ?? null }}&meterNo={{ $meterNo ?? null }}" class="btn btn-success btn-sm">
                                         <i class="fas fa-file-excel me-1"></i> Export to Excel
                                     </a>
                                 </div>

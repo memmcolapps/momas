@@ -1705,6 +1705,9 @@ class MeterController extends Controller
             $data['total_amount'] = $query->sum('amount');
             $data['total_vat'] = $query->sum('vatAmount');
             $data['total_units'] = $query->sum('unitkwh');
+            $data['from_date'] = $startofday;
+            $data['to_date'] = $endofday;
+            $data['meterNo'] = $meterNo;
 
             return view('admin/report/meter-transaction-report', $data);
         }

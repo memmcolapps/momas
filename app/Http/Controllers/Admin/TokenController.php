@@ -1487,9 +1487,11 @@ class TokenController extends Controller
                 $status = $payment_init['status'];
 
                 if (! $status) {
+
                     Logger::warning("Payment init by {$customer_email} Failed", [
                         'payment_engine' => $payment_init,
                     ]);
+
                     return redirect('/admin/credit-token')->with(
                         'error',
                         $payment_init['message'] ?? "Payment not available at the moment, kindly select another payment option"
@@ -3745,6 +3747,7 @@ class TokenController extends Controller
                         $vending_amount = $action_payload['vending_amount'];
                         $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
                     }
+
 
                     $access_point = $request->header('Access-Point') ?? 'web';
                     $action = $access_point == 'mobile' ? 'momas_meter' : 'momas_meter_web';

@@ -24,6 +24,7 @@ class MigrateEcmiData extends Command
     protected array $estateMap = [];
     protected array $tariffMap = [];
     protected array $meterMap = [];
+    protected? Estate $estate = null;
 
     protected ?string $estateFilter = null;
 
@@ -40,6 +41,8 @@ class MigrateEcmiData extends Command
         $this->info('=====================================');
 
         try {
+            DB::beginTransaction();
+
             $this->migrateEstates();
             $this->migrateTariffs();
             $this->migrateTariffStates();
@@ -48,6 +51,8 @@ class MigrateEcmiData extends Command
             $this->migrateUserDataUsers();
             $this->attachMetersToUsers();
 
+            DB::commit();
+
             $this->info('=====================================');
             $this->info('Migration completed successfully');
             $this->info('=====================================');
@@ -55,6 +60,8 @@ class MigrateEcmiData extends Command
             return self::SUCCESS;
 
         } catch (\Throwable $e) {
+            DB::rollback();
+
             $this->error('Migration failed');
             $this->error($e->getMessage());
             $this->error($e->getFile() . ':' . $e->getLine());
@@ -112,6 +119,8 @@ class MigrateEcmiData extends Command
                 'address' => $row->Address,
                 'state' => $row->State,
                 'status' => $row->status1 === 'N' ? 1 : 0,
+                'min_pur' => $row->MinimumVend ?? 0,
+                'max_pur' => $row->MaximumVend ?? 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -123,6 +132,7 @@ class MigrateEcmiData extends Command
             }
 
             $estate = Estate::create($payload);
+            $this->estate = $estate;
 
             $this->estateMap[$row->BUID] = $estate->id;
         }
