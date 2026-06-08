@@ -787,6 +787,7 @@ class TransactionController extends Controller
                 $trx = Transaction::where('trx_id', $ref)->first();
 
                 if ($trx) {
+                    // dd('something is wrong2');
                     DB::transaction(function () use ($trx) {
                         $user = User::where('id', $trx->user_id)->lockForUpdate()->first();
                         $user->creditWallet($trx->amount);
