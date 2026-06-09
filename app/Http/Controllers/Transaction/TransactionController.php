@@ -317,6 +317,8 @@ class TransactionController extends Controller
                 if (! $sub_account && in_array($request->pay_type, ['paystack', 'flutterwave'])) {
                     Log::warning("User {$auth_user->id} transaction terminated due to absence of estate {$request->pay_type} subaccount id");
 
+                    // dd($est->toArray());
+
                     return StandardResponse::error(
                         422,
                         "Transaction terminated due to absence of estate subaccount reach out to your estate admin"
@@ -787,19 +789,23 @@ class TransactionController extends Controller
                 $trx = Transaction::where('trx_id', $ref)->first();
 
                 if ($trx) {
-                    // dd('something is wrong2');
-                    DB::transaction(function () use ($trx) {
-                        $user = User::where('id', $trx->user_id)->lockForUpdate()->first();
-                        $user->creditWallet($trx->amount);
-                        $trx->wallet_creditted = $trx->amount;
-                        $trx->save();
-                    });
                     $action_payload = json_decode($trx->action_payload);
 
-                    if ($action_payload?->action == 'momas_meter_web') {
+                    $action = $action_payload?->action;
+                    if (
+                        in_array($action,
+                        ['momas_meter_web', 'momas_clear_credit_token', 'momas_kct_token', 'momas_tamper_token']
+                    )) {
                         RequestActionHandler::handleRequestAction($trx->trx_id);
 
-                        return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
+                        $action_to_type = [
+                            'momas_meter_web' => 'credit_token',
+                            'momas_clear_credit_token' => 'clear_credit',
+                            'momas_kct_token' => 'kct_token',
+                            'momas_tamper_token' => 'tamper'
+                        ];
+
+                        return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type={$action_to_type[$action]}"));
                     }
                 }
                 ProcessPaystackWebhook::dispatch($transactionData['reference']);

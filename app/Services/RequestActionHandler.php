@@ -219,7 +219,7 @@ class RequestActionHandler {
     protected function handleBuyClearCreditTokenRequest()
     {
         // dump("handleBuyClearCreditTokenRequest here");
-        throw new Exception("handleBuyClearCreditTokenRequest test failure");
+        // throw new Exception("handleBuyClearCreditTokenRequest test failure");
         Logger::info('handleBuyClearCreditTokenRequest started', ['reference' => $this->reference]);
 
         $trx = Transaction::where('trx_id', $this->reference)
