@@ -490,11 +490,11 @@
                                         <div class="row">
                                             <div class="col-3">
                                                 <label>Date From</label>
-                                                <input type="date" class="form-control" name="from">
+                                                <input type="date" class="form-control" name="from" value="{{ $from ?? null }}>
                                             </div>
                                             <div class="col-3">
                                                 <label>Date To</label>
-                                                <input type="date" class="form-control" name="to">
+                                                <input type="date" class="form-control" name="to" value="{{ $to ?? null }}>
                                             </div>
                                             <div class="col-3">
                                                 <label>Transaction Type</label>

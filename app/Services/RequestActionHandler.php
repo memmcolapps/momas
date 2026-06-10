@@ -114,7 +114,7 @@ class RequestActionHandler {
         $vending_amount = $action_payload['vending_amount'];
         $reciever_meterNo = $action_payload['reciever_meterNo'] ?? null;
 
-        dump ('Got here');
+        // dump ('Got here');
         $meter->getNewToken($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 
         return true;
@@ -219,7 +219,7 @@ class RequestActionHandler {
     protected function handleBuyClearCreditTokenRequest()
     {
         // dump("handleBuyClearCreditTokenRequest here");
-        throw new Exception("handleBuyClearCreditTokenRequest test failure");
+        // throw new Exception("handleBuyClearCreditTokenRequest test failure");
         Logger::info('handleBuyClearCreditTokenRequest started', ['reference' => $this->reference]);
 
         $trx = Transaction::where('trx_id', $this->reference)

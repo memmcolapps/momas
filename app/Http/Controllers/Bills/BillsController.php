@@ -106,12 +106,10 @@ class BillsController extends Controller
             $status = $response['status'] ?? null;
 
             if ($status === 'successful') {
-                User::where('id', $auth_user->id)->first()->debitWallet($trx->amount);
                 Transaction::where('trx_id', $request->trx_id)->update([
                     'service_type' => ServiceTypeConstants::AIRTIME_TOP_UP,
                     'service' => "Airtime Purchase {$network}",
                     'status' => TransactionConstants::TRANSACTION_COMPLETE,
-                    'wallet_creditted' => 0,
                 ]);
 
                 DB::commit();
@@ -407,12 +405,10 @@ User::where('id', $auth_user->id)->first()->creditWallet($amount);
             $status = $response['status'] ?? null;
 
             if ($status === 'successful') {
-                User::where('id', $auth_user->id)->first()->debitWallet($trx->amount);
                 Transaction::where('trx_id', $request->trx_id)->update([
                     'service_type' => ServiceTypeConstants::CABLE_SUBSCRIPTION,
                     'service' => "Cable Purchase {$service}",
                     'status' => TransactionConstants::TRANSACTION_COMPLETE,
-                    'wallet_creditted' => 0,
                 ]);
                 DB::commit();
                 $message = "Cable Purchase successful";
@@ -440,6 +436,11 @@ User::where('id', $auth_user->id)->first()->creditWallet($amount);
                  'status' => 3,
              ]);
          } catch (Exception $e) {
+            DB::rollBack();
+            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+            Transaction::where('trx_id', $request->trx_id)->update([
+                'status' => 3,
+            ]);
 
              Logger::error($e->getMessage(), [
                  'user_id' => $auth_user->id,
@@ -575,12 +576,10 @@ Transaction::where('trx_id', $request->trx_id)->update([
             $status = $response['status'] ?? null;
 
             if ($status === 'successful') {
-                User::where('id', $auth_user->id)->first()->debitWallet($trx->amount);
                 Transaction::where('trx_id', $request->trx_id)->update([
                     'service_type' => ServiceTypeConstants::DATA_TOP_UP,
                     'service' => "Data Purchase {$network}",
                     'status' => TransactionConstants::TRANSACTION_COMPLETE,
-                    'wallet_creditted' => 0,
                 ]);
                 DB::commit();
                 $message = "Data Purchase successful";

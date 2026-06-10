@@ -328,15 +328,11 @@ class Meter extends Model
 
                 if ( ! $token_gen['success']) {
                     // dump('Failed Meter: 317');
-Transaction::where('trx_id', $trx_id)->update([
+                Transaction::where('trx_id', $trx_id)->update([
                          'note' => 'token generation failed',
                          'status' => 3,
                      ]);
 
-
-                    if ($action == 'momas_meter') {
-                        User::where('id', $this->user_id)->first()->creditWallet($trx->vending_amount ?? $trx->amount);
-                    }
 
                     throw new Exception("Vending server not connected, Retry again on transaction history");
                 }
@@ -389,8 +385,7 @@ Transaction::where('trx_id', $trx_id)->update([
                     ]);
                 }
 
-                $user->debitWallet($trx->vending_amount ?? $trx->amount);
-                Transaction::where('trx_id', $trx_id)->update(['status' => '2', 'wallet_creditted' => 0]);
+                Transaction::where('trx_id', $trx_id)->update(['status' => '2']);
 
                 MeterTokenGenerated::dispatch(
                     $cdt,
@@ -402,12 +397,14 @@ Transaction::where('trx_id', $trx_id)->update([
                 );
 
             });
-        } catch (Exception $e) {
+        }  catch (Exception $e) {
 
             $trx = Transaction::where('trx_id', $trx_id)->first();
 
             if ($action == 'momas_meter') {
                 $trx->status = 3;
+                $user = User::where('id', $trx->user_id)->first();
+                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
                 $trx->save();
             }
 
@@ -434,6 +431,7 @@ Transaction::where('trx_id', $trx_id)->update([
      */
     public function getNewKctToken($trx_id, $meterNo, $sgc, $tosgc, $ti, $toti = 1, $verify = "null")
     {
+        try {
         DB::transaction(function () use ($trx_id, $meterNo, $sgc, $tosgc, $ti, $toti, $verify) {
             if ($this->status === 0) {
                 throw new Exception("Meter is unable from carrying out operations");
@@ -503,10 +501,20 @@ Transaction::where('trx_id', $trx_id)->update([
             ]);
 
             // Update transaction status
-            $trxUser = User::find($trx->user_id);
-            $trxUser->debitWallet($trx->amount);
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
         });
+        } catch (Exception $e) {
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+            if ($trx) {
+                $user = User::find($trx->user_id);
+                if ($user) {
+                    $user->creditWallet($trx->amount);
+                }
+                $trx->status = 3;
+                $trx->save();
+            }
+            throw $e;
+        }
 
         return true;
     }
@@ -528,6 +536,7 @@ Transaction::where('trx_id', $trx_id)->update([
     public function getNewClearCreditToken($tariff_id, $trx_id, $email = null, $verify = "null")
     {
         dump("Meter: 387");
+        try {
         DB::transaction(function () use ($tariff_id, $trx_id, $email, $verify) {
             // Validate meter status
             if ($this->status === 0) {
@@ -616,10 +625,20 @@ Transaction::where('trx_id', $trx_id)->update([
             ]);
 
             // Update transaction status
-            $trxUser = User::find($trx->user_id);
-            $trxUser->debitWallet($trx->amount);
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
         });
+        } catch (Exception $e) {
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+            if ($trx) {
+                $user = User::find($trx->user_id);
+                if ($user) {
+                    $user->creditWallet($trx->amount);
+                }
+                $trx->status = 3;
+                $trx->save();
+            }
+            throw $e;
+        }
 
         return true;
     }
@@ -641,6 +660,7 @@ Transaction::where('trx_id', $trx_id)->update([
      */
     public function getNewTamperToken($tariff_id, $trx_id, $vending_amount = 0, $email = null, $verify = "null")
     {
+        try {
         DB::transaction(function () use ($tariff_id, $trx_id, $vending_amount, $email, $verify) {
             // Validate meter status
             if ($this->status === 0) {
@@ -724,10 +744,20 @@ Transaction::where('trx_id', $trx_id)->update([
             ]);
 
             // Update transaction status
-            $trxUser = User::find($trx->user_id);
-            $trxUser->debitWallet($trx->amount);
-            Transaction::where('trx_id', $trx_id)->update(['status' => 2, 'wallet_creditted' => 0]);
+            Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
         });
+        } catch (Exception $e) {
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+            if ($trx) {
+                $user = User::find($trx->user_id);
+                if ($user) {
+                    $user->creditWallet($trx->amount);
+                }
+                $trx->status = 3;
+                $trx->save();
+            }
+            throw $e;
+        }
 
         return true;
     }
