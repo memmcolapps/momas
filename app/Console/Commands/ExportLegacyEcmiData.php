@@ -148,10 +148,11 @@ class ExportLegacyEcmiData extends Command
                 'email' => $email,
                 'estate_buid' => $row->BUID,
                 'estate_name' => $row->BusinessUnit,
-                'password_hash' => Hash::make($password), // 🔥 IMPORTANT CHANGE
+                'password_hash' => Hash::make($password),
                 'activated' => $row->Activated,
                 'can_login' => $row->Activated ? 1 : 0,
                 'created_at' => $row->OperatorDate ?? now(),
+                'raw_password' => $password,
             ];
         }
 

@@ -174,17 +174,31 @@ class ImportLegacyEcmiData extends Command
 
             $payload = [
                 'estate_id' => $estateId,
-                'meterNo' => $row->MeterNo,
+                'meterNo' => trim($row->MeterNo),
                 'status' => 2,
                 'meterModel' => $row->Model,
                 'AccountNo' => $row->AccountNo,
-                'NewTariffID' => $row->Tariff,
-                'OldTariffID' => $row->OldTariff,
+                'isDualTariff' => $row->IsDual ? '1' : '0',
+                // 'NewTariffDualID' => $row->Tariff2,
+                // 'OldTariffID' => $row->OldTariff,
+                'NewSGC' => $row->SGC,
+                'OldSGC' => $row->OldSGC,
+                // 'NewTariffID' => $row->Tariff,
+                // AFTER
+                'NewTariffID'     => $this->tariffMap[$row->Tariff    . '_' . $row->BUID] ?? null,
+                'NewTariffDualID' => $this->tariffMap[$row->Tariff2   . '_' . $row->BUID] ?? null,
+                'OldTariffID'     => $this->tariffMap[$row->OldTariff . '_' . $row->BUID] ?? null,
+                'NewSGCDual' => $row->SGC2,
+                'KRN1' => $row->KRN1,
+                'KRN2' => $row->KRN2,
+                'NeedKCT' => $row->NeedKCT ? '1' : '0',
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
 
             if ($this->isDryRun()) {
                 $this->meterMap[$row->MeterNo] = Str::uuid();
-                $this->preview('Meter', $payload);
+                $this->preview("Meter {$row->MeterNo}", $payload);
                 continue;
             }
 
@@ -215,6 +229,7 @@ class ImportLegacyEcmiData extends Command
                 'estate_name' => $row->estate_name,
                 'status' => $row->activated ? 2 : 0,
                 'can_login' => $row->can_login,
+                'raw_password' => $row->raw_password,
             ];
 
             if ($this->isDryRun()) {
