@@ -72,6 +72,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     // ── Feature::MOMAS_METER ──────────────────
     Route::group(['defaults' => ['feature' => \App\Constants\Feature::MOMAS_METER]], function () {
         Route::post('buy-meter', [MeterController::class, 'buy_meter_token']);
+        Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
         Route::post('request-meter', [MeterController::class, 'request_meter']);
         Route::post('retry-meter', [TokenController::class, 'retry_generate_credit_token']);
         Route::get('vending-properties', [MeterController::class, 'vending_properties']);
