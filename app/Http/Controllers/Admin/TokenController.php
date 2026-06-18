@@ -636,7 +636,7 @@ class TokenController extends Controller
                 'vat' => $vat,
             ];
 
-            dd($params);
+            // dd($params);
 
             $vatAmount = $calculator->calculateVatAmount($params);
             $costOfUnit = $calculator->calculateCostOfUnit($params);
@@ -728,7 +728,7 @@ class TokenController extends Controller
 
 
             $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
-            dd($tariffState, $request->tariff_id);
+            // dd($tariffState, $request->tariff_id);
             $tariffAmount = $tariffState->amount ?? 0;
             $vat = $tariffState->vat ?? 0;
             $fixedCharge = $tariffState->fixed_charge ?? 0;

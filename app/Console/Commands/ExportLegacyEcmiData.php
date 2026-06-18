@@ -2,529 +2,248 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Estate;
-use App\Models\Meter;
-use App\Models\Tariff;
-use App\Models\TarrifState;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class ImportLegacyEcmiData extends Command
+class ExportLegacyEcmiData extends Command
 {
-    protected $signature = 'legacy:import {--path=} {--dry-run}';
+    protected $signature = 'legacy:export
+                            {estate?}
+                            {--chunk=1000}';
 
-    protected $description = 'Import legacy JSON export into MySQL';
+    protected $description = 'Export MSSQL legacy data into JSON files';
 
-    protected array $estateMap = [];
-    protected array $tariffMap = [];
-    protected array $meterMap = [];
-
-    /** TariffID_BUID keys whose latest tariff_states.json Status is INVALID */
-    protected array $invalidTariffKeys = [];
-
-    /** TariffID_BUID => 'Grid' | 'Off Grid' | 'CONFLICT' */
-    protected array $tariffTypeMap = [];
-
-    /** TariffID_BUID keys that got conflicting Grid/Off Grid votes */
-    protected array $tariffConflicts = [];
-
-    /** Cache so tariff_states.json is only read from disk once */
-    protected ?array $rawTariffStates = null;
-
-    protected array $stats = [
-        'estates_matched' => 0,
-        'estates_created' => 0,
-        'tariffs_created' => 0,
-        'tariffs_skipped_invalid' => 0,
-        'tariff_states_created' => 0,
-        'tariff_states_skipped' => 0,
-        'meters' => 0,
-        'tariffs_grid' => 0,
-        'tariffs_offgrid' => 0,
-        'users_info' => 0,
-        'users_data' => 0,
-    ];
+    protected function legacy()
+    {
+        return DB::connection('mssql_legacy');
+    }
 
     public function handle(): int
     {
-        $path = $this->option('path') ?: storage_path('app/legacy-export');
+        $estate = $this->argument('estate');
 
-        $this->info("Importing from: $path");
+        $path = storage_path('app/legacy-export');
 
-        DB::beginTransaction();
-
-        try {
-            $this->buildInvalidTariffMap($path);
-            $this->importEstates($path);
-            $this->importTariffs($path);
-            $this->importTariffStates($path);
-            $this->importMeters($path);
-            $this->classifyTariffTypes();
-            $this->importUserInfo($path);
-            $this->importUserData($path);
-            $this->attachMeters();
-
-            DB::commit();
-
-            $this->printSummary();
-
-            $this->info('Import completed successfully');
-
-            return self::SUCCESS;
-
-        } catch (\Throwable $e) {
-
-            DB::rollBack();
-
-            $this->error($e->getMessage());
-            $this->error($e->getFile() . ':' . $e->getLine());
-
-            return self::FAILURE;
-        }
-    }
-
-    protected function read($file, $path)
-    {
-        return json_decode(file_get_contents($path . '/' . $file));
-    }
-
-    protected function isDryRun(): bool
-    {
-        return $this->option('dry-run');
-    }
-
-    protected function tariffKey($tariffId, $buid): string
-    {
-        return $tariffId . '_' . $buid;
-    }
-
-    /* ================= TARIFF STATES (loaded once, reused) ================= */
-
-    protected function loadTariffStates($path): array
-    {
-        if ($this->rawTariffStates === null) {
-            $this->rawTariffStates = $this->read('tariff_states.json', $path);
+        if (!file_exists($path)) {
+            mkdir($path, 0777, true);
         }
 
-        return $this->rawTariffStates;
+        $this->info("Exporting legacy data...");
+
+        $this->exportEstates($path, $estate);
+        $this->exportTariffs($path, $estate);
+        $this->exportTariffStates($path, $estate);
+        $this->exportMeters($path, $estate);
+        $this->exportUserInfo($path, $estate);
+        $this->exportUserData($path, $estate);
+
+        $this->info("Export completed successfully");
+
+        return self::SUCCESS;
     }
 
-    /**
-     * Determine which tariffs are phased out: a tariff is INVALID if its
-     * most recent tariff_states.json row has Status = INVALID.
-     * "Most recent" = latest EffectiveDate, ties broken by highest VersionNo.
-     * Adjust isNewerState() if your data defines "latest" differently.
-     */
-    protected function buildInvalidTariffMap($path): void
+    protected function write(string $file, array $data, string $path)
     {
-        $rows = $this->loadTariffStates($path);
-
-        $latest = [];
-
-        foreach ($rows as $row) {
-            $key = $this->tariffKey($row->TariffID, $row->BUID);
-
-            if (!isset($latest[$key]) || $this->isNewerState($row, $latest[$key])) {
-                $latest[$key] = $row;
-            }
-        }
-
-        foreach ($latest as $key => $row) {
-            if (strtoupper(trim($row->Status ?? '')) === 'INVALID') {
-                $this->invalidTariffKeys[$key] = true;
-            }
-        }
-
-        if (!empty($this->invalidTariffKeys)) {
-            $this->warn(
-                'Skipping ' . count($this->invalidTariffKeys) . ' tariff(s) marked INVALID in their latest state: '
-                . implode(', ', array_keys($this->invalidTariffKeys))
-            );
-        }
-    }
-
-    protected function isNewerState($candidate, $current): bool
-    {
-        $candidateDate = $candidate->EffectiveDate ?? null;
-        $currentDate = $current->EffectiveDate ?? null;
-
-        if ($candidateDate && $currentDate) {
-            $cmp = strtotime($candidateDate) <=> strtotime($currentDate);
-            if ($cmp !== 0) {
-                return $cmp > 0;
-            }
-        } elseif ($candidateDate xor $currentDate) {
-            return (bool) $candidateDate;
-        }
-
-        return ($candidate->VersionNo ?? 0) > ($current->VersionNo ?? 0);
+        file_put_contents(
+            $path . '/' . $file,
+            json_encode($data, JSON_PRETTY_PRINT)
+        );
     }
 
     /* ================= ESTATES ================= */
 
-    protected function importEstates($path)
+    protected function exportEstates($path, $estate)
     {
-        $rows = $this->read('estates.json', $path);
+        $query = $this->legacy()->table('BusinessUnit');
 
-        foreach ($rows as $row) {
-
-            $existing = Estate::where('title', $row->Name)->first();
-
-            if ($existing) {
-                $this->estateMap[$row->BUID] = $existing->id;
-                $this->stats['estates_matched']++;
-                continue;
-            }
-
-            $payload = [
-                'title' => $row->Name,
-                'address' => $row->Address,
-                'state' => $row->State,
-                'status' => $row->status1 === 'N' ? 1 : 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-
-            $this->stats['estates_created']++;
-
-            if ($this->isDryRun()) {
-                $this->preview('ESTATE', $payload);
-                $this->estateMap[$row->BUID] = Str::uuid();
-                continue;
-            }
-
-            $estate = Estate::create($payload);
-
-            $this->estateMap[$row->BUID] = $estate->id;
+        if ($estate) {
+            $query->where('BUID', $estate)->orWhere('Name', $estate);
         }
+
+        $this->write('estates.json', $query->get()->toArray(), $path);
+
+        $this->info("Exported estates");
     }
 
     /* ================= TARIFFS ================= */
 
-    protected function importTariffs($path)
+    protected function exportTariffs($path, $estate)
     {
-        $rows = $this->read('tariffs.json', $path);
+        $query = $this->legacy()->table('Tariff');
 
-        foreach ($rows as $row) {
-
-            $key = $this->tariffKey($row->TariffID, $row->BUID);
-
-            if (isset($this->invalidTariffKeys[$key])) {
-                $this->stats['tariffs_skipped_invalid']++;
-                continue;
-            }
-
-            $estateId = $this->estateMap[$row->BUID] ?? null;
-
-            if ($estateId === null) {
-                $this->warn("[WARN] Tariff {$key}: no matching estate for BUID {$row->BUID}");
-            }
-
-            $payload = [
-                'title' => $row->Description,
-                'tariff_index' => $row->TariffID,
-                'estate_id' => $estateId,
-                'status' => $row->status1 === 'N' ? 1 : 0,
-                'type' => null, // filled in by classifyTariffTypes() after meters are processed
-            ];
-
-            $this->stats['tariffs_created']++;
-
-            if ($this->isDryRun()) {
-                $this->preview('Tariff', $payload);
-                $this->tariffMap[$key] = random_int(1000, 9999);
-                continue;
-            }
-
-            $tariff = Tariff::create($payload);
-
-            $this->tariffMap[$key] = $tariff->id;
+        if ($estate) {
+            $query->where('BUID', $estate);
         }
+
+        $this->write('tariffs.json', $query->get()->toArray(), $path);
+
+        $this->info("Exported tariffs");
     }
 
-    /* ================= TARIFF STATES ================= */
+    /* ============== TARIFF STATES ============== */
 
-    protected function importTariffStates($path)
+    protected function exportTariffStates($path, $estate)
     {
-        $rows = $this->loadTariffStates($path);
+        $query = $this->legacy()->table('TariffRates');
 
-        foreach ($rows as $row) {
-
-            $key = $this->tariffKey($row->TariffID, $row->BUID);
-
-            if (isset($this->invalidTariffKeys[$key])) {
-                // parent tariff was phased out — don't migrate its rate history either
-                $this->stats['tariff_states_skipped']++;
-                continue;
-            }
-
-            $estateId = $this->estateMap[$row->BUID] ?? null;
-            $tariffId = $this->tariffMap[$key] ?? null;
-
-            if (!$tariffId) {
-                $this->warn("[WARN] TariffState references unresolved tariff {$key} - skipping");
-                $this->stats['tariff_states_skipped']++;
-                continue;
-            }
-
-            $payload = [
-                'amount' => $row->Rate,
-                'effective_from' => $row->EffectiveDate ?? now(),
-                'vat' => $row->VAT,
-                'fixed_charge' => $row->FC,
-                'estate_id' => $estateId,
-                'tariff_id' => $tariffId,
-                't_index' => $row->VersionNo,
-                'status' => strtoupper(trim($row->Status ?? '')) === 'ACTIVE' ? 1 : 0,
-            ];
-
-            $this->stats['tariff_states_created']++;
-
-            if ($this->isDryRun()) {
-                $this->preview('Tariff State', $payload);
-                continue;
-            }
-
-            TarrifState::create($payload);
+        if ($estate) {
+            $query->where('BUID', $estate);
         }
+
+        $this->write('tariff_states.json', $query->orderBy('EffectiveDate')->get()->toArray(), $path);
+
+        $this->info("Exported tariff states");
     }
 
     /* ================= METERS ================= */
 
-    protected function importMeters($path)
+    protected function exportMeters($path, $estate)
     {
-        $rows = $this->read('meters.json', $path);
+        $query = $this->legacy()->table('Meters');
+
+        if ($estate) {
+            $query->where('BUID', $estate);
+        }
+
+        $this->write('meters.json', $query->orderBy('MeterNo')->get()->toArray(), $path);
+
+        $this->info("Exported meters");
+    }
+
+    /* =============== USER INFO =============== */
+
+    protected function exportUserInfo($path, $estate)
+    {
+        $query = $this->legacy()->table('UserInfo');
+
+        if ($estate) {
+            $query->where('BUID', $estate)
+                ->orWhere('BusinessUnit', $estate);
+        }
+
+        $rows = $query->orderBy('OperatorId')->get();
+
+        $export = [];
 
         foreach ($rows as $row) {
 
-            $estateId = $this->estateMap[$row->BUID] ?? null;
+            // 🔐 RECONSTRUCT ORIGINAL PASSWORD (same logic as migration)
+            $password = $this->reconstructPassword(
+                $row->OperatorId,
+                (int) $row->Pw_Len
+            );
 
-            $newTariffId = $this->resolveTariffId($row->Tariff, $row->BUID, 'NewTariffID', $row->MeterNo);
-            $newTariffDualId = $this->resolveTariffId($row->Tariff2, $row->BUID, 'NewTariffDualID', $row->MeterNo);
-            $oldTariffId = $this->resolveTariffId($row->OldTariff, $row->BUID, 'OldTariffID', $row->MeterNo);
+            [$firstName, $lastName] = $this->splitName($row->FullName);
 
-            // Classification happens regardless of dry-run, so a dry-run preview
-            // reflects real Grid/Off Grid results.
-            if ($newTariffId) {
-                $this->classifyTariff($this->tariffKey($row->Tariff, $row->BUID), 'Grid');
-            }
+            $email = $this->sanitizeEmailForExport($row->OperatorName);
 
-            if ($row->IsDual && $newTariffDualId) {
-                $this->classifyTariff($this->tariffKey($row->Tariff2, $row->BUID), 'Off Grid');
-            }
-
-            // OldTariff is intentionally left out of Grid/Off Grid classification.
-
-            $payload = [
-                'estate_id' => $estateId,
-                'meterNo' => trim($row->MeterNo),
-                'status' => 2,
-                'meterModel' => $row->Model,
-                'AccountNo' => $row->AccountNo,
-                'isDualTariff' => $row->IsDual ? '1' : '0',
-                'NewSGC' => $row->SGC,
-                'OldSGC' => $row->OldSGC,
-                'NewTariffID' => $newTariffId,
-                'NewTariffDualID' => $newTariffDualId,
-                'OldTariffID' => $oldTariffId,
-                'NewSGCDual' => $row->SGC2,
-                'KRN1' => $row->KRN1,
-                'KRN2' => $row->KRN2,
-                'NeedKCT' => $row->NeedKCT ? '1' : '0',
-                'created_at' => now(),
-                'updated_at' => now(),
+            $export[] = [
+                'operator_id' => $row->OperatorId,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'estate_buid' => $row->BUID,
+                'estate_name' => $row->BusinessUnit,
+                'password_hash' => Hash::make($password),
+                'activated' => $row->Activated,
+                'can_login' => $row->Activated ? 1 : 0,
+                'created_at' => $row->OperatorDate ?? now(),
+                'raw_password' => $password,
             ];
+        }
 
-            $this->stats['meters']++;
+        $this->write('user_info.json', $export, $path);
 
-            if ($this->isDryRun()) {
-                $this->meterMap[$row->MeterNo] = Str::uuid();
-                $this->preview("Meter {$row->MeterNo}", $payload);
+        $this->info("Exported user info (with hashed passwords)");
+    }
+
+    /* =============== USER DATA =============== */
+
+    protected function exportUserData($path, $estate)
+    {
+        $query = $this->legacy()->table('UserData')
+            ->join('Meters', 'Meters.MeterNo', '=', 'UserData.MeterNo')
+            ->select('UserData.*', 'Meters.BUID as meter_buid');
+
+        if ($estate) {
+            $query->where('Meters.BUID', $estate);
+        }
+
+        $this->write('user_data.json', $query->orderBy('UserData.OperatorId')->get()->toArray(), $path);
+
+        $this->info("Exported user data");
+    }
+
+    protected function reconstructPassword(int $operatorId, int $length): string
+    {
+        $passwordRow = $this->legacy()
+            ->table('UserPw')
+            ->where('OperatorId', $operatorId)
+            ->first();
+
+        if (!$passwordRow) {
+            return Str::random(12);
+        }
+
+        $password = '';
+
+        for ($i = 1; $i <= $length; $i++) {
+
+            $column = 'pw' . $i;
+
+            $ascii = $passwordRow->{$column} ?? null;
+
+            if ($ascii === null) {
                 continue;
             }
 
-            $meter = Meter::create($payload);
-
-            $this->meterMap[$row->MeterNo] = $meter->id;
+            $password .= chr((int) $ascii);
         }
+
+        return $password ?: Str::random(12);
     }
 
-    /**
-     * Resolve a raw legacy tariff id (Tariff / Tariff2 / OldTariff) to the
-     * migrated tariff's DB id. Returns null if absent or unresolved
-     * (commonly because it was an INVALID tariff that got skipped).
-     */
-    protected function resolveTariffId($tariffRaw, $buid, string $label, string $meterNo): ?int
+    protected function splitName(?string $name): array
     {
-        if (empty($tariffRaw)) {
+        $name = trim((string) $name);
+
+        if (empty($name)) {
+            return [null, null];
+        }
+
+        $parts = preg_split('/\s+/', $name);
+
+        $firstName = array_shift($parts);
+
+        $lastName = count($parts)
+            ? implode(' ', $parts)
+            : null;
+
+        return [$firstName, $lastName];
+    }
+
+    protected function sanitizeEmailForExport(?string $email): ?string
+    {
+        $email = trim((string) $email);
+
+        if (empty($email)) {
             return null;
         }
 
-        $key = $this->tariffKey($tariffRaw, $buid);
-        $id = $this->tariffMap[$key] ?? null;
-
-        if ($id === null) {
-            $this->warn("[WARN] Meter {$meterNo}: {$label} tariff {$key} not found (invalid/missing) - left null");
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return null;
         }
 
-        return $id;
-    }
+        $exists = User::where('email', $email)->exists();
 
-    protected function classifyTariff(string $key, string $type): void
-    {
-        if (!isset($this->tariffTypeMap[$key])) {
-            $this->tariffTypeMap[$key] = $type;
-            return;
+        if ($exists) {
+            return null;
         }
 
-        if ($this->tariffTypeMap[$key] === $type || $this->tariffTypeMap[$key] === 'CONFLICT') {
-            return;
-        }
-
-        // Same tariff used as Grid on one meter and Off Grid on another.
-        $this->tariffTypeMap[$key] = 'CONFLICT';
-        $this->tariffConflicts[$key] = true;
-    }
-
-    /* ================= TARIFF TYPE CLASSIFICATION (after meters) ================= */
-
-    protected function classifyTariffTypes(): void
-    {
-        foreach ($this->tariffTypeMap as $key => $type) {
-
-            $tariffId = $this->tariffMap[$key] ?? null;
-
-            if (!$tariffId) {
-                continue;
-            }
-
-            if ($type === 'CONFLICT') {
-                $this->warn("[CONFLICT] Tariff {$key} appears as both Grid and Off Grid on different meters. Left type=null for manual review.");
-                continue;
-            }
-
-            $this->stats[$type === 'Grid' ? 'tariffs_grid' : 'tariffs_offgrid']++;
-
-            if ($this->isDryRun()) {
-                $this->preview("Tariff Type [{$key}]", ['tariff_id' => $tariffId, 'type' => $type]);
-                continue;
-            }
-
-            Tariff::where('id', $tariffId)->update(['type' => $type]);
-        }
-    }
-
-    /* ================= USERS ================= */
-
-    protected function importUserInfo($path)
-    {
-        $rows = $this->read('user_info.json', $path);
-
-        foreach ($rows as $row) {
-
-            $payload = [
-                'first_name' => $row->first_name ?? null,
-                'last_name' => $row->last_name ?? null,
-                'email' => $row->email,
-                'password' => $row->password_hash,
-                'role' => 3,
-                'estate_id' => $this->estateMap[$row->estate_buid] ?? null,
-                'estate_name' => $row->estate_name,
-                'status' => $row->activated ? 2 : 0,
-                'can_login' => $row->can_login,
-                'raw_password' => $row->raw_password,
-            ];
-
-            $this->stats['users_info']++;
-
-            if ($this->isDryRun()) {
-                $this->preview('USER INFO', (array) $payload);
-                continue;
-            }
-
-            User::create($payload);
-        }
-    }
-
-    protected function importUserData($path)
-    {
-        $rows = $this->read('user_data.json', $path);
-
-        foreach ($rows as $row) {
-
-            [$first, $last] = $this->split($row->FullName);
-
-            $payload = [
-                'first_name' => $first,
-                'last_name' => $last,
-                'email' => strtolower($row->OperatorName),
-                'phone' => $row->PhoneNumber,
-                'meterNo' => $row->MeterNo,
-                'role' => 2,
-                'password' => Hash::make($row->Pw ?? 'default123'),
-            ];
-
-            $this->stats['users_data']++;
-
-            if ($this->isDryRun()) {
-                $this->preview('Customer | MOBILE', $payload);
-                continue;
-            }
-
-            User::create($payload);
-        }
-    }
-
-    protected function attachMeters()
-    {
-        $users = User::whereNotNull('meterNo')->get();
-
-        foreach ($users as $user) {
-
-            Meter::where('meterNo', $user->meterNo)
-                ->update(['user_id' => $user->id]);
-        }
-    }
-
-    protected function split($name)
-    {
-        $parts = explode(' ', trim($name));
-        return [$parts[0] ?? null, $parts[1] ?? null];
-    }
-
-    protected function preview(string $type, array $data): void
-    {
-        $this->line('=====================================');
-        $this->info("[DRY RUN] {$type}");
-        $this->line(json_encode($data, JSON_PRETTY_PRINT));
-        $this->line('=====================================');
-    }
-
-    protected function printSummary(): void
-    {
-        $this->newLine();
-        $this->info($this->isDryRun() ? 'DRY RUN SUMMARY' : 'IMPORT SUMMARY');
-
-        $this->table(['Metric', 'Count'], [
-            ['Estates matched (existing)', $this->stats['estates_matched']],
-            ['Estates created', $this->stats['estates_created']],
-            ['Tariffs created', $this->stats['tariffs_created']],
-            ['Tariffs skipped (INVALID)', $this->stats['tariffs_skipped_invalid']],
-            ['Tariff states created', $this->stats['tariff_states_created']],
-            ['Tariff states skipped', $this->stats['tariff_states_skipped']],
-            ['Meters created', $this->stats['meters']],
-            ['Tariffs classified Grid', $this->stats['tariffs_grid']],
-            ['Tariffs classified Off Grid', $this->stats['tariffs_offgrid']],
-            ['Tariffs left null (conflict)', count($this->tariffConflicts)],
-            ['Users (admin/staff) created', $this->stats['users_info']],
-            ['Users (mobile/customer) created', $this->stats['users_data']],
-        ]);
-
-        if (!empty($this->tariffConflicts)) {
-            $this->warn('Conflicted tariffs (manual review needed): ' . implode(', ', array_keys($this->tariffConflicts)));
-        }
+        return strtolower($email);
     }
 }

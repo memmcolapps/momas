@@ -39,7 +39,7 @@ class VatCalculator
     {
         $costOfUnit = $this->calculateCostOfUnit($params);
         $rate = $params['tariffAmount'] ?? 0;
-        dd($costOfUnit, $rate, $params);
+        // dd($costOfUnit, $rate, $params);
         return $rate > 0 ? $costOfUnit / $rate : 0;
     }
 }
