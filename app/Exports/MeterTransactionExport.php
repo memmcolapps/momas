@@ -13,11 +13,15 @@ class MeterTransactionExport implements FromCollection, WithHeadings
 
     protected $meterNo;
     protected $estate_id;
+    protected $from_date;
+    protected $to_date;
 
-    public function __construct($meterNo = null, $estate_id = null)
+    public function __construct($meterNo = null, $estate_id = null, $from_date = null, $to_date=null)
     {
         $this->meterNo = $meterNo;
         $this->estate_id = $estate_id;
+        $this->from_date = $from_date;
+        $this->to_date = $to_date;
     }
 
 
@@ -35,12 +39,16 @@ class MeterTransactionExport implements FromCollection, WithHeadings
             $query->where('estate_id', $this->estate_id);
         }
 
+        if ($this->from_date && $this->to_date) {
+            $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+        }
+
         return $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($token) {
                 return [
                     'trx_id' => $token->trx_id,
-                    'meter_no' => $token->meterNo ?? 'N/A',
+                    'meter_no' => (string) $token->meterNo ?? 'N/A',
                     'customer' => ($token->user->first_name ?? 'N/A')." ".($token->user->last_name ?? ''),
                     'email' => $token->user->email ?? 'N/A',
                     'phone' => $token->user->phone ?? 'N/A',

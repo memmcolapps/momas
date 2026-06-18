@@ -17,6 +17,7 @@ class TransactionExport implements FromCollection, WithHeadings
 
     public function __construct($estate_id = null, $status = null, $transaction_type = null, $from_date = null, $to_date = null, $rrn = null)
     {
+        // dd($estate_id, $status, $transaction_type, $from_date, $to_date, $rrn);
         $this->estate_id = $estate_id;
         $this->status = $status;
         $this->transaction_type = $transaction_type;

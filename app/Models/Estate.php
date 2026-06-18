@@ -9,6 +9,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Estate extends Model
 {
+    protected $fillable = [
+        'title',
+        'address',
+        'state',
+        'status',
+        'min_pur',
+        'max_pur',
+        'created_at',
+        'updated_at',
+    ];
+
     use HasFactory;
 
     public function asset()

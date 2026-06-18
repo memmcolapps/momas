@@ -241,7 +241,7 @@
                                                     </td>
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
-                                                    <td>{{number_format($data->amount_charged, 2)}}</td>
+                                                    <td>{{number_format($data->amount_charged ?? $data->amount, 2)}}</td>
                                                     <td>{{$data->tariff_id}}</td>
                                                     <td>{{$data->unitkwh}}kw/N</td>
                                                     <td>
@@ -667,7 +667,7 @@
                                                     </td>
                                                     <td>{{$data->meterNo}}</a> </td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
-                                                    <td>{{number_format($data->amount, 2)}}</td>
+                                                    <td>{{number_format($data->amount_charged ?? $data->amount, 2)}}</td>
                                                     <td>{{$data->tariff_id}}</td>
                                                     <td>{{$data->unitkwh}}kw/N</td>
                                                     <td>
