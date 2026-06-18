@@ -500,8 +500,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function clearAndPopulateTariffSelects(tariffs) {
-        const nepaTariffs = tariffs.filter(t => t.type === 'Grid');
-        const genTariffs = tariffs.filter(t => t.type === 'Off Grid');
+        const nepaTariffs = tariffs.filter(t => t.type === 'Grid' || t.type === 'nepa');
+        const genTariffs = tariffs.filter(t => t.type === 'Off Grid' || t.type === 'gen');
 
         // Clear and populate NEPA Old Tariff
         if (nepaOldSelect) {
