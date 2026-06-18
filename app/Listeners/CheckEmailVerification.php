@@ -9,9 +9,7 @@ class CheckEmailVerification
 {
     public function handle(MessageSending $event): bool
     {
-        if (true) {//in_array(app()->environment(), ['prod', 'production', 'live', 'prd'])) {
-
-        dd('entered');
+        if (in_array(app()->environment(), ['prod', 'production', 'live', 'prd'])) {
             $to = collect($event->message->getTo())
                 ->keys()
                 ->first();

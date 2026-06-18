@@ -3,10 +3,12 @@
 namespace App\Providers;
 
 use App\Events\MeterTokenGenerated;
+use App\Listeners\CheckEmailVerification;
 use App\Listeners\SendMeterTokenEmailNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\Facades\Event;
 
 class EventServiceProvider extends ServiceProvider
@@ -17,6 +19,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         MeterTokenGenerated::class => [
             SendMeterTokenEmailNotification::class,
+        ],
+        MessageSending::class => [
+            CheckEmailVerification::class,
         ],
     ];
 
