@@ -636,12 +636,14 @@ class TokenController extends Controller
                 'vat' => $vat,
             ];
 
+            dd($params);
+
             $vatAmount = $calculator->calculateVatAmount($params);
             $costOfUnit = $calculator->calculateCostOfUnit($params);
             $tariffPerKWatt = $calculator->calculateTariffAmountPerKWatt($params);
 
             if ($tariffPerKWatt < 0.1) {
-                return back()->with('error', 'Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
+                return back()->with('error', "Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered" . json_encode($params));
             }
 
             $data['vatAmount'] = $vatAmount;
@@ -726,6 +728,7 @@ class TokenController extends Controller
 
 
             $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
+            dd($tariffState, $request->tariff_id);
             $tariffAmount = $tariffState->amount ?? 0;
             $vat = $tariffState->vat ?? 0;
             $fixedCharge = $tariffState->fixed_charge ?? 0;
@@ -774,7 +777,7 @@ class TokenController extends Controller
             $tariffPerKWatt = $calculator->calculateTariffAmountPerKWatt($params);
 
             if ($tariffPerKWatt < 0.1) {
-                return back()->with('error', 'Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
+                return back()->with('error', 'Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.' . $tariffPerKWatt . '  ' . $afterFixedCharge);
             }
 
 
