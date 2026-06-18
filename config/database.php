@@ -100,21 +100,21 @@ return [
             'sslmode' => 'prefer',
         ],
 
-        'mssql_legacy' => [
-            'driver'   => 'sqlsrv',
-            'host'     => env('MSSQL_HOST', 'localhost'),
-            'port'     => env('MSSQL_PORT', '1433'),
-            'database' => env('MSSQL_DATABASE', ''),
-            'username' => env('MSSQL_USERNAME', ''),
-            'password' => env('MSSQL_PASSWORD', ''),
-            'charset'  => 'utf8',
-            'prefix'   => '',
-            'prefix_indexes'         => true,
-            'TrustServerCertificate' => true,
-            'options'  => [
-                PDO::SQLSRV_ATTR_FETCHES_NUMERIC_TYPE => true,
-            ],
-        ],
+        // 'mssql_legacy' => [
+        //     'driver'   => 'sqlsrv',
+        //     'host'     => env('MSSQL_HOST', 'localhost'),
+        //     'port'     => env('MSSQL_PORT', '1433'),
+        //     'database' => env('MSSQL_DATABASE', ''),
+        //     'username' => env('MSSQL_USERNAME', ''),
+        //     'password' => env('MSSQL_PASSWORD', ''),
+        //     'charset'  => 'utf8',
+        //     'prefix'   => '',
+        //     'prefix_indexes'         => true,
+        //     'TrustServerCertificate' => true,
+        //     'options'  => [
+        //         PDO::SQLSRV_ATTR_FETCHES_NUMERIC_TYPE => true,
+        //     ],
+        // ],
 
     ],
 
