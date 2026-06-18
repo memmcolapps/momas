@@ -357,6 +357,51 @@ class MeterController extends Controller
         $values = $meter->calculateTokenValues($request->tariff_id, $trx);
     }
 
+    public function calculate_token_fees_by_amount(Request $request)
+    {
+        $auth_user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'tariff_id' => ['required', 'numeric', Rule::exists('tarrif_states', 'tariff_id')
+                                                            ->where('estate_id', $auth_user->estate_id)
+                                                            ->where('status', 2)],
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        $meter = meter();
+
+        if (!$meter) {
+            Logger::error("User $auth_user->id failed to calculate token fees by amount meter not found", [
+                'user_id' => $auth_user->id,
+                'meter' => $meter,
+            ]);
+
+            return StandardResponse::error(401, 'Meter blocked please reach out to estate admin for support', []);
+        }
+
+        if (!$meter->isActive()) {
+            Logger::error("User $auth_user->id failed to calculate token fees by amount due to blocked meter", [
+                'user_id' => $auth_user->id,
+                'meter' => $meter,
+            ]);
+
+            return StandardResponse::error(401, 'Meter blocked please reach out to estate admin for support', []);
+        }
+
+        try {
+            $values = $meter->calculateTokenValuesByAmount((int) $request->tariff_id, (int) $request->amount);
+            return StandardResponse::success(200, 'Token values calculated successfully', $values);
+        } catch (Exception $e) {
+            return StandardResponse::error(422, $e->getMessage());
+        }
+    }
+
     public function buy_meter_token(request $request)
     {
         DB::beginTransaction();
@@ -1093,7 +1138,7 @@ class MeterController extends Controller
             if(!$newTariff || $newTariff->estate_id != $meter->estate_id) {
                 $newTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->NewTariffID)
-                    ->where('type', 'nepa')
+                    ->whereIn('type', ['nepa', 'Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 
@@ -1110,7 +1155,7 @@ class MeterController extends Controller
             if(!$oldTariff || $oldTariff->estate_id != $meter->estate_id) {
                 $oldTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->OldTariffID)
-                    ->where('type', 'nepa')
+                    ->whereIn('type', ['nepa', 'Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 
@@ -1128,7 +1173,7 @@ class MeterController extends Controller
             if(!$newGenTariff || $newGenTariff->estate_id != $meter->estate_id) {
                 $newGenTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->NewTariffDualID)
-                    ->where('type', 'gen')
+                    ->whereIn('type', ['gen', 'Off Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 
@@ -1149,7 +1194,7 @@ class MeterController extends Controller
             if(!$oldGenTariff || $oldGenTariff->estate_id != $meter->estate_id) {
                 $oldGenTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->OldTariffDualID)
-                    ->where('type', 'gen')
+                    ->whereIn('type', ['gen', 'Off Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 

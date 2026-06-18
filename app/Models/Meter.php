@@ -184,6 +184,84 @@ class Meter extends Model
     }
 
     /**
+     * Calculate token values based on tariff and amount (without a Transaction).
+     *
+     * Variant of calculateTokenValues that takes a raw amount instead of a Transaction object.
+     *
+     * @param int $tariff_id The ID of the tariff to use for calculations
+     * @param int $amount The amount in Naira to calculate token values for
+     * @return array Array of calculated values including service fees, charges, and unit details
+     * @throws \Exception When the amount is too small after deductions or unit is less than 0.1KWh
+     */
+    public function calculateTokenValuesByAmount(int $tariff_id, int $amount): array
+    {
+        $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+        $tariffAmount = $tariffState->amount ?? 0;
+        $vat = $tariffState->vat ?? 0;
+        $fixedCharge = $tariffState->fixed_charge ?? 0;
+
+        // NEW CALCULATION FLOW:
+        // [1] 2.5% Service Fee
+        $percn = (2.5 / 100) * $amount;
+        $afterServiceFee = $amount - $percn;
+
+        // [2] Estate Service Charge
+        $est = Estate::where('id', $this->estate_id)->first();
+        if ($est->charge_fee_flat != null) {
+            $estateFee = $est->charge_fee_flat;
+        } else if ($est->charge_fee_precent != null) {
+            $estateFee = ($est->charge_fee_precent / 100) * $amount;
+        } else {
+            $estateFee = 0;
+        }
+        $afterEstateFee = $afterServiceFee - $estateFee;
+
+        // [3] Tariff Fixed Charge
+        $afterFixedCharge = $afterEstateFee - $fixedCharge;
+
+        // Validate that amount after deductions is not negative or too small
+        if ($afterFixedCharge <= 0) {
+            $minimumRequired = $percn + $estateFee + $fixedCharge + 10;
+            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
+                '), estate fee (NGN ' . number_format($estateFee, 2) .
+                '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
+                '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
+                '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
+        }
+
+        // [4] VAT Calculation on remaining amount
+        $calculator = new VatCalculator();
+        $params = [
+            'amountText' => $afterFixedCharge,
+            'tariffAmount' => $tariffAmount,
+            'utilitiesAmount' => 0,
+            'vat' => $vat,
+        ];
+
+        $vatAmount = $calculator->calculateVatAmount($params);
+        $vending_amount = $calculator->calculateCostOfUnit($params);
+        $unit = $calculator->calculateTariffAmountPerKWatt($params);
+
+        if ($unit < 0.1) {
+            throw new Exception('Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
+        }
+
+        return [
+            'tariffAmount' => $tariffAmount,
+            'vat' => $vat,
+            'fixedCharge' => $fixedCharge,
+            'serviceFee' => $percn,
+            'afterServiceFee' => $afterServiceFee,
+            'estateFee' => $estateFee,
+            'afterEstateFee' => $afterEstateFee,
+            'afterFixedCharge' => $afterFixedCharge,
+            'vatAmount' => $vatAmount,
+            'vending_amount' => $vending_amount,
+            'unit' => $unit,
+        ];
+    }
+
+    /**
      * Generate a new token for the meter after payment verification.
      *
      * This method handles the token generation process after a successful payment.
