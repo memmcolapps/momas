@@ -1138,7 +1138,7 @@ class MeterController extends Controller
             if(!$newTariff || $newTariff->estate_id != $meter->estate_id) {
                 $newTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->NewTariffID)
-                    ->where('type', 'nepa')
+                    ->whereIn('type', ['nepa', 'Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 
@@ -1155,7 +1155,7 @@ class MeterController extends Controller
             if(!$oldTariff || $oldTariff->estate_id != $meter->estate_id) {
                 $oldTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->OldTariffID)
-                    ->where('type', 'nepa')
+                    ->whereIn('type', ['nepa', 'Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 
@@ -1173,7 +1173,7 @@ class MeterController extends Controller
             if(!$newGenTariff || $newGenTariff->estate_id != $meter->estate_id) {
                 $newGenTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->NewTariffDualID)
-                    ->where('type', 'gen')
+                    ->whereIn('type', ['gen', 'Off Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 
@@ -1194,7 +1194,7 @@ class MeterController extends Controller
             if(!$oldGenTariff || $oldGenTariff->estate_id != $meter->estate_id) {
                 $oldGenTariff = Tariff::where('estate_id', $meter->estate_id)
                     ->where('tariff_index', $meter->OldTariffDualID)
-                    ->where('type', 'gen')
+                    ->whereIn('type', ['gen', 'Off Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
 
