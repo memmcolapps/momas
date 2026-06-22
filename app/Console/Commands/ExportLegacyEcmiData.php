@@ -35,11 +35,14 @@ class ExportLegacyEcmiData extends Command
         $this->info("Exporting legacy data...");
 
         $this->exportEstates($path, $estate);
+        $this->exportTransformers($path, $estate);
         $this->exportTariffs($path, $estate);
         $this->exportTariffStates($path, $estate);
         $this->exportMeters($path, $estate);
         $this->exportUserInfo($path, $estate);
         $this->exportUserData($path, $estate);
+        $this->exportCustomers($path, $estate);
+        $this->exportTransactions($path, $estate);
 
         $this->info("Export completed successfully");
 
@@ -245,5 +248,61 @@ class ExportLegacyEcmiData extends Command
         }
 
         return strtolower($email);
+    }
+
+
+    protected function exportTransactions($path, $estate)
+    {
+        $query = $this->legacy()
+            ->table('Transactions')
+            ->orderByDesc('TransactionDateTime');
+
+        if ($estate) {
+            $query->where('BUID', $estate);
+        }
+
+        $this->write(
+            'transactions.json',
+            $query->get()->toArray(),
+            $path
+        );
+
+        $this->info('Exported transactions');
+    }
+
+    protected function exportTransformers($path, $estate)
+    {
+        $query = $this->legacy()
+            ->table('Transformer');
+
+        if ($estate) {
+            $query->where('BUID', $estate);
+        }
+
+        $this->write(
+            'transformers.json',
+            $query->get()->toArray(),
+            $path
+        );
+
+        $this->info('Exported transfomers');
+    }
+
+    protected function exportCustomers($path, $estate)
+    {
+        $query = $this->legacy()
+            ->table('Customers');
+
+        if ($estate) {
+            $query->where('BUID', $estate);
+        }
+
+        $this->write(
+            'customers.json',
+            $query->get()->toArray(),
+            $path
+        );
+
+        $this->info('Exported customers');
     }
 }

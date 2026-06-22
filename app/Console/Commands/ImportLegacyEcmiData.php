@@ -6,6 +6,7 @@ use App\Models\Estate;
 use App\Models\Meter;
 use App\Models\Tariff;
 use App\Models\TarrifState;
+use App\Models\Transformer;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -14,13 +15,14 @@ use Illuminate\Support\Str;
 
 class ImportLegacyEcmiData extends Command
 {
-    protected $signature = 'legacy:import {--path=} {--dry-run}';
+    protected $signature = 'legacy:import {--path=} {--dry-run} {--transactions=5}';
 
     protected $description = 'Import legacy JSON export into MySQL';
 
     protected array $estateMap = [];
     protected array $tariffMap = [];
     protected array $meterMap = [];
+    protected array $transformerMap = [];
 
     /** TariffID_BUID keys whose latest tariff_states.json Status is INVALID */
     protected array $invalidTariffKeys = [];
@@ -46,6 +48,9 @@ class ImportLegacyEcmiData extends Command
         'tariffs_offgrid' => 0,
         'users_info' => 0,
         'users_data' => 0,
+        'transactions_data' => 0,
+        'transformers' => 0,
+        'customers' => 0,
     ];
 
     public function handle(): int
@@ -59,13 +64,18 @@ class ImportLegacyEcmiData extends Command
         try {
             $this->buildInvalidTariffMap($path);
             $this->importEstates($path);
+            $this->importTransformers($path);
             $this->importTariffs($path);
             $this->importTariffStates($path);
             $this->importMeters($path);
             $this->classifyTariffTypes();
             $this->importUserInfo($path);
             $this->importUserData($path);
-            $this->attachMeters();
+            $this->importCustomers($path);
+            if (!$this->isDryRun()) {
+                $this->attachMeters();
+            }
+            $this->importTransactions($path);
 
             DB::commit();
 
@@ -521,10 +531,282 @@ class ImportLegacyEcmiData extends Command
             ['Tariffs left null (conflict)', count($this->tariffConflicts)],
             ['Users (admin/staff) created', $this->stats['users_info']],
             ['Users (mobile/customer) created', $this->stats['users_data']],
+            ['Transactions Imported by meter', $this->stats['transactions_data']],
+            ['Transformers Imported by estate', $this->stats['transformers']],
         ]);
 
         if (!empty($this->tariffConflicts)) {
             $this->warn('Conflicted tariffs (manual review needed): ' . implode(', ', array_keys($this->tariffConflicts)));
+        }
+    }
+
+    protected function importTransactions($path): void
+    {
+        $rows = $this->read('transactions.json', $path);
+
+        $limit = (int) $this->option('transactions');
+
+        $rows = collect($rows)
+            ->sortByDesc('TransactionDateTime')
+            ->take($limit);
+
+        foreach ($rows as $row) {
+
+            $meter = Meter::where(
+                'meterNo',
+                trim($row->MeterNo)
+            )->first();
+
+            if (!$meter) {
+
+                $this->warn(
+                    "Transaction {$row->TransactionNo} skipped - meter not found"
+                );
+
+                continue;
+            }
+
+            if (!$meter->user_id) {
+
+                $this->warn(
+                    "Transaction {$row->TransactionNo} skipped - meter has no user"
+                );
+
+                continue;
+            }
+
+            $exists = DB::table('transactions')
+                ->where('trx_id', (string) $row->TransactionNo)
+                ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+            $payload = [
+                'user_id' => $meter->user_id,
+                'estate_id' => $meter->estate_id,
+
+                'pay_type' => 'wallet',
+                'service_type' => 'electricity',
+                'service' => 'legacy_ecmi',
+
+                'utility_id' => $row->MeterNo,
+                'utility_amount' => $row->Units,
+
+                'trx_id' => (string) $row->TransactionNo,
+                'payment_ref' => $row->transref,
+
+                'amount' => $row->Amount,
+                'fee' => $row->FC ?? 0,
+
+                'unit_amount' => $row->Units,
+
+                'status' => $row->TransactionComplete ? 1 : 0,
+
+                'note' => $row->Reasons,
+
+                'miscellaneous' => $row->Token,
+
+                'action_payload' => json_encode([
+                    'legacy_transaction_no' => $row->TransactionNo,
+                    'account_no' => $row->AccountNo,
+                    'buid' => $row->BUID,
+                    'token' => $row->Token,
+                    'token_type' => $row->TokenType,
+                    'vat' => $row->VAT,
+                    'fc' => $row->FC,
+                    'mmf' => $row->MMF,
+                    'kva' => $row->KVA,
+                ]),
+
+                'vending_amount' => $row->CostOfUnits,
+
+                'service_rendered_at' => $row->TransactionDateTime,
+
+                'created_at' => $row->TransactionDateTime,
+                'updated_at' => now(),
+            ];
+
+            $this->stats['transactions_data']++;
+
+            if ($this->isDryRun()) {
+
+                $this->preview(
+                    "Transaction {$row->TransactionNo}",
+                    $payload
+                );
+
+                continue;
+            }
+
+            DB::table('transactions')->insert($payload);
+        }
+    }
+
+    protected function importTransformers($path)
+    {
+        $rows = $this->read('transformers.json', $path);
+
+        foreach ($rows as $row) {
+
+            $estateId = $this->estateMap[$row->BUID] ?? null;
+
+            if (!$estateId) {
+                $this->warn("[WARN] Transformer {$row->TransID}: estate not found for BUID {$row->BUID}");
+            }
+
+            $payload = [
+                'Estate_id' => $estateId,
+                'estate' => null, // optional if you want name mapping later
+                'Capacity' => $row->Capacity,
+                'MDMeterSN' => $row->MDMeterSN,
+                'CTRatio' => $row->CTRatio,
+                'Multiplier' => $row->Multiplier,
+                'Location' => $row->Location,
+                'Title' => $row->Name,
+                'City' => $row->City,
+                'State' => $row->State,
+                'Status' => $row->status1 === 'N' ? 1 : 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            $this->stats['transformers']++;
+
+            if ($this->isDryRun()) {
+                $this->preview("Transformer {$row->TransID}", $payload);
+
+                // fake mapping
+                $this->transformerMap[$row->TransID] = Str::uuid();
+
+                continue;
+            }
+
+            $transformer = Transformer::updateOrCreate([
+                'Estate_id' => $estateId,
+                'title' => $row->Name,
+            ], $payload);
+
+            // 🔥 IMPORTANT: legacy → new DB ID mapping
+            $this->transformerMap[$row->TransID] = $transformer->id;
+        }
+    }
+
+    protected function importCustomers($path): void
+    {
+        $rows = $this->read('customers.json', $path);
+
+        foreach ($rows as $row) {
+
+            $estateId = $this->estateMap[$row->BUID] ?? null;
+
+            $meterId = null;
+
+            if (!empty($row->MeterNo)) {
+
+                $meter = Meter::where(
+                    'meterNo',
+                    trim($row->MeterNo)
+                )->first();
+
+                $meterId = $meter?->id;
+            }
+
+            $tariffId = null;
+
+            if (!empty($row->TariffID)) {
+
+                $legacyTariffKey = $this->tariffKey(
+                    $row->TariffID,
+                    $row->BUID
+                );
+
+                $tariffId = $this->tariffMap[$legacyTariffKey] ?? null;
+            }
+
+            $payload = [
+                'first_name' => trim($row->OtherNames),
+                'last_name' => trim($row->Surname),
+
+                'phone' => $row->Mobile,
+                'email' => $row->EMail,
+
+                'address' => $row->Address,
+                'state' => $row->State,
+
+                'meterNo' => $row->MeterNo,
+
+                'meterid' => $meterId,
+
+                'estate_id' => $estateId,
+
+                'account_no' => $row->AccountNo,
+
+                'tariffid' => $tariffId,
+
+                'estate_name' => $row->BUID,
+
+                'role' => 2,
+
+                'status' => $row->activated ? 2 : 0,
+
+                'can_login' => 0,
+
+                'password' => Hash::make('default123'),
+
+                'created_at' => $row->OpenDate
+                    ? date('Y-m-d H:i:s', strtotime($row->OpenDate))
+                    : now(),
+
+                'updated_at' => now(),
+            ];
+
+            $this->stats['customers']++;
+
+            /*
+            * Email is unique.
+            * Legacy data often contains:
+            * - null emails
+            * - duplicate emails
+            */
+
+            if (empty($payload['email'])) {
+
+                $payload['email'] =
+                    strtolower(
+                        str_replace(
+                            ' ',
+                            '',
+                            $row->AccountNo
+                        )
+                    )
+                    . '@legacy.local';
+            }
+
+            if ($this->isDryRun()) {
+
+                $this->preview(
+                    "CUSTOMER {$row->AccountNo}",
+                    $payload
+                );
+
+                continue;
+            }
+
+            $exists = User::where(
+                'email',
+                $payload['email']
+            )->exists();
+
+            if ($exists) {
+
+                $payload['email'] =
+                    uniqid('legacy_')
+                    . '@legacy.local';
+            }
+
+            User::create($payload);
         }
     }
 }

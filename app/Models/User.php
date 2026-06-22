@@ -48,8 +48,7 @@ class User extends Authenticatable
         'tariffidgen',
         'gen_source_amount',
         'nepa_source_amount',
-
-
+        'role',
     ];
 
     /**
