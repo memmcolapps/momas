@@ -288,7 +288,7 @@ class ImportLegacyEcmiData extends Command
                 'estate_id' => $estateId,
                 'tariff_id' => $tariffId,
                 't_index' => $row->VersionNo,
-                'status' => strtoupper(trim($row->Status ?? '')) === 'ACTIVE' ? 1 : 0,
+                'status' => 2,
             ];
 
             $this->stats['tariff_states_created']++;
@@ -781,7 +781,7 @@ class ImportLegacyEcmiData extends Command
                             $row->AccountNo
                         )
                     )
-                    . '@legacy.local';
+                    . '@legacy.local.com';
             }
 
             if ($this->isDryRun()) {
