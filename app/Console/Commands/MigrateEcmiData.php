@@ -17,6 +17,7 @@ class MigrateEcmiData extends Command
     protected $signature = 'legacy:migrate
                             {estate? : Optional estate/BUID filter}
                             {--chunk=500 : Chunk size}
+                            {--transactions=5: Number of latest transactions to import}
                             {--dry-run : Run without inserting}';
 
     protected $description = 'Migrate legacy MSSQL data into MySQL';
@@ -24,6 +25,7 @@ class MigrateEcmiData extends Command
     protected array $estateMap = [];
     protected array $tariffMap = [];
     protected array $meterMap = [];
+    protected array $transformerMap = [];
     protected? Estate $estate = null;
 
     protected ?string $estateFilter = null;
@@ -44,12 +46,16 @@ class MigrateEcmiData extends Command
             DB::beginTransaction();
 
             $this->migrateEstates();
+            $this->migrateTransformers();
             $this->migrateTariffs();
             $this->migrateTariffStates();
             $this->migrateMeters();
             $this->migrateUserInfoUsers();
             $this->migrateUserDataUsers();
             $this->attachMetersToUsers();
+            $this->importTransactions(
+                (int) ($this->option('transactions') ?? 5)
+            );
 
             DB::commit();
 
@@ -274,6 +280,8 @@ class MigrateEcmiData extends Command
                         continue;
                     }
 
+                    $transformerId = $this->transformerMap[$row->TransID . '_' . $row->BUID] ?? null;
+
                     $estateId = $this->estateMap[$row->BUID] ?? null;
 
                     $payload = [
@@ -293,6 +301,7 @@ class MigrateEcmiData extends Command
                         'NewTariffID'     => $this->tariffMap[$row->Tariff    . '_' . $row->BUID] ?? null,
                         'NewTariffDualID' => $this->tariffMap[$row->Tariff2   . '_' . $row->BUID] ?? null,
                         'OldTariffID'     => $this->tariffMap[$row->OldTariff . '_' . $row->BUID] ?? null,
+                        'transformer_id' => $transformerId,
                         'KRN1' => $row->KRN1,
                         'KRN2' => $row->KRN2,
                         'NeedKCT' => $row->NeedKCT ? '1' : '0',
@@ -545,6 +554,154 @@ class MigrateEcmiData extends Command
         }
 
         return $password ?: Str::random(12);
+    }
+
+    protected function importTransactions(int $limit = 5): void
+    {
+        $this->info("Importing {$limit} transaction(s)...");
+
+        $transactions = DB::connection('mssql_legacy')
+            ->table('Transactions')
+            ->orderByDesc('TransactionDateTime')
+            ->limit($limit)
+            ->get();
+
+        foreach ($transactions as $row) {
+
+            $meter = Meter::where('meterNo', trim($row->MeterNo))
+                ->first();
+
+            if (!$meter || !$meter->user_id) {
+
+                $this->warn(
+                    "Skipping Transaction {$row->TransactionNo}: User not found for meter {$row->MeterNo}"
+                );
+
+                continue;
+            }
+
+            $exists = DB::table('transactions')
+                ->where('trx_id', (string) $row->TransactionNo)
+                ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+            DB::table('transactions')->insert([
+                'user_id' => $meter->user_id,
+                'estate_id' => $meter->estate_id,
+
+                'pay_type' => 'wallet',
+                'service_type' => 'electricity',
+                'service' => 'legacy_ecmi',
+
+                'utility_id' => $row->MeterNo,
+                'utility_amount' => $row->Units,
+
+                'trx_id' => (string) $row->TransactionNo,
+                'payment_ref' => $row->transref,
+
+                'amount' => (float) $row->Amount,
+                'fee' => (float) ($row->FC ?? 0),
+
+                'unit_amount' => (float) ($row->Units ?? 0),
+
+                'status' => (
+                    $row->TransactionComplete
+                    && strtoupper($row->status ?? 'N') === 'N'
+                ) ? 1 : 0,
+
+                'note' => $row->Reasons,
+
+                'miscellaneous' => $row->Token,
+
+                'action_payload' => json_encode([
+                    'legacy_transaction_no' => $row->TransactionNo,
+                    'meter_no' => $row->MeterNo,
+                    'account_no' => $row->AccountNo,
+                    'csp_client_id' => $row->CSPClientID,
+                    'buid' => $row->BUID,
+                    'token' => $row->Token,
+                    'token_type' => $row->TokenType,
+                    'vat' => $row->VAT,
+                    'fc' => $row->FC,
+                    'mmf' => $row->MMF,
+                    'kva' => $row->KVA,
+                ]),
+
+                'vending_amount' => (float) ($row->CostOfUnits ?? 0),
+
+                'service_rendered_at' => $row->TransactionDateTime,
+
+                'created_at' => $row->TransactionDateTime,
+                'updated_at' => now(),
+            ]);
+        }
+
+        $this->info("Transactions imported successfully");
+    }
+
+        protected function migrateTransformers(): void
+    {
+        $this->info('Migrating transformers...');
+
+        $query = $this->legacy()
+            ->table('Transformers');
+
+        if ($this->estateFilter) {
+            $query->where('BUID', $this->estateFilter);
+        }
+
+        $rows = $query->get();
+
+        foreach ($rows as $row) {
+
+            $estateId = $this->estateMap[$row->BUID] ?? null;
+
+            $existing = DB::table('transformers')
+                ->where('Title', $row->Name)
+                ->where('MDMeterSN', $row->MDMeterSN)
+                ->first();
+
+            if ($existing) {
+                $this->transformerMap[$row->TransID . '_' . $row->BUID] = $existing->id;
+
+                continue;
+            }
+
+            $payload = [
+                'Estate_id' => $estateId,
+                'estate' => Estate::find($estateId)?->title,
+                'Title' => $row->Name,
+                'Capacity' => $row->Capacity,
+                'MDMeterSN' => $row->MDMeterSN,
+                'CTRatio' => $row->CTRatio,
+                'Multiplier' => $row->Multiplier,
+                'Location' => $row->Location,
+                'City' => $row->City,
+                'State' => $row->State,
+                'Status' => strtoupper($row->status1 ?? 'N') === 'N' ? 2 : 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            if ($this->isDryRun()) {
+
+                $this->line(
+                    'DRY RUN: Transformer => ' .
+                    json_encode($payload)
+                );
+
+                continue;
+            }
+
+            $transformer = DB::table('transformers')->insertGetId($payload);
+
+            $this->transformerMap[$row->TransID . '_' . $row->BUID] = $transformer;
+        }
+
+        $this->info('Transformers migrated');
     }
 }
 
