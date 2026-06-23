@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class Tariff extends Model
 {
     protected $fillable = [
+        'legacy_tariffid',
+        'legacy_buid',
         'title',
         'tariff_index',
         'estate_id',
