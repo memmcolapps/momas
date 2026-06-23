@@ -19,18 +19,19 @@ class ImportLegacyEcmiData extends Command
 
     protected $description = 'Import legacy JSON export into MySQL';
 
-    protected array $estateMap = [];
-    protected array $tariffMap = [];
+    // Cached lookups backed by legacy columns in the DB
+    protected array $estateIdByBuid = [];
+    protected array $tariffIdByKey = [];
+
     protected array $meterMap = [];
-    protected array $transformerMap = [];
 
     /** TariffID_BUID keys whose latest tariff_states.json Status is INVALID */
     protected array $invalidTariffKeys = [];
 
-    /** TariffID_BUID => 'Grid' | 'Off Grid' | 'CONFLICT' */
+    /** Tariff DB id => 'Grid' | 'Off Grid' | 'CONFLICT' */
     protected array $tariffTypeMap = [];
 
-    /** TariffID_BUID keys that got conflicting Grid/Off Grid votes */
+    /** Composite keys (TariffID_BUID) that got conflicting Grid/Off Grid votes */
     protected array $tariffConflicts = [];
 
     /** Cache so tariff_states.json is only read from disk once */
@@ -111,6 +112,27 @@ class ImportLegacyEcmiData extends Command
         return $tariffId . '_' . $buid;
     }
 
+    /* ================= CACHED DB LOOKUPS ================= */
+
+    protected function estateIdByBuid(string $buid): ?int
+    {
+        if (!array_key_exists($buid, $this->estateIdByBuid)) {
+            $this->estateIdByBuid[$buid] = Estate::where('legacy_buid', $buid)->value('id');
+        }
+        return $this->estateIdByBuid[$buid];
+    }
+
+    protected function tariffIdByKey(string $tariffId, string $buid): ?int
+    {
+        $key = $this->tariffKey($tariffId, $buid);
+        if (!array_key_exists($key, $this->tariffIdByKey)) {
+            $this->tariffIdByKey[$key] = Tariff::where('legacy_tariffid', $tariffId)
+                ->where('legacy_buid', $buid)
+                ->value('id');
+        }
+        return $this->tariffIdByKey[$key];
+    }
+
     /* ================= TARIFF STATES (loaded once, reused) ================= */
 
     protected function loadTariffStates($path): array
@@ -181,15 +203,20 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($rows as $row) {
 
-            $existing = Estate::where('title', $row->Name)->first();
+            $existing = Estate::where('legacy_buid', $row->BUID)->first()
+                ?? Estate::where('title', $row->Name)->first();
 
             if ($existing) {
-                $this->estateMap[$row->BUID] = $existing->id;
+                if (!$existing->legacy_buid) {
+                    $existing->update(['legacy_buid' => $row->BUID]);
+                }
+                $this->estateIdByBuid[$row->BUID] = $existing->id;
                 $this->stats['estates_matched']++;
                 continue;
             }
 
             $payload = [
+                'legacy_buid' => $row->BUID,
                 'title' => $row->Name,
                 'address' => $row->Address,
                 'state' => $row->State,
@@ -202,13 +229,13 @@ class ImportLegacyEcmiData extends Command
 
             if ($this->isDryRun()) {
                 $this->preview('ESTATE', $payload);
-                $this->estateMap[$row->BUID] = Str::uuid();
+                $this->estateIdByBuid[$row->BUID] = Str::uuid();
                 continue;
             }
 
             $estate = Estate::create($payload);
 
-            $this->estateMap[$row->BUID] = $estate->id;
+            $this->estateIdByBuid[$row->BUID] = $estate->id;
         }
     }
 
@@ -227,13 +254,15 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            $estateId = $this->estateMap[$row->BUID] ?? null;
+            $estateId = $this->estateIdByBuid($row->BUID);
 
             if ($estateId === null) {
                 $this->warn("[WARN] Tariff {$key}: no matching estate for BUID {$row->BUID}");
             }
 
             $payload = [
+                'legacy_tariffid' => $row->TariffID,
+                'legacy_buid' => $row->BUID,
                 'title' => $row->Description,
                 'tariff_index' => $row->TariffID,
                 'estate_id' => $estateId,
@@ -245,13 +274,13 @@ class ImportLegacyEcmiData extends Command
 
             if ($this->isDryRun()) {
                 $this->preview('Tariff', $payload);
-                $this->tariffMap[$key] = random_int(1000, 9999);
+                $this->tariffIdByKey[$key] = random_int(1000, 9999);
                 continue;
             }
 
             $tariff = Tariff::create($payload);
 
-            $this->tariffMap[$key] = $tariff->id;
+            $this->tariffIdByKey[$key] = $tariff->id;
         }
     }
 
@@ -271,8 +300,8 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            $estateId = $this->estateMap[$row->BUID] ?? null;
-            $tariffId = $this->tariffMap[$key] ?? null;
+            $tariffId = $this->tariffIdByKey($row->TariffID, $row->BUID);
+            $estateId = $this->estateIdByBuid($row->BUID);
 
             if (!$tariffId) {
                 $this->warn("[WARN] TariffState references unresolved tariff {$key} - skipping");
@@ -310,7 +339,7 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($rows as $row) {
 
-            $estateId = $this->estateMap[$row->BUID] ?? null;
+            $estateId = $this->estateIdByBuid($row->BUID);
 
             $newTariffId = $this->resolveTariffId($row->Tariff, $row->BUID, 'NewTariffID', $row->MeterNo);
             $newTariffDualId = $this->resolveTariffId($row->Tariff2, $row->BUID, 'NewTariffDualID', $row->MeterNo);
@@ -319,11 +348,11 @@ class ImportLegacyEcmiData extends Command
             // Classification happens regardless of dry-run, so a dry-run preview
             // reflects real Grid/Off Grid results.
             if ($newTariffId) {
-                $this->classifyTariff($this->tariffKey($row->Tariff, $row->BUID), 'Grid');
+                $this->classifyTariff($newTariffId, 'Grid');
             }
 
             if ($row->IsDual && $newTariffDualId) {
-                $this->classifyTariff($this->tariffKey($row->Tariff2, $row->BUID), 'Off Grid');
+                $this->classifyTariff($newTariffDualId, 'Off Grid');
             }
 
             // OldTariff is intentionally left out of Grid/Off Grid classification.
@@ -373,45 +402,44 @@ class ImportLegacyEcmiData extends Command
             return null;
         }
 
-        $key = $this->tariffKey($tariffRaw, $buid);
-        $id = $this->tariffMap[$key] ?? null;
+        $id = $this->tariffIdByKey($tariffRaw, $buid);
 
         if ($id === null) {
-            $this->warn("[WARN] Meter {$meterNo}: {$label} tariff {$key} not found (invalid/missing) - left null");
+            $this->warn("[WARN] Meter {$meterNo}: {$label} tariff {$tariffRaw}_{$buid} not found (invalid/missing) - left null");
         }
 
         return $id;
     }
 
-    protected function classifyTariff(string $key, string $type): void
+    protected function classifyTariff(int $tariffId, string $type): void
     {
-        if (!isset($this->tariffTypeMap[$key])) {
-            $this->tariffTypeMap[$key] = $type;
+        if (!isset($this->tariffTypeMap[$tariffId])) {
+            $this->tariffTypeMap[$tariffId] = $type;
             return;
         }
 
-        if ($this->tariffTypeMap[$key] === $type || $this->tariffTypeMap[$key] === 'CONFLICT') {
+        if ($this->tariffTypeMap[$tariffId] === $type || $this->tariffTypeMap[$tariffId] === 'CONFLICT') {
             return;
         }
 
-        // Same tariff used as Grid on one meter and Off Grid on another.
-        $this->tariffTypeMap[$key] = 'CONFLICT';
-        $this->tariffConflicts[$key] = true;
+        $this->tariffTypeMap[$tariffId] = 'CONFLICT';
+        $tariff = Tariff::find($tariffId);
+        if ($tariff) {
+            $this->tariffConflicts[] = $this->tariffKey($tariff->legacy_tariffid, $tariff->legacy_buid);
+        }
     }
 
     /* ================= TARIFF TYPE CLASSIFICATION (after meters) ================= */
 
     protected function classifyTariffTypes(): void
     {
-        foreach ($this->tariffTypeMap as $key => $type) {
-
-            $tariffId = $this->tariffMap[$key] ?? null;
-
-            if (!$tariffId) {
-                continue;
-            }
+        foreach ($this->tariffTypeMap as $tariffId => $type) {
 
             if ($type === 'CONFLICT') {
+                $tariff = Tariff::find($tariffId);
+                $key = $tariff
+                    ? $this->tariffKey($tariff->legacy_tariffid, $tariff->legacy_buid)
+                    : (string) $tariffId;
                 $this->warn("[CONFLICT] Tariff {$key} appears as both Grid and Off Grid on different meters. Left type=null for manual review.");
                 continue;
             }
@@ -419,7 +447,7 @@ class ImportLegacyEcmiData extends Command
             $this->stats[$type === 'Grid' ? 'tariffs_grid' : 'tariffs_offgrid']++;
 
             if ($this->isDryRun()) {
-                $this->preview("Tariff Type [{$key}]", ['tariff_id' => $tariffId, 'type' => $type]);
+                $this->preview("Tariff Type [{$tariffId}]", ['tariff_id' => $tariffId, 'type' => $type]);
                 continue;
             }
 
@@ -441,7 +469,7 @@ class ImportLegacyEcmiData extends Command
                 'email' => $row->email,
                 'password' => $row->password_hash,
                 'role' => 3,
-                'estate_id' => $this->estateMap[$row->estate_buid] ?? null,
+                'estate_id' => $this->estateIdByBuid($row->estate_buid),
                 'estate_name' => $row->estate_name,
                 'status' => $row->activated ? 2 : 0,
                 'can_login' => $row->can_login,
@@ -536,7 +564,7 @@ class ImportLegacyEcmiData extends Command
         ]);
 
         if (!empty($this->tariffConflicts)) {
-            $this->warn('Conflicted tariffs (manual review needed): ' . implode(', ', array_keys($this->tariffConflicts)));
+            $this->warn('Conflicted tariffs (manual review needed): ' . implode(', ', $this->tariffConflicts));
         }
     }
 
@@ -548,7 +576,8 @@ class ImportLegacyEcmiData extends Command
 
         $rows = collect($rows)
             ->sortByDesc('TransactionDateTime')
-            ->take($limit);
+            ->groupBy('MeterNo')
+            ->flatMap(fn ($txns) => $txns->take($limit));
 
         foreach ($rows as $row) {
 
@@ -650,15 +679,16 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($rows as $row) {
 
-            $estateId = $this->estateMap[$row->BUID] ?? null;
+            $estateId = $this->estateIdByBuid($row->BUID);
 
             if (!$estateId) {
                 $this->warn("[WARN] Transformer {$row->TransID}: estate not found for BUID {$row->BUID}");
             }
 
             $payload = [
+                'legacy_trans_id' => $row->TransID,
                 'Estate_id' => $estateId,
-                'estate' => null, // optional if you want name mapping later
+                'estate' => null,
                 'Capacity' => $row->Capacity,
                 'MDMeterSN' => $row->MDMeterSN,
                 'CTRatio' => $row->CTRatio,
@@ -676,20 +706,13 @@ class ImportLegacyEcmiData extends Command
 
             if ($this->isDryRun()) {
                 $this->preview("Transformer {$row->TransID}", $payload);
-
-                // fake mapping
-                $this->transformerMap[$row->TransID] = Str::uuid();
-
                 continue;
             }
 
-            $transformer = Transformer::updateOrCreate([
-                'Estate_id' => $estateId,
-                'title' => $row->Name,
-            ], $payload);
-
-            // 🔥 IMPORTANT: legacy → new DB ID mapping
-            $this->transformerMap[$row->TransID] = $transformer->id;
+            Transformer::updateOrCreate(
+                ['legacy_trans_id' => $row->TransID],
+                $payload
+            );
         }
     }
 
@@ -699,7 +722,7 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($rows as $row) {
 
-            $estateId = $this->estateMap[$row->BUID] ?? null;
+            $estateId = $this->estateIdByBuid($row->BUID);
 
             $meterId = null;
 
@@ -716,13 +739,7 @@ class ImportLegacyEcmiData extends Command
             $tariffId = null;
 
             if (!empty($row->TariffID)) {
-
-                $legacyTariffKey = $this->tariffKey(
-                    $row->TariffID,
-                    $row->BUID
-                );
-
-                $tariffId = $this->tariffMap[$legacyTariffKey] ?? null;
+                $tariffId = $this->tariffIdByKey($row->TariffID, $row->BUID);
             }
 
             $payload = [

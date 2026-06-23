@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 class Estate extends Model
 {
     protected $fillable = [
+        'legacy_buid',
         'title',
         'address',
         'state',
