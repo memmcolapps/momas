@@ -385,7 +385,7 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            $meter = Meter::create($payload);
+            $meter = Meter::updateOrCreate(['meterNo' => $row->MeterNo], $payload);
 
             $this->meterMap[$row->MeterNo] = $meter->id;
         }
