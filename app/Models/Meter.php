@@ -12,6 +12,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -234,10 +235,14 @@ class Meter extends Model
 
         // [4] VAT Calculation on remaining amount
         $calculator = new VatCalculator();
+        $utilities_amount = UtilitiesPayment::where('user_id', Auth::user()->id)
+            ->where('status', '!=', 2)
+            ->sum('amount');
+
         $params = [
             'amountText' => $afterFixedCharge,
             'tariffAmount' => $tariffAmount,
-            'utilitiesAmount' => 0,
+            'utilitiesAmount' => $utilities_amount,
             'vat' => $vat,
         ];
 
@@ -251,16 +256,17 @@ class Meter extends Model
 
         return [
             'tariffAmount' => $tariffAmount,
-            'vat' => $vat,
-            'fixedCharge' => $fixedCharge,
-            'serviceFee' => $percn,
-            'afterServiceFee' => $afterServiceFee,
-            'estateFee' => $estateFee,
-            'afterEstateFee' => $afterEstateFee,
-            'afterFixedCharge' => $afterFixedCharge,
-            'vatAmount' => $vatAmount,
-            'vending_amount' => $vending_amount,
-            'unit' => $unit,
+            'vat' => round($vat, 2),
+            'fixedCharge' => round($fixedCharge, 2),
+            'serviceFee' => round($percn, 2),
+            'afterServiceFee' => round($afterServiceFee, 2),
+            'estateFee' => round($estateFee, 2),
+            'afterEstateFee' => round($afterEstateFee, 2),
+            'afterFixedCharge' => round($afterFixedCharge, 2),
+            'vatAmount' => round($vatAmount, 2),
+            'vendingAmount' => round($vending_amount, 2),
+            'unit' => round($unit, 2),
+            'utilityAmount' => 6362,
         ];
     }
 
