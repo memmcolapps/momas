@@ -33,7 +33,10 @@ class CreditToken extends Model
         'receiver_meterNo',
         'vatAmount',
         'tariff_amount',
-        'tariff_id',
+        'costOfUnit',
+        'fee',
+        'tariffPerKWatt',
+        'kct_tokens',
     ];
 
     public function estate()
