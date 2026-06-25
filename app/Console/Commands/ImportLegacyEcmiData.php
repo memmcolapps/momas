@@ -727,7 +727,7 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            User::create($payload);
+            User::updateOrCreate(['meterNo' => $row->MeterNo], $payload);
         }
     }
 
@@ -750,6 +750,7 @@ class ImportLegacyEcmiData extends Command
                 'meterNo'    => $row->MeterNo,
                 'role'       => 2,
                 'password'   => Hash::make($row->Pw ?? 'default123'),
+                'status'     => 2,
             ];
 
             $this->stats['users_data']++;
@@ -759,7 +760,7 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            User::create($payload);
+            User::updateOrCreate(['meterNo' => $row->MeterNo], $payload);
         }
     }
 
@@ -803,7 +804,7 @@ class ImportLegacyEcmiData extends Command
                 'tariffid'    => $tariffId,
                 'estate_name' => $row->BUID,
                 'role'        => 2,
-                'status'      => $row->activated ? 2 : 0,
+                'status'      => 2,
                 'can_login'   => 0,
                 'password'    => Hash::make('default123'),
                 'created_at'  => $row->OpenDate
@@ -821,10 +822,10 @@ class ImportLegacyEcmiData extends Command
 
             // Deduplicate emails at insert time
             if (User::where('email', $payload['email'])->exists()) {
-                $payload['email'] = 'legacy_' . uniqid() . '@legacy.local';
+                $payload['email'] = 'legacy_' . uniqid() . '@legacy.local.com';
             }
 
-            User::create($payload);
+            User::updateOrCreate(['meterNo' => $row->MeterNo], $payload);
         }
     }
 
@@ -916,41 +917,38 @@ class ImportLegacyEcmiData extends Command
             DB::table('transactions')->insert($payload);
 
             $this->info('Entered Credit Token ' . $row->TransactionNo . '  ->  ' . $row->TokenType);
-            // Create a credit token record for TokenType = 2 transactions
-            if ((int) $row->TokenType === 2) {
-                $this->info('Entered Credit Token ' . $row->TransactionNo);
-                if (!DB::table('credit_tokens')->where('trx_id', (string) $row->TransactionNo)->exists()) {
-                    $estateName = null;
-                    if ($meter->estate_id) {
-                        $estate = Estate::find($meter->estate_id);
-                        $estateName = $estate?->title;
-                    }
-
-                    CreditToken::create([
-                        'user_id'          => $meter->user_id,
-                        'trx_id'           => (string) $row->TransactionNo,
-                        'meterNo'          => trim($row->MeterNo),
-                        'token'            => $row->Token,
-                        'amount'           => $row->Amount,
-                        'amount_charged'   => $row->Amount,
-                        'vat'              => $row->VAT ?? 0,
-                        'vatAmount'        => (string) ($row->VAT ?? 0),
-                        'costOfUnit'       => (string) ($row->CostOfUnits ?? 0),
-                        'unitkwh'          => (string) ($row->Units ?? 0),
-                        'fee'              => $row->FC ?? 0,
-                        'estate_id'        => $meter->estate_id,
-                        'estate_name'      => $estateName,
-                        'tariff_id'        => $meter->NewTariffID,
-                        'tariff_amount'    => null,
-                        'tariffPerKWatt'   => null,
-                        'kct_tokens'       => null,
-                        'customer_email'   => null,
-                        'receiver_meterNo' => null,
-                        'status'           => 2,
-                        'created_at'       => $row->TransactionDateTime,
-                        'updated_at'       => $row->TransactionDateTime,
-                    ]);
+            $this->info('Entered Credit Token ' . $row->TransactionNo);
+            if (!DB::table('credit_tokens')->where('trx_id', (string) $row->TransactionNo)->exists()) {
+                $estateName = null;
+                if ($meter->estate_id) {
+                    $estate = Estate::find($meter->estate_id);
+                    $estateName = $estate?->title;
                 }
+
+                CreditToken::create([
+                    'user_id'          => $meter->user_id,
+                    'trx_id'           => (string) $row->TransactionNo,
+                    'meterNo'          => trim($row->MeterNo),
+                    'token'            => $row->Token,
+                    'amount'           => $row->Amount,
+                    'amount_charged'   => $row->Amount,
+                    'vat'              => $row->VAT ?? 0,
+                    'vatAmount'        => (string) ($row->VAT ?? 0),
+                    'costOfUnit'       => (string) ($row->CostOfUnits ?? 0),
+                    'unitkwh'          => (string) ($row->Units ?? 0),
+                    'fee'              => $row->FC ?? 0,
+                    'estate_id'        => $meter->estate_id,
+                    'estate_name'      => $estateName,
+                    'tariff_id'        => $meter->NewTariffID,
+                    'tariff_amount'    => null,
+                    'tariffPerKWatt'   => null,
+                    'kct_tokens'       => null,
+                    'customer_email'   => null,
+                    'receiver_meterNo' => null,
+                    'status'           => 2,
+                    'created_at'       => $row->TransactionDateTime,
+                    'updated_at'       => $row->TransactionDateTime,
+                ]);
             }
         }
     }
