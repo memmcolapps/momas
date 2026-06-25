@@ -33,7 +33,10 @@ class CreditToken extends Model
         'receiver_meterNo',
         'vatAmount',
         'tariff_amount',
-        'tariff_id',
+        'costOfUnit',
+        'fee',
+        'tariffPerKWatt',
+        'kct_tokens',
     ];
 
     public function estate()
@@ -54,5 +57,9 @@ class CreditToken extends Model
     public function meter()
     {
         return $this->belongsTo(Meter::class);
+    }
+
+    public function getUnitAttribute($value) {
+        return round($value, 2);
     }
 }

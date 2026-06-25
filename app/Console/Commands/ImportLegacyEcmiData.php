@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\Meter;
 use App\Models\Tariff;
@@ -913,6 +914,44 @@ class ImportLegacyEcmiData extends Command
             }
 
             DB::table('transactions')->insert($payload);
+
+            $this->info('Entered Credit Token ' . $row->TransactionNo . '  ->  ' . $row->TokenType);
+            // Create a credit token record for TokenType = 2 transactions
+            if ((int) $row->TokenType === 2) {
+                $this->info('Entered Credit Token ' . $row->TransactionNo);
+                if (!DB::table('credit_tokens')->where('trx_id', (string) $row->TransactionNo)->exists()) {
+                    $estateName = null;
+                    if ($meter->estate_id) {
+                        $estate = Estate::find($meter->estate_id);
+                        $estateName = $estate?->title;
+                    }
+
+                    CreditToken::create([
+                        'user_id'          => $meter->user_id,
+                        'trx_id'           => (string) $row->TransactionNo,
+                        'meterNo'          => trim($row->MeterNo),
+                        'token'            => $row->Token,
+                        'amount'           => $row->Amount,
+                        'amount_charged'   => $row->Amount,
+                        'vat'              => $row->VAT ?? 0,
+                        'vatAmount'        => (string) ($row->VAT ?? 0),
+                        'costOfUnit'       => (string) ($row->CostOfUnits ?? 0),
+                        'unitkwh'          => (string) ($row->Units ?? 0),
+                        'fee'              => $row->FC ?? 0,
+                        'estate_id'        => $meter->estate_id,
+                        'estate_name'      => $estateName,
+                        'tariff_id'        => $meter->NewTariffID,
+                        'tariff_amount'    => null,
+                        'tariffPerKWatt'   => null,
+                        'kct_tokens'       => null,
+                        'customer_email'   => null,
+                        'receiver_meterNo' => null,
+                        'status'           => 2,
+                        'created_at'       => $row->TransactionDateTime,
+                        'updated_at'       => $row->TransactionDateTime,
+                    ]);
+                }
+            }
         }
     }
 
