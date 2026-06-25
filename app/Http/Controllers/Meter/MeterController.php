@@ -87,12 +87,12 @@ class MeterController extends Controller
             ]
         ]);
 
-        if ($validator->fails()) {
+        // if ($validator->fails()) {
 
-            return StandardResponse::error(422, 'Validation Error', [
-                'error' => $validator->errors(),
-            ]);
-        }
+        //     return StandardResponse::error(422, 'Validation Error', [
+        //         'error' => $validator->errors(),
+        //     ]);
+        // }
 
 
 
@@ -103,7 +103,7 @@ class MeterController extends Controller
         $get_user_estate_id = $user?->estate_id;
 
 
-        $meter = Meter::where('meterNo', $request->meterNo)->where('estate_id', $get_user_estate_id)->first() ?? null;
+        $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;//->where('estate_id', $get_user_estate_id)->first() ?? null;
         if ($meter == null) {
             $message = "Validation Failed, please check meter number or estate selected";
             $code = 422;
@@ -797,6 +797,8 @@ class MeterController extends Controller
             ]);
 
             if ($validator->fails()) {
+
+                Logger::error('Validation Error on pay for others', ['data' => $validator->errors()]);
                 return StandardResponse::error(code: 422, message: 'Validation error', data: [
                     'validation_error' => $validator->errors()
                 ]);
