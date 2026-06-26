@@ -37,7 +37,7 @@ class VatCalculator
 
     public function calculateTariffAmountPerKWatt($params)
     {
-        $costOfUnit = $this->calculateCostOfUnit($params);
+        $costOfUnit = $this->calculateCostOfUnit($params) - $this->parseAmount($params['utilitiesAmount']);
         $rate = $params['tariffAmount'] ?? 0;
         // dd($costOfUnit, $rate, $params);
         return $rate > 0 ? $costOfUnit / $rate : 0;

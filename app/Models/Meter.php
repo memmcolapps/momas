@@ -264,7 +264,7 @@ class Meter extends Model
             'vatAmount' => round($vatAmount, 2),
             'vendingAmount' => round($vending_amount, 2),
             'unit' => round($unit, 2),
-            'utilityAmount' => 6362,
+            'utilityAmount' => $utilities_amount,
         ];
     }
 
