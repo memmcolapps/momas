@@ -421,7 +421,11 @@ class MeterController extends Controller
 
             $trx_id = $request->trxref ?? $request->ref;
             $tariff_id = $request->tariff_id;
-            $utility_amount = $request->utility_amount ?? 0;
+            $utility_amount = UtilitiesPayment::where('user_id', Auth::user()->id)
+                ->where('status', '!=', 2)
+                ->where('type', '=', 'utilities')
+                ->sum('amount');
+
             $auth_user = Auth::user();
 
             if (!$trx_id) {

@@ -66,7 +66,6 @@ class LoginController extends Controller
         Passport::refreshTokensExpireIn(Carbon::now()->addHours(2));
 
         if (!auth()->attempt($credentials)) {
-            dd($credentials);
             $field = $isEmailLogin ? "Email" : "Meter No";
             Logger::warning('Login attempt: invalid credentials', [
                 'user_id'   => $usr->id,
