@@ -37,6 +37,8 @@ class CreditToken extends Model
         'fee',
         'tariffPerKWatt',
         'kct_tokens',
+        'created_at',
+        'updated_at',
     ];
 
     public function estate()
