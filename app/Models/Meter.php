@@ -235,6 +235,7 @@ class Meter extends Model
         $calculator = new VatCalculator();
         $utilities_amount = UtilitiesPayment::where('user_id', Auth::user()->id)
             ->where('status', '!=', 2)
+            ->where('type', '=', 'utilities')
             ->sum('amount');
 
         $params = [
