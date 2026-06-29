@@ -727,7 +727,7 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            User::updateOrCreate(['meterNo' => $row->MeterNo], $payload);
+            User::updateOrCreate(['email' => $row->email], $payload);
         }
     }
 
@@ -925,7 +925,9 @@ class ImportLegacyEcmiData extends Command
                     $estateName = $estate?->title;
                 }
 
-                CreditToken::create([
+                CreditToken::updateOrCreate([
+                    'trx_id'           => (string) $row->TransactionNo,
+                ], [
                     'user_id'          => $meter->user_id,
                     'trx_id'           => (string) $row->TransactionNo,
                     'meterNo'          => trim($row->MeterNo),
