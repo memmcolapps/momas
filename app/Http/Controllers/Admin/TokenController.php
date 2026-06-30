@@ -1478,6 +1478,13 @@ class TokenController extends Controller
                     $get_utility_id = UtilitiesPayment::where('user_id', Auth::id())->where('type', 'utilities')->first()->id;
                 }
 
+                if (! $est->paystack_subaccount) {
+                    return redirect('/admin/credit-token')->with(
+                        'error',
+                        "Estate {$est->title} does not have paystack subaccount reach out to momas support"
+                    );
+                }
+
                 // Use PaystackPaymentService for payment initialization
                 $databody = [
                     "amount" => $request->amount * 100,
