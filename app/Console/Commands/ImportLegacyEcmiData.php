@@ -736,11 +736,17 @@ class ImportLegacyEcmiData extends Command
     {
         $rows = $this->read('user_info.json', $path);
 
+        $emailize = function ($firstname, $lastname) {
+            return trim(str_replace(' ', '-', $firstname)) . '-' . trim(str_replace(' ', '-', $lastname)) . '@legacy.local.com';
+        };
+
         foreach ($rows as $row) {
+            $email = $row->email ?? $emailize($row->first_name, $row->last_name);
+
             $payload = [
                 'first_name'   => $row->first_name ?? null,
                 'last_name'    => $row->last_name  ?? null,
-                'email'        => $row->email,
+                'email'        => $email,
                 'password'     => $row->password_hash,
                 'role'         => 3,
                 'estate_id'    => $this->estateMap[$row->estate_buid] ?? null,
@@ -757,7 +763,7 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            User::updateOrCreate(['email' => $row->email], $payload);
+            User::updateOrCreate(['email' => $email], $payload);
         }
     }
 
