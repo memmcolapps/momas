@@ -397,27 +397,57 @@ class ImportLegacyEcmiData extends Command
     {
         $rows = $this->read('estates.json', $path);
 
+        $subAccounts = collect($this->read('paystack_subaccounts.json', $path))
+            ->keyBy('BUID');
+
         foreach ($rows as $row) {
-            // Skip if this BUID was already resolved in a previous run
             if (isset($this->estateMap[$row->BUID])) {
                 continue;
             }
+
+            $subAcct = $subAccounts[$row->BUID] ?? null;
 
             $existing = Estate::where('title', $row->Name)->first();
 
             if ($existing) {
                 $this->estateMap[$row->BUID] = $existing->id;
                 $this->stats['estates_matched']++;
+
+                // Backfill subaccount + legacy_buid onto existing estate if missing
+                if (!$this->isDryRun()) {
+                    $updates = [];
+
+                    if (!$existing->legacy_buid) {
+                        $updates['legacy_buid'] = $row->BUID;
+                    }
+
+                    if ($subAcct && !$existing->paystack_subaccount) {
+                        $updates['paystack_subaccount'] = $subAcct->SubAcctID;
+                        $updates['account_no']          = $subAcct->BankAccountNo;
+                        $updates['account_name']        = $subAcct->BankAccountName;
+                        $updates['bank']                = $subAcct->BankName;
+                    }
+
+                    if (!empty($updates)) {
+                        $existing->update($updates);
+                    }
+                }
+
                 continue;
             }
 
             $payload = [
-                'title'      => $row->Name,
-                'address'    => $row->Address,
-                'state'      => $row->State,
-                'status'     => $row->status1 === 'N' ? 1 : 0,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'title'               => $row->Name,
+                'address'             => $row->Address,
+                'state'               => $row->State,
+                'legacy_buid'         => $row->BUID,
+                'status'              => $row->status1 === 'N' ? 1 : 0,
+                'paystack_subaccount' => $subAcct?->SubAcctID       ?? null,
+                'account_no'          => $subAcct?->BankAccountNo   ?? null,
+                'account_name'        => $subAcct?->BankAccountName ?? null,
+                'bank'                => $subAcct?->BankName        ?? null,
+                'created_at'          => now(),
+                'updated_at'          => now(),
             ];
 
             $this->stats['estates_created']++;

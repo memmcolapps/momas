@@ -35,6 +35,7 @@ class ExportLegacyEcmiData extends Command
         $this->info("Exporting legacy data...");
 
         $this->exportEstates($path, $estate);
+        $this->exportPaystackSubAccounts($path, $estate);
         $this->exportTransformers($path, $estate);
         $this->exportTariffs($path, $estate);
         $this->exportTariffStates($path, $estate);
@@ -70,6 +71,26 @@ class ExportLegacyEcmiData extends Command
         $this->write('estates.json', $query->get()->toArray(), $path);
 
         $this->info("Exported estates");
+    }
+
+    protected function exportPaystackSubAccounts($path, $estate)
+    {
+        $query = $this->legacy()
+            ->table('Paystack_SubAcct')
+            ->join('BusinessUnit', 'BusinessUnit.BUID', '=', 'Paystack_SubAcct.RUID')
+            ->select(
+                'Paystack_SubAcct.*',
+                'BusinessUnit.BUID'
+            );
+
+        if ($estate) {
+            $query->where('Paystack_SubAcct.RUID', $estate)
+                ->orWhere('BusinessUnit.Name', $estate);
+        }
+
+        $this->write('paystack_subaccounts.json', $query->get()->toArray(), $path);
+
+        $this->info('Exported Paystack subaccounts');
     }
 
     /* ================= TARIFFS ================= */
