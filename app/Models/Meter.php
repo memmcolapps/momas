@@ -434,7 +434,7 @@ class Meter extends Model
                     'user_id' => $this->user_id,
                     'meterNo' => $this->meterNo,
                 ],
-                    [
+                [
                     'amount' => $vending_amount,
                     'amount_charged' => $trx->amount,
                     'customer_email' => $email,
@@ -445,7 +445,7 @@ class Meter extends Model
                     'estate_name' => $user->estate_name,
                     'token' => $token,
                     'status' => 2,
-                    'vatAmount' => $vat,
+                    'vatAmount' => $vatAmount,
                     'tariff_amount' => $tariffAmount,
                     'tariff_id' => $tariff_id
                 ]);
