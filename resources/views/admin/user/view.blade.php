@@ -64,6 +64,8 @@
                                                 <label class="mt-3">Old Email</label>
                                                 <input name="old_email" class="form-control" readonly value="{{$user->email}}">
 
+                                                <input name="user_id" class="form-control" readonly value="{{$user->id}}" hidden>
+
                                                 <label class="mt-3">New Email</label>
                                                 <input type="email" name="email" class="form-control" required >
 

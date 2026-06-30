@@ -190,9 +190,9 @@ class ImportLegacyEcmiData extends Command
             'transformer' => $this->importTransformers($path),
             'tariff'      => $this->runTariffModule($path),
             'meter'       => $this->runMeterModule($path),
+            'customer'    => $this->importCustomers($path),
             'user_info'   => $this->importUserInfo($path),
             'user_data'   => $this->importUserData($path),
-            'customer'    => $this->importCustomers($path),
             'transaction' => $this->runTransactionModule($path),
         };
     }

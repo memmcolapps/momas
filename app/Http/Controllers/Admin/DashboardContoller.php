@@ -808,13 +808,14 @@ class DashboardContoller extends Controller
     }
     public function update_user_email(request $request)
     {
+        // dd($request->all());
 
         if ($request->email  != $request->confirm_email) {
             return back()->with('error', "Email Incorrect");
         }
 
 
-        User::where('email', $request->old_email)->update([
+        User::where('id', $request->user_id)->update([
             'email' => $request->email,
         ]);
 
