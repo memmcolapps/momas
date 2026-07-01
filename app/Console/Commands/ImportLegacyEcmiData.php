@@ -530,10 +530,10 @@ class ImportLegacyEcmiData extends Command
                 continue; // already migrated in a previous run
             }
 
-            if (isset($this->invalidTariffKeys[$key])) {
-                $this->stats['tariffs_skipped_invalid']++;
-                continue;
-            }
+            // if (isset($this->invalidTariffKeys[$key])) {
+            //     $this->stats['tariffs_skipped_invalid']++;
+            //     continue;
+            // }
 
             $estateId = $this->estateMap[$row->BUID] ?? null;
 
@@ -573,10 +573,10 @@ class ImportLegacyEcmiData extends Command
         foreach ($rows as $row) {
             $key = $this->tariffKey($row->TariffID, $row->BUID);
 
-            if (isset($this->invalidTariffKeys[$key])) {
-                $this->stats['tariff_states_skipped']++;
-                continue;
-            }
+            // if (isset($this->invalidTariffKeys[$key])) {
+            //     $this->stats['tariff_states_skipped']++;
+            //     continue;
+            // }
 
             $tariffId = $this->tariffMap[$key] ?? null;
 
@@ -737,7 +737,7 @@ class ImportLegacyEcmiData extends Command
         $rows = $this->read('user_info.json', $path);
 
         $emailize = function ($firstname, $lastname) {
-            return trim(str_replace(' ', '-', $firstname)) . '-' . trim(str_replace(' ', '-', $lastname)) . '@legacy.local.com';
+            return trim(strtolower(str_replace(' ', '-', $firstname))) . '-' . trim(strtolower(str_replace(' ', '-', $lastname))) . '@legacy.local.com';
         };
 
         foreach ($rows as $row) {
