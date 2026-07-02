@@ -20,7 +20,7 @@ class ImportLegacyEcmiData extends Command
                             {--path=           : Path to legacy export folder}
                             {--dry-run         : Preview changes without writing to DB}
                             {--transactions=5  : Max recent transactions to import per meter}
-                            {--module=         : Run a single module only (estate|transformer|tariff|meter|user_info|user_data|customer|transaction|subaccount)}
+                            {--module=         : Run a single module only (estate|transformer|tariff|meter|user_info|user_data|customer|transaction|subaccount|attach_meters)}
                             {--reset           : Delete saved migration state and start fresh}';
 
     protected $description = 'Import legacy ECMI JSON export into MySQL (resumable, module-by-module)';
@@ -107,13 +107,16 @@ class ImportLegacyEcmiData extends Command
 
         if ($targetModule !== null) {
 
-            if ($targetModule === 'subaccount') {
-                $this->info('▶ Running standalone module: subaccount');
+            if ($targetModule === 'subaccount' || $targetModule === 'attach_meters') {
+                $this->info("▶ Running standalone module: {$targetModule}");
                 try {
-                    $this->importSubAccounts($path);
-                    $this->info('✔ Subaccount backfill complete.');
+                    match ($targetModule) {
+                        'subaccount'   => $this->importSubAccounts($path),
+                        'attach_meters' => $this->attachMeters(),
+                    };
+                    $this->info("✔ Module [{$targetModule}] complete.");
                 } catch (\Throwable $e) {
-                    $this->error('✘ Subaccount module failed: ' . $e->getMessage());
+                    $this->error("✘ Module [{$targetModule}] failed: " . $e->getMessage());
                     $this->error($e->getFile() . ':' . $e->getLine());
                     return self::FAILURE;
                 }
