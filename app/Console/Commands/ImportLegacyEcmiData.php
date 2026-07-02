@@ -1038,7 +1038,8 @@ class ImportLegacyEcmiData extends Command
         foreach ($rows as $row) {
             // Resolve estate: legacy_buid is the clean match; fall back to title
             $estate = Estate::where('legacy_buid', $row->BUID)->first()
-                ?? Estate::where('title', $row->EstateName)->first();
+                ?? Estate::where('title', $row->EstateName)->first()
+                ?? Estate::where('title', 'like', '%' . $row->SubAccountName . '%' )->first();
 
             if (!$estate) {
                 $this->warn("[NOT FOUND] No estate matched BUID={$row->BUID} / Name={$row->EstateName} — skipping");
@@ -1092,9 +1093,18 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            $estate->update($updates);
+            // foreach($updates as $key => $value) {
+            //     $estate->$key = $estate->$value;
+            // }
+            // $estate->save();
+            // DB::commit();
+            DB::table('estates')
+                ->where('id', $estate->id)
+                ->update($updates);
 
-            $this->info("[OK] Estate '{$estate->title}' (id={$estate->id}) updated: " . implode(', ', array_keys($updates)));
+            // $estate->update($updates);
+
+            $this->info("[OK] Estate '{$estate->title}' (id={$estate->id}) updated: " . implode(', ', array_keys($updates)) . implode(', ', array_values($updates)));
             $updated++;
         }
 
