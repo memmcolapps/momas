@@ -12,8 +12,9 @@ use Illuminate\Support\Str;
 class ExportLegacyEcmiData extends Command
 {
     protected $signature = 'legacy:export
-                            {estate?}
-                            {--chunk=1000}';
+                        {estate?}
+                        {--chunk=1000}
+                        {--module= : Run a single export module only (subaccount)}';
 
     protected $description = 'Export MSSQL legacy data into JSON files';
 
@@ -22,7 +23,7 @@ class ExportLegacyEcmiData extends Command
         return DB::connection('mssql_legacy');
     }
 
-    public function handle(): int
+    public function handle()
     {
         $estate = $this->argument('estate');
 
@@ -30,6 +31,14 @@ class ExportLegacyEcmiData extends Command
 
         if (!file_exists($path)) {
             mkdir($path, 0777, true);
+        }
+
+        // Single-module mode
+        if ($module = $this->option('module')) {
+            return match ($module) {
+                'subaccount' => $this->exportPaystackSubAccounts($path, $estate) ?? self::SUCCESS,
+                default      => $this->error("Unknown module: {$module}") ?? self::FAILURE,
+            };
         }
 
         $this->info("Exporting legacy data...");
@@ -73,14 +82,15 @@ class ExportLegacyEcmiData extends Command
         $this->info("Exported estates");
     }
 
-    protected function exportPaystackSubAccounts($path, $estate)
+    protected function exportPaystackSubAccounts($path, $estate): void
     {
         $query = $this->legacy()
             ->table('Paystack_SubAcct')
             ->join('BusinessUnit', 'BusinessUnit.BUID', '=', 'Paystack_SubAcct.RUID')
             ->select(
                 'Paystack_SubAcct.*',
-                'BusinessUnit.BUID'
+                'BusinessUnit.BUID',
+                'BusinessUnit.Name as EstateName'
             );
 
         if ($estate) {
@@ -88,9 +98,11 @@ class ExportLegacyEcmiData extends Command
                 ->orWhere('BusinessUnit.Name', $estate);
         }
 
-        $this->write('paystack_subaccounts.json', $query->get()->toArray(), $path);
+        $rows = $query->get()->toArray();
 
-        $this->info('Exported Paystack subaccounts');
+        $this->write('paystack_subaccounts.json', $rows, $path);
+
+        $this->info("Exported " . count($rows) . " Paystack subaccount(s) → paystack_subaccounts.json");
     }
 
     /* ================= TARIFFS ================= */
