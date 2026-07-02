@@ -11,10 +11,10 @@ class Estate extends Model
 {
     protected $fillable = [
         'legacy_buid',
-        'paystack_subaccount',
-        'account_no',
-        'account_name',
-        'bank',
+        // 'paystack_subaccount',
+        // 'account_no',
+        // 'account_name',
+        // 'bank',
         'title',
         'address',
         'state',

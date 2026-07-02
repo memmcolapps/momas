@@ -20,7 +20,7 @@ class ImportLegacyEcmiData extends Command
                             {--path=           : Path to legacy export folder}
                             {--dry-run         : Preview changes without writing to DB}
                             {--transactions=5  : Max recent transactions to import per meter}
-                            {--module=         : Run a single module only (estate|transformer|tariff|meter|user_info|user_data|customer|transaction)}
+                            {--module=         : Run a single module only (estate|transformer|tariff|meter|user_info|user_data|customer|transaction|subaccount)}
                             {--reset           : Delete saved migration state and start fresh}';
 
     protected $description = 'Import legacy ECMI JSON export into MySQL (resumable, module-by-module)';
@@ -106,6 +106,19 @@ class ImportLegacyEcmiData extends Command
         $targetModule = $this->option('module');
 
         if ($targetModule !== null) {
+
+            if ($targetModule === 'subaccount') {
+                $this->info('▶ Running standalone module: subaccount');
+                try {
+                    $this->importSubAccounts($path);
+                    $this->info('✔ Subaccount backfill complete.');
+                } catch (\Throwable $e) {
+                    $this->error('✘ Subaccount module failed: ' . $e->getMessage());
+                    $this->error($e->getFile() . ':' . $e->getLine());
+                    return self::FAILURE;
+                }
+                return self::SUCCESS;
+            }
             if (!in_array($targetModule, self::MODULES, true)) {
                 $this->error("Unknown module: {$targetModule}. Valid: " . implode(', ', self::MODULES));
                 return self::FAILURE;
@@ -194,6 +207,7 @@ class ImportLegacyEcmiData extends Command
             'user_info'   => $this->importUserInfo($path),
             'user_data'   => $this->importUserData($path),
             'transaction' => $this->runTransactionModule($path),
+            'subaccount' => $this->importSubAccounts($path),
         };
     }
 
@@ -1007,6 +1021,89 @@ class ImportLegacyEcmiData extends Command
         $this->info("[DRY RUN] {$type}");
         $this->line(json_encode($data, JSON_PRETTY_PRINT));
         $this->line('=====================================');
+    }
+
+    // -----------------------------------------------------------------------
+// SUBACCOUNT BACKFILL (standalone — safe to re-run, no state dependency)
+// -----------------------------------------------------------------------
+
+    protected function importSubAccounts(string $path): void
+    {
+        $rows = $this->read('paystack_subaccounts.json', $path);
+
+        $updated  = 0;
+        $skipped  = 0;
+        $notFound = 0;
+
+        foreach ($rows as $row) {
+            // Resolve estate: legacy_buid is the clean match; fall back to title
+            $estate = Estate::where('legacy_buid', $row->BUID)->first()
+                ?? Estate::where('title', $row->EstateName)->first();
+
+            if (!$estate) {
+                $this->warn("[NOT FOUND] No estate matched BUID={$row->BUID} / Name={$row->EstateName} — skipping");
+                $notFound++;
+                continue;
+            }
+
+            // Skip rows where all four fields are already populated
+            if (
+                $estate->paystack_subaccount &&
+                $estate->account_no         &&
+                $estate->account_name       &&
+                $estate->bank
+            ) {
+                $this->line("[SKIP] Estate '{$estate->title}' already has subaccount data.");
+                $skipped++;
+                continue;
+            }
+
+            $updates = [];
+
+            // Always write legacy_buid if missing — makes future runs use the fast path
+            if (!$estate->legacy_buid) {
+                $updates['legacy_buid'] = $row->BUID;
+            }
+
+            if (!$estate->paystack_subaccount && !empty($row->SubAcctID)) {
+                $updates['paystack_subaccount'] = $row->SubAcctID;
+            }
+
+            if (!$estate->account_no && !empty($row->BankAccountNo)) {
+                $updates['account_no'] = $row->BankAccountNo;
+            }
+
+            if (!$estate->account_name && !empty($row->BankAccountName)) {
+                $updates['account_name'] = $row->BankAccountName;
+            }
+
+            if (!$estate->bank && !empty($row->BankName)) {
+                $updates['bank'] = $row->BankName;
+            }
+
+            if (empty($updates)) {
+                $skipped++;
+                continue;
+            }
+
+            if ($this->isDryRun()) {
+                $this->preview("SUBACCOUNT → Estate '{$estate->title}' (id={$estate->id})", $updates);
+                $updated++;
+                continue;
+            }
+
+            $estate->update($updates);
+
+            $this->info("[OK] Estate '{$estate->title}' (id={$estate->id}) updated: " . implode(', ', array_keys($updates)));
+            $updated++;
+        }
+
+        $this->newLine();
+        $this->table(['Metric', 'Count'], [
+            ['Estates updated',   $updated],
+            ['Estates skipped',   $skipped],
+            ['Estates not found', $notFound],
+        ]);
     }
 
     protected function printSummary(): void
