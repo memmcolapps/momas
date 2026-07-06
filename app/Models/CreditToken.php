@@ -55,4 +55,8 @@ class CreditToken extends Model
     {
         return $this->belongsTo(Meter::class);
     }
+
+    public function getUnitAttribute($value) {
+        return round($value, 2);
+    }
 }

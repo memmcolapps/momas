@@ -9,6 +9,7 @@ use App\Jobs\ProcessPaystackWebhook;
 use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\Logger;
+use App\Models\Meter;
 use App\Models\MeterToken;
 use App\Models\Setting;
 use App\Models\Transaction;
@@ -290,8 +291,17 @@ class TransactionController extends Controller
 
 
             if (in_array($request->pay_type, ['paystack', 'flutterwave', 'wallet'])) {
-                $est = Estate::where('id', Auth::user()->estate_id)->first();
+
+                $other_estate_id = null;
+
+                $reciever_meterNo = $request->action_payload['reciever_meterNo'] ?? null;
+
+                if (isset($reciever_meterNo) && isset($reciever_meterNo)) {
+                    $other_estate_id = Meter::where('meterNo', $reciever_meterNo)->first()->estate_id;
+                }
+
                 $estate_id = Auth::user()->estate_id;
+                $est = Estate::where('id', $other_estate_id ?? $estate_id)->first();
 
 
                 if (! $est && $request->pay_type !== 'wallet') {
@@ -309,6 +319,8 @@ class TransactionController extends Controller
                     'flutterwave' => $est->flutterwave_subaccout ?? null,
                     default => null,
                 };
+
+                // dd($provider_subaccount);
 
                 $sub_account = $request->service_type === 'admin_fee' ?
                     'ACCT_nd2zcvugcv5zfqp' : // MEMMCOL admin_fee subaccount

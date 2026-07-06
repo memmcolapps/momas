@@ -11,7 +11,7 @@ class VatCalculator
 
     public function calculateAmountReceivable($params)
     {
-        $amount = $params['amount'] ?? 0;
+        $amount = $this->parseAmount($params['amountText'] ?? '');
         $utilitiesAmount = $params['utilitiesAmount'] ?? 0;
         return $amount - $utilitiesAmount;
     }
