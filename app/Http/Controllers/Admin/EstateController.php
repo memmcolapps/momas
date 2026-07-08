@@ -10,7 +10,7 @@ use App\Models\ModFeature;
 use App\Models\Setting;
 use App\Models\Tariff;
 use App\Models\User;
-use App\Models\Utitlity;
+use App\Models\Utility;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -167,9 +167,9 @@ class EstateController extends Controller
 
 
             $data['tar'] = Tariff::where('estate_id', $request->id)->first();
-            $data['utl'] = Utitlity::where('estate_id', $request->id)->first() ?? null;
-            $data['total_utility'] = Utitlity::where('estate_id', $request->id)->sum('amount');
-            $data['utility'] = Utitlity::where('estate_id', $request->id)->get() ?? null;
+            $data['utl'] = Utility::where('estate_id', $request->id)->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', $request->id)->sum('amount');
+            $data['utility'] = Utility::where('estate_id', $request->id)->with('user')->get() ?? null;
             $data['total_meters'] = Meter::where('estate_id', $request->id)->count() ?? null;
             $data['customers'] = User::where('estate_id', $request->id)->count() ?? null;
             $data['estate_features'] = ModFeature::query()
@@ -195,11 +195,11 @@ class EstateController extends Controller
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
-            $data['utl'] = Utitlity::where('estate_id', Auth::user()->estate_id)->first() ?? null;
-            $data['total_utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->sum('amount');
+            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->sum('amount');
 
 
-            $data['utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->get() ?? null;
+            $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->with('user')->get() ?? null;
 
 
         } elseif (Auth::user()->role == 4) {
@@ -276,18 +276,30 @@ class EstateController extends Controller
             if (is_array($utilitiesData)) {
                 foreach ($utilitiesData as $utility) {
                     if (!empty($utility['title']) && !empty($utility['amount'])) {
-                        Utitlity::create([
+                        $monthlyEndDate = null;
+                        if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && !empty($utility['start_date']) && !empty($utility['payment_months'])) {
+                            $monthlyEndDate = \Carbon\Carbon::parse($utility['start_date'])->addMonths((int) $utility['payment_months'])->toDateString();
+                        }
+
+                        Utility::create([
                             'title' => $utility['title'],
                             'amount' => $utility['amount'],
                             'duration' => $request->duration,
                             'estate_id' => $request->estate_id,
-
+                            'start_date' => $utility['start_date'] ?? null,
+                            'mode_of_payment' => $utility['mode_of_payment'] ?? null,
+                            'payment_amount' => $utility['payment_amount'] ?? null,
+                            'activated' => $utility['activated'] ?? false,
+                            'operator_id' => auth()->id(),
+                            'percent_payment' => $utility['percent_payment'] ?? null,
+                            'payment_months' => $utility['payment_months'] ?? null,
+                            'monthly_end_date' => $monthlyEndDate,
                         ]);
                     }
                 }
             }
 
-            $utility_amount = Utitlity::where('estate_id', $request->estate_id)->sum('amount');
+            $utility_amount = Utility::where('estate_id', $request->estate_id)->sum('amount');
             Estate::where('id', $request->estate_id)->update(['total_utility_amount' => $utility_amount]);
 
             return back()->with('message', 'Utilities Saved successfully');
@@ -377,6 +389,33 @@ class EstateController extends Controller
         return back()->with('message', 'Features updated successfully');
     }
 
+    public function customer_store_utility(Request $request)
+    {
+        try {
+            $monthlyEndDate = null;
+            if ($request->mode_of_payment === 'monthly_payment' && $request->start_date && $request->payment_months) {
+                $monthlyEndDate = \Carbon\Carbon::parse($request->start_date)->addMonths((int) $request->payment_months)->toDateString();
+            }
 
+            Utility::create([
+                'user_id' => $request->user_id,
+                'estate_id' => $request->estate_id,
+                'title' => $request->title,
+                'amount' => $request->amount,
+                'start_date' => $request->start_date,
+                'mode_of_payment' => $request->mode_of_payment,
+                'payment_amount' => $request->payment_amount,
+                'activated' => $request->has('activated'),
+                'operator_id' => auth()->id(),
+                'percent_payment' => $request->percent_payment,
+                'payment_months' => $request->payment_months,
+                'monthly_end_date' => $monthlyEndDate,
+            ]);
+
+            return back()->with('message', 'Customer Utility Saved successfully');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
 
 }

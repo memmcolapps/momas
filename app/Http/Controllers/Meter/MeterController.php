@@ -18,7 +18,7 @@ use App\Models\Transaction;
 use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
-use App\Models\Utitlity;
+use App\Models\Utility;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
@@ -1428,7 +1428,7 @@ class MeterController extends Controller
     function vending_properties(request $request)
     {
 
-        $duration = Utitlity::where('estate_id', Auth::user()->estate_id)->first()->duration ?? null;
+        $duration = Utility::where('estate_id', Auth::user()->estate_id)->first()->duration ?? null;
         $estate_id = Auth::user()->estate_id ?? null;
         $user_id = Auth::id();
 

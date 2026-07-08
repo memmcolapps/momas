@@ -20,7 +20,7 @@ use App\Models\Token;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
-use App\Models\Utitlity;
+use App\Models\Utility;
 use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
@@ -400,9 +400,9 @@ class DashboardContoller extends Controller
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
-            $data['utl'] = Utitlity::where('estate_id', Auth::user()->estate_id)->first() ?? null;
-            $data['total_utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->sum('amount');
-            $data['utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->get() ?? null;
+            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->sum('amount');
+            $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->get() ?? null;
 
             return view('admin/settings', $data);
         } elseif (Auth::user()->isEstateStaff()) {
@@ -533,23 +533,32 @@ class DashboardContoller extends Controller
             return redirect('admin/settings')->with('error', 'Failed to update payment: ' . $e->getMessage());
         }
     }
-
     public function update_utility(request $request)
     {
+        $monthlyEndDate = null;
+        if ($request->mode_of_payment === 'monthly_payment' && $request->start_date && $request->payment_months) {
+            $monthlyEndDate = \Carbon\Carbon::parse($request->start_date)->addMonths((int) $request->payment_months)->toDateString();
+        }
 
-
-        dd($request->all());
-        Utitlity::where('id', $request->id)->update(['title' => $request->title, 'amount' => $request->amount]);
-
-
-
+        Utility::where('id', $request->id)->update([
+            'title' => $request->title,
+            'amount' => $request->amount,
+            'start_date' => $request->start_date,
+            'mode_of_payment' => $request->mode_of_payment,
+            'payment_amount' => $request->payment_amount,
+            'activated' => $request->has('activated'),
+            'operator_id' => auth()->id(),
+            'percent_payment' => $request->percent_payment,
+            'payment_months' => $request->payment_months,
+            'monthly_end_date' => $monthlyEndDate,
+        ]);
 
         return back()->with('message', 'Utility Updated Successfully');
     }
 
     public function delete_utility(request $request)
     {
-        Utitlity::where('id', $request->id)->delete();
+        Utility::where('id', $request->id)->delete();
         return back()->with('message', 'Utility deleted Successfully');
     }
 
@@ -705,6 +714,7 @@ class DashboardContoller extends Controller
             $data['estate'] = Estate::where('status', 2)->get();
             $data['estate_name'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
             $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
+            $data['customer_utilities'] = Utility::where('user_id', $request->id)->with('user')->get();
             $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
             $data['meters'] = Meter::all();
             $data['tariff_count'] = Tariff::where('user_id', $request->id)->count();

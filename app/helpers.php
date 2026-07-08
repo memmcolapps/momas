@@ -9,7 +9,7 @@ use App\Models\Token;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
-use App\Models\Utitlity;
+use App\Models\Utility;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -229,7 +229,7 @@ if (!function_exists('total_utility')) {
     function total_utility($estate_id)
     {
 
-        $total_utility = Utitlity::where('estate_id', $estate_id)->sum('amount');
+        $total_utility = Utility::where('estate_id', $estate_id)->sum('amount');
         return $total_utility;
 
     }

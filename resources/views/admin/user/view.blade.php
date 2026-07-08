@@ -423,6 +423,94 @@
 
 
                         </div>
+                        <div class="card my-4">
+                            <div class="card-body">
+                                <h6 class="d-flex justify-content-start my-2">Create Customer Utility</h6>
+                                <form action="customer-store-utility" method="post" class="row">
+                                    @csrf
+                                    <input type="hidden" name="user_id" value="{{$user->id}}">
+                                    <input type="hidden" name="estate_id" value="{{$user->estate_id}}">
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Title</label>
+                                        <input type="text" name="title" class="form-control" required>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Amount</label>
+                                        <input type="number" step="0.01" name="amount" class="form-control" required>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Start Date</label>
+                                        <input type="date" name="start_date" class="form-control">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Mode of Payment</label>
+                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
+                                            <option value="">Select</option>
+                                            <option value="percentage_payment">Percentage Payment</option>
+                                            <option value="monthly_payment">Monthly Payment</option>
+                                            <option value="one_off">One-Off</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Payment Amount</label>
+                                        <input type="number" step="0.01" name="payment_amount" class="form-control">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Activated</label>
+                                        <select name="activated" class="form-control">
+                                            <option value="0">No</option>
+                                            <option value="1">Yes</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: none;">
+                                        <label class="my-1">% Payment</label>
+                                        <select name="percent_payment" class="form-control">
+                                            <option value="">Select</option>
+                                            @for($pct = 5; $pct <= 70; $pct += 5)
+                                                <option value="{{ $pct }}">{{ $pct }}%</option>
+                                            @endfor
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: none;">
+                                        <label class="my-1">Number of Months</label>
+                                        <input type="number" name="payment_months" min="1" max="60" class="form-control">
+                                    </div>
+
+                                    <div class="col-12 my-3">
+                                        <button type="submit" class="btn btn-primary">Save Utility</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <script>
+                            function togglePaymentFields(select) {
+                                var container = select.closest('.row');
+                                if (!container) return;
+                                var percentField = container.querySelector('.percent-field');
+                                var monthsField = container.querySelector('.months-field');
+
+                                if (percentField) percentField.style.display = 'none';
+                                if (monthsField) monthsField.style.display = 'none';
+
+                                if (select.value === 'percentage_payment' && percentField) {
+                                    percentField.style.display = 'block';
+                                } else if (select.value === 'monthly_payment' && monthsField) {
+                                    monthsField.style.display = 'block';
+                                }
+                            }
+                        </script>
+
+
+
+
 
 
 
@@ -567,6 +655,72 @@
 
                             <div class="card-body">
 
+
+                            </div>
+
+                        </div>
+                        <div class="card">
+
+                            <div class="card-body">
+
+                                <div class="row">
+
+                                    <h6 class="d-flex justify-content-start my-2">Customer Utilities</h6>
+
+                                    <div class="card-body">
+                                        <table
+                                               class="table table-striped table-bordered dt-responsive nowrap">
+                                            <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Title</th>
+                                                <th>Amount</th>
+                                                <th>Mode of Payment</th>
+                                                <th>% Payment</th>
+                                                <th>Payment Months</th>
+                                                <th>Monthly End Date</th>
+                                                <th>Activated</th>
+                                                <th>Status</th>
+                                                <th>Created At</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+
+                                            @forelse($customer_utilities as $cu)
+                                                <tr>
+                                                    <td>{{ $cu->id }}</td>
+                                                    <td>{{ $cu->title }}</td>
+                                                    <td>{{ number_format($cu->amount, 2) }}</td>
+                                                    <td>{{ str_replace('_', ' ', ucwords($cu->mode_of_payment ?? 'N/A')) }}</td>
+                                                    <td>{{ $cu->percent_payment ? $cu->percent_payment . '%' : '-' }}</td>
+                                                    <td>{{ $cu->payment_months ?? '-' }}</td>
+                                                    <td>{{ $cu->monthly_end_date ? \Carbon\Carbon::parse($cu->monthly_end_date)->format('Y-m-d') : '-' }}</td>
+                                                    <td>
+                                                        @if($cu->activated)
+                                                            <span class="badge text-bg-success">Yes</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">No</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($cu->status == 1)
+                                                            <span class="badge text-bg-success">Active</span>
+                                                        @else
+                                                            <span class="badge text-bg-warning">Inactive</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ $cu->created_at }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="10" class="text-center">No customer utilities found.</td>
+                                                </tr>
+                                            @endforelse
+
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
 
                             </div>
 
@@ -998,6 +1152,94 @@
 
 
                         </div>
+                        <div class="card my-4">
+                            <div class="card-body">
+                                <h6 class="d-flex justify-content-start my-2">Create Customer Utility</h6>
+                                <form action="customer-store-utility" method="post" class="row">
+                                    @csrf
+                                    <input type="hidden" name="user_id" value="{{$user->id}}">
+                                    <input type="hidden" name="estate_id" value="{{$user->estate_id}}">
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Title</label>
+                                        <input type="text" name="title" class="form-control" required>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Amount</label>
+                                        <input type="number" step="0.01" name="amount" class="form-control" required>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Start Date</label>
+                                        <input type="date" name="start_date" class="form-control">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Mode of Payment</label>
+                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
+                                            <option value="">Select</option>
+                                            <option value="percentage_payment">Percentage Payment</option>
+                                            <option value="monthly_payment">Monthly Payment</option>
+                                            <option value="one_off">One-Off</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Payment Amount</label>
+                                        <input type="number" step="0.01" name="payment_amount" class="form-control">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Activated</label>
+                                        <select name="activated" class="form-control">
+                                            <option value="0">No</option>
+                                            <option value="1">Yes</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: none;">
+                                        <label class="my-1">% Payment</label>
+                                        <select name="percent_payment" class="form-control">
+                        <script>
+                            function togglePaymentFields(select) {
+                                var container = select.closest('.row');
+                                if (!container) return;
+                                var percentField = container.querySelector('.percent-field');
+                                var monthsField = container.querySelector('.months-field');
+
+                                if (percentField) percentField.style.display = 'none';
+                                if (monthsField) monthsField.style.display = 'none';
+
+                                if (select.value === 'percentage_payment' && percentField) {
+                                    percentField.style.display = 'block';
+                                } else if (select.value === 'monthly_payment' && monthsField) {
+                                    monthsField.style.display = 'block';
+                                }
+                            }
+                        </script>
+
+                                            <option value="">Select</option>
+                                            @for($pct = 5; $pct <= 70; $pct += 5)
+                                                <option value="{{ $pct }}">{{ $pct }}%</option>
+                                            @endfor
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: none;">
+                                        <label class="my-1">Number of Months</label>
+                                        <input type="number" name="payment_months" min="1" max="60" class="form-control">
+                                    </div>
+
+                                    <div class="col-12 my-3">
+                                        <button type="submit" class="btn btn-primary">Save Utility</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+
+
 
 
 
@@ -1142,6 +1384,72 @@
 
                             <div class="card-body">
 
+
+                            </div>
+
+                        </div>
+                        <div class="card">
+
+                            <div class="card-body">
+
+                                <div class="row">
+
+                                    <h6 class="d-flex justify-content-start my-2">Customer Utilities</h6>
+
+                                    <div class="card-body">
+                                        <table
+                                               class="table table-striped table-bordered dt-responsive nowrap">
+                                            <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Title</th>
+                                                <th>Amount</th>
+                                                <th>Mode of Payment</th>
+                                                <th>% Payment</th>
+                                                <th>Payment Months</th>
+                                                <th>Monthly End Date</th>
+                                                <th>Activated</th>
+                                                <th>Status</th>
+                                                <th>Created At</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+
+                                            @forelse($customer_utilities as $cu)
+                                                <tr>
+                                                    <td>{{ $cu->id }}</td>
+                                                    <td>{{ $cu->title }}</td>
+                                                    <td>{{ number_format($cu->amount, 2) }}</td>
+                                                    <td>{{ str_replace('_', ' ', ucwords($cu->mode_of_payment ?? 'N/A')) }}</td>
+                                                    <td>{{ $cu->percent_payment ? $cu->percent_payment . '%' : '-' }}</td>
+                                                    <td>{{ $cu->payment_months ?? '-' }}</td>
+                                                    <td>{{ $cu->monthly_end_date ? \Carbon\Carbon::parse($cu->monthly_end_date)->format('Y-m-d') : '-' }}</td>
+                                                    <td>
+                                                        @if($cu->activated)
+                                                            <span class="badge text-bg-success">Yes</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">No</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($cu->status == 1)
+                                                            <span class="badge text-bg-success">Active</span>
+                                                        @else
+                                                            <span class="badge text-bg-warning">Inactive</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ $cu->created_at }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="10" class="text-center">No customer utilities found.</td>
+                                                </tr>
+                                            @endforelse
+
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
 
                             </div>
 
