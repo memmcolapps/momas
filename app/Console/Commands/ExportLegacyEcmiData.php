@@ -36,8 +36,9 @@ class ExportLegacyEcmiData extends Command
         // Single-module mode
         if ($module = $this->option('module')) {
             return match ($module) {
-                'subaccount' => $this->exportPaystackSubAccounts($path, $estate) ?? self::SUCCESS,
-                default      => $this->error("Unknown module: {$module}") ?? self::FAILURE,
+                'subaccount'            => $this->exportPaystackSubAccounts($path, $estate) ?? self::SUCCESS,
+                'utility-subaccount'    => $this->exportUtilitySubAccounts($path, $estate) ?? self::SUCCESS,
+                default                 => $this->error("Unknown module: {$module}") ?? self::FAILURE,
             };
         }
 
@@ -53,6 +54,7 @@ class ExportLegacyEcmiData extends Command
         $this->exportUserData($path, $estate);
         $this->exportCustomers($path, $estate);
         $this->exportTransactions($path, $estate);
+        $this->exportUtilitySubAccounts($path, $estate);
 
         $this->info("Export completed successfully");
 
@@ -337,5 +339,36 @@ class ExportLegacyEcmiData extends Command
         );
 
         $this->info('Exported customers');
+    }
+
+    protected function exportUtilitySubAccountCustomers(string $path): void
+    {
+        $query = $this->legacy()->table('Customers');
+        $rows = $query->get()->toArray();
+        $this->write('customers.json', $rows, $path);
+        $this->info("Exported " . count($rows) . " customers for utility subaccount mapping");
+    }
+
+    protected function exportUtilitySubAccounts(string $path, $estate): void
+    {
+        $this->exportUtilitySubAccountCustomers($path);
+        $this->exportSubAccounts($path, $estate);
+    }
+
+    protected function exportSubAccounts($path, $estate)
+    {
+        $query = $this->legacy()->table('SubAccount');
+
+        if ($estate) {
+            $query->join('Meters', 'Meters.AccountNo', '=', 'SubAccount.AccountNo')
+                ->where('Meters.BUID', $estate)
+                ->select('SubAccount.*');
+        }
+
+        $rows = $query->get()->toArray();
+
+        $this->write('subaccounts.json', $rows, $path);
+
+        $this->info("Exported ".count($rows)." subaccounts");
     }
 }

@@ -31,12 +31,13 @@ class ImportLegacyEcmiData extends Command
     protected const MODULES = [
         'estate',
         'transformer',
-        'tariff',          // includes invalid-tariff map + tariff states
+        'tariff',
         'meter',
         'user_info',
         'user_data',
         'customer',
-        'transaction',     // attachMeters() runs just before this
+        'utility-subaccount',
+        'transaction',
     ];
 
     protected const MODULE_DEPS = [
@@ -46,6 +47,7 @@ class ImportLegacyEcmiData extends Command
         'user_info'   => ['estate'],
         'customer'    => ['estate', 'tariff', 'meter'],
         'transaction' => ['meter', 'user_data'],
+        'utility-subaccount' => ['customer'],
         // estate, user_data have no deps
     ];
 
@@ -107,12 +109,13 @@ class ImportLegacyEcmiData extends Command
 
         if ($targetModule !== null) {
 
-            if ($targetModule === 'subaccount' || $targetModule === 'attach_meters') {
+            if ($targetModule === 'subaccount' || $targetModule === 'attach_meters' || $targetModule === 'utility-subaccount') {
                 $this->info("▶ Running standalone module: {$targetModule}");
                 try {
                     match ($targetModule) {
-                        'subaccount'   => $this->importSubAccounts($path),
-                        'attach_meters' => $this->attachMeters(),
+                        'subaccount'         => $this->importSubAccounts($path),
+                        'attach_meters'      => $this->attachMeters(),
+                        'utility-subaccount' => $this->importUtilitySubAccounts($path),
                     };
                     $this->info("✔ Module [{$targetModule}] complete.");
                 } catch (\Throwable $e) {
@@ -211,6 +214,7 @@ class ImportLegacyEcmiData extends Command
             'user_data'   => $this->importUserData($path),
             'transaction' => $this->runTransactionModule($path),
             'subaccount' => $this->importSubAccounts($path),
+            'utility-subaccount' => $this->importUtilitySubAccounts($path),
         };
     }
 
@@ -1027,8 +1031,8 @@ class ImportLegacyEcmiData extends Command
     }
 
     // -----------------------------------------------------------------------
-// SUBACCOUNT BACKFILL (standalone — safe to re-run, no state dependency)
-// -----------------------------------------------------------------------
+    // SUBACCOUNT BACKFILL (standalone — safe to re-run, no state dependency)
+    // -----------------------------------------------------------------------
 
     protected function importSubAccounts(string $path): void
     {
@@ -1117,6 +1121,81 @@ class ImportLegacyEcmiData extends Command
             ['Estates skipped',   $skipped],
             ['Estates not found', $notFound],
         ]);
+    }
+
+    protected function importUtilitySubAccounts(string $path): void
+    {
+        $rows = $this->read('subaccounts.json', $path);
+        $customers = $this->read('customers.json', $path);
+
+        $customerMeterMap = [];
+        foreach ($customers as $c) {
+            $acctNo = trim($c->AccountNo ?? '');
+            if ($acctNo !== '') {
+                $customerMeterMap[$acctNo] = trim($c->MeterNo ?? '');
+            }
+        }
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($rows as $row) {
+            $acctNo = trim($row->AccountNo ?? '');
+            $meterNo = $customerMeterMap[$acctNo] ?? null;
+
+            if (!$meterNo) {
+                $this->warn("Customer not found for account {$acctNo}");
+                $skipped++;
+                continue;
+            }
+
+            $user = User::where('meterNo', $meterNo)->first();
+
+            if (!$user) {
+                $this->warn("User not found for meter {$meterNo}");
+                $skipped++;
+                continue;
+            }
+
+            $payload = [
+                'estate_id'        => $user->estate_id,
+                'user_id'          => $user->id,
+                'title'            => $row->SubAccountAbbre,
+                'amount'           => $row->AmountAttached ?? 0,
+                'balance'          => $row->Balance,
+                'start_date'       => $row->StartDate,
+                'mode_of_payment'  => $row->ModeOfPayment,
+                'payment_amount'   => $row->PaymentAmount,
+                'activated'        => (bool)$row->activated,
+                'operator_id'      => $row->OperatorID,
+                'status'           => strtoupper($row->status) === 'N' ? 1 : 0,
+                'created_at'       => $row->Date ?? now(),
+                'updated_at'       => $row->lastmodified ?? now(),
+            ];
+
+            if ($this->isDryRun()) {
+                $this->preview("UTILITY {$row->SubAccountNo}", $payload);
+                continue;
+            }
+
+            DB::table('utilities')->updateOrInsert(
+                [
+                    'user_id' => $user->id,
+                    'title'   => $row->SubAccountAbbre,
+                ],
+                $payload
+            );
+
+            $created++;
+        }
+
+        $this->table(
+            ['Metric', 'Count'],
+            [
+                ['Imported', $created],
+                ['Skipped', $skipped],
+            ]
+        );
     }
 
     protected function printSummary(): void
