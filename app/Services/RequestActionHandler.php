@@ -114,6 +114,20 @@ class RequestActionHandler {
         $vending_amount = $action_payload['vending_amount'];
         $reciever_meterNo = $action_payload['reciever_meterNo'] ?? null;
 
+        // Settle utility payments before token generation
+        $utilityAmount = (float) ($action_payload['utility_amount'] ?? 0);
+        if ($utilityAmount > 0) {
+            try {
+                $utilityService = new \App\Services\UtilityManagementService();
+                $utilityService->settleUtilitiesByTransaction($this->reference);
+            } catch (\Throwable $e) {
+                Logger::error('Utility settlement failed', [
+                    'reference' => $this->reference,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // dump ('Got here');
         $meter->getNewToken($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 

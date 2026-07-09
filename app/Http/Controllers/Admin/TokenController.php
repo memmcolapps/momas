@@ -613,15 +613,22 @@ class TokenController extends Controller
             }
             $afterEstateFee = $afterServiceFee - $estateFee;
 
+            // [2.5] Utility Owed
+            $utilityService = new \App\Services\UtilityManagementService();
+            $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
+            $utilityOwed = $utilityResult['total_owed'];
+            $afterUtility = $afterEstateFee - $utilityOwed;
+
             // [3] Tariff Fixed Charge
-            $afterFixedCharge = $afterEstateFee - $fixedCharge;
+            $afterFixedCharge = $afterUtility - $fixedCharge;
 
             // Validate that amount after deductions is not negative or too small
             if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+                $minimumRequired = $percn + $estateFee + $utilityOwed + $fixedCharge + 10; // Adding small buffer
                 return back()->with('error',
                     'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                     '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                     '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                     '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
                     '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
@@ -632,7 +639,7 @@ class TokenController extends Controller
             $params = [
                 'amountText' => $afterFixedCharge,
                 'tariffAmount' => $tariffAmount,
-                'utilitiesAmount' => 0,
+                'utilitiesAmount' => $utilityOwed,
                 'vat' => $vat,
             ];
 
@@ -658,6 +665,7 @@ class TokenController extends Controller
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $request->estate_id;
             $data['tarrif_amount'] = $tariffAmount;
+            $data['utility_owed'] = $utilityOwed;
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
@@ -749,15 +757,22 @@ class TokenController extends Controller
             }
             $afterEstateFee = $afterServiceFee - $estateFee;
 
+            // [2.5] Utility Owed
+            $utilityService = new \App\Services\UtilityManagementService();
+            $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
+            $utilityOwed = $utilityResult['total_owed'];
+            $afterUtility = $afterEstateFee - $utilityOwed;
+
             // [3] Tariff Fixed Charge
-            $afterFixedCharge = $afterEstateFee - $fixedCharge;
+            $afterFixedCharge = $afterUtility - $fixedCharge;
 
             // Validate that amount after deductions is not negative or too small
             if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+                $minimumRequired = $percn + $estateFee + $utilityOwed + $fixedCharge + 10; // Adding small buffer
                 return back()->with('error',
                     'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                     '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                     '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                     '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
                     '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
@@ -768,7 +783,7 @@ class TokenController extends Controller
             $params = [
                 'amountText' => $afterFixedCharge,
                 'tariffAmount' => $tariffAmount,
-                'utilitiesAmount' => 0,
+                'utilitiesAmount' => $utilityOwed,
                 'vat' => $vat,
             ];
 
@@ -793,6 +808,7 @@ class TokenController extends Controller
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $estate_id; // Estate Admin uses their assigned estate ID
             $data['tarrif_amount'] = $tariffAmount;
+            $data['utility_owed'] = $utilityOwed;
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
@@ -1473,11 +1489,6 @@ class TokenController extends Controller
                     $fee = $est->charge_fee_flat;
                 }
 
-                $get_utility_id = null;
-                if ($request->utility_amount < 0) {
-                    $get_utility_id = UtilitiesPayment::where('user_id', Auth::id())->where('type', 'utilities')->first()->id;
-                }
-
                 if (! $est->paystack_subaccount) {
                     return redirect('/admin/credit-token')->with(
                         'error',
@@ -1511,15 +1522,18 @@ class TokenController extends Controller
                 $trx_id = $payment_init['reference'];
 
                 if ($status === true) {
+                    $utilityAmount = (float) ($request->utility_owed ?? 0);
+                    $vendingAmount = (float) $request->amount - $utilityAmount;
+
                     // Build action_payload for RequestActionHandler
                     $action_payload = [
                         'action' => 'momas_meter_web',
                         'tariff_id' => $request->tariff_id,
                         'vend_amount_kw_per_naira' => $request->unit,
-                        'utility_amount' => 0,
+                        'utility_amount' => $utilityAmount,
                         'total_paid_amount' => $request->amount,
                         'vat_amount' => $request->vatAmount ?? 0,
-                        'vending_amount' => $request->amount,
+                        'vending_amount' => $vendingAmount,
                         'amount' => $amount,
                         'user_id' => $user_id,
                         'meterNo' => $request->meterNo,

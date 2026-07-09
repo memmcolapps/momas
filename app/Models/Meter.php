@@ -139,14 +139,20 @@ class Meter extends Model
         }
         $afterEstateFee = $afterServiceFee - $estateFee;
 
+        // [2.5] Utility Owed
+        $actionPayload = $trx->action_payload ? json_decode($trx->action_payload, true) : [];
+        $utilityAmount = (float) ($actionPayload['utility_amount'] ?? 0);
+        $afterUtility = $afterEstateFee - $utilityAmount;
+
         // [3] Tariff Fixed Charge
-        $afterFixedCharge = $afterEstateFee - $fixedCharge;
+        $afterFixedCharge = $afterUtility - $fixedCharge;
 
         // Validate that amount after deductions is not negative or too small
         if ($afterFixedCharge <= 0) {
-            $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+            $minimumRequired = $percn + $estateFee + $utilityAmount + $fixedCharge + 10; // Adding small buffer
             throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                 '), estate fee (NGN ' . number_format($estateFee, 2) .
+                '), utility owed (NGN ' . number_format($utilityAmount, 2) .
                 '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                 '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
                 '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
@@ -157,7 +163,7 @@ class Meter extends Model
         $params = [
             'amountText' => $afterFixedCharge,
             'tariffAmount' => $tariffAmount,
-            'utilitiesAmount' => 0,
+            'utilitiesAmount' => $utilityAmount,
             'vat' => $vat,
         ];
 

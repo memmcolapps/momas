@@ -187,54 +187,64 @@
                                                                                 <h6>{{number_format($vatAmount, 2)}}</h6>
                                                                             </div>
 
-                                                                            <div class="col-xl-4 my-2 col-sm-12">
-                                                                                <label class="my-2">Cost Of Unit</label>
-                                                                                <input required name="costOfUnit"
-                                                                                       value="{{$costOfUnit}}"
-                                                                                       hidden="">
-                                                                                <h6>{{number_format($costOfUnit, 2)}}</h6>
-                                                                            </div>
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Cost Of Unit</label>
+                                                                                 <input required name="costOfUnit"
+                                                                                        value="{{$costOfUnit}}"
+                                                                                        hidden="">
+                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
+                                                                             </div>
 
-                                                                            <input required name="vat" value="{{$vat}}"
-                                                                                   hidden="">
-                                                                            <input required name="estate_id"
-                                                                                   value="{{$estate_id}}"
-                                                                                   hidden="">
-                                                                            <input required name="estate_name"
-                                                                                   value="{{$estate_name}}"
-                                                                                   hidden="">
-                                                                            <input required name="amount" value="{{$amount}}"
-                                                                                   hidden="">
-                                                                            <input required name="tariff_amount"
-                                                                                   value="{{$tarrif_amount}}" hidden="">
+                                                                             @if(($utility_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Utility Owed</label>
+                                                                                 <input required name="utility_owed"
+                                                                                        value="{{$utility_owed}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($utility_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
 
-                                                                            <input required name="t_index"
-                                                                                   value="{{$tarrif_index}}" hidden="">
-                                                                            <input required name="tariff_id"
-                                                                                   value="{{$tariff_id}}" hidden="">
+                                                                             <input required name="vat" value="{{$vat}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_id"
+                                                                                    value="{{$estate_id}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_name"
+                                                                                    value="{{$estate_name}}"
+                                                                                    hidden="">
+                                                                             <input required name="amount" value="{{$amount}}"
+                                                                                    hidden="">
+                                                                             <input required name="tariff_amount"
+                                                                                    value="{{$tarrif_amount}}" hidden="">
 
-                                                                        </div>
+                                                                             <input required name="t_index"
+                                                                                    value="{{$tarrif_index}}" hidden="">
+                                                                             <input required name="tariff_id"
+                                                                                    value="{{$tariff_id}}" hidden="">
 
-                                                                        <hr>
+                                                                         </div>
+
+                                                                         <hr>
 
 
-                                                                        <div
-                                                                            class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                                            <select class="form-control" required
-                                                                                    name="pay_type">
-                                                                                <option value=" ">--Choose Payment Gateway---
-                                                                                </option>
-                                                                                <option value="paystack">Pay with Paystack
-                                                                                </option>
-                                                                                {{-- <option value="flutterwave">Pay with Flutterwave
-                                                                                </option> --}}
-                                                                                {{-- <option value="enkpay">Pay with Enkpay</option> --}}
-                                                                                <!-- <option value="test_bypass">Payment Bypass (Testing Only)</option> -->
-                                                                                @if (app()->environment('staging'))
-                                                                                    <option value="test_bypass">Payment Bypass (Testing Only)</option>
-                                                                                @endif
-                                                                            </select>
-                                                                        </div>
+                                                                         <div
+                                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
+                                                                             <select class="form-control" required
+                                                                                     name="pay_type">
+                                                                                 <option value=" ">--Choose Payment Gateway---
+                                                                                 </option>
+                                                                                 <option value="paystack">Pay with Paystack
+                                                                                 </option>
+                                                                                 {{-- <option value="flutterwave">Pay with Flutterwave
+                                                                                 </option> --}}
+                                                                                 {{-- <option value="enkpay">Pay with Enkpay</option> --}}
+                                                                                 <!-- <option value="test_bypass">Payment Bypass (Testing Only)</option> -->
+                                                                                 @if (app()->environment('staging'))
+                                                                                     <option value="test_bypass">Payment Bypass (Testing Only)</option>
+                                                                                 @endif
+                                                                             </select>
+                                                                         </div>
 
 
                                                                         <div
@@ -555,47 +565,57 @@
                                                                                 <h6>{{number_format($vatAmount, 2)}}</h6>
                                                                             </div>
 
-                                                                            <div class="col-xl-4 my-2 col-sm-12">
-                                                                                <label class="my-2">Cost Of Unit</label>
-                                                                                <input required name="costOfUnit"
-                                                                                       value="{{$costOfUnit}}"
-                                                                                       hidden="">
-                                                                                <h6>{{number_format($costOfUnit, 2)}}</h6>
-                                                                            </div>
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Cost Of Unit</label>
+                                                                                 <input required name="costOfUnit"
+                                                                                        value="{{$costOfUnit}}"
+                                                                                        hidden="">
+                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
+                                                                             </div>
 
-                                                                            <input required name="vat" value="{{$vat}}"
-                                                                                   hidden="">
-                                                                            <input required name="estate_id"
-                                                                                   value="{{$estate_id}}"
-                                                                                   hidden="">
-                                                                            <input required name="estate_name"
-                                                                                   value="{{$estate_name}}"
-                                                                                   hidden="">
-                                                                            <input required name="amount" value="{{$amount}}"
-                                                                                   hidden="">
-                                                                            <input required name="tariff_amount"
-                                                                                   value="{{$tarrif_amount}}" hidden="">
+                                                                             @if(($utility_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Utility Owed</label>
+                                                                                 <input required name="utility_owed"
+                                                                                        value="{{$utility_owed}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($utility_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
 
-                                                                            <input required name="t_index"
-                                                                                   value="{{$tarrif_index}}" hidden="">
-                                                                            <input required name="tariff_id"
-                                                                                   value="{{$tariff_id}}" hidden="">
+                                                                             <input required name="vat" value="{{$vat}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_id"
+                                                                                    value="{{$estate_id}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_name"
+                                                                                    value="{{$estate_name}}"
+                                                                                    hidden="">
+                                                                             <input required name="amount" value="{{$amount}}"
+                                                                                    hidden="">
+                                                                             <input required name="tariff_amount"
+                                                                                    value="{{$tarrif_amount}}" hidden="">
 
-                                                                        </div>
+                                                                             <input required name="t_index"
+                                                                                    value="{{$tarrif_index}}" hidden="">
+                                                                             <input required name="tariff_id"
+                                                                                    value="{{$tariff_id}}" hidden="">
 
-                                                                        <hr>
+                                                                         </div>
+
+                                                                         <hr>
 
 
-                                                                        <div
-                                                                            class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                                            <select class="form-control" required
-                                                                                    name="pay_type">
-                                                                                <option value=" ">--Choose Payment Gateway---
-                                                                                </option>
-                                                                                <option value="paystack">Pay with Paystack
-                                                                                </option>
-                                                                            </select>
-                                                                        </div>
+                                                                         <div
+                                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
+                                                                             <select class="form-control" required
+                                                                                     name="pay_type">
+                                                                                 <option value=" ">--Choose Payment Gateway---
+                                                                                 </option>
+                                                                                 <option value="paystack">Pay with Paystack
+                                                                                 </option>
+                                                                             </select>
+                                                                         </div>
 
 
                                                                         <div
