@@ -4,31 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class UtilityPaymentRecord extends Model
+class UserUtility extends Model
 {
-    protected $table = 'utility_payment_records';
+    protected $table = 'user_utilities';
 
     protected $fillable = [
-        'user_utility_id',
         'utility_id',
         'user_id',
         'estate_id',
-        'utility_amount',
+        'amount',
         'amount_paid',
-        'trx_id',
+        'activated',
         'status',
     ];
 
     protected $casts = [
-        'utility_amount' => 'double',
+        'amount' => 'double',
         'amount_paid' => 'double',
+        'activated' => 'boolean',
         'status' => 'integer',
     ];
-
-    public function userUtility()
-    {
-        return $this->belongsTo(UserUtility::class, 'user_utility_id');
-    }
 
     public function utility()
     {
@@ -43,5 +38,10 @@ class UtilityPaymentRecord extends Model
     public function estate()
     {
         return $this->belongsTo(Estate::class);
+    }
+
+    public function paymentRecords()
+    {
+        return $this->hasMany(UtilityPaymentRecord::class, 'user_utility_id');
     }
 }

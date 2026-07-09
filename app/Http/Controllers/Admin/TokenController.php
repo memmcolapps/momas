@@ -653,6 +653,12 @@ class TokenController extends Controller
                 return back()->with('error', "Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered" . json_encode($params));
             }
 
+            $min_pur = $est->min_pur ?? null;
+
+            if ($costOfUnit < $min_pur) {
+                return back()->with("error", "Amount after charges can't be less than " . $min_pur);
+            }
+
             $data['vatAmount'] = $vatAmount;
             $data['costOfUnit'] = $costOfUnit;
             $data['tariffPerKWatt'] = $tariffPerKWatt;
@@ -1542,7 +1548,7 @@ class TokenController extends Controller
                     // dd($action_payload);
 
                     $trx = new Transaction();
-                    $trx->user_id = Auth::id();
+                    $trx->user_id = $request->user_id;
                     $trx->estate_id = $estate_id;
                     $trx->pay_type = "paystack";
                     $trx->amount = $request->amount;
@@ -2440,9 +2446,9 @@ class TokenController extends Controller
                 $status = $var->status ?? null;
 
 
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->estate_id = $estate_id;
+                    $trx = new Transaction();
+                    $trx->user_id = $user_id;
+                    $trx->estate_id = $estate_id;
                 $trx->pay_type = "flutterwave";
                 $trx->service_type = "kct_token";
                 $trx->amount = $request->amount;

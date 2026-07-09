@@ -116,6 +116,7 @@ class RequestActionHandler {
 
         // Settle utility payments before token generation
         $utilityAmount = (float) ($action_payload['utility_amount'] ?? 0);
+        // dd($utilityAmount);
         if ($utilityAmount > 0) {
             try {
                 $utilityService = new \App\Services\UtilityManagementService();
