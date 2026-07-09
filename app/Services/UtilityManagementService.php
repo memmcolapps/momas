@@ -16,15 +16,54 @@ class UtilityManagementService
 {
     public function calculateUserOwedUtility(int $userId, int $estateId): array
     {
-        $utilities = Utility::where('estate_id', $estateId)
-            ->where('activated', true)
+        $utilities = $this->fetchUtilities($userId, $estateId);
+        $this->ensureRecordsExist($utilities, $userId, $estateId);
+        $paymentRecords = $this->fetchPaymentRecords($userId, $estateId);
+        $this->activateOverdueRecords($paymentRecords, $utilities);
+        return $this->computeOwed($utilities, $paymentRecords);
+    }
+
+    /**
+     * Fetch utilities that are active or should become active (start_date reached).
+     */
+    private function fetchUtilities(int $userId, int $estateId, bool $lock = false): Collection
+    {
+        $query = Utility::where('estate_id', $estateId)
+            ->where(function ($q) {
+                $q->where('activated', true)
+                  ->orWhere(function ($q2) {
+                      $q2->where('activated', false)
+                         ->whereNotNull('start_date')
+                         ->where('start_date', '<=', now());
+                  });
+            })
             ->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
                   ->orWhereNull('user_id');
-            })
-            ->get();
+            });
 
-        // Phase A: Clone uncloned utilities into UtilityPaymentRecord (once)
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        $utilities = $query->get();
+
+        // Activate utilities whose start_date has arrived
+        foreach ($utilities as $utility) {
+            if (!$utility->activated) {
+                $utility->activated = true;
+                $utility->save();
+            }
+        }
+
+        return $utilities;
+    }
+
+    /**
+     * Phase A: Clone uncloned utilities into UtilityPaymentRecord (once).
+     */
+    private function ensureRecordsExist(Collection $utilities, int $userId, int $estateId): void
+    {
         foreach ($utilities as $utility) {
             UtilityPaymentRecord::firstOrCreate(
                 [
@@ -40,14 +79,28 @@ class UtilityManagementService
                 ]
             );
         }
+    }
 
-        // Refetch records after cloning
-        $paymentRecords = UtilityPaymentRecord::where('user_id', $userId)
-            ->where('estate_id', $estateId)
-            ->get()
-            ->keyBy('utility_id');
+    /**
+     * Fetch payment records for a user/estate.
+     */
+    private function fetchPaymentRecords(int $userId, int $estateId, bool $lock = false): Collection
+    {
+        $query = UtilityPaymentRecord::where('user_id', $userId)
+            ->where('estate_id', $estateId);
 
-        // Phase B: Activate records whose start_date has passed
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->get()->keyBy('utility_id');
+    }
+
+    /**
+     * Phase B: Activate UtilityPaymentRecords whose start_date has passed.
+     */
+    private function activateOverdueRecords(Collection $paymentRecords, Collection $utilities): void
+    {
         foreach ($paymentRecords as $record) {
             if (!$record->activated && $record->status === 0) {
                 $utility = $utilities->firstWhere('id', $record->utility_id);
@@ -62,8 +115,13 @@ class UtilityManagementService
                 }
             }
         }
+    }
 
-        // Phase C: Calculate owed amounts per utility
+    /**
+     * Phase C: Calculate owed amounts per utility.
+     */
+    private function computeOwed(Collection $utilities, Collection $paymentRecords): array
+    {
         $items = [];
         $totalOwed = 0;
 
@@ -133,82 +191,14 @@ class UtilityManagementService
     ): array {
         try {
             return DB::transaction(function () use ($userId, $estateId, $amount, $transactionId) {
-                $utilities = Utility::where('estate_id', $estateId)
-                    ->where('activated', true)
-                    ->where(function ($q) use ($userId) {
-                        $q->where('user_id', $userId)
-                          ->orWhereNull('user_id');
-                    })
-                    ->lockForUpdate()
-                    ->get();
+                $utilities = $this->fetchUtilities($userId, $estateId, true);
+                $this->ensureRecordsExist($utilities, $userId, $estateId);
+                $paymentRecords = $this->fetchPaymentRecords($userId, $estateId, true);
+                $this->activateOverdueRecords($paymentRecords, $utilities);
 
-                // Phase A: Clone uncloned utilities into UtilityPaymentRecord (once)
-                foreach ($utilities as $utility) {
-                    UtilityPaymentRecord::firstOrCreate(
-                        [
-                            'utility_id' => $utility->id,
-                            'user_id' => $userId,
-                            'estate_id' => $estateId,
-                        ],
-                        [
-                            'amount' => $utility->amount,
-                            'amount_paid' => 0,
-                            'activated' => false,
-                            'status' => 0,
-                        ]
-                    );
-                }
-
-                // Refetch records with lock after cloning
-                $paymentRecords = UtilityPaymentRecord::where('user_id', $userId)
-                    ->where('estate_id', $estateId)
-                    ->lockForUpdate()
-                    ->get()
-                    ->keyBy('utility_id');
-
-                // Phase B: Activate records whose start_date has passed
-                foreach ($paymentRecords as $record) {
-                    if (!$record->activated && $record->status === 0) {
-                        $utility = $utilities->firstWhere('id', $record->utility_id);
-                        if (
-                            $utility &&
-                            $utility->start_date &&
-                            $utility->start_date <= now() &&
-                            (float) $record->amount_paid !== (float) $record->amount
-                        ) {
-                            $record->activated = true;
-                            $record->save();
-                        }
-                    }
-                }
-
-                // Phase C: Calculate owed amounts
-                $items = [];
-                $totalOwed = 0;
-
-                foreach ($utilities as $utility) {
-                    $record = $paymentRecords->get($utility->id);
-
-                    if (!$record || !$record->activated) {
-                        continue;
-                    }
-
-                    $remaining = max(0, (float) $utility->amount - (float) $record->amount_paid);
-                    if ($remaining <= 0) {
-                        continue;
-                    }
-
-                    $installment = $this->getPeriodicAmount($utility);
-                    $owed = min($installment, $remaining);
-
-                    $items[] = [
-                        'utility' => $utility,
-                        'payment_record' => $record,
-                        'owed' => $owed,
-                    ];
-
-                    $totalOwed += $owed;
-                }
+                $result = $this->computeOwed($utilities, $paymentRecords);
+                $items = $result['items'];
+                $totalOwed = $result['total_owed'];
 
                 if ($amount < $totalOwed) {
                     throw new InsufficientPaymentException($amount, $totalOwed);

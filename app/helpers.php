@@ -678,6 +678,11 @@ if (! function_exists('handle_pay_arrears')) {
             $trx->save();
 
             $utilities = $pendingUtilities;
+
+            Logger::info("User pays utilities_payment", [
+                'utilities_payment' => $pendingUtilities,
+                'user_id' => Auth::user()->id,
+            ]);
         });
 
 
