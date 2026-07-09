@@ -24,25 +24,63 @@ class UtilityManagementService
             })
             ->get();
 
+        // Phase A: Clone uncloned utilities into UtilityPaymentRecord (once)
+        foreach ($utilities as $utility) {
+            UtilityPaymentRecord::firstOrCreate(
+                [
+                    'utility_id' => $utility->id,
+                    'user_id' => $userId,
+                    'estate_id' => $estateId,
+                ],
+                [
+                    'amount' => $utility->amount,
+                    'amount_paid' => 0,
+                    'activated' => false,
+                    'status' => 0,
+                ]
+            );
+        }
+
+        // Refetch records after cloning
         $paymentRecords = UtilityPaymentRecord::where('user_id', $userId)
             ->where('estate_id', $estateId)
             ->get()
             ->keyBy('utility_id');
 
+        // Phase B: Activate records whose start_date has passed
+        foreach ($paymentRecords as $record) {
+            if (!$record->activated && $record->status === 0) {
+                $utility = $utilities->firstWhere('id', $record->utility_id);
+                if (
+                    $utility &&
+                    $utility->start_date &&
+                    $utility->start_date <= now() &&
+                    (float) $record->amount_paid !== (float) $record->amount
+                ) {
+                    $record->activated = true;
+                    $record->save();
+                }
+            }
+        }
+
+        // Phase C: Calculate owed amounts per utility
         $items = [];
         $totalOwed = 0;
 
         foreach ($utilities as $utility) {
             $record = $paymentRecords->get($utility->id);
 
-            if ($record) {
-                $owed = $utility->amount - $record->amount_paid;
-                if ($owed <= 0) {
-                    continue;
-                }
-            } else {
-                $owed = $utility->amount;
+            if (!$record || !$record->activated) {
+                continue;
             }
+
+            $remaining = max(0, (float) $utility->amount - (float) $record->amount_paid);
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            $installment = $this->getPeriodicAmount($utility);
+            $owed = min($installment, $remaining);
 
             $items[] = [
                 'utility' => $utility,
@@ -57,6 +95,34 @@ class UtilityManagementService
             'items' => $items,
             'total_owed' => $totalOwed,
         ];
+    }
+
+    /**
+     * Determine the periodic installment amount for a utility based on its mode_of_payment.
+     */
+    private function getPeriodicAmount(Utility $utility): float
+    {
+        $mode = strtolower(trim($utility->mode_of_payment ?? ''));
+
+        if (str_contains($mode, 'monthly')) {
+            if ((float) ($utility->payment_amount ?? 0) > 0) {
+                return (float) $utility->payment_amount;
+            }
+            if (($utility->payment_months ?? 0) > 0) {
+                return (float) ($utility->amount / $utility->payment_months);
+            }
+        }
+
+        if (str_contains($mode, 'percent')) {
+            if ((float) ($utility->percent_payment ?? 0) > 0) {
+                return (float) ($utility->amount * $utility->percent_payment / 100);
+            }
+            if ((float) ($utility->payment_amount ?? 0) > 0) {
+                return (float) $utility->payment_amount;
+            }
+        }
+
+        return (float) $utility->amount;
     }
 
     public function processPayment(
@@ -76,26 +142,64 @@ class UtilityManagementService
                     ->lockForUpdate()
                     ->get();
 
+                // Phase A: Clone uncloned utilities into UtilityPaymentRecord (once)
+                foreach ($utilities as $utility) {
+                    UtilityPaymentRecord::firstOrCreate(
+                        [
+                            'utility_id' => $utility->id,
+                            'user_id' => $userId,
+                            'estate_id' => $estateId,
+                        ],
+                        [
+                            'amount' => $utility->amount,
+                            'amount_paid' => 0,
+                            'activated' => false,
+                            'status' => 0,
+                        ]
+                    );
+                }
+
+                // Refetch records with lock after cloning
                 $paymentRecords = UtilityPaymentRecord::where('user_id', $userId)
                     ->where('estate_id', $estateId)
                     ->lockForUpdate()
                     ->get()
                     ->keyBy('utility_id');
 
+                // Phase B: Activate records whose start_date has passed
+                foreach ($paymentRecords as $record) {
+                    if (!$record->activated && $record->status === 0) {
+                        $utility = $utilities->firstWhere('id', $record->utility_id);
+                        if (
+                            $utility &&
+                            $utility->start_date &&
+                            $utility->start_date <= now() &&
+                            (float) $record->amount_paid !== (float) $record->amount
+                        ) {
+                            $record->activated = true;
+                            $record->save();
+                        }
+                    }
+                }
+
+                // Phase C: Calculate owed amounts
                 $items = [];
                 $totalOwed = 0;
 
                 foreach ($utilities as $utility) {
                     $record = $paymentRecords->get($utility->id);
 
-                    if ($record) {
-                        $owed = $utility->amount - $record->amount_paid;
-                        if ($owed <= 0) {
-                            continue;
-                        }
-                    } else {
-                        $owed = $utility->amount;
+                    if (!$record || !$record->activated) {
+                        continue;
                     }
+
+                    $remaining = max(0, (float) $utility->amount - (float) $record->amount_paid);
+                    if ($remaining <= 0) {
+                        continue;
+                    }
+
+                    $installment = $this->getPeriodicAmount($utility);
+                    $owed = min($installment, $remaining);
 
                     $items[] = [
                         'utility' => $utility,
@@ -116,25 +220,13 @@ class UtilityManagementService
                     $utility = $item['utility'];
                     $record = $item['payment_record'];
                     $owed = $item['owed'];
-                    $newAmountPaid = ($record ? $record->amount_paid : 0) + $owed;
+                    $newAmountPaid = ($record->amount_paid ?? 0) + $owed;
                     $fullyPaid = $newAmountPaid >= $utility->amount;
 
-                    if (!$record) {
-                        UtilityPaymentRecord::create([
-                            'utility_id' => $utility->id,
-                            'user_id' => $userId,
-                            'estate_id' => $estateId,
-                            'amount' => $utility->amount,
-                            'amount_paid' => $owed,
-                            'activated' => !$fullyPaid,
-                            'status' => $fullyPaid ? 2 : 1,
-                        ]);
-                    } else {
-                        $record->amount_paid = $newAmountPaid;
-                        $record->activated = !$fullyPaid;
-                        $record->status = $fullyPaid ? 2 : 1;
-                        $record->save();
-                    }
+                    $record->amount_paid = $newAmountPaid;
+                    $record->activated = !$fullyPaid;
+                    $record->status = $fullyPaid ? 2 : 1;
+                    $record->save();
 
                     $remaining -= $owed;
                 }
