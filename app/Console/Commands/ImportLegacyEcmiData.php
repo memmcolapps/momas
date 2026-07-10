@@ -591,14 +591,13 @@ class ImportLegacyEcmiData extends Command
     {
         $rows = $this->loadTariffStates($path);
 
+        $grouped = [];
         foreach ($rows as $row) {
             $key = $this->tariffKey($row->TariffID, $row->BUID);
+            $grouped[$key][] = $row;
+        }
 
-            // if (isset($this->invalidTariffKeys[$key])) {
-            //     $this->stats['tariff_states_skipped']++;
-            //     continue;
-            // }
-
+        foreach ($grouped as $key => $states) {
             $tariffId = $this->tariffMap[$key] ?? null;
 
             if (!$tariffId) {
@@ -607,25 +606,36 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            $payload = [
-                'amount'         => $row->Rate,
-                'effective_from' => $row->EffectiveDate ?? now(),
-                'vat'            => $row->VAT,
-                'fixed_charge'   => $row->FC,
-                'estate_id'      => $this->estateMap[$row->BUID] ?? null,
-                'tariff_id'      => $tariffId,
-                't_index'        => $row->VersionNo,
-                'status'         => 2,
-            ];
-
-            $this->stats['tariff_states_created']++;
-
-            if ($this->isDryRun()) {
-                $this->preview('Tariff State', $payload);
-                continue;
+            $latest = $states[0];
+            foreach ($states as $state) {
+                if ($this->isNewerState($state, $latest)) {
+                    $latest = $state;
+                }
             }
 
-            TarrifState::create($payload);
+            foreach ($states as $state) {
+                $isLatest = $state === $latest;
+
+                $payload = [
+                    'amount'         => $state->Rate,
+                    'effective_from' => $state->EffectiveDate ?? now(),
+                    'vat'            => $state->VAT,
+                    'fixed_charge'   => $state->FC,
+                    'estate_id'      => $this->estateMap[$state->BUID] ?? null,
+                    'tariff_id'      => $tariffId,
+                    't_index'        => $state->VersionNo,
+                    'status'         => $isLatest ? 2 : 0,
+                ];
+
+                $this->stats['tariff_states_created']++;
+
+                if ($this->isDryRun()) {
+                    $this->preview('Tariff State', $payload);
+                    continue;
+                }
+
+                TarrifState::create($payload);
+            }
         }
     }
 

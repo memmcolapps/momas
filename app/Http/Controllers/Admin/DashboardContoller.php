@@ -21,6 +21,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Models\UtilityPaymentRecord;
 use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
@@ -714,6 +715,26 @@ class DashboardContoller extends Controller
             $data['estate'] = Estate::where('status', 2)->get();
             $data['estate_name'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
             $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
+
+            $recQuery = UtilityPaymentRecord::where('user_id', $request->id)->with('utility');
+
+            if ($search = $request->get('utility_title')) {
+                $recQuery->whereHas('utility', fn($q) => $q->where('title', 'like', "%{$search}%"));
+            }
+            if ($from = $request->get('payment_date_from')) {
+                $recQuery->whereDate('created_at', '>=', $from);
+            }
+            if ($to = $request->get('payment_date_to')) {
+                $recQuery->whereDate('created_at', '<=', $to);
+            }
+            if ($trxId = $request->get('trx_id')) {
+                $recQuery->where('trx_id', 'like', "%{$trxId}%");
+            }
+            if (($status = $request->get('status')) !== null && $status !== '') {
+                $recQuery->where('status', $status);
+            }
+
+            $data['utility_payment_records'] = $recQuery->latest()->paginate(10);
             $data['customer_utilities'] = Utility::where('user_id', $request->id)->with('user')->get();
             $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
             $data['meters'] = Meter::all();

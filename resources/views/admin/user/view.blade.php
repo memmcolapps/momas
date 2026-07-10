@@ -801,6 +801,97 @@
                             </div>
 
                         </div>
+
+                        {{-- Utility Payment Records --}}
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <h6 class="d-flex justify-content-start my-2">Utility Payment Records</h6>
+
+                                    <form method="GET" action="{{ url()->current() }}">
+                                        <input type="hidden" name="id" value="{{ $user->id }}">
+                                        <div class="row mb-3">
+                                            <div class="col">
+                                                <label class="form-label mb-1">Utility</label>
+                                                <input type="text" name="utility_title" class="form-control" placeholder="Utility title" value="{{ request('utility_title') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">From</label>
+                                                <input type="date" name="payment_date_from" class="form-control" value="{{ request('payment_date_from') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">To</label>
+                                                <input type="date" name="payment_date_to" class="form-control" value="{{ request('payment_date_to') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">Transaction ID</label>
+                                                <input type="text" name="trx_id" class="form-control" placeholder="Transaction number" value="{{ request('trx_id') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">Status</label>
+                                                <select name="status" class="form-control">
+                                                    <option value="">All Status</option>
+                                                    <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Not Paid</option>
+                                                    <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Payment in Progress</option>
+                                                    <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Paid</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-auto d-flex align-items-end">
+                                                <div>
+                                                    <button type="submit" class="btn btn-primary">Filter</button>
+                                                    <a href="{{ url()->current() }}?id={{ $user->id }}" class="btn btn-secondary">Reset</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                    <div class="card-body">
+                                        <table id="datatable-buttons"
+                                               class="table table-striped table-bordered dt-responsive nowrap">
+                                            <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Utility</th>
+                                                <th>Utility Amount</th>
+                                                <th>Amount Paid</th>
+                                                <th>Transaction ID</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            @forelse($utility_payment_records as $record)
+                                                <tr>
+                                                    <td>{{ $record->id }}</td>
+                                                    <td>{{ $record->utility?->title ?? 'N/A' }}</td>
+                                                    <td>{{ number_format($record->utility_amount, 2) }}</td>
+                                                    <td>{{ number_format($record->amount_paid, 2) }}</td>
+                                                    <td>{{ $record->trx_id }}</td>
+                                                    <td>
+                                                        @if($record->status == 0)
+                                                            <span class="badge text-bg-warning">Not Paid</span>
+                                                        @elseif($record->status == 1)
+                                                            <span class="badge text-bg-info">Payment in Progress</span>
+                                                        @else
+                                                            <span class="badge text-bg-success">Paid</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ $record->created_at }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="7" class="text-center">No payment records found.</td>
+                                                </tr>
+                                            @endforelse
+                                            </tbody>
+                                            <tfoot>
+                                            {{ $utility_payment_records->links() }}
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     @else
                     @endif
 
@@ -1519,6 +1610,97 @@
 
                             </div>
 
+                        </div>
+
+                        {{-- Utility Payment Records --}}
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <h6 class="d-flex justify-content-start my-2">Utility Payment Records</h6>
+
+                                    <form method="GET" action="{{ url()->current() }}">
+                                        <input type="hidden" name="id" value="{{ $user->id }}">
+                                        <div class="row mb-3">
+                                            <div class="col">
+                                                <label class="form-label mb-1">Utility</label>
+                                                <input type="text" name="utility_title" class="form-control" placeholder="Utility title" value="{{ request('utility_title') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">From</label>
+                                                <input type="date" name="payment_date_from" class="form-control" value="{{ request('payment_date_from') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">To</label>
+                                                <input type="date" name="payment_date_to" class="form-control" value="{{ request('payment_date_to') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">Transaction ID</label>
+                                                <input type="text" name="trx_id" class="form-control" placeholder="Transaction number" value="{{ request('trx_id') }}">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label mb-1">Status</label>
+                                                <select name="status" class="form-control">
+                                                    <option value="">All Status</option>
+                                                    <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Not Paid</option>
+                                                    <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Payment in Progress</option>
+                                                    <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Paid</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-auto d-flex align-items-end">
+                                                <div>
+                                                    <button type="submit" class="btn btn-primary">Filter</button>
+                                                    <a href="{{ url()->current() }}?id={{ $user->id }}" class="btn btn-secondary">Reset</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                    <div class="card-body">
+                                        <table id="datatable-buttons"
+                                               class="table table-striped table-bordered dt-responsive nowrap">
+                                            <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Utility</th>
+                                                <th>Utility Amount</th>
+                                                <th>Amount Paid</th>
+                                                <th>Transaction ID</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            @forelse($utility_payment_records as $record)
+                                                <tr>
+                                                    <td>{{ $record->id }}</td>
+                                                    <td>{{ $record->utility?->title ?? 'N/A' }}</td>
+                                                    <td>{{ number_format($record->utility_amount, 2) }}</td>
+                                                    <td>{{ number_format($record->amount_paid, 2) }}</td>
+                                                    <td>{{ $record->trx_id }}</td>
+                                                    <td>
+                                                        @if($record->status == 0)
+                                                            <span class="badge text-bg-warning">Not Paid</span>
+                                                        @elseif($record->status == 1)
+                                                            <span class="badge text-bg-info">Payment in Progress</span>
+                                                        @else
+                                                            <span class="badge text-bg-success">Paid</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ $record->created_at }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="7" class="text-center">No payment records found.</td>
+                                                </tr>
+                                            @endforelse
+                                            </tbody>
+                                            <tfoot>
+                                            {{ $utility_payment_records->links() }}
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     @else
                     @endif
