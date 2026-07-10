@@ -54,7 +54,7 @@ class ExportLegacyEcmiData extends Command
         $this->exportUserData($path, $estate);
         $this->exportCustomers($path, $estate);
         $this->exportTransactions($path, $estate);
-        $this->exportUtilitySubAccounts($path, $estate);
+        $this->exportSubAccounts($path, $estate);
 
         $this->info("Export completed successfully");
 
