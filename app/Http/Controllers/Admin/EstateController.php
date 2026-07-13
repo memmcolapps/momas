@@ -167,9 +167,9 @@ class EstateController extends Controller
 
 
             $data['tar'] = Tariff::where('estate_id', $request->id)->first();
-            $data['utl'] = Utility::where('estate_id', $request->id)->first() ?? null;
-            $data['total_utility'] = Utility::where('estate_id', $request->id)->sum('amount');
-            $data['utility'] = Utility::where('estate_id', $request->id)->with('user')->get() ?? null;
+            // $data['utl'] = Utility::where('estate_id', $request->id)->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', $request->id)->where('type', 'service_charge')->sum('amount');
+            $data['utility'] = Utility::where('estate_id', $request->id)->whereNull('user_id')->get() ?? null;
             $data['total_meters'] = Meter::where('estate_id', $request->id)->count() ?? null;
             $data['customers'] = User::where('estate_id', $request->id)->count() ?? null;
             $data['estate_features'] = ModFeature::query()
@@ -195,8 +195,8 @@ class EstateController extends Controller
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
-            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->first() ?? null;
-            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->sum('amount');
+            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->sum('amount');
 
 
             $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->with('user')->get() ?? null;
@@ -286,6 +286,7 @@ class EstateController extends Controller
                             'amount' => $utility['amount'],
                             'duration' => $request->duration,
                             'estate_id' => $request->estate_id,
+                            'type' => $utility['type'] ?? 'service_charge',
                             'start_date' => $utility['start_date'] ?? null,
                             'mode_of_payment' => $utility['mode_of_payment'] ?? null,
                             'payment_amount' => $utility['payment_amount'] ?? null,
@@ -299,7 +300,7 @@ class EstateController extends Controller
                 }
             }
 
-            $utility_amount = Utility::where('estate_id', $request->estate_id)->sum('amount');
+            $utility_amount = Utility::where('estate_id', $request->estate_id)->where('type', 'service_charge')->sum('amount');
             Estate::where('id', $request->estate_id)->update(['total_utility_amount' => $utility_amount]);
 
             return back()->with('message', 'Utilities Saved successfully');
@@ -400,6 +401,7 @@ class EstateController extends Controller
             Utility::create([
                 'user_id' => $request->user_id,
                 'estate_id' => $request->estate_id,
+                'type' => $request->input('type', 'debt'),
                 'title' => $request->title,
                 'amount' => $request->amount,
                 'start_date' => $request->start_date,

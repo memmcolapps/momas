@@ -27,6 +27,7 @@ class UtilityManagementService
     private function fetchUtilities(int $userId, int $estateId, bool $lock = false): Collection
     {
         $query = Utility::where('estate_id', $estateId)
+            ->where('type', 'debt')
             ->where(function ($q) {
                 $q->where('activated', true)
                   ->orWhere(function ($q2) {

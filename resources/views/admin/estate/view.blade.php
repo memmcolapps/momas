@@ -630,6 +630,7 @@
                                                     <option value="percentage_payment" @selected($data->mode_of_payment == 'percentage_payment')>Percentage Payment</option>
                                                     <option value="monthly_payment" @selected($data->mode_of_payment == 'monthly_payment')>Monthly Payment</option>
                                                     <option value="one_off" @selected($data->mode_of_payment == 'one_off')>One-Off</option>
+                                                    <option value="fixed_charge" @selected($data->mode_of_payment == 'fixed_charge')>Fixed Charge</option>
                                                 </select>
                                             </div>
 
@@ -668,6 +669,12 @@
                                                 <label class="my-1">Number of Months</label>
                                                 <input type="number" name="payment_months" min="1" max="60"
                                                        class="form-control" value="{{$data->payment_months}}">
+                                            </div>
+
+                                            <div class="col-xl-3 col-sm-12 my-1">
+                                                <label class="my-1">Type</label>
+                                                <input type="text" class="form-control" value="{{ ucfirst(str_replace('_', ' ', $data->type ?? 'service_charge')) }}" disabled>
+                                                <input type="hidden" name="type" value="{{ $data->type ?? 'service_charge' }}">
                                             </div>
 
                                             <div class="col-12 my-3">
@@ -716,6 +723,13 @@
                                                     <input type="number" step="0.01" name="amount[]" class="form-control" required>
                                                 </div>
                                                 <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-2">Type</label>
+                                                    <select name="type[]" class="form-control">
+                                                        <option value="service_charge" selected>Service Charge</option>
+                                                        <option value="debt">Debt</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-xl-3 col-sm-12 my-1">
                                                     <label class="my-2">Start Date</label>
                                                     <input type="date" name="start_date[]" class="form-control">
                                                 </div>
@@ -726,6 +740,7 @@
                                                         <option value="percentage_payment">Percentage Payment</option>
                                                         <option value="monthly_payment">Monthly Payment</option>
                                                         <option value="one_off">One-Off</option>
+                                                        <option value="fixed_charge">Fixed Charge</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-xl-3 col-sm-12 my-1">
@@ -797,6 +812,7 @@
                                     document.getElementById('save').addEventListener('click', function () {
                                         let titles = document.querySelectorAll('input[name="title[]"]');
                                         let amounts = document.querySelectorAll('input[name="amount[]"]');
+                                        let types = document.querySelectorAll('select[name="type[]"]');
                                         let startDates = document.querySelectorAll('input[name="start_date[]"]');
                                         let modeOfPayments = document.querySelectorAll('select[name="mode_of_payment[]"]');
                                         let paymentAmounts = document.querySelectorAll('input[name="payment_amount[]"]');
@@ -810,6 +826,7 @@
                                             utilities.push({
                                                 title: titles[i].value,
                                                 amount: amounts[i].value,
+                                                type: types[i]?.value || 'service_charge',
                                                 start_date: startDates[i]?.value || null,
                                                 mode_of_payment: modeOfPayments[i]?.value || null,
                                                 payment_amount: paymentAmounts[i]?.value || null,

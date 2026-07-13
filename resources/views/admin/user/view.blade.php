@@ -442,6 +442,14 @@
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Type</label>
+                                        <select name="type" class="form-control">
+                                            <option value="debt" selected>Debt</option>
+                                            <option value="service_charge">Service Charge</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Start Date</label>
                                         <input type="date" name="start_date" class="form-control">
                                     </div>
@@ -675,6 +683,7 @@
                                                 <th>ID</th>
                                                 <th>Title</th>
                                                 <th>Amount</th>
+                                                <th>Type</th>
                                                 <th>Mode of Payment</th>
                                                 <th>% Payment</th>
                                                 <th>Payment Months</th>
@@ -691,6 +700,13 @@
                                                     <td>{{ $cu->id }}</td>
                                                     <td>{{ $cu->title }}</td>
                                                     <td>{{ number_format($cu->amount, 2) }}</td>
+                                                    <td>
+                                                        @if(($cu->type ?? 'service_charge') == 'debt')
+                                                            <span class="badge text-bg-warning">Debt</span>
+                                                        @else
+                                                            <span class="badge text-bg-info">Service Charge</span>
+                                                        @endif
+                                                    </td>
                                                     <td>{{ str_replace('_', ' ', ucwords($cu->mode_of_payment ?? 'N/A')) }}</td>
                                                     <td>{{ $cu->percent_payment ? $cu->percent_payment . '%' : '-' }}</td>
                                                     <td>{{ $cu->payment_months ?? '-' }}</td>
@@ -713,7 +729,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="10" class="text-center">No customer utilities found.</td>
+                                                    <td colspan="11" class="text-center">No customer utilities found.</td>
                                                 </tr>
                                             @endforelse
 
@@ -1262,6 +1278,14 @@
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Type</label>
+                                        <select name="type" class="form-control">
+                                            <option value="debt" selected>Debt</option>
+                                            <option value="service_charge">Service Charge</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Start Date</label>
                                         <input type="date" name="start_date" class="form-control">
                                     </div>
@@ -1495,6 +1519,7 @@
                                                 <th>ID</th>
                                                 <th>Title</th>
                                                 <th>Amount</th>
+                                                <th>Type</th>
                                                 <th>Mode of Payment</th>
                                                 <th>% Payment</th>
                                                 <th>Payment Months</th>
@@ -1511,6 +1536,13 @@
                                                     <td>{{ $cu->id }}</td>
                                                     <td>{{ $cu->title }}</td>
                                                     <td>{{ number_format($cu->amount, 2) }}</td>
+                                                    <td>
+                                                        @if(($cu->type ?? 'service_charge') == 'debt')
+                                                            <span class="badge text-bg-warning">Debt</span>
+                                                        @else
+                                                            <span class="badge text-bg-info">Service Charge</span>
+                                                        @endif
+                                                    </td>
                                                     <td>{{ str_replace('_', ' ', ucwords($cu->mode_of_payment ?? 'N/A')) }}</td>
                                                     <td>{{ $cu->percent_payment ? $cu->percent_payment . '%' : '-' }}</td>
                                                     <td>{{ $cu->payment_months ?? '-' }}</td>
@@ -1533,7 +1565,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="10" class="text-center">No customer utilities found.</td>
+                                                    <td colspan="11" class="text-center">No customer utilities found.</td>
                                                 </tr>
                                             @endforelse
 

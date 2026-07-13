@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use OwenIt\Auditing\Auditable;
@@ -15,6 +16,7 @@ class Utility extends Model implements AuditableContract
     protected $fillable = [
         'estate_id',
         'user_id',
+        'type',
         'title',
         'amount',
         'duration',
@@ -47,6 +49,21 @@ class Utility extends Model implements AuditableContract
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function scopeOfType(Builder $query, string $type): Builder
+    {
+        return $query->where('type', $type);
+    }
+
+    public function scopeDebt(Builder $query): Builder
+    {
+        return $query->where('type', 'debt');
+    }
+
+    public function scopeServiceCharge(Builder $query): Builder
+    {
+        return $query->where('type', 'service_charge');
     }
 
     public function customAudit()

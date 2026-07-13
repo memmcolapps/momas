@@ -1170,6 +1170,7 @@ class ImportLegacyEcmiData extends Command
             $payload = [
                 'estate_id'        => $user->estate_id,
                 'user_id'          => $user->id,
+                'type'             => 'debt',
                 'title'            => $row->SubAccountAbbre,
                 'amount'           => $row->AmountAttached ?? 0,
                 'balance'          => $row->Balance,
