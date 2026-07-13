@@ -1428,7 +1428,7 @@ class MeterController extends Controller
     function vending_properties(request $request)
     {
 
-        $duration = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->first()->duration ?? null;
+        $duration = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first()->duration ?? null;
         $estate_id = Auth::user()->estate_id ?? null;
         $user_id = Auth::id();
 

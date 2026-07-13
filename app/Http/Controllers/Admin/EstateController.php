@@ -168,7 +168,7 @@ class EstateController extends Controller
 
             $data['tar'] = Tariff::where('estate_id', $request->id)->first();
             // $data['utl'] = Utility::where('estate_id', $request->id)->first() ?? null;
-            $data['total_utility'] = Utility::where('estate_id', $request->id)->where('type', 'service_charge')->sum('amount');
+            $data['total_utility'] = Utility::where('estate_id', $request->id)->serviceCharge()->sum('amount');
             $data['utility'] = Utility::where('estate_id', $request->id)->whereNull('user_id')->get() ?? null;
             $data['total_meters'] = Meter::where('estate_id', $request->id)->count() ?? null;
             $data['customers'] = User::where('estate_id', $request->id)->count() ?? null;
@@ -195,8 +195,8 @@ class EstateController extends Controller
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
-            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->first() ?? null;
-            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->sum('amount');
+            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->sum('amount');
 
 
             $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->with('user')->get() ?? null;
@@ -300,7 +300,7 @@ class EstateController extends Controller
                 }
             }
 
-            $utility_amount = Utility::where('estate_id', $request->estate_id)->where('type', 'service_charge')->sum('amount');
+            $utility_amount = Utility::where('estate_id', $request->estate_id)->serviceCharge()->sum('amount');
             Estate::where('id', $request->estate_id)->update(['total_utility_amount' => $utility_amount]);
 
             return back()->with('message', 'Utilities Saved successfully');

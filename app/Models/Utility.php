@@ -63,7 +63,7 @@ class Utility extends Model implements AuditableContract
 
     public function scopeServiceCharge(Builder $query): Builder
     {
-        return $query->where('type', 'service_charge');
+        return $query->where('type', 'service_charge')->whereNull('user_id');
     }
 
     public function customAudit()

@@ -229,7 +229,7 @@ if (!function_exists('total_utility')) {
     function total_utility($estate_id)
     {
 
-        $total_utility = Utility::where('estate_id', $estate_id)->where('type', 'service_charge')->sum('amount');
+        $total_utility = Utility::where('estate_id', $estate_id)->serviceCharge()->sum('amount');
         return $total_utility;
 
     }

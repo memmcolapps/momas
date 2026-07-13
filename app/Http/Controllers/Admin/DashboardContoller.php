@@ -401,9 +401,9 @@ class DashboardContoller extends Controller
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
-            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->first() ?? null;
-            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->sum('amount');
-            $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->where('type', 'service_charge')->get() ?? null;
+            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->sum('amount');
+            $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get() ?? null;
 
             return view('admin/settings', $data);
         } elseif (Auth::user()->isEstateStaff()) {
@@ -735,7 +735,14 @@ class DashboardContoller extends Controller
             }
 
             $data['utility_payment_records'] = $recQuery->latest()->paginate(10);
-            $data['customer_utilities'] = Utility::where('user_id', $request->id)->where('type', 'debt')->with('user')->get();
+            $data['customer_utilities'] = Utility::where('estate_id', $data['user']->estate_id)
+                ->where('type', 'debt')
+                ->where(function ($q) use ($data) {
+                    $q->whereNull('user_id')
+                      ->orWhere('user_id', $data['user']->id);
+                })
+                ->with('user')
+                ->get();
             $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
             $data['meters'] = Meter::all();
             $data['tariff_count'] = Tariff::where('user_id', $request->id)->count();
