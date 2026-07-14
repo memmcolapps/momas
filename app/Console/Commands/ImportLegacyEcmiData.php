@@ -462,7 +462,7 @@ class ImportLegacyEcmiData extends Command
                 'address'             => $row->Address,
                 'state'               => $row->State,
                 'legacy_buid'         => $row->BUID,
-                'status'              => $row->status1 === 'N' ? 1 : 0,
+                'status'              => 2,
                 'paystack_subaccount' => $subAcct?->SubAcctID       ?? null,
                 'account_no'          => $subAcct?->BankAccountNo   ?? null,
                 'account_name'        => $subAcct?->BankAccountName ?? null,
@@ -514,7 +514,7 @@ class ImportLegacyEcmiData extends Command
                 'Title'      => $row->Name,
                 'City'       => $row->City,
                 'State'      => $row->State,
-                'Status'     => $row->status1 === 'N' ? 1 : 0,
+                'Status'     => 2,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -566,7 +566,7 @@ class ImportLegacyEcmiData extends Command
                 'title'        => $row->Description,
                 'tariff_index' => $row->TariffID,
                 'estate_id'    => $estateId,
-                'status'       => $row->status1 === 'N' ? 1 : 0,
+                'status'       => 2,
                 'type'         => null, // set later by classifyTariffTypes()
             ];
 
@@ -782,7 +782,7 @@ class ImportLegacyEcmiData extends Command
                 'role'         => 3,
                 'estate_id'    => $this->estateMap[$row->estate_buid] ?? null,
                 'estate_name'  => $row->estate_name,
-                'status'       => $row->activated ? 2 : 0,
+                'status'       => 2,
                 'can_login'    => $row->can_login,
                 'raw_password' => $row->raw_password,
             ];
@@ -954,7 +954,7 @@ class ImportLegacyEcmiData extends Command
                 'amount'              => $row->Amount,
                 'fee'                 => $row->FC ?? 0,
                 'unit_amount'         => $row->Units,
-                'status'              => $row->TransactionComplete ? 1 : 0,
+                'status'              => 2,
                 'note'                => $row->Reasons,
                 'miscellaneous'       => $row->Token,
                 'action_payload'      => json_encode([
@@ -1179,7 +1179,7 @@ class ImportLegacyEcmiData extends Command
                 'payment_amount'   => $row->PaymentAmount,
                 'activated'        => (bool)$row->activated,
                 'operator_id'      => $row->OperatorID,
-                'status'           => strtoupper($row->status) === 'N' ? 1 : 0,
+                'status'           => 2,
                 'created_at'       => $row->Date ?? now(),
                 'updated_at'       => $row->lastmodified ?? now(),
             ];
