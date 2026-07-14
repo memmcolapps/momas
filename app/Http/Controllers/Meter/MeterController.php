@@ -366,6 +366,7 @@ class MeterController extends Controller
                                                             ->where('estate_id', $auth_user->estate_id)
                                                             ->where('status', 2)],
             'amount' => 'required|numeric|min:1',
+            'receiver_meterNo' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -395,7 +396,11 @@ class MeterController extends Controller
         }
 
         try {
-            $values = $meter->calculateTokenValuesByAmount((int) $request->tariff_id, (int) $request->amount);
+            $values = $meter->calculateTokenValuesByAmount(
+                (int) $request->tariff_id,
+                (int) $request->amount,
+                $request->receiver_meterNo
+            );
             return StandardResponse::success(200, 'Token values calculated successfully', $values);
         } catch (Exception $e) {
             return StandardResponse::error(422, $e->getMessage());

@@ -170,6 +170,8 @@ class EstateController extends Controller
             // $data['utl'] = Utility::where('estate_id', $request->id)->first() ?? null;
             $data['total_utility'] = Utility::where('estate_id', $request->id)->serviceCharge()->sum('amount');
             $data['utility'] = Utility::where('estate_id', $request->id)->whereNull('user_id')->get() ?? null;
+            $data['service_charges'] = Utility::where('estate_id', $request->id)->serviceCharge()->get();
+            $data['debt_utilities'] = Utility::where('estate_id', $request->id)->debt()->whereNull('user_id')->get();
             $data['total_meters'] = Meter::where('estate_id', $request->id)->count() ?? null;
             $data['customers'] = User::where('estate_id', $request->id)->count() ?? null;
             $data['estate_features'] = ModFeature::query()
@@ -198,8 +200,9 @@ class EstateController extends Controller
             $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first() ?? null;
             $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->sum('amount');
 
-
             $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->with('user')->get() ?? null;
+            $data['service_charges'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get();
+            $data['debt_utilities'] = Utility::where('estate_id', Auth::user()->estate_id)->debt()->whereNull('user_id')->get();
 
 
         } elseif (Auth::user()->role == 4) {

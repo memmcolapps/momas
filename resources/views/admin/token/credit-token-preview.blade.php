@@ -205,6 +205,13 @@
                                                                              </div>
                                                                              @endif
 
+                                                                             @if(($arrears_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Arrears Owed</label>
+                                                                                 <h6 class="text-danger">- {{number_format($arrears_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
                                                                              <input required name="vat" value="{{$vat}}"
                                                                                     hidden="">
                                                                              <input required name="estate_id"
@@ -580,6 +587,13 @@
                                                                                         value="{{$utility_owed}}"
                                                                                         hidden="">
                                                                                  <h6 class="text-danger">- {{number_format($utility_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             @if(($arrears_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Arrears Owed</label>
+                                                                                 <h6 class="text-danger">- {{number_format($arrears_owed, 2)}}</h6>
                                                                              </div>
                                                                              @endif
 

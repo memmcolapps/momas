@@ -852,6 +852,124 @@
 
                     </div>
 
+                    <div class="row">
+                        <div class="col-xl-12">
+                            <div class="card overflow-hidden">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="card-title text-black mb-0">Service Charges</h5>
+                                        <span class="badge text-bg-info">{{ $service_charges->count() }} Total</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-striped table-bordered dt-responsive nowrap">
+                                        <thead>
+                                        <tr>
+                                            <th scope="col" class="cursor-pointer">ID</th>
+                                            <th scope="col" class="cursor-pointer">Title</th>
+                                            <th scope="col" class="cursor-pointer">Amount</th>
+                                            <th scope="col" class="cursor-pointer">Mode of Payment</th>
+                                            <th scope="col" class="cursor-pointer">Start Date</th>
+                                            <th scope="col" class="cursor-pointer">Activated</th>
+                                            <th scope="col" class="cursor-pointer">Status</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @forelse($service_charges as $sc)
+                                            <tr>
+                                                <td>{{ $sc->id }}</td>
+                                                <td>{{ $sc->title }}</td>
+                                                <td>NGN {{ number_format($sc->amount, 2) }}</td>
+                                                <td>{{ str_replace('_', ' ', ucwords($sc->mode_of_payment ?? 'N/A')) }}</td>
+                                                <td>{{ $sc->start_date ? \Carbon\Carbon::parse($sc->start_date)->format('Y-m-d') : '-' }}</td>
+                                                <td>
+                                                    @if($sc->activated)
+                                                        <span class="badge text-bg-success">Yes</span>
+                                                    @else
+                                                        <span class="badge text-bg-secondary">No</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($sc->status == 2)
+                                                        <span class="badge text-bg-primary">Active</span>
+                                                    @elseif($sc->status == 0)
+                                                        <span class="badge text-bg-warning">Inactive</span>
+                                                    @else
+                                                        <span class="badge text-bg-secondary">N/A</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="7" class="text-center">No service charge utilities found.</td>
+                                            </tr>
+                                        @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xl-12">
+                            <div class="card overflow-hidden">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="card-title text-black mb-0">Debt Type Utilities</h5>
+                                        <span class="badge text-bg-warning">{{ $debt_utilities->count() }} Total</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-striped table-bordered dt-responsive nowrap">
+                                        <thead>
+                                        <tr>
+                                            <th scope="col" class="cursor-pointer">ID</th>
+                                            <th scope="col" class="cursor-pointer">Title</th>
+                                            <th scope="col" class="cursor-pointer">Amount</th>
+                                            <th scope="col" class="cursor-pointer">Mode of Payment</th>
+                                            <th scope="col" class="cursor-pointer">Start Date</th>
+                                            <th scope="col" class="cursor-pointer">Activated</th>
+                                            <th scope="col" class="cursor-pointer">Status</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @forelse($debt_utilities as $debt)
+                                            <tr>
+                                                <td>{{ $debt->id }}</td>
+                                                <td>{{ $debt->title }}</td>
+                                                <td>NGN {{ number_format($debt->amount, 2) }}</td>
+                                                <td>{{ str_replace('_', ' ', ucwords($debt->mode_of_payment ?? 'N/A')) }}</td>
+                                                <td>{{ $debt->start_date ? \Carbon\Carbon::parse($debt->start_date)->format('Y-m-d') : '-' }}</td>
+                                                <td>
+                                                    @if($debt->activated)
+                                                        <span class="badge text-bg-success">Yes</span>
+                                                    @else
+                                                        <span class="badge text-bg-secondary">No</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($debt->status == 2)
+                                                        <span class="badge text-bg-primary">Active</span>
+                                                    @elseif($debt->status == 0)
+                                                        <span class="badge text-bg-warning">Inactive</span>
+                                                    @else
+                                                        <span class="badge text-bg-secondary">N/A</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="7" class="text-center">No debt type utilities found.</td>
+                                            </tr>
+                                        @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
 
             </div>
         </div>

@@ -6,12 +6,12 @@ use App\Constants\ServiceTypeConstants;
 use App\Events\MeterTokenGenerated;
 use App\Services\PaystackPaymentService;
 use App\Services\TokenGenerationService;
+use App\Models\UtilitiesPayment;
 use App\Services\VatCalculator;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class Meter extends Model
@@ -108,21 +108,22 @@ class Meter extends Model
      * Calculate token values based on tariff and transaction amount.
      *
      * This method extracts the calculation logic for determining
-     * service fees, estate charges, VAT, and final unit values.
+     * service fees, estate charges, debt-type utility owed, VAT, and final unit values.
      *
      * @param int $tariff_id The ID of the tariff to use for calculations
      * @param \App\Models\Transaction $trx The transaction object containing the amount
-     * @return array Array of calculated values including service fees, charges, and unit details
+     * @param int|null $debtUserId Optional user ID for debt calculation (for "pay for others" flow)
+     * @param int|null $debtEstateId Optional estate ID for debt calculation (for "pay for others" flow)
+     * @return array Array of calculated values including service fees, charges, utility owed, and unit details
      * @throws \Exception When the amount is too small after deductions or unit is less than 0.1KWh
      */
-    public function calculateTokenValues(int $tariff_id, Transaction $trx): array
+    public function calculateTokenValues(int $tariff_id, Transaction $trx, ?int $debtUserId = null, ?int $debtEstateId = null): array
     {
         $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
         $tariffAmount = $tariffState->amount ?? 0;
         $vat = $tariffState->vat ?? 0;
         $fixedCharge = $tariffState->fixed_charge ?? 0;
 
-        // NEW CALCULATION FLOW:
         // [1] 2.5% Service Fee
         $amount = $trx->vending_amount ?? $trx->amount;
         $percn = (2.5 / 100) * (int)$amount;
@@ -139,14 +140,33 @@ class Meter extends Model
         }
         $afterEstateFee = $afterServiceFee - $estateFee;
 
+        // [2.3] Unpaid UtilitiesPayment Arrears (old system)
+        $effectiveUserId = $debtUserId ?? $this->user_id;
+        $effectiveEstateId = $debtEstateId ?? $this->estate_id;
+
+        $arrearsAmount = UtilitiesPayment::where('user_id', $effectiveUserId)
+            ->where('estate_id', $effectiveEstateId)
+            ->where('type', 'utilities')
+            ->where('status', '!=', 2)
+            ->sum('amount');
+        $afterArrears = $afterEstateFee - $arrearsAmount;
+
+        // [2.5] Debt-type Utility Owed
+        $utilityService = new \App\Services\UtilityManagementService();
+        $utilityResult = $utilityService->calculateUserOwedUtility($effectiveUserId, $effectiveEstateId);
+        $utilityOwed = $utilityResult['total_owed'];
+        $afterUtility = $afterArrears - $utilityOwed;
+
         // [3] Tariff Fixed Charge
-        $afterFixedCharge = $afterEstateFee - $fixedCharge;
+        $afterFixedCharge = $afterUtility - $fixedCharge;
 
         // Validate that amount after deductions is not negative or too small
         if ($afterFixedCharge <= 0) {
-            $minimumRequired = $percn + $estateFee + $fixedCharge + 10;
+            $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10;
             throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                 '), estate fee (NGN ' . number_format($estateFee, 2) .
+                '), arrears (NGN ' . number_format($arrearsAmount, 2) .
+                '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                 '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                 '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
                 '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
@@ -157,7 +177,7 @@ class Meter extends Model
         $params = [
             'amountText' => $afterFixedCharge,
             'tariffAmount' => $tariffAmount,
-            'utilitiesAmount' => 0,
+            'utilitiesAmount' => $utilityOwed,
             'vat' => $vat,
         ];
 
@@ -169,7 +189,6 @@ class Meter extends Model
             throw new Exception('Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
         }
 
-
         return [
             'tariffAmount' => $tariffAmount,
             'vat' => $vat,
@@ -178,6 +197,10 @@ class Meter extends Model
             'afterServiceFee' => $afterServiceFee,
             'estateFee' => $estateFee,
             'afterEstateFee' => $afterEstateFee,
+            'arrearsOwed' => $arrearsAmount,
+            'afterArrears' => $afterArrears,
+            'utilityOwed' => $utilityOwed,
+            'afterUtility' => $afterUtility,
             'afterFixedCharge' => $afterFixedCharge,
             'vatAmount' => $vatAmount,
             'vending_amount' => $vending_amount,
@@ -189,20 +212,21 @@ class Meter extends Model
      * Calculate token values based on tariff and amount (without a Transaction).
      *
      * Variant of calculateTokenValues that takes a raw amount instead of a Transaction object.
+     * Includes debt-type utility deduction using UtilityManagementService.
      *
      * @param int $tariff_id The ID of the tariff to use for calculations
      * @param int $amount The amount in Naira to calculate token values for
-     * @return array Array of calculated values including service fees, charges, and unit details
+     * @param string|null $receiverMeterNo Optional receiver meter number for "pay for others" flow
+     * @return array Array of calculated values including service fees, charges, utility owed, and unit details
      * @throws \Exception When the amount is too small after deductions or unit is less than 0.1KWh
      */
-    public function calculateTokenValuesByAmount(int $tariff_id, int $amount): array
+    public function calculateTokenValuesByAmount(int $tariff_id, int $amount, ?string $receiverMeterNo = null): array
     {
         $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
         $tariffAmount = $tariffState->amount ?? 0;
         $vat = $tariffState->vat ?? 0;
         $fixedCharge = $tariffState->fixed_charge ?? 0;
 
-        // NEW CALCULATION FLOW:
         // [1] 2.5% Service Fee
         $percn = (2.5 / 100) * $amount;
         $afterServiceFee = $amount - $percn;
@@ -218,14 +242,39 @@ class Meter extends Model
         }
         $afterEstateFee = $afterServiceFee - $estateFee;
 
+        // [2.3] Unpaid UtilitiesPayment Arrears (old system)
+        if ($receiverMeterNo) {
+            $receiverMeter = self::where('meterNo', $receiverMeterNo)->first();
+            $debtUserId = $receiverMeter->user_id ?? $this->user_id;
+            $debtEstateId = $receiverMeter->estate_id ?? $this->estate_id;
+        } else {
+            $debtUserId = $this->user_id;
+            $debtEstateId = $this->estate_id;
+        }
+
+        $arrearsAmount = UtilitiesPayment::where('user_id', $debtUserId)
+            ->where('estate_id', $debtEstateId)
+            ->where('type', 'utilities')
+            ->where('status', '!=', 2)
+            ->sum('amount');
+        $afterArrears = $afterEstateFee - $arrearsAmount;
+
+        // [2.5] Debt-type Utility Owed
+        $utilityService = new \App\Services\UtilityManagementService();
+        $utilityResult = $utilityService->calculateUserOwedUtility($debtUserId, $debtEstateId);
+        $utilityOwed = $utilityResult['total_owed'];
+        $afterUtility = $afterArrears - $utilityOwed;
+
         // [3] Tariff Fixed Charge
-        $afterFixedCharge = $afterEstateFee - $fixedCharge;
+        $afterFixedCharge = $afterUtility - $fixedCharge;
 
         // Validate that amount after deductions is not negative or too small
         if ($afterFixedCharge <= 0) {
-            $minimumRequired = $percn + $estateFee + $fixedCharge + 10;
+            $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10;
             throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                 '), estate fee (NGN ' . number_format($estateFee, 2) .
+                '), arrears (NGN ' . number_format($arrearsAmount, 2) .
+                '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                 '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                 '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
                 '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
@@ -233,15 +282,11 @@ class Meter extends Model
 
         // [4] VAT Calculation on remaining amount
         $calculator = new VatCalculator();
-        $utilities_amount = UtilitiesPayment::where('user_id', Auth::user()->id)
-            ->where('status', '!=', 2)
-            ->where('type', '=', 'utilities')
-            ->sum('amount');
 
         $params = [
             'amountText' => $afterFixedCharge,
             'tariffAmount' => $tariffAmount,
-            'utilitiesAmount' => $utilities_amount,
+            'utilitiesAmount' => $utilityOwed,
             'vat' => $vat,
         ];
 
@@ -261,11 +306,14 @@ class Meter extends Model
             'afterServiceFee' => round($afterServiceFee, 2),
             'estateFee' => round($estateFee, 2),
             'afterEstateFee' => round($afterEstateFee, 2),
+            'arrearsOwed' => round($arrearsAmount, 2),
+            'afterArrears' => round($afterArrears, 2),
+            'utilityOwed' => round($utilityOwed, 2),
+            'afterUtility' => round($afterUtility, 2),
             'afterFixedCharge' => round($afterFixedCharge, 2),
             'vatAmount' => round($vatAmount, 2),
             'vendingAmount' => round($vending_amount, 2),
             'unit' => round($unit, 2),
-            'utilityAmount' => $utilities_amount,
         ];
     }
 
@@ -325,8 +373,10 @@ class Meter extends Model
                     ->firstOrFail();
 
                 // Calculate token values using the dedicated method
-
-                $calculatedValues = $this->calculateTokenValues($tariff_id, $trx);
+                // For "pay for others", use the receiver's user/estate for debt calculation
+                $debtUserId = $other_meter ? $other_meter->user_id : null;
+                $debtEstateId = $other_meter ? $other_meter->estate_id : null;
+                $calculatedValues = $this->calculateTokenValues($tariff_id, $trx, $debtUserId, $debtEstateId);
 
                 // Extract calculated values
                 $tariffAmount = $calculatedValues['tariffAmount'];
@@ -425,6 +475,23 @@ class Meter extends Model
 
 
                 $token = $token_gen['data']['token'];
+
+                // Settle debt-type utility for the appropriate user
+                try {
+                    $debtUser = $other_meter ?? $this;
+                    $utilityService = new \App\Services\UtilityManagementService();
+                    $utilityService->processPayment(
+                        $debtUser->user_id,
+                        $debtUser->estate_id,
+                        (float) $trx->amount,
+                        $trx_id
+                    );
+                } catch (\Throwable $e) {
+                    Logger::error('Debt utility settlement failed', [
+                        'trx_id' => $trx_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
                 $tariffAmount = $tariffState->amount ?? 0;

@@ -613,21 +613,30 @@ class TokenController extends Controller
             }
             $afterEstateFee = $afterServiceFee - $estateFee;
 
+            // [2.3] Unpaid UtilitiesPayment Arrears (old system)
+            $arrearsAmount = UtilitiesPayment::where('user_id', $user->id)
+                ->where('estate_id', $estate_id)
+                ->where('type', 'utilities')
+                ->where('status', '!=', 2)
+                ->sum('amount');
+            $afterArrears = $afterEstateFee - $arrearsAmount;
+
             // [2.5] Utility Owed
             $utilityService = new \App\Services\UtilityManagementService();
             $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
             $utilityOwed = $utilityResult['total_owed'];
-            $afterUtility = $afterEstateFee - $utilityOwed;
+            $afterUtility = $afterArrears - $utilityOwed;
 
             // [3] Tariff Fixed Charge
             $afterFixedCharge = $afterUtility - $fixedCharge;
 
             // Validate that amount after deductions is not negative or too small
             if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $utilityOwed + $fixedCharge + 10; // Adding small buffer
+                $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10; // Adding small buffer
                 return back()->with('error',
                     'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                     '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), arrears (NGN ' . number_format($arrearsAmount, 2) .
                     '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                     '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                     '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
@@ -672,6 +681,7 @@ class TokenController extends Controller
             $data['estate_name'] = $request->estate_id;
             $data['tarrif_amount'] = $tariffAmount;
             $data['utility_owed'] = $utilityOwed;
+            $data['arrears_owed'] = $arrearsAmount;
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
@@ -763,21 +773,30 @@ class TokenController extends Controller
             }
             $afterEstateFee = $afterServiceFee - $estateFee;
 
+            // [2.3] Unpaid UtilitiesPayment Arrears (old system)
+            $arrearsAmount = UtilitiesPayment::where('user_id', $user->id)
+                ->where('estate_id', $estate_id)
+                ->where('type', 'utilities')
+                ->where('status', '!=', 2)
+                ->sum('amount');
+            $afterArrears = $afterEstateFee - $arrearsAmount;
+
             // [2.5] Utility Owed
             $utilityService = new \App\Services\UtilityManagementService();
             $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
             $utilityOwed = $utilityResult['total_owed'];
-            $afterUtility = $afterEstateFee - $utilityOwed;
+            $afterUtility = $afterArrears - $utilityOwed;
 
             // [3] Tariff Fixed Charge
             $afterFixedCharge = $afterUtility - $fixedCharge;
 
             // Validate that amount after deductions is not negative or too small
             if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $utilityOwed + $fixedCharge + 10; // Adding small buffer
+                $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10; // Adding small buffer
                 return back()->with('error',
                     'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                     '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), arrears (NGN ' . number_format($arrearsAmount, 2) .
                     '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                     '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                     '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
@@ -815,6 +834,7 @@ class TokenController extends Controller
             $data['estate_name'] = $estate_id; // Estate Admin uses their assigned estate ID
             $data['tarrif_amount'] = $tariffAmount;
             $data['utility_owed'] = $utilityOwed;
+            $data['arrears_owed'] = $arrearsAmount;
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
