@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\CreditToken;
 use App\Models\Estate;
+use App\Models\EstateModFeature;
 use App\Models\Meter;
+use App\Models\ModFeature;
 use App\Models\Tariff;
 use App\Models\TarrifState;
 use App\Models\Transformer;
@@ -481,6 +483,15 @@ class ImportLegacyEcmiData extends Command
 
             $estate = Estate::create($payload);
             $this->estateMap[$row->BUID] = $estate->id;
+
+            $allFeatures = ModFeature::all();
+            foreach ($allFeatures as $feature) {
+                EstateModFeature::create([
+                    'estate_id'      => $estate->id,
+                    'mod_feature_id' => $feature->id,
+                    'status'         => $feature->status,
+                ]);
+            }
         }
     }
 
@@ -773,6 +784,7 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($rows as $row) {
             $email = $row->email ?? $emailize($row->first_name, $row->last_name);
+            $email = $this->uniqueEmail($email);
 
             $payload = [
                 'first_name'   => $row->first_name ?? null,
@@ -809,10 +821,12 @@ class ImportLegacyEcmiData extends Command
         foreach ($rows as $row) {
             [$first, $last] = $this->splitName($row->FullName);
 
+            $email = $this->uniqueEmail(strtolower($row->OperatorName));
+
             $payload = [
                 'first_name' => $first,
                 'last_name'  => $last,
-                'email'      => strtolower($row->OperatorName),
+                'email'      => $email,
                 'phone'      => $row->PhoneNumber,
                 'meterNo'    => $row->MeterNo,
                 'role'       => 2,
@@ -887,9 +901,8 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            // Deduplicate emails at insert time
-            if (User::where('email', $payload['email'])->exists()) {
-                $payload['email'] = 'legacy_' . uniqid() . '@legacy.local.com';
+            if (!$this->isDryRun()) {
+                $payload['email'] = $this->uniqueEmail($payload['email']);
             }
 
             User::updateOrCreate(['meterNo' => $row->MeterNo], $payload);
@@ -1038,6 +1051,17 @@ class ImportLegacyEcmiData extends Command
         $this->info("[DRY RUN] {$type}");
         $this->line(json_encode($data, JSON_PRETTY_PRINT));
         $this->line('=====================================');
+    }
+
+    protected function uniqueEmail(string $email): string
+    {
+        $original = $email;
+        while (User::where('email', $email)->exists()) {
+            $local  = explode('@', $original)[0];
+            $domain = explode('@', $original)[1] ?? 'legacy.local.com';
+            $email  = $local . '_dup' . Str::random(6) . '@' . $domain;
+        }
+        return $email;
     }
 
     // -----------------------------------------------------------------------
