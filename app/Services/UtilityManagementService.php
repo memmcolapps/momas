@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Constants\UserUtilityStatus;
 use App\Exceptions\InsufficientPaymentException;
 use App\Models\Logger;
 use App\Models\Transaction;
@@ -70,7 +71,7 @@ class UtilityManagementService
                     'amount' => $utility->amount,
                     'amount_paid' => 0,
                     'activated' => $utility->activated,
-                    'status' => 0,
+                    'status' => UserUtilityStatus::INACTIVE,
                 ]
             );
         }
@@ -92,7 +93,7 @@ class UtilityManagementService
     {
         // dd($utilities->toArray(), $userUtilities->toArray());
         foreach ($userUtilities as $userUtility) {
-            if (!$userUtility->activated && $userUtility->status == 0) {
+            if (!$userUtility->activated && $userUtility->status == UserUtilityStatus::INACTIVE) {
                 $utility = $utilities->firstWhere('id', $userUtility->utility_id);
                 if (
                     $utility &&
@@ -195,7 +196,7 @@ class UtilityManagementService
 
                     $userUtility->amount_paid = $newAmountPaid;
                     $userUtility->activated = !$fullyPaid;
-                    $userUtility->status = $fullyPaid ? 2 : 1;
+                    $userUtility->status = $fullyPaid ? UserUtilityStatus::PAID : UserUtilityStatus::ACTIVE;
                     $userUtility->save();
 
                     UtilityPaymentRecord::create([

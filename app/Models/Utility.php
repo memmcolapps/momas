@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Constants\UserUtilityStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
@@ -41,9 +42,27 @@ class Utility extends Model implements AuditableContract
         'monthly_end_date' => 'date',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function (Utility $utility) {
+            UserUtility::where('utility_id', $utility->id)
+                ->update([
+                    'status' => UserUtilityStatus::DEACTIVATED,
+                    'activated' => false,
+                ]);
+        });
+    }
+
     public function estate()
     {
         return $this->belongsTo(Estate::class);
+    }
+
+    public function userUtilities()
+    {
+        return $this->hasMany(UserUtility::class);
     }
 
     public function user()
