@@ -722,6 +722,7 @@ if (! function_exists('backfill_utility_payments')) {
                 'duration'      => $duration,
                 'type'          => $type,
                 'status'        => 0,
+                'created_at'    => $startDate,
             ]);
         };
 

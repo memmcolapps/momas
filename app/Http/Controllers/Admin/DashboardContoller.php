@@ -404,6 +404,8 @@ class DashboardContoller extends Controller
             $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first() ?? null;
             $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->sum('amount');
             $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get() ?? null;
+            $data['service_charges'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get();
+            $data['debt_utilities'] = Utility::where('estate_id', Auth::user()->estate_id)->debt()->whereNull('user_id')->get();
 
             return view('admin/settings', $data);
         } elseif (Auth::user()->isEstateStaff()) {

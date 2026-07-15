@@ -900,122 +900,244 @@
                                         <hr class="my-4">
 
 
-                                        @if($utility != null)
-
-                                            <h6 class="my-3">Available Utilities</h6>
-
-
-
-
-
-
-                                            @foreach($utility as $index => $data)
-
-                                                <form action="update-utility" method="get" class="row">
-                                                    @csrf
-                                                    <input type="hidden" name="id" value="{{$data->id}}"
-                                                           required>
-                                                    <input type="hidden" name="type" value="{{ $data->type ?? 'service_charge' }}">
-
-                                                    @if(($data->type ?? 'service_charge') == 'service_charge')
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Title</label>
-                                                            <input type="text" name="title" id="title_{{$index}}"
-                                                                   class="form-control" value="{{$data->title ?? "name"}}"
-                                                                   required>
+                                        <div class="row">
+                                            <div class="col-xl-12">
+                                                <div class="card overflow-hidden">
+                                                    <div class="card-header">
+                                                        <div class="d-flex justify-content-between">
+                                                            <h5 class="card-title text-black mb-0">Service Charges</h5>
+                                                            <span class="badge text-bg-info">{{ $service_charges->count() }} Total</span>
                                                         </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Amount</label>
-                                                            <input type="text" name="amount" id="amount_{{$index}}"
-                                                                   class="form-control" value="{{$data->amount}}"
-                                                                   required>
-                                                        </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Duration</label>
-                                                            <select name="duration" class="form-control">
-                                                                <option value="per_transaction" @selected($data->duration == 'per_transaction')>Per Transaction</option>
-                                                                <option value="weekly" @selected($data->duration == 'weekly')>Weekly</option>
-                                                                <option value="monthly" @selected(($data->duration ?? 'monthly') == 'monthly')>Monthly</option>
-                                                                <option value="yearly" @selected($data->duration == 'yearly')>Yearly</option>
-                                                            </select>
-                                                        </div>
-                                                    @else
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Title</label>
-                                                            <input type="text" name="title" id="title_{{$index}}"
-                                                                   class="form-control" value="{{$data->title ?? "name"}}"
-                                                                   required>
-                                                        </div>
-
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Amount</label>
-                                                            <input type="text" name="amount" id="amount_{{$index}}"
-                                                                   class="form-control" value="{{$data->amount}}"
-                                                                   required>
-                                                        </div>
-
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Start Date</label>
-                                                            <input type="date" name="start_date"
-                                                                   class="form-control" value="{{$data->start_date ? \Carbon\Carbon::parse($data->start_date)->format('Y-m-d') : ''}}">
-                                                        </div>
-
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Mode of Payment</label>
-                                                            <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
-                                                                <option value="">Select</option>
-                                                                <option value="percentage_payment" @selected($data->mode_of_payment == 'percentage_payment')>Percentage Payment</option>
-                                                                <option value="monthly_payment" @selected($data->mode_of_payment == 'monthly_payment')>Monthly Payment</option>
-                                                                <option value="one_off" @selected($data->mode_of_payment == 'one_off')>One-Off</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Activated</label>
-                                                            <select name="activated" class="form-control">
-                                                                <option value="0" @selected(!$data->activated)>No</option>
-                                                                <option value="1" @selected($data->activated)>Yes</option>
-                                                            </select>
-                                                        </div>
-
-                                                        @if($data->user_id && $data->user)
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-1">Customer</label>
-                                                            <input type="text" class="form-control" value="{{ $data->user->first_name }} {{ $data->user->last_name }}" disabled>
-                                                        </div>
-                                                        @endif
-
-                                                        <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: {{ $data->mode_of_payment == 'percentage_payment' ? 'block' : 'none' }};">
-                                                            <label class="my-1">% Payment</label>
-                                                            <select name="percent_payment" class="form-control">
-                                                                <option value="">Select</option>
-                                                                @for($pct = 5; $pct <= 70; $pct += 5)
-                                                                    <option value="{{ $pct }}" @selected($data->percent_payment == $pct)>{{ $pct }}%</option>
-                                                                @endfor
-                                                            </select>
-                                                        </div>
-
-                                                        <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: {{ $data->mode_of_payment == 'monthly_payment' ? 'block' : 'none' }};">
-                                                            <label class="my-1">Number of Months</label>
-                                                            <input type="number" name="payment_months" min="1" max="60"
-                                                                   class="form-control" value="{{$data->payment_months}}">
-                                                        </div>
-                                                    @endif
-
-                                                    <div class="col-12 my-3">
-                                                        <button type="submit" class="btn btn-primary">Update</button>
-                                                        <a href="delete-utility?id={{$data->id}}"
-                                                           class="btn btn-danger"
-                                                           onclick="return confirm('Are you sure you want to delete this item?');">Delete</a>
                                                     </div>
-                                                </form>
+                                                    <div class="card-body">
+                                                        <table class="table table-striped table-bordered dt-responsive nowrap">
+                                                            <thead>
+                                                            <tr>
+                                                                <th scope="col" class="cursor-pointer">ID</th>
+                                                                <th scope="col" class="cursor-pointer">Title</th>
+                                                                <th scope="col" class="cursor-pointer">Amount</th>
+                                                                <th scope="col" class="cursor-pointer">Mode of Payment</th>
+                                                                <th scope="col" class="cursor-pointer">Start Date</th>
+                                                                <th scope="col" class="cursor-pointer">Activated</th>
+                                                                <th scope="col" class="cursor-pointer">Status</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                            @forelse($service_charges as $sc)
+                                                                <tr>
+                                                                    <td>{{ $sc->id }}</td>
+                                                                    <td>{{ $sc->title }}</td>
+                                                                    <td>NGN {{ number_format($sc->amount, 2) }}</td>
+                                                                    <td>{{ str_replace('_', ' ', ucwords($sc->mode_of_payment ?? 'N/A')) }}</td>
+                                                                    <td>{{ $sc->start_date ? \Carbon\Carbon::parse($sc->start_date)->format('Y-m-d') : '-' }}</td>
+                                                                    <td>
+                                                                        @if($sc->activated)
+                                                                            <span class="badge text-bg-success">Yes</span>
+                                                                        @else
+                                                                            <span class="badge text-bg-secondary">No</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($sc->status == 2)
+                                                                            <span class="badge text-bg-primary">Active</span>
+                                                                        @elseif($sc->status == 0)
+                                                                            <span class="badge text-bg-warning">Inactive</span>
+                                                                        @else
+                                                                            <span class="badge text-bg-secondary">N/A</span>
+                                                                        @endif
+                                                                    </td>
+                                                                </tr>
+                                                            @empty
+                                                                <tr>
+                                                                    <td colspan="7" class="text-center">No service charge utilities found.</td>
+                                                                </tr>
+                                                            @endforelse
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                            @endforeach
+                                        <div class="row">
+                                            <div class="col-xl-12">
+                                                <div class="card overflow-hidden">
+                                                    <div class="card-header">
+                                                        <div class="d-flex justify-content-between">
+                                                            <h5 class="card-title text-black mb-0">Debt Type Utilities</h5>
+                                                            <span class="badge text-bg-warning">{{ $debt_utilities->count() }} Total</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <table class="table table-striped table-bordered dt-responsive nowrap">
+                                                            <thead>
+                                                            <tr>
+                                                                <th scope="col" class="cursor-pointer">ID</th>
+                                                                <th scope="col" class="cursor-pointer">Title</th>
+                                                                <th scope="col" class="cursor-pointer">Amount</th>
+                                                                <th scope="col" class="cursor-pointer">Mode of Payment</th>
+                                                                <th scope="col" class="cursor-pointer">Start Date</th>
+                                                                <th scope="col" class="cursor-pointer">Activated</th>
+                                                                <th scope="col" class="cursor-pointer">Status</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                            @forelse($debt_utilities as $debt)
+                                                                <tr>
+                                                                    <td>{{ $debt->id }}</td>
+                                                                    <td>{{ $debt->title }}</td>
+                                                                    <td>NGN {{ number_format($debt->amount, 2) }}</td>
+                                                                    <td>{{ str_replace('_', ' ', ucwords($debt->mode_of_payment ?? 'N/A')) }}</td>
+                                                                    <td>{{ $debt->start_date ? \Carbon\Carbon::parse($debt->start_date)->format('Y-m-d') : '-' }}</td>
+                                                                    <td>
+                                                                        @if($debt->activated)
+                                                                            <span class="badge text-bg-success">Yes</span>
+                                                                        @else
+                                                                            <span class="badge text-bg-secondary">No</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($debt->status == 2)
+                                                                            <span class="badge text-bg-primary">Active</span>
+                                                                        @elseif($debt->status == 0)
+                                                                            <span class="badge text-bg-warning">Inactive</span>
+                                                                        @else
+                                                                            <span class="badge text-bg-secondary">N/A</span>
+                                                                        @endif
+                                                                    </td>
+                                                                </tr>
+                                                            @empty
+                                                                <tr>
+                                                                    <td colspan="7" class="text-center">No debt type utilities found.</td>
+                                                                </tr>
+                                                            @endforelse
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                        @else
-                                            <p>No utilities available.</p>
-                                        @endif
+                                        <hr class="my-4">
 
+                                        <h6 class="my-3">Edit Service Charges</h6>
+
+                                        @forelse($service_charges as $index => $sc)
+                                            <form action="update-utility" method="get" class="row">
+                                                @csrf
+                                                <input type="hidden" name="id" value="{{ $sc->id }}" required>
+                                                <input type="hidden" name="type" value="service_charge">
+
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Title</label>
+                                                    <input type="text" name="title" id="title_sc_{{ $index }}"
+                                                           class="form-control" value="{{ $sc->title ?? '' }}" required>
+                                                </div>
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Amount</label>
+                                                    <input type="text" name="amount" id="amount_sc_{{ $index }}"
+                                                           class="form-control" value="{{ $sc->amount }}" required>
+                                                </div>
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Duration</label>
+                                                    <select name="duration" class="form-control">
+                                                        <option value="per_transaction" @selected($sc->duration == 'per_transaction')>Per Transaction</option>
+                                                        <option value="weekly" @selected($sc->duration == 'weekly')>Weekly</option>
+                                                        <option value="monthly" @selected(($sc->duration ?? 'monthly') == 'monthly')>Monthly</option>
+                                                        <option value="yearly" @selected($sc->duration == 'yearly')>Yearly</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-12 my-3">
+                                                    <button type="submit" class="btn btn-primary">Update</button>
+                                                    <a href="delete-utility?id={{ $sc->id }}"
+                                                       class="btn btn-danger"
+                                                       onclick="return confirm('Are you sure you want to delete this item?');">Delete</a>
+                                                </div>
+                                            </form>
+                                        @empty
+                                            <p>No service charge utilities to edit.</p>
+                                        @endforelse
+
+                                        <hr class="my-4">
+
+                                        <h6 class="my-3">Edit Debt Type Utilities</h6>
+
+                                        @forelse($debt_utilities as $index => $data)
+                                            <form action="update-utility" method="get" class="row">
+                                                @csrf
+                                                <input type="hidden" name="id" value="{{ $data->id }}" required>
+                                                <input type="hidden" name="type" value="debt">
+
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Title</label>
+                                                    <input type="text" name="title" id="title_debt_{{ $index }}"
+                                                           class="form-control" value="{{ $data->title ?? '' }}" required>
+                                                </div>
+
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Amount</label>
+                                                    <input type="text" name="amount" id="amount_debt_{{ $index }}"
+                                                           class="form-control" value="{{ $data->amount }}" required>
+                                                </div>
+
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Start Date</label>
+                                                    <input type="date" name="start_date"
+                                                           class="form-control" value="{{ $data->start_date ? \Carbon\Carbon::parse($data->start_date)->format('Y-m-d') : '' }}">
+                                                </div>
+
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Mode of Payment</label>
+                                                    <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
+                                                        <option value="">Select</option>
+                                                        <option value="percentage_payment" @selected($data->mode_of_payment == 'percentage_payment')>Percentage Payment</option>
+                                                        <option value="monthly_payment" @selected($data->mode_of_payment == 'monthly_payment')>Monthly Payment</option>
+                                                        <option value="one_off" @selected($data->mode_of_payment == 'one_off')>One-Off</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-xl-3 col-sm-12 my-1">
+                                                    <label class="my-1">Activated</label>
+                                                    <select name="activated" class="form-control">
+                                                        <option value="0" @selected(!$data->activated)>No</option>
+                                                        <option value="1" @selected($data->activated)>Yes</option>
+                                                    </select>
+                                                </div>
+
+                                                @if($data->user_id && $data->user)
+                                                    <div class="col-xl-3 col-sm-12 my-1">
+                                                        <label class="my-1">Customer</label>
+                                                        <input type="text" class="form-control" value="{{ $data->user->first_name }} {{ $data->user->last_name }}" disabled>
+                                                    </div>
+                                                @endif
+
+                                                <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: {{ $data->mode_of_payment == 'percentage_payment' ? 'block' : 'none' }};">
+                                                    <label class="my-1">% Payment</label>
+                                                    <select name="percent_payment" class="form-control">
+                                                        <option value="">Select</option>
+                                                        @for($pct = 5; $pct <= 70; $pct += 5)
+                                                            <option value="{{ $pct }}" @selected($data->percent_payment == $pct)>{{ $pct }}%</option>
+                                                        @endfor
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: {{ $data->mode_of_payment == 'monthly_payment' ? 'block' : 'none' }};">
+                                                    <label class="my-1">Number of Months</label>
+                                                    <input type="number" name="payment_months" min="1" max="60"
+                                                           class="form-control" value="{{ $data->payment_months }}">
+                                                </div>
+
+                                                <div class="col-12 my-3">
+                                                    <button type="submit" class="btn btn-primary">Update</button>
+                                                    <a href="delete-utility?id={{ $data->id }}"
+                                                       class="btn btn-danger"
+                                                       onclick="return confirm('Are you sure you want to delete this item?');">Delete</a>
+                                                </div>
+                                            </form>
+                                        @empty
+                                            <p>No debt type utilities to edit.</p>
+                                        @endforelse
 
                                         <hr class="my-2">
 
