@@ -915,78 +915,92 @@
                                                     @csrf
                                                     <input type="hidden" name="id" value="{{$data->id}}"
                                                            required>
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Title</label>
-                                                        <input type="text" name="title" id="title_{{$index}}"
-                                                               class="form-control" value="{{$data->title ?? "name"}}"
-                                                               required>
-                                                    </div>
+                                                    <input type="hidden" name="type" value="{{ $data->type ?? 'service_charge' }}">
 
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Amount</label>
-                                                        <input type="text" name="amount" id="amount_{{$index}}"
-                                                               class="form-control" value="{{$data->amount}}"
-                                                               required>
-                                                    </div>
+                                                    @if(($data->type ?? 'service_charge') == 'service_charge')
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Title</label>
+                                                            <input type="text" name="title" id="title_{{$index}}"
+                                                                   class="form-control" value="{{$data->title ?? "name"}}"
+                                                                   required>
+                                                        </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Amount</label>
+                                                            <input type="text" name="amount" id="amount_{{$index}}"
+                                                                   class="form-control" value="{{$data->amount}}"
+                                                                   required>
+                                                        </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Duration</label>
+                                                            <select name="duration" class="form-control">
+                                                                <option value="per_transaction" @selected($data->duration == 'per_transaction')>Per Transaction</option>
+                                                                <option value="weekly" @selected($data->duration == 'weekly')>Weekly</option>
+                                                                <option value="monthly" @selected(($data->duration ?? 'monthly') == 'monthly')>Monthly</option>
+                                                                <option value="yearly" @selected($data->duration == 'yearly')>Yearly</option>
+                                                            </select>
+                                                        </div>
+                                                    @else
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Title</label>
+                                                            <input type="text" name="title" id="title_{{$index}}"
+                                                                   class="form-control" value="{{$data->title ?? "name"}}"
+                                                                   required>
+                                                        </div>
 
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Start Date</label>
-                                                        <input type="date" name="start_date"
-                                                               class="form-control" value="{{$data->start_date ? \Carbon\Carbon::parse($data->start_date)->format('Y-m-d') : ''}}">
-                                                    </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Amount</label>
+                                                            <input type="text" name="amount" id="amount_{{$index}}"
+                                                                   class="form-control" value="{{$data->amount}}"
+                                                                   required>
+                                                        </div>
 
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Mode of Payment</label>
-                                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
-                                                            <option value="">Select</option>
-                                                            <option value="percentage_payment" @selected($data->mode_of_payment == 'percentage_payment')>Percentage Payment</option>
-                                                            <option value="monthly_payment" @selected($data->mode_of_payment == 'monthly_payment')>Monthly Payment</option>
-                                                            <option value="one_off" @selected($data->mode_of_payment == 'one_off')>One-Off</option>
-                                                        </select>
-                                                    </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Start Date</label>
+                                                            <input type="date" name="start_date"
+                                                                   class="form-control" value="{{$data->start_date ? \Carbon\Carbon::parse($data->start_date)->format('Y-m-d') : ''}}">
+                                                        </div>
 
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Payment Amount</label>
-                                                        <input type="number" step="0.01" name="payment_amount"
-                                                               class="form-control" value="{{$data->payment_amount}}">
-                                                    </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Mode of Payment</label>
+                                                            <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
+                                                                <option value="">Select</option>
+                                                                <option value="percentage_payment" @selected($data->mode_of_payment == 'percentage_payment')>Percentage Payment</option>
+                                                                <option value="monthly_payment" @selected($data->mode_of_payment == 'monthly_payment')>Monthly Payment</option>
+                                                                <option value="one_off" @selected($data->mode_of_payment == 'one_off')>One-Off</option>
+                                                            </select>
+                                                        </div>
 
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Activated</label>
-                                                        <select name="activated" class="form-control">
-                                                            <option value="0" @selected(!$data->activated)>No</option>
-                                                            <option value="1" @selected($data->activated)>Yes</option>
-                                                        </select>
-                                                    </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Activated</label>
+                                                            <select name="activated" class="form-control">
+                                                                <option value="0" @selected(!$data->activated)>No</option>
+                                                                <option value="1" @selected($data->activated)>Yes</option>
+                                                            </select>
+                                                        </div>
 
-                                                    @if($data->user_id && $data->user)
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Customer</label>
-                                                        <input type="text" class="form-control" value="{{ $data->user->first_name }} {{ $data->user->last_name }}" disabled>
-                                                    </div>
+                                                        @if($data->user_id && $data->user)
+                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                            <label class="my-1">Customer</label>
+                                                            <input type="text" class="form-control" value="{{ $data->user->first_name }} {{ $data->user->last_name }}" disabled>
+                                                        </div>
+                                                        @endif
+
+                                                        <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: {{ $data->mode_of_payment == 'percentage_payment' ? 'block' : 'none' }};">
+                                                            <label class="my-1">% Payment</label>
+                                                            <select name="percent_payment" class="form-control">
+                                                                <option value="">Select</option>
+                                                                @for($pct = 5; $pct <= 70; $pct += 5)
+                                                                    <option value="{{ $pct }}" @selected($data->percent_payment == $pct)>{{ $pct }}%</option>
+                                                                @endfor
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: {{ $data->mode_of_payment == 'monthly_payment' ? 'block' : 'none' }};">
+                                                            <label class="my-1">Number of Months</label>
+                                                            <input type="number" name="payment_months" min="1" max="60"
+                                                                   class="form-control" value="{{$data->payment_months}}">
+                                                        </div>
                                                     @endif
-
-                                                    <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: {{ $data->mode_of_payment == 'percentage_payment' ? 'block' : 'none' }};">
-                                                        <label class="my-1">% Payment</label>
-                                                        <select name="percent_payment" class="form-control">
-                                                            <option value="">Select</option>
-                                                            @for($pct = 5; $pct <= 70; $pct += 5)
-                                                                <option value="{{ $pct }}" @selected($data->percent_payment == $pct)>{{ $pct }}%</option>
-                                                            @endfor
-                                                        </select>
-                                                    </div>
-
-                                                    <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: {{ $data->mode_of_payment == 'monthly_payment' ? 'block' : 'none' }};">
-                                                        <label class="my-1">Number of Months</label>
-                                                        <input type="number" name="payment_months" min="1" max="60"
-                                                               class="form-control" value="{{$data->payment_months}}">
-                                                    </div>
-
-                                                    <div class="col-xl-3 col-sm-12 my-1">
-                                                        <label class="my-1">Type</label>
-                                                        <input type="text" class="form-control" value="{{ ucfirst(str_replace('_', ' ', $data->type ?? 'service_charge')) }}" disabled>
-                                                        <input type="hidden" name="type" value="{{ $data->type ?? 'service_charge' }}">
-                                                    </div>
 
                                                     <div class="col-12 my-3">
                                                         <button type="submit" class="btn btn-primary">Update</button>
@@ -1029,22 +1043,35 @@
                                                             <label class="my-2">Title</label>
                                                             <input type="text" name="title[]" class="form-control" required>
                                                         </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                        <div class="col-xl-3 col-sm-12 my-1 sc-field" style="display: none;">
+                                                            <label class="my-2">Amount</label>
+                                                            <input type="number" step="0.01" name="amount[]" class="form-control" required>
+                                                        </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1 sc-field" style="display: none;">
+                                                            <label class="my-2">Duration</label>
+                                                            <select name="duration[]" class="form-control">
+                                                                <option value="per_transaction">Per Transaction</option>
+                                                                <option value="weekly">Weekly</option>
+                                                                <option value="monthly" selected>Monthly</option>
+                                                                <option value="yearly">Yearly</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-xl-3 col-sm-12 my-1 debt-field">
                                                             <label class="my-2">Amount</label>
                                                             <input type="number" step="0.01" name="amount[]" class="form-control" required>
                                                         </div>
                                                         <div class="col-xl-3 col-sm-12 my-1">
                                                             <label class="my-2">Type</label>
-                                                            <select name="type[]" class="form-control">
+                                                            <select name="type[]" class="form-control utility-type" onchange="toggleUtilityTypeFields(this)">
                                                                 <option value="service_charge" selected>Service Charge</option>
                                                                 <option value="debt">Debt</option>
                                                             </select>
                                                         </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                        <div class="col-xl-3 col-sm-12 my-1 debt-field">
                                                             <label class="my-2">Start Date</label>
                                                             <input type="date" name="start_date[]" class="form-control">
                                                         </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                        <div class="col-xl-3 col-sm-12 my-1 debt-field">
                                                             <label class="my-2">Mode of Payment</label>
                                                             <select name="mode_of_payment[]" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
                                                                 <option value="">Select</option>
@@ -1053,18 +1080,14 @@
                                                                 <option value="one_off">One-Off</option>
                                                             </select>
                                                         </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1">
-                                                            <label class="my-2">Payment Amount</label>
-                                                            <input type="number" step="0.01" name="payment_amount[]" class="form-control">
-                                                        </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1">
+                                                        <div class="col-xl-3 col-sm-12 my-1 debt-field">
                                                             <label class="my-2">Activated</label>
                                                             <select name="activated[]" class="form-control">
                                                                 <option value="0">No</option>
                                                                 <option value="1">Yes</option>
                                                             </select>
                                                         </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: none;">
+                                                        <div class="col-xl-3 col-sm-12 my-1 percent-field debt-field" style="display: none;">
                                                             <label class="my-2">% Payment</label>
                                                             <select name="percent_payment[]" class="form-control">
                                                                 <option value="">Select</option>
@@ -1073,7 +1096,7 @@
                                                                 @endfor
                                                             </select>
                                                         </div>
-                                                        <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: none;">
+                                                        <div class="col-xl-3 col-sm-12 my-1 months-field debt-field" style="display: none;">
                                                             <label class="my-2">Number of Months</label>
                                                             <input type="number" name="payment_months[]" min="1" max="60" class="form-control">
                                                         </div>
@@ -1092,6 +1115,21 @@
                                         </form>
 
                                         <script>
+                                            function toggleUtilityTypeFields(select) {
+                                                var container = select.closest('.row');
+                                                if (!container) return;
+                                                var scFields = container.querySelectorAll('.sc-field');
+                                                var debtFields = container.querySelectorAll('.debt-field');
+
+                                                if (select.value === 'service_charge') {
+                                                    scFields.forEach(f => f.style.display = '');
+                                                    debtFields.forEach(f => f.style.display = 'none');
+                                                } else {
+                                                    scFields.forEach(f => f.style.display = 'none');
+                                                    debtFields.forEach(f => f.style.display = '');
+                                                }
+                                            }
+
                                             function togglePaymentFields(select) {
                                                 var container = select.closest('.row');
                                                 if (!container) return;
@@ -1108,6 +1146,11 @@
                                                 }
                                             }
 
+                                            function initTypeToggle(container) {
+                                                var typeSelect = container.querySelector('.utility-type');
+                                                if (typeSelect) toggleUtilityTypeFields(typeSelect);
+                                            }
+
                                             let utilities = [];
 
                                             document.getElementById('add-more').addEventListener('click', function () {
@@ -1116,34 +1159,56 @@
                                                 template.removeAttribute('id');
 
                                                 document.getElementById('utility-fields').appendChild(template);
+                                                initTypeToggle(template);
                                             });
 
+                                            document.querySelectorAll('.utility-type').forEach(function(el) {
+                                                initTypeToggle(el.closest('.row'));
+                                            });
 
                                             document.getElementById('save').addEventListener('click', function () {
-                                                let titles = document.querySelectorAll('input[name="title[]"]');
-                                                let amounts = document.querySelectorAll('input[name="amount[]"]');
                                                 let types = document.querySelectorAll('select[name="type[]"]');
-                                                let startDates = document.querySelectorAll('input[name="start_date[]"]');
-                                                let modeOfPayments = document.querySelectorAll('select[name="mode_of_payment[]"]');
-                                                let paymentAmounts = document.querySelectorAll('input[name="payment_amount[]"]');
-                                                let activateds = document.querySelectorAll('select[name="activated[]"]');
-                                                let percentPayments = document.querySelectorAll('select[name="percent_payment[]"]');
-                                                let paymentMonthsList = document.querySelectorAll('input[name="payment_months[]"]');
+                                                let utilities = [];
 
-                                                utilities = [];
+                                                for (let i = 0; i < types.length; i++) {
+                                                    let container = types[i].closest('.row');
+                                                    let type = types[i].value;
 
-                                                for (let i = 0; i < titles.length; i++) {
-                                                    utilities.push({
-                                                        title: titles[i].value,
-                                                        amount: amounts[i].value,
-                                                        type: types[i]?.value || 'service_charge',
-                                                        start_date: startDates[i]?.value || null,
-                                                        mode_of_payment: modeOfPayments[i]?.value || null,
-                                                        payment_amount: paymentAmounts[i]?.value || null,
-                                                        activated: activateds[i]?.value || '0',
-                                                        percent_payment: percentPayments[i]?.value || null,
-                                                        payment_months: paymentMonthsList[i]?.value || null,
-                                                    });
+                                                    if (type === 'service_charge') {
+                                                        let titles = container.querySelectorAll('input[name="title[]"]');
+                                                        let amounts = container.querySelectorAll('input[name="amount[]"]');
+                                                        let durations = container.querySelectorAll('select[name="duration[]"]');
+                                                        utilities.push({
+                                                            title: titles[0]?.value || '',
+                                                            amount: amounts[amounts.length - 1]?.value || amounts[0]?.value || '',
+                                                            type: 'service_charge',
+                                                            duration: durations[0]?.value || 'monthly',
+                                                            start_date: null,
+                                                            mode_of_payment: null,
+                                                            activated: '0',
+                                                            percent_payment: null,
+                                                            payment_months: null,
+                                                        });
+                                                    } else {
+                                                        let titles = container.querySelectorAll('input[name="title[]"]');
+                                                        let amounts = container.querySelectorAll('input[name="amount[]"]');
+                                                        let startDates = container.querySelectorAll('input[name="start_date[]"]');
+                                                        let modeOfPayments = container.querySelectorAll('select[name="mode_of_payment[]"]');
+                                                        let activateds = container.querySelectorAll('select[name="activated[]"]');
+                                                        let percentPayments = container.querySelectorAll('select[name="percent_payment[]"]');
+                                                        let paymentMonthsList = container.querySelectorAll('input[name="payment_months[]"]');
+                                                        utilities.push({
+                                                            title: titles[0]?.value || '',
+                                                            amount: amounts[amounts.length - 1]?.value || amounts[0]?.value || '',
+                                                            type: 'debt',
+                                                            duration: null,
+                                                            start_date: startDates[0]?.value || null,
+                                                            mode_of_payment: modeOfPayments[0]?.value || null,
+                                                            activated: activateds[0]?.value || '0',
+                                                            percent_payment: percentPayments[0]?.value || null,
+                                                            payment_months: paymentMonthsList[0]?.value || null,
+                                                        });
+                                                    }
                                                 }
 
                                                 console.log("Utilities Data: ", utilities);

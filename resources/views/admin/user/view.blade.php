@@ -1,7 +1,3 @@
-@php
-    // dump("Hello World");
-@endphp
-
 @extends('layouts.main')
 @section('content')
 
@@ -399,7 +395,7 @@
 
                                                     <label class="my-2">Set percentage %</label>
                                                     <input type="number" step="0.01" name="percent" class="form-control"
-                                                           value="{{$percentage}}" required>
+                                                           value="{{$percentage}}" disabled>
                                                     <input type="text" name="user_id" value="{{$user->id}}" hidden>
                                                     <input type="text" name="estate_id" value="{{$user->estate_id}}" hidden>
 
@@ -410,7 +406,7 @@
                                                 </div>
 
                                                 <div class="col-xl-3 col-sm-12">
-                                                    <button type="submit" class="col-12 d-flex w-100 btn btn-primary my-3">
+                                                    <button type="submit" class="col-12 d-flex w-100 btn btn-primary my-3" disabled>
                                                         Update
                                                     </button>
                                                 </div>
@@ -441,13 +437,7 @@
                                         <input type="number" step="0.01" name="amount" class="form-control" required>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Type</label>
-                                        <select name="type" class="form-control">
-                                            <option value="debt" selected>Debt</option>
-                                            <option value="service_charge">Service Charge</option>
-                                        </select>
-                                    </div>
+                                    <input type="hidden" name="type" value="debt">
 
                                     <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Start Date</label>
@@ -462,11 +452,6 @@
                                             <option value="monthly_payment">Monthly Payment</option>
                                             <option value="one_off">One-Off</option>
                                         </select>
-                                    </div>
-
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Payment Amount</label>
-                                        <input type="number" step="0.01" name="payment_amount" class="form-control">
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12 my-1">
@@ -1235,7 +1220,7 @@
 
                                                     <label class="my-2">Set percentage %</label>
                                                     <input type="number" step="0.01" name="percent" class="form-control"
-                                                           value="{{$percentage}}" required>
+                                                           value="{{$percentage}}" disabled>
                                                     <input type="text" name="user_id" value="{{$user->id}}" hidden>
                                                     <input type="text" name="estate_id" value="{{$user->estate_id}}" hidden>
 
@@ -1246,7 +1231,7 @@
                                                 </div>
 
                                                 <div class="col-xl-3 col-sm-12">
-                                                    <button type="submit" class="col-12 d-flex w-100 btn btn-primary my-3">
+                                                    <button type="submit" class="col-12 d-flex w-100 btn btn-primary my-3" disabled>
                                                         Update
                                                     </button>
                                                 </div>
@@ -1277,13 +1262,7 @@
                                         <input type="number" step="0.01" name="amount" class="form-control" required>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Type</label>
-                                        <select name="type" class="form-control">
-                                            <option value="debt" selected>Debt</option>
-                                            <option value="service_charge">Service Charge</option>
-                                        </select>
-                                    </div>
+                                    <input type="hidden" name="type" value="debt">
 
                                     <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Start Date</label>
@@ -1298,11 +1277,6 @@
                                             <option value="monthly_payment">Monthly Payment</option>
                                             <option value="one_off">One-Off</option>
                                         </select>
-                                    </div>
-
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Payment Amount</label>
-                                        <input type="number" step="0.01" name="payment_amount" class="form-control">
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12 my-1">

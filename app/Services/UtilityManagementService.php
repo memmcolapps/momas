@@ -69,7 +69,7 @@ class UtilityManagementService
                 [
                     'amount' => $utility->amount,
                     'amount_paid' => 0,
-                    'activated' => false,
+                    'activated' => $utility->activated,
                     'status' => 0,
                 ]
             );
@@ -90,8 +90,9 @@ class UtilityManagementService
 
     private function activateOverdueRecords(Collection $userUtilities, Collection $utilities): void
     {
+        // dd($utilities->toArray(), $userUtilities->toArray());
         foreach ($userUtilities as $userUtility) {
-            if (!$userUtility->activated && $userUtility->status === 0) {
+            if (!$userUtility->activated && $userUtility->status == 0) {
                 $utility = $utilities->firstWhere('id', $userUtility->utility_id);
                 if (
                     $utility &&
@@ -111,6 +112,7 @@ class UtilityManagementService
         $items = [];
         $totalOwed = 0;
 
+        // dd($utilities->toArray());
         foreach ($utilities as $utility) {
             $userUtility = $userUtilities->get($utility->id);
 
@@ -119,6 +121,7 @@ class UtilityManagementService
             }
 
             $remaining = max(0, (float) $utility->amount - (float) $userUtility->amount_paid);
+            // dump($remaining, $userUtility->toArray());
             if ($remaining <= 0) {
                 continue;
             }
@@ -146,9 +149,6 @@ class UtilityManagementService
         $mode = strtolower(trim($utility->mode_of_payment ?? ''));
 
         if (str_contains($mode, 'monthly')) {
-            if ((float) ($utility->payment_amount ?? 0) > 0) {
-                return (float) $utility->payment_amount;
-            }
             if (($utility->payment_months ?? 0) > 0) {
                 return (float) ($utility->amount / $utility->payment_months);
             }
@@ -157,9 +157,6 @@ class UtilityManagementService
         if (str_contains($mode, 'percent')) {
             if ((float) ($utility->percent_payment ?? 0) > 0) {
                 return (float) ($utility->amount * $utility->percent_payment / 100);
-            }
-            if ((float) ($utility->payment_amount ?? 0) > 0) {
-                return (float) $utility->payment_amount;
             }
         }
 

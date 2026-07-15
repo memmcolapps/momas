@@ -588,6 +588,8 @@ class TokenController extends Controller
                 Meter::where('MeterNo', $request->meterNo)->update(['user_id' => $user->id]);
             }
 
+            backfill_utility_payments($user->id, $estate_id);
+
             if (!app()->environment('staging') && $request->amount < 1000) {
                 return back()->with('error', 'Amount can not be less than NGN 1,000');
             }
@@ -749,6 +751,8 @@ class TokenController extends Controller
             if ($user == null) {
                 return back()->with('error', 'Meter has not been attached to any customer');
             }
+
+            backfill_utility_payments($user->id, $estate_id);
 
 
             $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();

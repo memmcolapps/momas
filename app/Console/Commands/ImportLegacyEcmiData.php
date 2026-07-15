@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\EstateModFeature;
+use App\Models\MigrationMap;
+use App\Models\MigrationState;
 use App\Models\Meter;
 use App\Models\ModFeature;
 use App\Models\Tariff;
@@ -54,7 +56,20 @@ class ImportLegacyEcmiData extends Command
     ];
 
     // -----------------------------------------------------------------------
-    // In-memory maps (re-hydrated from state file at boot)
+    // Map names used in MigrationMap
+    // -----------------------------------------------------------------------
+    protected const MAP_NAMES = [
+        'estateMap',
+        'tariffMap',
+        'meterMap',
+        'transformerMap',
+        'invalidTariffKeys',
+        'tariffTypeMap',
+        'tariffConflicts',
+    ];
+
+    // -----------------------------------------------------------------------
+    // In-memory maps (re-hydrated from DB at boot)
     // -----------------------------------------------------------------------
     protected array $estateMap      = [];
     protected array $tariffMap      = [];
@@ -84,7 +99,7 @@ class ImportLegacyEcmiData extends Command
         'customers'               => 0,
     ];
 
-    /** Modules that have been committed successfully (persisted in state file) */
+    /** Modules that have been committed successfully (persisted in DB) */
     protected array $completedModules = [];
 
     // -----------------------------------------------------------------------
@@ -99,12 +114,13 @@ class ImportLegacyEcmiData extends Command
 
         // --reset: wipe saved state and start over
         if ($this->option('reset')) {
-            $this->deleteStateFile($path);
-            $this->info('State file cleared. Starting fresh.');
+            MigrationState::clearContext('import');
+            MigrationMap::clearMaps(self::MAP_NAMES);
+            $this->info('Import state cleared. Starting fresh.');
         }
 
-        // Load any previously persisted state
-        $this->loadState($path);
+        // Load any previously persisted state from DB
+        $this->loadState();
 
         // Decide which modules to run
         $targetModule = $this->option('module');
@@ -162,7 +178,7 @@ class ImportLegacyEcmiData extends Command
                     DB::commit();
                     // Persist maps + mark this module done
                     $this->completedModules[] = $module;
-                    $this->saveState($path);
+                    $this->saveState();
                     $this->info("✔ Module [{$module}] committed and state saved.");
                 } else {
                     DB::rollBack();
@@ -178,11 +194,10 @@ class ImportLegacyEcmiData extends Command
             }
         }
 
-        // All modules done — clean up state file (unless dry-run)
+        // All modules done
         if (!$this->isDryRun() && empty(array_diff(self::MODULES, $this->completedModules))) {
-            $this->deleteStateFile($path);
             $this->info('');
-            $this->info('All modules complete. State file removed.');
+            $this->info('All modules complete.');
         }
 
         $this->printSummary();
@@ -248,75 +263,51 @@ class ImportLegacyEcmiData extends Command
     }
 
     // -----------------------------------------------------------------------
-    // State persistence
+    // State persistence (DB-backed via MigrationState + MigrationMap)
     // -----------------------------------------------------------------------
 
-    protected function stateFilePath(string $path): string
+    protected function loadState(): void
     {
-        return rtrim($path, '/') . '/migration_state.json';
-    }
+        $this->completedModules = MigrationState::getCompletedModules('import');
 
-    protected function saveState(string $path): void
-    {
-        $state = [
-            'saved_at'          => now()->toIso8601String(),
-            'completed_modules' => $this->completedModules,
-            'stats'             => $this->stats,
-            'maps'              => [
-                'estateMap'         => $this->estateMap,
-                'tariffMap'         => $this->tariffMap,
-                'meterMap'          => $this->meterMap,
-                'transformerMap'    => $this->transformerMap,
-                'invalidTariffKeys' => $this->invalidTariffKeys,
-                'tariffTypeMap'     => $this->tariffTypeMap,
-                'tariffConflicts'   => $this->tariffConflicts,
-            ],
-        ];
+        $this->estateMap         = MigrationMap::loadMap('estateMap');
+        $this->tariffMap         = MigrationMap::loadMap('tariffMap');
+        $this->meterMap          = MigrationMap::loadMap('meterMap');
+        $this->transformerMap    = MigrationMap::loadMap('transformerMap');
+        $this->invalidTariffKeys = MigrationMap::loadMap('invalidTariffKeys');
+        $this->tariffTypeMap     = MigrationMap::loadMap('tariffTypeMap');
+        $this->tariffConflicts   = MigrationMap::loadMap('tariffConflicts');
 
-        file_put_contents(
-            $this->stateFilePath($path),
-            json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
-    }
-
-    protected function loadState(string $path): void
-    {
-        $file = $this->stateFilePath($path);
-
-        if (!file_exists($file)) {
-            return;
+        // Load accumulated stats from completed modules
+        $completedStats = MigrationState::context('import')->pluck('stats', 'module');
+        foreach ($completedStats as $module => $stats) {
+            if ($stats) {
+                $this->stats = array_merge($this->stats, $stats);
+            }
         }
-
-        $state = json_decode(file_get_contents($file), true);
-
-        if (!$state) {
-            $this->warn('State file found but could not be parsed — ignoring.');
-            return;
-        }
-
-        $this->completedModules = $state['completed_modules'] ?? [];
-        $this->stats            = array_merge($this->stats, $state['stats'] ?? []);
-
-        $maps = $state['maps'] ?? [];
-        $this->estateMap         = $maps['estateMap']         ?? [];
-        $this->tariffMap         = $maps['tariffMap']         ?? [];
-        $this->meterMap          = $maps['meterMap']          ?? [];
-        $this->transformerMap    = $maps['transformerMap']    ?? [];
-        $this->invalidTariffKeys = $maps['invalidTariffKeys'] ?? [];
-        $this->tariffTypeMap     = $maps['tariffTypeMap']     ?? [];
-        $this->tariffConflicts   = $maps['tariffConflicts']   ?? [];
 
         if (!empty($this->completedModules)) {
-            $this->info('Resuming from state file. Completed: ' . implode(', ', $this->completedModules));
+            $this->info('Resuming from DB state. Completed: ' . implode(', ', $this->completedModules));
         }
     }
 
-    protected function deleteStateFile(string $path): void
+    protected function saveState(): void
     {
-        $file = $this->stateFilePath($path);
-        if (file_exists($file)) {
-            unlink($file);
+        $mapData = [
+            'estateMap'         => $this->estateMap,
+            'tariffMap'         => $this->tariffMap,
+            'meterMap'          => $this->meterMap,
+            'transformerMap'    => $this->transformerMap,
+            'invalidTariffKeys' => $this->invalidTariffKeys,
+            'tariffTypeMap'     => $this->tariffTypeMap,
+            'tariffConflicts'   => $this->tariffConflicts,
+        ];
+
+        foreach ($mapData as $mapName => $mappings) {
+            MigrationMap::setMappings($mapName, $mappings);
         }
+
+        MigrationState::markCompleted('import', end($this->completedModules), $this->stats);
     }
 
     // -----------------------------------------------------------------------
@@ -382,7 +373,7 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($latest as $key => $row) {
             if (strtoupper(trim($row->Status ?? '')) === 'INVALID') {
-                $this->invalidTariffKeys[$key] = true;
+                $this->invalidTariffKeys[$key] = $key;
             }
         }
 
@@ -562,11 +553,6 @@ class ImportLegacyEcmiData extends Command
                 continue; // already migrated in a previous run
             }
 
-            // if (isset($this->invalidTariffKeys[$key])) {
-            //     $this->stats['tariffs_skipped_invalid']++;
-            //     continue;
-            // }
-
             $estateId = $this->estateMap[$row->BUID] ?? null;
 
             if ($estateId === null) {
@@ -738,7 +724,7 @@ class ImportLegacyEcmiData extends Command
         }
 
         $this->tariffTypeMap[$key]   = 'CONFLICT';
-        $this->tariffConflicts[$key] = true;
+        $this->tariffConflicts[$key] = $key;
     }
 
     // -----------------------------------------------------------------------
@@ -1134,16 +1120,9 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            // foreach($updates as $key => $value) {
-            //     $estate->$key = $estate->$value;
-            // }
-            // $estate->save();
-            // DB::commit();
             DB::table('estates')
                 ->where('id', $estate->id)
                 ->update($updates);
-
-            // $estate->update($updates);
 
             $this->info("[OK] Estate '{$estate->title}' (id={$estate->id}) updated: " . implode(', ', array_keys($updates)) . implode(', ', array_values($updates)));
             $updated++;

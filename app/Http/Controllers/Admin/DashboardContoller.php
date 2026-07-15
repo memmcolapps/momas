@@ -544,9 +544,9 @@ class DashboardContoller extends Controller
         Utility::where('id', $request->id)->update([
             'title' => $request->title,
             'amount' => $request->amount,
+            'duration' => $request->duration ?? null,
             'start_date' => $request->start_date,
             'mode_of_payment' => $request->mode_of_payment,
-            'payment_amount' => $request->payment_amount,
             'activated' => $request->has('activated'),
             'operator_id' => auth()->id(),
             'percent_payment' => $request->percent_payment,
@@ -714,6 +714,9 @@ class DashboardContoller extends Controller
             $data['user'] = User::where('id', $request->id)->first();
             $data['estate'] = Estate::where('status', 2)->get();
             $data['estate_name'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
+
+            backfill_utility_payments($data['user']->id, $data['user']->estate_id);
+
             $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
 
             $recQuery = UtilityPaymentRecord::where('user_id', $request->id)->with('utility');

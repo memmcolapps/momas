@@ -401,6 +401,8 @@ class MeterController extends Controller
                 (int) $request->amount,
                 $request->receiver_meterNo
             );
+
+            $values['utilityAmount'] = $values['arrearsOwed'];
             return StandardResponse::success(200, 'Token values calculated successfully', $values);
         } catch (Exception $e) {
             return StandardResponse::error(422, $e->getMessage());

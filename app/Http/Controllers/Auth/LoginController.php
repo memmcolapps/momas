@@ -109,88 +109,7 @@ class LoginController extends Controller
                 &$adminFeeFlag, $meter, &$user, $utilityAmount,
                 $duration, &$mod_features
             ) {
-                // ── Helper ────────────────────────────────────────────────────────────
-                $createPayment = function (string $type, float $amount, string $duration, Carbon $startDate) use ($userId, $estateId) {
-                    $nextDueDate = $startDate->copy();
-
-                    match ($duration) {
-                        'weekly'  => $nextDueDate->addWeek(),
-                        'monthly' => $nextDueDate->addMonth(),
-                        'yearly'  => $nextDueDate->addYear(),
-                        default   => send_notification("Unknown duration '{$duration}'"),
-                    };
-
-                    return UtilitiesPayment::create([
-                        'estate_id'     => $estateId,
-                        'user_id'       => $userId,
-                        'amount'        => $amount,
-                        'total_amount'  => $amount,
-                        'next_due_date' => $nextDueDate,
-                        'duration'      => $duration,
-                        'type'          => $type,
-                        'status'        => 0,
-                    ]);
-                };
-
-                if ($duration === null) {
-                    throw new \RuntimeException('Estate utility duration not set');
-                }
-
-                // ── Utility backfill ──────────────────────────────────────────────────
-                if ($utilityAmount > 0) {
-                    $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
-                        ->where('type', 'utilities')
-                        ->orderByDesc('created_at')
-                        ->value('created_at');
-
-                    $backfillFrom = $lastUtilityDate
-                        ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
-                        : Carbon::parse(Auth::user()->created_at)->startOfMonth();
-
-                    $now = Carbon::now()->startOfMonth();
-
-                    while ($backfillFrom->lte($now)) {
-                        $exists = UtilitiesPayment::where('user_id', $userId)
-                            ->where('type', 'utilities')
-                            ->whereYear('created_at', $backfillFrom->year)
-                            ->whereMonth('created_at', $backfillFrom->month)
-                            ->exists();
-
-                        if (!$exists) {
-                            $createPayment('utilities', $utilityAmount, $duration, $backfillFrom->copy());
-                        }
-
-                        $backfillFrom->addMonth();
-                    }
-                }
-
-                // ── Admin fee backfill ────────────────────────────────────────────────
-                if ($adminFeeAmount > 0) {
-                    $lastAdminFeeDate = UtilitiesPayment::where('user_id', $userId)
-                        ->where('type', 'admin_fee')
-                        ->orderByDesc('created_at')
-                        ->value('created_at');
-
-                    $backfillFrom = $lastAdminFeeDate
-                        ? Carbon::parse($lastAdminFeeDate)->addMonth()->startOfMonth()
-                        : Carbon::parse(Auth::user()->created_at)->startOfMonth();
-
-                    $now = Carbon::now()->startOfMonth();
-
-                    while ($backfillFrom->lte($now)) {
-                        $exists = UtilitiesPayment::where('user_id', $userId)
-                            ->where('type', 'admin_fee')
-                            ->whereYear('created_at', $backfillFrom->year)
-                            ->whereMonth('created_at', $backfillFrom->month)
-                            ->exists();
-
-                        if (!$exists) {
-                            $createPayment('admin_fee', $adminFeeAmount, 'monthly', $backfillFrom->copy());
-                        }
-
-                        $backfillFrom->addMonth();
-                    }
-                }
+                backfill_utility_payments($userId, $estateId);
 
                 // ── Admin fee paid flag (current month) ───────────────────────────────
                 $adminFeeFlag = UtilitiesPayment::where('user_id', $userId)
@@ -207,7 +126,7 @@ class LoginController extends Controller
                 $user['meter']             = $meter;
                 $user['tariff']            = $tariffs;
                 $user['monthly_admin_fee'] = $adminFeeFlag;
-                $user['meter_status']      = $meter?->status;
+                $user['meter_status']      = $meter?->isActive();
 
                 // ── Mod features ──────────────────────────────────────────────────────
                 $features =  EstateModFeature::byUser($user)
