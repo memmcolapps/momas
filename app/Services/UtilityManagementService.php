@@ -127,7 +127,7 @@ class UtilityManagementService
                 continue;
             }
 
-            $installment = $this->getPeriodicAmount($utility);
+            $installment = $this->getPeriodicAmount($utility, $userUtility->user_id);
             $owed = min($installment, $remaining);
 
             $items[] = [
@@ -145,11 +145,21 @@ class UtilityManagementService
         ];
     }
 
-    private function getPeriodicAmount(Utility $utility): float
+    private function getPeriodicAmount(Utility $utility, ?int $userId = null): float
     {
         $mode = strtolower(trim($utility->mode_of_payment ?? ''));
 
         if (str_contains($mode, 'monthly')) {
+            if ($userId) {
+                $hasPaidThisMonth = UtilityPaymentRecord::where('utility_id', $utility->id)
+                    ->where('user_id', $userId)
+                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('created_at', now()->year)
+                    ->exists();
+                if ($hasPaidThisMonth) {
+                    return 0.0;
+                }
+            }
             if (($utility->payment_months ?? 0) > 0) {
                 return (float) ($utility->amount / $utility->payment_months);
             }
