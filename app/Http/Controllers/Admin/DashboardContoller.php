@@ -740,13 +740,37 @@ class DashboardContoller extends Controller
             }
 
             $data['utility_payment_records'] = $recQuery->latest()->paginate(10);
-            $data['customer_utilities'] = Utility::where('estate_id', $data['user']->estate_id)
-                ->where('type', 'debt')
-                ->where(function ($q) use ($data) {
-                    $q->whereNull('user_id')
-                      ->orWhere('user_id', $data['user']->id);
+            $data['customer_utilities'] = \DB::table('utilities')
+                ->select(
+                    'utilities.id',
+                    'utilities.estate_id',
+                    'utilities.user_id',
+                    'utilities.type',
+                    'utilities.title',
+                    'utilities.amount',
+                    'utilities.duration',
+                    'utilities.start_date',
+                    'utilities.mode_of_payment',
+                    'utilities.payment_amount',
+                    'utilities.operator_id',
+                    'utilities.percent_payment',
+                    'utilities.payment_months',
+                    'utilities.monthly_end_date',
+                    'utilities.created_at',
+                    'utilities.updated_at',
+                    \DB::raw('COALESCE(user_utilities.activated, utilities.activated) as activated'),
+                    \DB::raw('COALESCE(user_utilities.status, utilities.status) as status')
+                )
+                ->leftJoin('user_utilities', function ($join) use ($data) {
+                    $join->on('utilities.id', '=', 'user_utilities.utility_id')
+                         ->where('user_utilities.user_id', '=', $data['user']->id);
                 })
-                ->with('user')
+                ->where('utilities.estate_id', $data['user']->estate_id)
+                ->where('utilities.type', 'debt')
+                ->where(function ($q) use ($data) {
+                    $q->whereNull('utilities.user_id')
+                      ->orWhere('utilities.user_id', $data['user']->id);
+                })
                 ->get();
             $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
             $data['meters'] = Meter::all();

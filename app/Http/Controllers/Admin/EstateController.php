@@ -270,51 +270,74 @@ class EstateController extends Controller
 
     public function estate_update_utilities(request $request)
     {
-
-
-
         try {
-
             $utilitiesData = json_decode($request->input('utilities_data'), true);
-            if (is_array($utilitiesData)) {
-                foreach ($utilitiesData as $utility) {
-                    if (!empty($utility['title']) && !empty($utility['amount'])) {
-                        $monthlyEndDate = null;
-                        if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && !empty($utility['start_date']) && !empty($utility['payment_months'])) {
-                            $monthlyEndDate = \Carbon\Carbon::parse($utility['start_date'])->addMonths((int) $utility['payment_months'])->toDateString();
-                        }
+            if (!is_array($utilitiesData) || empty($utilitiesData)) {
+                return back()->with('error', 'No utility data provided');
+            }
 
-                        Utility::create([
-                            'title' => $utility['title'],
-                            'amount' => $utility['amount'],
-                            'duration' => $utility['duration'] ?? $request->duration,
-                            'estate_id' => $request->estate_id,
-                            'type' => $utility['type'] ?? 'service_charge',
-                            'start_date' => $utility['start_date'] ?? null,
-                            'mode_of_payment' => $utility['mode_of_payment'] ?? null,
-                            'activated' => $utility['activated'] ?? false,
-                            'operator_id' => auth()->id(),
-                            'percent_payment' => $utility['percent_payment'] ?? null,
-                            'payment_months' => $utility['payment_months'] ?? null,
-                            'monthly_end_date' => $monthlyEndDate,
-                        ]);
+            foreach ($utilitiesData as $index => $utility) {
+                $pos = $index + 1;
+
+                if (empty($utility['title'])) {
+                    return back()->with('error', "Title is required for utility at position {$pos}");
+                }
+                if (empty($utility['amount'])) {
+                    return back()->with('error', "Amount is required for utility at position {$pos}");
+                }
+
+                $type = $utility['type'] ?? 'service_charge';
+
+                if ($type === 'service_charge' && empty($utility['duration'])) {
+                    return back()->with('error', 'Duration is required for service charge utilities');
+                }
+
+                if ($type === 'debt') {
+                    if (empty($utility['start_date'])) {
+                        return back()->with('error', 'Start date is required for debt utilities');
+                    }
+                    if (empty($utility['mode_of_payment'])) {
+                        return back()->with('error', 'Mode of payment is required for debt utilities');
+                    }
+                    if (($utility['mode_of_payment'] ?? null) === 'percentage_payment' && empty($utility['percent_payment'])) {
+                        return back()->with('error', '% Payment is required when mode is percentage payment');
+                    }
+                    if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && empty($utility['payment_months'])) {
+                        return back()->with('error', 'Number of months is required when mode is monthly payment');
                     }
                 }
+
+                $monthlyEndDate = null;
+                if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && !empty($utility['start_date']) && !empty($utility['payment_months'])) {
+                    $monthlyEndDate = \Carbon\Carbon::parse($utility['start_date'])->addMonths((int) $utility['payment_months'])->toDateString();
+                }
+
+                $startDate = \Carbon\Carbon::parse($utility['start_date'] ?? now());
+                // dd($utility);
+
+                Utility::create([
+                    'title' => $utility['title'],
+                    'amount' => $utility['amount'],
+                    'duration' => $utility['duration'] ?? null,
+                    'estate_id' => $request->estate_id,
+                    'type' => $type,
+                    'start_date' => $utility['start_date'] ?? null,
+                    'mode_of_payment' => $utility['mode_of_payment'] ?? null,
+                    'activated' => !$startDate->isFuture(),
+                    'operator_id' => auth()->id(),
+                    // 'percent_payment' => $utility['percent_payment'] ?? null,
+                    // 'payment_months' => $utility['payment_months'] ?? null,
+                    'monthly_end_date' => $monthlyEndDate,
+                ]);
             }
 
             $utility_amount = Utility::where('estate_id', $request->estate_id)->serviceCharge()->sum('amount');
             Estate::where('id', $request->estate_id)->update(['total_utility_amount' => $utility_amount]);
 
             return back()->with('message', 'Utilities Saved successfully');
-
-
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
-
-
-
-
     }
 
 
@@ -395,10 +418,31 @@ class EstateController extends Controller
     public function customer_store_utility(Request $request)
     {
         try {
+            if (empty($request->title)) {
+                return back()->with('error', 'Title is required');
+            }
+            if (empty($request->amount)) {
+                return back()->with('error', 'Amount is required');
+            }
+            if (empty($request->start_date)) {
+                return back()->with('error', 'Start date is required');
+            }
+            if (empty($request->mode_of_payment)) {
+                return back()->with('error', 'Mode of payment is required');
+            }
+            if ($request->mode_of_payment === 'percentage_payment' && empty($request->percent_payment)) {
+                return back()->with('error', '% Payment is required when mode is percentage payment');
+            }
+            if ($request->mode_of_payment === 'monthly_payment' && empty($request->payment_months)) {
+                return back()->with('error', 'Number of months is required when mode is monthly payment');
+            }
+
             $monthlyEndDate = null;
             if ($request->mode_of_payment === 'monthly_payment' && $request->start_date && $request->payment_months) {
                 $monthlyEndDate = \Carbon\Carbon::parse($request->start_date)->addMonths((int) $request->payment_months)->toDateString();
             }
+
+            $startDate = \Carbon\Carbon::parse($request->start_date);
 
             Utility::create([
                 'user_id' => $request->user_id,
@@ -408,7 +452,7 @@ class EstateController extends Controller
                 'amount' => $request->amount,
                 'start_date' => $request->start_date,
                 'mode_of_payment' => $request->mode_of_payment,
-                'activated' => $request->has('activated'),
+                'activated' => !$startDate->isFuture(),
                 'operator_id' => auth()->id(),
                 'percent_payment' => $request->percent_payment,
                 'payment_months' => $request->payment_months,

@@ -114,7 +114,10 @@ class RequestActionHandler {
         $vending_amount = $action_payload['vending_amount'];
         $reciever_meterNo = $action_payload['reciever_meterNo'] ?? null;
 
-        // dump ('Got here');
+        if ($action === 'momas_meter_web') {
+            handle_pay_arrears($this->reference, $user_id, 'utilities');
+        }
+
         $meter->getNewToken($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 
         return true;

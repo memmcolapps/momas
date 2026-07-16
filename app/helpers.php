@@ -697,7 +697,6 @@ if (! function_exists('backfill_utility_payments')) {
         $estate = Estate::where('id', $estateId)->first();
         if (! $estate) return;
 
-        $utilityAmount  = $estate->total_utility_amount ?? 0;
         $adminFeeAmount = $estate->getAdminFee();
         $duration       = $estate->duration ?? null;
 
@@ -726,35 +725,45 @@ if (! function_exists('backfill_utility_payments')) {
             ]);
         };
 
-        DB::transaction(function () use ($userId, $utilityAmount, $adminFeeAmount, $duration, $createPayment) {
+        DB::transaction(function () use ($userId, $estateId, $adminFeeAmount, $duration, $createPayment) {
             // ── Utility backfill ──────────────────────────────────────────────
-            if ($utilityAmount > 0) {
-                $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
+            $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
+                ->where('type', 'utilities')
+                ->orderByDesc('created_at')
+                ->value('created_at');
+
+            $createdAt = User::where('id', $userId)->value('created_at');
+
+            $backfillFrom = $lastUtilityDate
+                ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
+                : Carbon::parse($createdAt)->startOfMonth();
+
+            $originalBackfillFrom = (clone $backfillFrom);
+
+            $now = Carbon::now()->startOfMonth();
+
+            while ($backfillFrom->lte($now)) {
+                $exists = UtilitiesPayment::where('user_id', $userId)
                     ->where('type', 'utilities')
-                    ->orderByDesc('created_at')
-                    ->value('created_at');
+                    ->whereYear('created_at', $backfillFrom->year)
+                    ->whereMonth('created_at', $backfillFrom->month)
+                    ->exists();
 
-                $createdAt = User::where('id', $userId)->value('created_at');
+                if (!$exists) {
+                    $prevMonthStart = (clone $backfillFrom)->subMonth()->startOfMonth();
+                    $prevMonthEnd   = (clone $backfillFrom)->subMonth()->endOfMonth();
 
-                $backfillFrom = $lastUtilityDate
-                    ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
-                    : Carbon::parse($createdAt)->startOfMonth();
+                    $monthUtilityAmount = Utility::where('estate_id', $estateId)
+                        ->serviceCharge()
+                        ->whereBetween('created_at', [$originalBackfillFrom, $prevMonthEnd])
+                        ->sum('amount');
 
-                $now = Carbon::now()->startOfMonth();
-
-                while ($backfillFrom->lte($now)) {
-                    $exists = UtilitiesPayment::where('user_id', $userId)
-                        ->where('type', 'utilities')
-                        ->whereYear('created_at', $backfillFrom->year)
-                        ->whereMonth('created_at', $backfillFrom->month)
-                        ->exists();
-
-                    if (!$exists) {
-                        $createPayment('utilities', $utilityAmount, $duration, $backfillFrom->copy());
+                    if ($monthUtilityAmount > 0) {
+                        $createPayment('utilities', $monthUtilityAmount, $duration, $backfillFrom->copy());
                     }
-
-                    $backfillFrom->addMonth();
                 }
+
+                $backfillFrom->addMonth();
             }
 
             // ── Admin fee backfill ────────────────────────────────────────────

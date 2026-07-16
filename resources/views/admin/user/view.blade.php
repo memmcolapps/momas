@@ -441,40 +441,21 @@
 
                                     <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Start Date</label>
-                                        <input type="date" name="start_date" class="form-control">
+                                        <input type="date" name="start_date" class="form-control" required>
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Mode of Payment</label>
-                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
+                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)" required>
                                             <option value="">Select</option>
-                                            <option value="percentage_payment">Percentage Payment</option>
                                             <option value="monthly_payment">Monthly Payment</option>
                                             <option value="one_off">One-Off</option>
                                         </select>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Activated</label>
-                                        <select name="activated" class="form-control">
-                                            <option value="0">No</option>
-                                            <option value="1">Yes</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: none;">
-                                        <label class="my-1">% Payment</label>
-                                        <select name="percent_payment" class="form-control">
-                                            <option value="">Select</option>
-                                            @for($pct = 5; $pct <= 70; $pct += 5)
-                                                <option value="{{ $pct }}">{{ $pct }}%</option>
-                                            @endfor
-                                        </select>
-                                    </div>
-
                                     <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: none;">
                                         <label class="my-1">Number of Months</label>
-                                        <input type="number" name="payment_months" min="1" max="60" class="form-control">
+                                        <input type="number" name="payment_months" min="1" max="60" class="form-control" required>
                                     </div>
 
                                     <div class="col-12 my-3">
@@ -487,15 +468,11 @@
                             function togglePaymentFields(select) {
                                 var container = select.closest('.row');
                                 if (!container) return;
-                                var percentField = container.querySelector('.percent-field');
                                 var monthsField = container.querySelector('.months-field');
 
-                                if (percentField) percentField.style.display = 'none';
                                 if (monthsField) monthsField.style.display = 'none';
 
-                                if (select.value === 'percentage_payment' && percentField) {
-                                    percentField.style.display = 'block';
-                                } else if (select.value === 'monthly_payment' && monthsField) {
+                                if (select.value === 'monthly_payment' && monthsField) {
                                     monthsField.style.display = 'block';
                                 }
                             }
@@ -1266,48 +1243,22 @@
 
                                     <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Start Date</label>
-                                        <input type="date" name="start_date" class="form-control">
+                                        <input type="date" name="start_date" class="form-control" required>
                                     </div>
 
                                     <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Mode of Payment</label>
-                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
+                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)" required>
                                             <option value="">Select</option>
-                                            <option value="percentage_payment">Percentage Payment</option>
+                                            <!-- <option value="percentage_payment">Percentage Payment</option> -->
                                             <option value="monthly_payment">Monthly Payment</option>
                                             <option value="one_off">One-Off</option>
                                         </select>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Activated</label>
-                                        <select name="activated" class="form-control">
-                                            <option value="0">No</option>
-                                            <option value="1">Yes</option>
-                                        </select>
-                                    </div>
-
                                     <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: none;">
                                         <label class="my-1">% Payment</label>
-                                        <select name="percent_payment" class="form-control">
-                        <script>
-                            function togglePaymentFields(select) {
-                                var container = select.closest('.row');
-                                if (!container) return;
-                                var percentField = container.querySelector('.percent-field');
-                                var monthsField = container.querySelector('.months-field');
-
-                                if (percentField) percentField.style.display = 'none';
-                                if (monthsField) monthsField.style.display = 'none';
-
-                                if (select.value === 'percentage_payment' && percentField) {
-                                    percentField.style.display = 'block';
-                                } else if (select.value === 'monthly_payment' && monthsField) {
-                                    monthsField.style.display = 'block';
-                                }
-                            }
-                        </script>
-
+                                        <select name="percent_payment" class="form-control" required>
                                             <option value="">Select</option>
                                             @for($pct = 5; $pct <= 70; $pct += 5)
                                                 <option value="{{ $pct }}">{{ $pct }}%</option>
@@ -1317,7 +1268,7 @@
 
                                     <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: none;">
                                         <label class="my-1">Number of Months</label>
-                                        <input type="number" name="payment_months" min="1" max="60" class="form-control">
+                                        <input type="number" name="payment_months" min="1" max="60" class="form-control" required>
                                     </div>
 
                                     <div class="col-12 my-3">

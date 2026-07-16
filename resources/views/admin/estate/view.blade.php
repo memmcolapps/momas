@@ -652,7 +652,6 @@
                                                     <label class="my-1">Mode of Payment</label>
                                                     <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
                                                         <option value="">Select</option>
-                                                        <option value="percentage_payment" @selected($data->mode_of_payment == 'percentage_payment')>Percentage Payment</option>
                                                         <option value="monthly_payment" @selected($data->mode_of_payment == 'monthly_payment')>Monthly Payment</option>
                                                         <option value="one_off" @selected($data->mode_of_payment == 'one_off')>One-Off</option>
                                                         <option value="fixed_charge" @selected($data->mode_of_payment == 'fixed_charge')>Fixed Charge</option>
@@ -673,16 +672,6 @@
                                                     <input type="text" class="form-control" value="{{ $data->user->first_name }} {{ $data->user->last_name }}" disabled>
                                                 </div>
                                                 @endif
-
-                                                <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: {{ $data->mode_of_payment == 'percentage_payment' ? 'block' : 'none' }};">
-                                                    <label class="my-1">% Payment</label>
-                                                    <select name="percent_payment" class="form-control">
-                                                        <option value="">Select</option>
-                                                        @for($pct = 5; $pct <= 70; $pct += 5)
-                                                            <option value="{{ $pct }}" @selected($data->percent_payment == $pct)>{{ $pct }}%</option>
-                                                        @endfor
-                                                    </select>
-                                                </div>
 
                                                 <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: {{ $data->mode_of_payment == 'monthly_payment' ? 'block' : 'none' }};">
                                                     <label class="my-1">Number of Months</label>
@@ -738,7 +727,7 @@
                                                 </div>
                                                 <div class="col-xl-3 col-sm-12 my-1 sc-field" style="display: none;">
                                                     <label class="my-2">Duration</label>
-                                                    <select name="duration[]" class="form-control">
+                                                    <select name="duration[]" class="form-control" required>
                                                         <option value="per_transaction">Per Transaction</option>
                                                         <option value="weekly">Weekly</option>
                                                         <option value="monthly" selected>Monthly</option>
@@ -751,44 +740,27 @@
                                                 </div>
                                                 <div class="col-xl-3 col-sm-12 my-1">
                                                     <label class="my-2">Type</label>
-                                                    <select name="type[]" class="form-control utility-type" onchange="toggleUtilityTypeFields(this)">
+                                                    <select name="type[]" class="form-control utility-type" onchange="toggleUtilityTypeFields(this)" required>
                                                         <option value="service_charge" selected>Service Charge</option>
                                                         <option value="debt">Debt</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-xl-3 col-sm-12 my-1 debt-field">
                                                     <label class="my-2">Start Date</label>
-                                                    <input type="date" name="start_date[]" class="form-control">
+                                                    <input type="date" name="start_date[]" class="form-control" required>
                                                 </div>
                                                 <div class="col-xl-3 col-sm-12 my-1 debt-field">
                                                     <label class="my-2">Mode of Payment</label>
-                                                    <select name="mode_of_payment[]" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
+                                                    <select name="mode_of_payment[]" class="form-control mode-of-payment" onchange="togglePaymentFields(this)" required>
                                                         <option value="">Select</option>
-                                                        <option value="percentage_payment">Percentage Payment</option>
                                                         <option value="monthly_payment">Monthly Payment</option>
                                                         <option value="one_off">One-Off</option>
                                                         <option value="fixed_charge">Fixed Charge</option>
                                                     </select>
                                                 </div>
-                                                <div class="col-xl-3 col-sm-12 my-1 debt-field">
-                                                    <label class="my-2">Activated</label>
-                                                    <select name="activated[]" class="form-control">
-                                                        <option value="0">No</option>
-                                                        <option value="1">Yes</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-xl-3 col-sm-12 my-1 percent-field debt-field" style="display: none;">
-                                                    <label class="my-2">% Payment</label>
-                                                    <select name="percent_payment[]" class="form-control">
-                                                        <option value="">Select</option>
-                                                        @for($pct = 5; $pct <= 70; $pct += 5)
-                                                            <option value="{{ $pct }}">{{ $pct }}%</option>
-                                                        @endfor
-                                                    </select>
-                                                </div>
                                                 <div class="col-xl-3 col-sm-12 my-1 months-field debt-field" style="display: none;">
                                                     <label class="my-2">Number of Months</label>
-                                                    <input type="number" name="payment_months[]" min="1" max="60" class="form-control">
+                                                    <input type="number" name="payment_months[]" min="1" max="60" class="form-control" required>
                                                 </div>
                                                 <input name="estate_id" value="{{$org->id}}" hidden>
                                             </div>
@@ -825,15 +797,11 @@
                                     function togglePaymentFields(select) {
                                         var container = select.closest('.row');
                                         if (!container) return;
-                                        var percentField = container.querySelector('.percent-field');
                                         var monthsField = container.querySelector('.months-field');
 
-                                        if (percentField) percentField.style.display = 'none';
                                         if (monthsField) monthsField.style.display = 'none';
 
-                                        if (select.value === 'percentage_payment' && percentField) {
-                                            percentField.style.display = 'block';
-                                        } else if (select.value === 'monthly_payment' && monthsField) {
+                                        if (select.value === 'monthly_payment' && monthsField) {
                                             monthsField.style.display = 'block';
                                         }
                                     }
@@ -870,24 +838,21 @@
                                                 let titles = container.querySelectorAll('input[name="title[]"]');
                                                 let amounts = container.querySelectorAll('input[name="amount[]"]');
                                                 let durations = container.querySelectorAll('select[name="duration[]"]');
-                                                    utilities.push({
-                                                        title: titles[0]?.value || '',
-                                                        amount: amounts[amounts.length - 1]?.value || amounts[0]?.value || '',
-                                                        type: 'service_charge',
-                                                        duration: durations[0]?.value || 'monthly',
-                                                        start_date: null,
-                                                        mode_of_payment: null,
-                                                        activated: '0',
-                                                        percent_payment: null,
-                                                        payment_months: null,
-                                                    });
+                                                        utilities.push({
+                                                            title: titles[0]?.value || '',
+                                                            amount: amounts[amounts.length - 1]?.value || amounts[0]?.value || '',
+                                                            type: 'service_charge',
+                                                            duration: durations[0]?.value || 'monthly',
+                                                            start_date: null,
+                                                            mode_of_payment: null,
+                                                            percent_payment: null,
+                                                            payment_months: null,
+                                                        });
                                             } else {
                                                 let titles = container.querySelectorAll('input[name="title[]"]');
                                                 let amounts = container.querySelectorAll('input[name="amount[]"]');
                                                 let startDates = container.querySelectorAll('input[name="start_date[]"]');
                                                 let modeOfPayments = container.querySelectorAll('select[name="mode_of_payment[]"]');
-                                                let activateds = container.querySelectorAll('select[name="activated[]"]');
-                                                let percentPayments = container.querySelectorAll('select[name="percent_payment[]"]');
                                                 let paymentMonthsList = container.querySelectorAll('input[name="payment_months[]"]');
                                                 utilities.push({
                                                     title: titles[0]?.value || '',
@@ -896,8 +861,6 @@
                                                     duration: null,
                                                     start_date: startDates[0]?.value || null,
                                                     mode_of_payment: modeOfPayments[0]?.value || null,
-                                                    activated: activateds[0]?.value || '0',
-                                                    percent_payment: percentPayments[0]?.value || null,
                                                     payment_months: paymentMonthsList[0]?.value || null,
                                                 });
                                             }
@@ -948,7 +911,7 @@
                                                 <td>{{ $sc->title }}</td>
                                                 <td>NGN {{ number_format($sc->amount, 2) }}</td>
                                                 <td>{{ str_replace('_', ' ', ucwords($sc->mode_of_payment ?? 'N/A')) }}</td>
-                                                <td>{{ $sc->start_date ? \Carbon\Carbon::parse($sc->start_date)->format('Y-m-d') : '-' }}</td>
+                                                <td>{{ $sc->created_at ? \Carbon\Carbon::parse($sc->created_at)->format('Y-m-d') : '-' }}</td>
                                                 <td>
                                                     @if($sc->activated)
                                                         <span class="badge text-bg-success">Yes</span>

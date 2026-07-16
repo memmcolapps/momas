@@ -3491,7 +3491,6 @@ class TokenController extends Controller
 
             if ($status === 'success') {
 
-
                 Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 2]);
                 $meterNo = CreditToken::where('trx_id', $var->data->metadata->ref)->first()->meterNo;
                 $meter = Meter::where('meterNo', $meterNo)->first();
@@ -3669,6 +3668,8 @@ class TokenController extends Controller
 
                     $access_point = $request->header('Access-Point') ?? 'web';
                     $action = $access_point == 'mobile' ? 'momas_meter' : 'momas_meter_web';
+
+                    handle_pay_arrears($trx_id, $trx->user_id, 'utilities');
 
                     $meter->getNewToken($tariff_id, $trx_id, verify:"null", receiver_meterNo:$receiver_meterNo, action:$action);
 
@@ -4705,6 +4706,10 @@ class TokenController extends Controller
 
             if ($status == 'success') {
 
+                $cdtUser = CreditToken::where('trx_id', $ref)->first();
+                if ($cdtUser) {
+                    handle_pay_arrears($ref, $cdtUser->user_id, 'utilities');
+                }
 
                 Transaction::where('trx_id', $ref)->update(['status' => 2]);
                 $meterNo = CreditToken::where('trx_id', $ref)->first()->meterNo;
@@ -4801,6 +4806,10 @@ class TokenController extends Controller
 
             if ($status == 'success') {
 
+                $cdtUser = CreditToken::where('trx_id', $var->data->metadata->ref)->first();
+                if ($cdtUser) {
+                    handle_pay_arrears($var->data->metadata->ref, $cdtUser->user_id, 'utilities');
+                }
 
                 Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 2]);
                 $meterNo = CreditToken::where('trx_id', $var->data->metadata->ref)->first()->meterNo;
