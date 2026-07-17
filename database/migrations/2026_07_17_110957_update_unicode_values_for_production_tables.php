@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         $database = DB::getDatabaseName();
-
         $tables = DB::select("
             SELECT TABLE_NAME
             FROM information_schema.TABLES
@@ -18,22 +17,22 @@ return new class extends Migration
         ", [$database]);
 
         foreach ($tables as $table) {
-
             $tableName = $table->TABLE_NAME;
+            $hasCreatedAt = Schema::hasColumn($tableName, 'created_at');
+            $hasUpdatedAt = Schema::hasColumn($tableName, 'updated_at');
 
-            if (Schema::hasColumn($tableName, 'created_at')) {
+            if ($hasCreatedAt || $hasUpdatedAt) {
+                $modifications = [];
+                if ($hasCreatedAt) {
+                    $modifications[] = "MODIFY `created_at` TIMESTAMP NULL DEFAULT NULL";
+                }
+                if ($hasUpdatedAt) {
+                    $modifications[] = "MODIFY `updated_at` TIMESTAMP NULL DEFAULT NULL";
+                }
+
                 DB::statement("
                     ALTER TABLE `{$tableName}`
-                    MODIFY `created_at`
-                    TIMESTAMP NULL DEFAULT NULL
-                ");
-            }
-
-            if (Schema::hasColumn($tableName, 'updated_at')) {
-                DB::statement("
-                    ALTER TABLE `{$tableName}`
-                    MODIFY `updated_at`
-                    TIMESTAMP NULL DEFAULT NULL
+                    " . implode(', ', $modifications) . "
                 ");
             }
 
