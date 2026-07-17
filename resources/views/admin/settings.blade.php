@@ -862,10 +862,10 @@
                                                         Choose Duration
                                                     </option>
 
-                                                    <option value="per_transaction"
+                                                    <!-- <option value="per_transaction"
                                                         {{ old('duration', $org->duration ?? '') === 'per_transaction' ? 'selected' : '' }}>
                                                         Per Transaction
-                                                    </option>
+                                                    </option> -->
 
                                                     <option value="weekly"
                                                         {{ old('duration', $org->duration ?? '') === 'weekly' ? 'selected' : '' }}>
@@ -1041,7 +1041,7 @@
                                                 <div class="col-xl-3 col-sm-12 my-1">
                                                     <label class="my-1">Duration</label>
                                                     <select name="duration" class="form-control">
-                                                        <option value="per_transaction" @selected($sc->duration == 'per_transaction')>Per Transaction</option>
+                                                        <!-- <option value="per_transaction" @selected($sc->duration == 'per_transaction')>Per Transaction</option> -->
                                                         <option value="weekly" @selected($sc->duration == 'weekly')>Weekly</option>
                                                         <option value="monthly" @selected(($sc->duration ?? 'monthly') == 'monthly')>Monthly</option>
                                                         <option value="yearly" @selected($sc->duration == 'yearly')>Yearly</option>
@@ -1161,7 +1161,7 @@
                                                         <div class="col-xl-3 col-sm-12 my-1 sc-field" style="display: none;">
                                                             <label class="my-2">Duration</label>
                                                             <select name="duration[]" class="form-control" required>
-                                                                <option value="per_transaction">Per Transaction</option>
+                                                                <!-- <option value="per_transaction">Per Transaction</option> -->
                                                                 <option value="weekly">Weekly</option>
                                                                 <option value="monthly" selected>Monthly</option>
                                                                 <option value="yearly">Yearly</option>
