@@ -5510,6 +5510,12 @@ class TokenController extends Controller
                     $data['kct_token1'] = $kct_tokens[0] ?? null;
                     $data['kct_token2'] = $kct_tokens[1] ?? null;
 
+                    $debt_breakdown = json_decode($trx->action_payload, true)['debt_breakdown'] ?? null;
+                    if ($debt_breakdown) {
+                        $data['debt_owed'] = $debt_breakdown['debt_owed'];
+                        $data['service_charge_owed'] = $debt_breakdown['service_charge_owed'];
+                    }
+
                     return view('admin/recepit.recepit', $data);
                 }
             }
