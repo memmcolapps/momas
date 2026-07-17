@@ -81,6 +81,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     // ── Feature::OTHER_METER ──────────────────
     Route::group(['defaults' => ['feature' => \App\Constants\Feature::OTHER_METER]], function () {
         Route::post('buy-meter-others', [MeterController::class, 'pay_for_others_meter_token']);
+        Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
     });
 
     // ── Feature::PRINT_TOKEN ──────────────────

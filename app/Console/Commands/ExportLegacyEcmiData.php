@@ -2,62 +2,204 @@
 
 namespace App\Console\Commands;
 
+use App\Models\MigrationMap;
+use App\Models\MigrationState;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ExportLegacyEcmiData extends Command
 {
     protected $signature = 'legacy:export
                         {estate?}
-                        {--chunk=1000}
-                        {--module= : Run a single export module only (subaccount)}';
+                        {--chunk=100 : Number of unprocessed estates per run}
+                        {--reset     : Clear export state and start fresh}
+                        {--status    : Show export progress without exporting}
+                        {--module=   : Run a single export module only (subaccount|utility-subaccount)}';
 
-    protected $description = 'Export MSSQL legacy data into JSON files';
+    protected $description = 'Export MSSQL legacy data into JSON files (chunked, resumable)';
+
+    protected array $chunkBuids = [];
+    protected int $totalEstates = 0;
+    protected int $exportedCount = 0;
+    protected int $remainingCount = 0;
 
     protected function legacy()
     {
         return DB::connection('mssql_legacy');
     }
 
-    public function handle()
+    public function handle(): int
     {
-        $estate = $this->argument('estate');
-
         $path = storage_path('app/legacy-export');
 
         if (!file_exists($path)) {
             mkdir($path, 0777, true);
         }
 
+        // --reset: clear export state
+        if ($this->option('reset')) {
+            MigrationState::clearContext('export');
+            MigrationMap::clearMap('exported_buids');
+            $this->info('Export state cleared. Starting fresh.');
+        }
+
+        // --status: show progress and exit
+        if ($this->option('status')) {
+            return $this->showStatus();
+        }
+
+        // Load estate list and determine chunk
+        $this->prepareChunk();
+
         // Single-module mode
         if ($module = $this->option('module')) {
             return match ($module) {
-                'subaccount' => $this->exportPaystackSubAccounts($path, $estate) ?? self::SUCCESS,
-                default      => $this->error("Unknown module: {$module}") ?? self::FAILURE,
+                'subaccount'         => $this->exportPaystackSubAccounts($path) ?? self::SUCCESS,
+                'utility-subaccount' => $this->exportUtilitySubAccounts($path) ?? self::SUCCESS,
+                default              => $this->error("Unknown module: {$module}") ?? self::FAILURE,
             };
+        }
+
+        $estateArg = $this->argument('estate');
+
+        if ($estateArg) {
+            $this->info("Exporting single estate: {$estateArg}");
+        } else {
+            $this->info("Exporting chunk: {$this->exportedCount} of {$this->totalEstates} total ({$this->remainingCount} remaining)");
         }
 
         $this->info("Exporting legacy data...");
 
-        $this->exportEstates($path, $estate);
-        $this->exportPaystackSubAccounts($path, $estate);
-        $this->exportTransformers($path, $estate);
-        $this->exportTariffs($path, $estate);
-        $this->exportTariffStates($path, $estate);
-        $this->exportMeters($path, $estate);
-        $this->exportUserInfo($path, $estate);
-        $this->exportUserData($path, $estate);
-        $this->exportCustomers($path, $estate);
-        $this->exportTransactions($path, $estate);
+        $this->exportEstates($path, $estateArg);
+        $this->exportPaystackSubAccounts($path, $estateArg);
+        $this->exportTransformers($path, $estateArg);
+        $this->exportTariffs($path, $estateArg);
+        $this->exportTariffStates($path, $estateArg);
+        $this->exportMeters($path, $estateArg);
+        $this->exportUserInfo($path, $estateArg);
+        $this->exportUserData($path, $estateArg);
+        $this->exportCustomers($path, $estateArg);
+        $this->exportTransactions($path, $estateArg);
+        $this->exportSubAccounts($path, $estateArg);
+
+        // Persist export state (only for chunk mode, not single-estate mode)
+        if (!$estateArg) {
+            $this->saveExportState();
+        }
 
         $this->info("Export completed successfully");
 
         return self::SUCCESS;
     }
+
+    // -----------------------------------------------------------------------
+    // Chunk preparation
+    // -----------------------------------------------------------------------
+
+    protected function prepareChunk(): void
+    {
+        $estateArg = $this->argument('estate');
+
+        if ($estateArg) {
+            $this->chunkBuids = [$estateArg];
+            $this->totalEstates = 1;
+            $this->exportedCount = 0;
+            $this->remainingCount = 1;
+            return;
+        }
+
+        $allBuids = $this->legacy()
+            ->table('BusinessUnit')
+            ->pluck('BUID')
+            ->map(fn ($b) => (string) $b)
+            ->toArray();
+
+        $this->totalEstates = count($allBuids);
+
+        $exportedBuids = MigrationMap::getKeys('exported_buids');
+
+        $remaining = array_values(array_filter($allBuids, fn ($b) => !in_array($b, $exportedBuids, true)));
+
+        $this->remainingCount = count($remaining);
+        $this->exportedCount = $this->totalEstates - $this->remainingCount;
+
+        $chunkSize = (int) $this->option('chunk');
+
+        $this->chunkBuids = array_slice($remaining, 0, $chunkSize);
+
+        if (empty($this->chunkBuids)) {
+            $this->info("All estates already exported. Use --reset to start over.");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // --status
+    // -----------------------------------------------------------------------
+
+    protected function showStatus(): int
+    {
+        $allBuids = $this->legacy()
+            ->table('BusinessUnit')
+            ->pluck('BUID')
+            ->map(fn ($b) => (string) $b)
+            ->toArray();
+
+        $total = count($allBuids);
+        $exported = MigrationMap::getKeys('exported_buids');
+        $exportedCount = count($exported);
+        $remaining = $total - $exportedCount;
+
+        $states = MigrationState::context('export')->get();
+
+        $this->info('── EXPORT STATUS ──');
+        $this->table(['Metric', 'Value'], [
+            ['Total estates', $total],
+            ['Exported', $exportedCount],
+            ['Remaining', $remaining],
+            ['Chunk size', $this->option('chunk')],
+        ]);
+
+        if ($states->isNotEmpty()) {
+            $this->info('');
+            $this->table(['Module', 'Status', 'Stats'], $states->map(fn ($s) => [
+                $s->module,
+                $s->status,
+                $s->stats ? json_encode($s->stats) : '—',
+            ])->toArray());
+        }
+
+        return self::SUCCESS;
+    }
+
+    // -----------------------------------------------------------------------
+    // --reset handled in handle()
+    // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Save export state
+    // -----------------------------------------------------------------------
+
+    protected function saveExportState(): void
+    {
+        foreach ($this->chunkBuids as $buid) {
+            MigrationMap::setMapping('exported_buids', $buid, $buid);
+        }
+
+        MigrationState::markCompleted('export', 'chunk', [
+            'chunk_size'    => count($this->chunkBuids),
+            'total'         => $this->totalEstates,
+            'exported'      => $this->exportedCount + count($this->chunkBuids),
+            'remaining'     => $this->remainingCount - count($this->chunkBuids),
+            'exported_at'   => now()->toIso8601String(),
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
 
     protected function write(string $file, array $data, string $path)
     {
@@ -65,6 +207,27 @@ class ExportLegacyEcmiData extends Command
             $path . '/' . $file,
             json_encode($data, JSON_PRETTY_PRINT)
         );
+    }
+
+    /**
+     * Check if a row's BUID is in the current chunk.
+     * When exporting a single estate (by argument), all rows pass.
+     */
+    protected function inChunk($buid): bool
+    {
+        if ($this->argument('estate')) {
+            return true;
+        }
+
+        return in_array((string) $buid, $this->chunkBuids, true);
+    }
+
+    /**
+     * Filter a MSSQL query result to only rows whose BUID is in the chunk.
+     */
+    protected function filterByChunk(array $rows): array
+    {
+        return array_values(array_filter($rows, fn ($row) => $this->inChunk($row->BUID ?? null)));
     }
 
     /* ================= ESTATES ================= */
@@ -75,6 +238,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('BUID', $estate)->orWhere('Name', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $this->write('estates.json', $query->get()->toArray(), $path);
@@ -96,6 +261,8 @@ class ExportLegacyEcmiData extends Command
         if ($estate) {
             $query->where('Paystack_SubAcct.RUID', $estate)
                 ->orWhere('BusinessUnit.Name', $estate);
+        } else {
+            $query->whereIn('Paystack_SubAcct.RUID', $this->chunkBuids);
         }
 
         $rows = $query->get()->toArray();
@@ -113,6 +280,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('BUID', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $this->write('tariffs.json', $query->get()->toArray(), $path);
@@ -128,6 +297,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('BUID', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $this->write('tariff_states.json', $query->orderBy('EffectiveDate')->get()->toArray(), $path);
@@ -143,6 +314,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('BUID', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $this->write('meters.json', $query->orderBy('MeterNo')->get()->toArray(), $path);
@@ -159,6 +332,8 @@ class ExportLegacyEcmiData extends Command
         if ($estate) {
             $query->where('BUID', $estate)
                 ->orWhere('BusinessUnit', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $rows = $query->orderBy('OperatorId')->get();
@@ -167,7 +342,6 @@ class ExportLegacyEcmiData extends Command
 
         foreach ($rows as $row) {
 
-            // 🔐 RECONSTRUCT ORIGINAL PASSWORD (same logic as migration)
             $password = $this->reconstructPassword(
                 $row->OperatorId,
                 (int) $row->Pw_Len
@@ -207,6 +381,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('Meters.BUID', $estate);
+        } else {
+            $query->whereIn('Meters.BUID', $this->chunkBuids);
         }
 
         $this->write('user_data.json', $query->orderBy('UserData.OperatorId')->get()->toArray(), $path);
@@ -292,6 +468,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('BUID', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $this->write(
@@ -310,6 +488,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('BUID', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $this->write(
@@ -328,6 +508,8 @@ class ExportLegacyEcmiData extends Command
 
         if ($estate) {
             $query->where('BUID', $estate);
+        } else {
+            $query->whereIn('BUID', $this->chunkBuids);
         }
 
         $this->write(
@@ -337,5 +519,45 @@ class ExportLegacyEcmiData extends Command
         );
 
         $this->info('Exported customers');
+    }
+
+    protected function exportUtilitySubAccountCustomers(string $path): void
+    {
+        $query = $this->legacy()->table('Customers');
+
+        if (!$this->argument('estate')) {
+            $query->whereIn('BUID', $this->chunkBuids);
+        }
+
+        $rows = $query->get()->toArray();
+        $this->write('customers.json', $rows, $path);
+        $this->info("Exported " . count($rows) . " customers for utility subaccount mapping");
+    }
+
+    protected function exportUtilitySubAccounts(string $path, $estate): void
+    {
+        $this->exportUtilitySubAccountCustomers($path);
+        $this->exportSubAccounts($path, $estate);
+    }
+
+    protected function exportSubAccounts($path, $estate)
+    {
+        $query = $this->legacy()->table('SubAccount');
+
+        if ($estate) {
+            $query->join('Meters', 'Meters.AccountNo', '=', 'SubAccount.AccountNo')
+                ->where('Meters.BUID', $estate)
+                ->select('SubAccount.*');
+        } elseif (!empty($this->chunkBuids)) {
+            $query->join('Meters', 'Meters.AccountNo', '=', 'SubAccount.AccountNo')
+                ->whereIn('Meters.BUID', $this->chunkBuids)
+                ->select('SubAccount.*');
+        }
+
+        $rows = $query->get()->toArray();
+
+        $this->write('subaccounts.json', $rows, $path);
+
+        $this->info("Exported ".count($rows)." subaccounts");
     }
 }

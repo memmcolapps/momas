@@ -18,7 +18,7 @@ use App\Models\Transaction;
 use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
-use App\Models\Utitlity;
+use App\Models\Utility;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
@@ -366,6 +366,7 @@ class MeterController extends Controller
                                                             ->where('estate_id', $auth_user->estate_id)
                                                             ->where('status', 2)],
             'amount' => 'required|numeric|min:1',
+            'receiver_meterNo' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -395,7 +396,13 @@ class MeterController extends Controller
         }
 
         try {
-            $values = $meter->calculateTokenValuesByAmount((int) $request->tariff_id, (int) $request->amount);
+            $values = $meter->calculateTokenValuesByAmount(
+                (int) $request->tariff_id,
+                (int) $request->amount,
+                $request->receiver_meterNo
+            );
+
+            $values['utilityAmount'] = $values['arrearsOwed'];
             return StandardResponse::success(200, 'Token values calculated successfully', $values);
         } catch (Exception $e) {
             return StandardResponse::error(422, $e->getMessage());
@@ -1428,7 +1435,7 @@ class MeterController extends Controller
     function vending_properties(request $request)
     {
 
-        $duration = Utitlity::where('estate_id', Auth::user()->estate_id)->first()->duration ?? null;
+        $duration = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first()->duration ?? null;
         $estate_id = Auth::user()->estate_id ?? null;
         $user_id = Auth::id();
 

@@ -4,7 +4,11 @@ namespace App\Console\Commands;
 
 use App\Models\CreditToken;
 use App\Models\Estate;
+use App\Models\EstateModFeature;
+use App\Models\MigrationMap;
+use App\Models\MigrationState;
 use App\Models\Meter;
+use App\Models\ModFeature;
 use App\Models\Tariff;
 use App\Models\TarrifState;
 use App\Models\Transformer;
@@ -31,12 +35,13 @@ class ImportLegacyEcmiData extends Command
     protected const MODULES = [
         'estate',
         'transformer',
-        'tariff',          // includes invalid-tariff map + tariff states
+        'tariff',
         'meter',
         'user_info',
         'user_data',
         'customer',
-        'transaction',     // attachMeters() runs just before this
+        'utility-subaccount',
+        'transaction',
     ];
 
     protected const MODULE_DEPS = [
@@ -46,11 +51,25 @@ class ImportLegacyEcmiData extends Command
         'user_info'   => ['estate'],
         'customer'    => ['estate', 'tariff', 'meter'],
         'transaction' => ['meter', 'user_data'],
+        'utility-subaccount' => ['customer'],
         // estate, user_data have no deps
     ];
 
     // -----------------------------------------------------------------------
-    // In-memory maps (re-hydrated from state file at boot)
+    // Map names used in MigrationMap
+    // -----------------------------------------------------------------------
+    protected const MAP_NAMES = [
+        'estateMap',
+        'tariffMap',
+        'meterMap',
+        'transformerMap',
+        'invalidTariffKeys',
+        'tariffTypeMap',
+        'tariffConflicts',
+    ];
+
+    // -----------------------------------------------------------------------
+    // In-memory maps (re-hydrated from DB at boot)
     // -----------------------------------------------------------------------
     protected array $estateMap      = [];
     protected array $tariffMap      = [];
@@ -80,7 +99,7 @@ class ImportLegacyEcmiData extends Command
         'customers'               => 0,
     ];
 
-    /** Modules that have been committed successfully (persisted in state file) */
+    /** Modules that have been committed successfully (persisted in DB) */
     protected array $completedModules = [];
 
     // -----------------------------------------------------------------------
@@ -95,24 +114,26 @@ class ImportLegacyEcmiData extends Command
 
         // --reset: wipe saved state and start over
         if ($this->option('reset')) {
-            $this->deleteStateFile($path);
-            $this->info('State file cleared. Starting fresh.');
+            MigrationState::clearContext('import');
+            MigrationMap::clearMaps(self::MAP_NAMES);
+            $this->info('Import state cleared. Starting fresh.');
         }
 
-        // Load any previously persisted state
-        $this->loadState($path);
+        // Load any previously persisted state from DB
+        $this->loadState();
 
         // Decide which modules to run
         $targetModule = $this->option('module');
 
         if ($targetModule !== null) {
 
-            if ($targetModule === 'subaccount' || $targetModule === 'attach_meters') {
+            if ($targetModule === 'subaccount' || $targetModule === 'attach_meters' || $targetModule === 'utility-subaccount') {
                 $this->info("▶ Running standalone module: {$targetModule}");
                 try {
                     match ($targetModule) {
-                        'subaccount'   => $this->importSubAccounts($path),
-                        'attach_meters' => $this->attachMeters(),
+                        'subaccount'         => $this->importSubAccounts($path),
+                        'attach_meters'      => $this->attachMeters(),
+                        'utility-subaccount' => $this->importUtilitySubAccounts($path),
                     };
                     $this->info("✔ Module [{$targetModule}] complete.");
                 } catch (\Throwable $e) {
@@ -157,7 +178,7 @@ class ImportLegacyEcmiData extends Command
                     DB::commit();
                     // Persist maps + mark this module done
                     $this->completedModules[] = $module;
-                    $this->saveState($path);
+                    $this->saveState();
                     $this->info("✔ Module [{$module}] committed and state saved.");
                 } else {
                     DB::rollBack();
@@ -173,11 +194,10 @@ class ImportLegacyEcmiData extends Command
             }
         }
 
-        // All modules done — clean up state file (unless dry-run)
+        // All modules done
         if (!$this->isDryRun() && empty(array_diff(self::MODULES, $this->completedModules))) {
-            $this->deleteStateFile($path);
             $this->info('');
-            $this->info('All modules complete. State file removed.');
+            $this->info('All modules complete.');
         }
 
         $this->printSummary();
@@ -211,6 +231,7 @@ class ImportLegacyEcmiData extends Command
             'user_data'   => $this->importUserData($path),
             'transaction' => $this->runTransactionModule($path),
             'subaccount' => $this->importSubAccounts($path),
+            'utility-subaccount' => $this->importUtilitySubAccounts($path),
         };
     }
 
@@ -242,75 +263,51 @@ class ImportLegacyEcmiData extends Command
     }
 
     // -----------------------------------------------------------------------
-    // State persistence
+    // State persistence (DB-backed via MigrationState + MigrationMap)
     // -----------------------------------------------------------------------
 
-    protected function stateFilePath(string $path): string
+    protected function loadState(): void
     {
-        return rtrim($path, '/') . '/migration_state.json';
-    }
+        $this->completedModules = MigrationState::getCompletedModules('import');
 
-    protected function saveState(string $path): void
-    {
-        $state = [
-            'saved_at'          => now()->toIso8601String(),
-            'completed_modules' => $this->completedModules,
-            'stats'             => $this->stats,
-            'maps'              => [
-                'estateMap'         => $this->estateMap,
-                'tariffMap'         => $this->tariffMap,
-                'meterMap'          => $this->meterMap,
-                'transformerMap'    => $this->transformerMap,
-                'invalidTariffKeys' => $this->invalidTariffKeys,
-                'tariffTypeMap'     => $this->tariffTypeMap,
-                'tariffConflicts'   => $this->tariffConflicts,
-            ],
-        ];
+        $this->estateMap         = MigrationMap::loadMap('estateMap');
+        $this->tariffMap         = MigrationMap::loadMap('tariffMap');
+        $this->meterMap          = MigrationMap::loadMap('meterMap');
+        $this->transformerMap    = MigrationMap::loadMap('transformerMap');
+        $this->invalidTariffKeys = MigrationMap::loadMap('invalidTariffKeys');
+        $this->tariffTypeMap     = MigrationMap::loadMap('tariffTypeMap');
+        $this->tariffConflicts   = MigrationMap::loadMap('tariffConflicts');
 
-        file_put_contents(
-            $this->stateFilePath($path),
-            json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
-    }
-
-    protected function loadState(string $path): void
-    {
-        $file = $this->stateFilePath($path);
-
-        if (!file_exists($file)) {
-            return;
+        // Load accumulated stats from completed modules
+        $completedStats = MigrationState::context('import')->pluck('stats', 'module');
+        foreach ($completedStats as $module => $stats) {
+            if ($stats) {
+                $this->stats = array_merge($this->stats, $stats);
+            }
         }
-
-        $state = json_decode(file_get_contents($file), true);
-
-        if (!$state) {
-            $this->warn('State file found but could not be parsed — ignoring.');
-            return;
-        }
-
-        $this->completedModules = $state['completed_modules'] ?? [];
-        $this->stats            = array_merge($this->stats, $state['stats'] ?? []);
-
-        $maps = $state['maps'] ?? [];
-        $this->estateMap         = $maps['estateMap']         ?? [];
-        $this->tariffMap         = $maps['tariffMap']         ?? [];
-        $this->meterMap          = $maps['meterMap']          ?? [];
-        $this->transformerMap    = $maps['transformerMap']    ?? [];
-        $this->invalidTariffKeys = $maps['invalidTariffKeys'] ?? [];
-        $this->tariffTypeMap     = $maps['tariffTypeMap']     ?? [];
-        $this->tariffConflicts   = $maps['tariffConflicts']   ?? [];
 
         if (!empty($this->completedModules)) {
-            $this->info('Resuming from state file. Completed: ' . implode(', ', $this->completedModules));
+            $this->info('Resuming from DB state. Completed: ' . implode(', ', $this->completedModules));
         }
     }
 
-    protected function deleteStateFile(string $path): void
+    protected function saveState(): void
     {
-        $file = $this->stateFilePath($path);
-        if (file_exists($file)) {
-            unlink($file);
+        $mapData = [
+            'estateMap'         => $this->estateMap,
+            'tariffMap'         => $this->tariffMap,
+            'meterMap'          => $this->meterMap,
+            'transformerMap'    => $this->transformerMap,
+            'invalidTariffKeys' => $this->invalidTariffKeys,
+            'tariffTypeMap'     => $this->tariffTypeMap,
+            'tariffConflicts'   => $this->tariffConflicts,
+        ];
+
+        foreach ($mapData as $mapName => $mappings) {
+            MigrationMap::setMappings($mapName, $mappings);
         }
+
+        MigrationState::markCompleted('import', end($this->completedModules), $this->stats);
     }
 
     // -----------------------------------------------------------------------
@@ -376,7 +373,7 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($latest as $key => $row) {
             if (strtoupper(trim($row->Status ?? '')) === 'INVALID') {
-                $this->invalidTariffKeys[$key] = true;
+                $this->invalidTariffKeys[$key] = $key;
             }
         }
 
@@ -458,7 +455,7 @@ class ImportLegacyEcmiData extends Command
                 'address'             => $row->Address,
                 'state'               => $row->State,
                 'legacy_buid'         => $row->BUID,
-                'status'              => $row->status1 === 'N' ? 1 : 0,
+                'status'              => 2,
                 'paystack_subaccount' => $subAcct?->SubAcctID       ?? null,
                 'account_no'          => $subAcct?->BankAccountNo   ?? null,
                 'account_name'        => $subAcct?->BankAccountName ?? null,
@@ -477,6 +474,15 @@ class ImportLegacyEcmiData extends Command
 
             $estate = Estate::create($payload);
             $this->estateMap[$row->BUID] = $estate->id;
+
+            $allFeatures = ModFeature::all();
+            foreach ($allFeatures as $feature) {
+                EstateModFeature::create([
+                    'estate_id'      => $estate->id,
+                    'mod_feature_id' => $feature->id,
+                    'status'         => $feature->status,
+                ]);
+            }
         }
     }
 
@@ -510,7 +516,7 @@ class ImportLegacyEcmiData extends Command
                 'Title'      => $row->Name,
                 'City'       => $row->City,
                 'State'      => $row->State,
-                'Status'     => $row->status1 === 'N' ? 1 : 0,
+                'Status'     => 2,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -547,11 +553,6 @@ class ImportLegacyEcmiData extends Command
                 continue; // already migrated in a previous run
             }
 
-            // if (isset($this->invalidTariffKeys[$key])) {
-            //     $this->stats['tariffs_skipped_invalid']++;
-            //     continue;
-            // }
-
             $estateId = $this->estateMap[$row->BUID] ?? null;
 
             if ($estateId === null) {
@@ -562,7 +563,7 @@ class ImportLegacyEcmiData extends Command
                 'title'        => $row->Description,
                 'tariff_index' => $row->TariffID,
                 'estate_id'    => $estateId,
-                'status'       => $row->status1 === 'N' ? 1 : 0,
+                'status'       => 2,
                 'type'         => null, // set later by classifyTariffTypes()
             ];
 
@@ -587,14 +588,13 @@ class ImportLegacyEcmiData extends Command
     {
         $rows = $this->loadTariffStates($path);
 
+        $grouped = [];
         foreach ($rows as $row) {
             $key = $this->tariffKey($row->TariffID, $row->BUID);
+            $grouped[$key][] = $row;
+        }
 
-            // if (isset($this->invalidTariffKeys[$key])) {
-            //     $this->stats['tariff_states_skipped']++;
-            //     continue;
-            // }
-
+        foreach ($grouped as $key => $states) {
             $tariffId = $this->tariffMap[$key] ?? null;
 
             if (!$tariffId) {
@@ -603,25 +603,36 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            $payload = [
-                'amount'         => $row->Rate,
-                'effective_from' => $row->EffectiveDate ?? now(),
-                'vat'            => $row->VAT,
-                'fixed_charge'   => $row->FC,
-                'estate_id'      => $this->estateMap[$row->BUID] ?? null,
-                'tariff_id'      => $tariffId,
-                't_index'        => $row->VersionNo,
-                'status'         => 2,
-            ];
-
-            $this->stats['tariff_states_created']++;
-
-            if ($this->isDryRun()) {
-                $this->preview('Tariff State', $payload);
-                continue;
+            $latest = $states[0];
+            foreach ($states as $state) {
+                if ($this->isNewerState($state, $latest)) {
+                    $latest = $state;
+                }
             }
 
-            TarrifState::create($payload);
+            foreach ($states as $state) {
+                $isLatest = $state === $latest;
+
+                $payload = [
+                    'amount'         => $state->Rate,
+                    'effective_from' => $state->EffectiveDate ?? now(),
+                    'vat'            => $state->VAT,
+                    'fixed_charge'   => $state->FC,
+                    'estate_id'      => $this->estateMap[$state->BUID] ?? null,
+                    'tariff_id'      => $tariffId,
+                    't_index'        => $state->VersionNo,
+                    'status'         => $isLatest ? 2 : 0,
+                ];
+
+                $this->stats['tariff_states_created']++;
+
+                if ($this->isDryRun()) {
+                    $this->preview('Tariff State', $payload);
+                    continue;
+                }
+
+                TarrifState::create($payload);
+            }
         }
     }
 
@@ -713,7 +724,7 @@ class ImportLegacyEcmiData extends Command
         }
 
         $this->tariffTypeMap[$key]   = 'CONFLICT';
-        $this->tariffConflicts[$key] = true;
+        $this->tariffConflicts[$key] = $key;
     }
 
     // -----------------------------------------------------------------------
@@ -759,6 +770,7 @@ class ImportLegacyEcmiData extends Command
 
         foreach ($rows as $row) {
             $email = $row->email ?? $emailize($row->first_name, $row->last_name);
+            $email = $this->uniqueEmail($email);
 
             $payload = [
                 'first_name'   => $row->first_name ?? null,
@@ -768,7 +780,7 @@ class ImportLegacyEcmiData extends Command
                 'role'         => 3,
                 'estate_id'    => $this->estateMap[$row->estate_buid] ?? null,
                 'estate_name'  => $row->estate_name,
-                'status'       => $row->activated ? 2 : 0,
+                'status'       => 2,
                 'can_login'    => $row->can_login,
                 'raw_password' => $row->raw_password,
             ];
@@ -795,10 +807,12 @@ class ImportLegacyEcmiData extends Command
         foreach ($rows as $row) {
             [$first, $last] = $this->splitName($row->FullName);
 
+            $email = $this->uniqueEmail(strtolower($row->OperatorName));
+
             $payload = [
                 'first_name' => $first,
                 'last_name'  => $last,
-                'email'      => strtolower($row->OperatorName),
+                'email'      => $email,
                 'phone'      => $row->PhoneNumber,
                 'meterNo'    => $row->MeterNo,
                 'role'       => 2,
@@ -873,9 +887,8 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            // Deduplicate emails at insert time
-            if (User::where('email', $payload['email'])->exists()) {
-                $payload['email'] = 'legacy_' . uniqid() . '@legacy.local.com';
+            if (!$this->isDryRun()) {
+                $payload['email'] = $this->uniqueEmail($payload['email']);
             }
 
             User::updateOrCreate(['meterNo' => $row->MeterNo], $payload);
@@ -940,7 +953,7 @@ class ImportLegacyEcmiData extends Command
                 'amount'              => $row->Amount,
                 'fee'                 => $row->FC ?? 0,
                 'unit_amount'         => $row->Units,
-                'status'              => $row->TransactionComplete ? 1 : 0,
+                'status'              => 2,
                 'note'                => $row->Reasons,
                 'miscellaneous'       => $row->Token,
                 'action_payload'      => json_encode([
@@ -1026,9 +1039,20 @@ class ImportLegacyEcmiData extends Command
         $this->line('=====================================');
     }
 
+    protected function uniqueEmail(string $email): string
+    {
+        $original = $email;
+        while (User::where('email', $email)->exists()) {
+            $local  = explode('@', $original)[0];
+            $domain = explode('@', $original)[1] ?? 'legacy.local.com';
+            $email  = $local . '_dup' . Str::random(6) . '@' . $domain;
+        }
+        return $email;
+    }
+
     // -----------------------------------------------------------------------
-// SUBACCOUNT BACKFILL (standalone — safe to re-run, no state dependency)
-// -----------------------------------------------------------------------
+    // SUBACCOUNT BACKFILL (standalone — safe to re-run, no state dependency)
+    // -----------------------------------------------------------------------
 
     protected function importSubAccounts(string $path): void
     {
@@ -1096,16 +1120,9 @@ class ImportLegacyEcmiData extends Command
                 continue;
             }
 
-            // foreach($updates as $key => $value) {
-            //     $estate->$key = $estate->$value;
-            // }
-            // $estate->save();
-            // DB::commit();
             DB::table('estates')
                 ->where('id', $estate->id)
                 ->update($updates);
-
-            // $estate->update($updates);
 
             $this->info("[OK] Estate '{$estate->title}' (id={$estate->id}) updated: " . implode(', ', array_keys($updates)) . implode(', ', array_values($updates)));
             $updated++;
@@ -1117,6 +1134,82 @@ class ImportLegacyEcmiData extends Command
             ['Estates skipped',   $skipped],
             ['Estates not found', $notFound],
         ]);
+    }
+
+    protected function importUtilitySubAccounts(string $path): void
+    {
+        $rows = $this->read('subaccounts.json', $path);
+        $customers = $this->read('customers.json', $path);
+
+        $customerMeterMap = [];
+        foreach ($customers as $c) {
+            $acctNo = trim($c->AccountNo ?? '');
+            if ($acctNo !== '') {
+                $customerMeterMap[$acctNo] = trim($c->MeterNo ?? '');
+            }
+        }
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($rows as $row) {
+            $acctNo = trim($row->AccountNo ?? '');
+            $meterNo = $customerMeterMap[$acctNo] ?? null;
+
+            if (!$meterNo) {
+                $this->warn("Customer not found for account {$acctNo}");
+                $skipped++;
+                continue;
+            }
+
+            $user = User::where('meterNo', $meterNo)->first();
+
+            if (!$user) {
+                $this->warn("User not found for meter {$meterNo}");
+                $skipped++;
+                continue;
+            }
+
+            $payload = [
+                'estate_id'        => $user->estate_id,
+                'user_id'          => $user->id,
+                'type'             => 'debt',
+                'title'            => $row->SubAccountAbbre,
+                'amount'           => $row->AmountAttached ?? 0,
+                'balance'          => $row->Balance,
+                'start_date'       => $row->StartDate,
+                'mode_of_payment'  => $row->ModeOfPayment,
+                'payment_amount'   => $row->PaymentAmount,
+                'activated'        => (bool)$row->activated,
+                'operator_id'      => $row->OperatorID,
+                'status'           => 2,
+                'created_at'       => $row->Date ?? now(),
+                'updated_at'       => $row->lastmodified ?? now(),
+            ];
+
+            if ($this->isDryRun()) {
+                $this->preview("UTILITY {$row->SubAccountNo}", $payload);
+                continue;
+            }
+
+            DB::table('utilities')->updateOrInsert(
+                [
+                    'user_id' => $user->id,
+                    'title'   => $row->SubAccountAbbre,
+                ],
+                $payload
+            );
+
+            $created++;
+        }
+
+        $this->table(
+            ['Metric', 'Count'],
+            [
+                ['Imported', $created],
+                ['Skipped', $skipped],
+            ]
+        );
     }
 
     protected function printSummary(): void

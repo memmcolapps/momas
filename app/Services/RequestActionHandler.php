@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Models\ClearcreditToken;
 use App\Models\Feature;
 use App\Models\KctToken;
+use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\UtilitiesPayment;
 use Exception;
-use App\Models\Logger;
 
 class RequestActionHandler {
     protected $reference;
@@ -80,6 +81,49 @@ class RequestActionHandler {
 
 
 
+    protected function calculateDebtServiceChargeBreakdown(int $user_id): array
+    {
+        $estate_id = $this->getEstateIdForUser($user_id);
+        $debt_owed = $this->calculateDebtOwed($user_id, $estate_id);
+        $service_charge_owed = $this->calculateServiceChargeOwed($user_id, $estate_id);
+
+        $debt_service_charge_breakdown = [
+            'debt_owed' => $debt_owed,
+            'service_charge_owed' => $service_charge_owed,
+        ];
+
+        // dd($debt_service_charge_breakdown);
+
+        return $debt_service_charge_breakdown;
+    }
+
+    protected function getEstateIdForUser(int $user_id): int
+    {
+        $user = User::where('id', $user_id)->first();
+        if (!$user || !$user->estate_id) {
+            throw new Exception("User {$user_id} has no estate_id");
+        }
+        return $user->estate_id;
+    }
+
+    protected function calculateDebtOwed(int $user_id, int $estate_id): float
+    {
+        $serviceService = new \App\Services\UtilityManagementService();
+        $debtOwedResult = $serviceService->calculateUserOwedUtility($user_id, $estate_id);
+        return (float) ($debtOwedResult['total_owed'] ?? 0);
+    }
+
+    protected function calculateServiceChargeOwed(int $user_id, int $estate_id): float
+    {
+        $arrearsAmount = UtilitiesPayment::where('user_id', $user_id)
+            ->where('estate_id', $estate_id)
+            ->where('type', 'utilities')
+            ->where('status', '!=', 2)
+            ->sum('amount');
+
+        return (float) $arrearsAmount;
+    }
+
     protected function handleBuyTokenRequest($others=false, $action='momas_meter') {
         // dump('handleBuyTokenRequest');
         // throw new Exception("Test Failure");
@@ -96,7 +140,6 @@ class RequestActionHandler {
         // dump("RequestActionHandler: 78", $trx);
 
         $action_payload = json_decode($trx->action_payload, true);
-        // dump("Booyah");
         $user_id = $action_payload['user_id'];
 
         // dump($user_id, $action_payload);
@@ -104,8 +147,6 @@ class RequestActionHandler {
         // dump("user->", $user->id);
 
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
-        // dump("meter_with_uid->", $meter->id);
-        // dump($meter);
 
         $tariffId = $action_payload['tariff_id'];
         $unit = $action_payload['vend_amount_kw_per_naira'];
@@ -114,7 +155,20 @@ class RequestActionHandler {
         $vending_amount = $action_payload['vending_amount'];
         $reciever_meterNo = $action_payload['reciever_meterNo'] ?? null;
 
-        // dump ('Got here');
+        if ($action === 'momas_meter_web') {
+
+            $debtServiceBreakdown = $this->calculateDebtServiceChargeBreakdown($user_id);
+
+            handle_pay_arrears($this->reference, $user_id, 'utilities');
+            $trx = Transaction::where('trx_id', $this->reference)->first();
+            if ($trx) {
+                $action_payload = json_decode($trx->action_payload, true) ?? [];
+                $action_payload['debt_breakdown'] = $debtServiceBreakdown;
+                $trx->action_payload = json_encode($action_payload);
+                $trx->save();
+            }
+        }
+
         $meter->getNewToken($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 
         return true;

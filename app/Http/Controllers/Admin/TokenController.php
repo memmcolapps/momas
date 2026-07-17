@@ -588,6 +588,8 @@ class TokenController extends Controller
                 Meter::where('MeterNo', $request->meterNo)->update(['user_id' => $user->id]);
             }
 
+            backfill_utility_payments($user->id, $estate_id);
+
             if (!app()->environment('staging') && $request->amount < 1000) {
                 return back()->with('error', 'Amount can not be less than NGN 1,000');
             }
@@ -613,15 +615,31 @@ class TokenController extends Controller
             }
             $afterEstateFee = $afterServiceFee - $estateFee;
 
+            // [2.3] Unpaid UtilitiesPayment Arrears (old system)
+            $arrearsAmount = UtilitiesPayment::where('user_id', $user->id)
+                ->where('estate_id', $estate_id)
+                ->where('type', 'utilities')
+                ->where('status', '!=', 2)
+                ->sum('amount');
+            $afterArrears = $afterEstateFee - $arrearsAmount;
+
+            // [2.5] Utility Owed
+            $utilityService = new \App\Services\UtilityManagementService();
+            $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
+            $utilityOwed = $utilityResult['total_owed'];
+            $afterUtility = $afterArrears - $utilityOwed;
+
             // [3] Tariff Fixed Charge
-            $afterFixedCharge = $afterEstateFee - $fixedCharge;
+            $afterFixedCharge = $afterUtility - $fixedCharge;
 
             // Validate that amount after deductions is not negative or too small
             if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+                $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10; // Adding small buffer
                 return back()->with('error',
                     'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                     '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), arrears (NGN ' . number_format($arrearsAmount, 2) .
+                    '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                     '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                     '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
                     '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
@@ -632,7 +650,7 @@ class TokenController extends Controller
             $params = [
                 'amountText' => $afterFixedCharge,
                 'tariffAmount' => $tariffAmount,
-                'utilitiesAmount' => 0,
+                'utilitiesAmount' => $utilityOwed,
                 'vat' => $vat,
             ];
 
@@ -644,6 +662,12 @@ class TokenController extends Controller
 
             if ($tariffPerKWatt < 0.1) {
                 return back()->with('error', "Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered" . json_encode($params));
+            }
+
+            $min_pur = $est->min_pur ?? null;
+
+            if ($costOfUnit < $min_pur) {
+                return back()->with("error", "Amount after charges can't be less than " . $min_pur);
             }
 
             $data['vatAmount'] = $vatAmount;
@@ -658,6 +682,8 @@ class TokenController extends Controller
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $request->estate_id;
             $data['tarrif_amount'] = $tariffAmount;
+            $data['utility_owed'] = $utilityOwed;
+            $data['arrears_owed'] = $arrearsAmount;
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
@@ -726,6 +752,8 @@ class TokenController extends Controller
                 return back()->with('error', 'Meter has not been attached to any customer');
             }
 
+            backfill_utility_payments($user->id, $estate_id);
+
 
             $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
             // dd($tariffState, $request->tariff_id);
@@ -749,15 +777,31 @@ class TokenController extends Controller
             }
             $afterEstateFee = $afterServiceFee - $estateFee;
 
+            // [2.3] Unpaid UtilitiesPayment Arrears (old system)
+            $arrearsAmount = UtilitiesPayment::where('user_id', $user->id)
+                ->where('estate_id', $estate_id)
+                ->where('type', 'utilities')
+                ->where('status', '!=', 2)
+                ->sum('amount');
+            $afterArrears = $afterEstateFee - $arrearsAmount;
+
+            // [2.5] Utility Owed
+            $utilityService = new \App\Services\UtilityManagementService();
+            $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
+            $utilityOwed = $utilityResult['total_owed'];
+            $afterUtility = $afterArrears - $utilityOwed;
+
             // [3] Tariff Fixed Charge
-            $afterFixedCharge = $afterEstateFee - $fixedCharge;
+            $afterFixedCharge = $afterUtility - $fixedCharge;
 
             // Validate that amount after deductions is not negative or too small
             if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $fixedCharge + 10; // Adding small buffer
+                $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10; // Adding small buffer
                 return back()->with('error',
                     'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
                     '), estate fee (NGN ' . number_format($estateFee, 2) .
+                    '), arrears (NGN ' . number_format($arrearsAmount, 2) .
+                    '), utility owed (NGN ' . number_format($utilityOwed, 2) .
                     '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
                     '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
                     '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
@@ -768,7 +812,7 @@ class TokenController extends Controller
             $params = [
                 'amountText' => $afterFixedCharge,
                 'tariffAmount' => $tariffAmount,
-                'utilitiesAmount' => 0,
+                'utilitiesAmount' => $utilityOwed,
                 'vat' => $vat,
             ];
 
@@ -793,6 +837,8 @@ class TokenController extends Controller
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $estate_id; // Estate Admin uses their assigned estate ID
             $data['tarrif_amount'] = $tariffAmount;
+            $data['utility_owed'] = $utilityOwed;
+            $data['arrears_owed'] = $arrearsAmount;
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
@@ -1473,11 +1519,6 @@ class TokenController extends Controller
                     $fee = $est->charge_fee_flat;
                 }
 
-                $get_utility_id = null;
-                if ($request->utility_amount < 0) {
-                    $get_utility_id = UtilitiesPayment::where('user_id', Auth::id())->where('type', 'utilities')->first()->id;
-                }
-
                 if (! $est->paystack_subaccount) {
                     return redirect('/admin/credit-token')->with(
                         'error',
@@ -1511,15 +1552,18 @@ class TokenController extends Controller
                 $trx_id = $payment_init['reference'];
 
                 if ($status === true) {
+                    $utilityAmount = (float) ($request->utility_owed ?? 0);
+                    $vendingAmount = (float) $request->amount - $utilityAmount;
+
                     // Build action_payload for RequestActionHandler
                     $action_payload = [
                         'action' => 'momas_meter_web',
                         'tariff_id' => $request->tariff_id,
                         'vend_amount_kw_per_naira' => $request->unit,
-                        'utility_amount' => 0,
+                        'utility_amount' => $utilityAmount,
                         'total_paid_amount' => $request->amount,
                         'vat_amount' => $request->vatAmount ?? 0,
-                        'vending_amount' => $request->amount,
+                        'vending_amount' => $vendingAmount,
                         'amount' => $amount,
                         'user_id' => $user_id,
                         'meterNo' => $request->meterNo,
@@ -1528,7 +1572,7 @@ class TokenController extends Controller
                     // dd($action_payload);
 
                     $trx = new Transaction();
-                    $trx->user_id = Auth::id();
+                    $trx->user_id = $request->user_id;
                     $trx->estate_id = $estate_id;
                     $trx->pay_type = "paystack";
                     $trx->amount = $request->amount;
@@ -2426,9 +2470,9 @@ class TokenController extends Controller
                 $status = $var->status ?? null;
 
 
-                $trx = new Transaction();
-                $trx->user_id = Auth::id();
-                $trx->estate_id = $estate_id;
+                    $trx = new Transaction();
+                    $trx->user_id = $user_id;
+                    $trx->estate_id = $estate_id;
                 $trx->pay_type = "flutterwave";
                 $trx->service_type = "kct_token";
                 $trx->amount = $request->amount;
@@ -3447,7 +3491,6 @@ class TokenController extends Controller
 
             if ($status === 'success') {
 
-
                 Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 2]);
                 $meterNo = CreditToken::where('trx_id', $var->data->metadata->ref)->first()->meterNo;
                 $meter = Meter::where('meterNo', $meterNo)->first();
@@ -3625,6 +3668,8 @@ class TokenController extends Controller
 
                     $access_point = $request->header('Access-Point') ?? 'web';
                     $action = $access_point == 'mobile' ? 'momas_meter' : 'momas_meter_web';
+
+                    handle_pay_arrears($trx_id, $trx->user_id, 'utilities');
 
                     $meter->getNewToken($tariff_id, $trx_id, verify:"null", receiver_meterNo:$receiver_meterNo, action:$action);
 
@@ -4661,6 +4706,10 @@ class TokenController extends Controller
 
             if ($status == 'success') {
 
+                $cdtUser = CreditToken::where('trx_id', $ref)->first();
+                if ($cdtUser) {
+                    handle_pay_arrears($ref, $cdtUser->user_id, 'utilities');
+                }
 
                 Transaction::where('trx_id', $ref)->update(['status' => 2]);
                 $meterNo = CreditToken::where('trx_id', $ref)->first()->meterNo;
@@ -4757,6 +4806,10 @@ class TokenController extends Controller
 
             if ($status == 'success') {
 
+                $cdtUser = CreditToken::where('trx_id', $var->data->metadata->ref)->first();
+                if ($cdtUser) {
+                    handle_pay_arrears($var->data->metadata->ref, $cdtUser->user_id, 'utilities');
+                }
 
                 Transaction::where('trx_id', $var->data->metadata->ref)->update(['status' => 2]);
                 $meterNo = CreditToken::where('trx_id', $var->data->metadata->ref)->first()->meterNo;
@@ -5447,6 +5500,7 @@ class TokenController extends Controller
                     $data['token'] = $trx_comp->token;
                     $data['ref'] = $trx_comp->trx_id;
                     $data['amount'] = $trx->amount ?? $trx_comp->amount_charged;
+                    $data['cost_of_unit'] = $trx_comp->amount;
                     $data['vat_amount'] = $trx_comp->vatAmount;
                     $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
                     $data['tariff_amount'] = $trx_comp->tariff_amount;
@@ -5456,6 +5510,12 @@ class TokenController extends Controller
                     $data['meter_no'] = $trx_comp->meterNo;
                     $data['kct_token1'] = $kct_tokens[0] ?? null;
                     $data['kct_token2'] = $kct_tokens[1] ?? null;
+
+                    $debt_breakdown = json_decode($trx->action_payload, true)['debt_breakdown'] ?? null;
+                    if ($debt_breakdown) {
+                        $data['debt_owed'] = $debt_breakdown['debt_owed'];
+                        $data['service_charge_owed'] = $debt_breakdown['service_charge_owed'];
+                    }
 
                     return view('admin/recepit.recepit', $data);
                 }

@@ -20,7 +20,8 @@ use App\Models\Token;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
-use App\Models\Utitlity;
+use App\Models\Utility;
+use App\Models\UtilityPaymentRecord;
 use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
@@ -400,9 +401,11 @@ class DashboardContoller extends Controller
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
-            $data['utl'] = Utitlity::where('estate_id', Auth::user()->estate_id)->first() ?? null;
-            $data['total_utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->sum('amount');
-            $data['utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->get() ?? null;
+            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->sum('amount');
+            $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get() ?? null;
+            $data['service_charges'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get();
+            $data['debt_utilities'] = Utility::where('estate_id', Auth::user()->estate_id)->debt()->whereNull('user_id')->get();
 
             return view('admin/settings', $data);
         } elseif (Auth::user()->isEstateStaff()) {
@@ -533,23 +536,32 @@ class DashboardContoller extends Controller
             return redirect('admin/settings')->with('error', 'Failed to update payment: ' . $e->getMessage());
         }
     }
-
     public function update_utility(request $request)
     {
+        $monthlyEndDate = null;
+        if ($request->mode_of_payment === 'monthly_payment' && $request->start_date && $request->payment_months) {
+            $monthlyEndDate = \Carbon\Carbon::parse($request->start_date)->addMonths((int) $request->payment_months)->toDateString();
+        }
 
-
-        dd($request->all());
-        Utitlity::where('id', $request->id)->update(['title' => $request->title, 'amount' => $request->amount]);
-
-
-
+        Utility::where('id', $request->id)->update([
+            'title' => $request->title,
+            'amount' => $request->amount,
+            'duration' => $request->duration ?? null,
+            'start_date' => $request->start_date,
+            'mode_of_payment' => $request->mode_of_payment,
+            'activated' => $request->has('activated'),
+            'operator_id' => auth()->id(),
+            'percent_payment' => $request->percent_payment,
+            'payment_months' => $request->payment_months,
+            'monthly_end_date' => $monthlyEndDate,
+        ]);
 
         return back()->with('message', 'Utility Updated Successfully');
     }
 
     public function delete_utility(request $request)
     {
-        Utitlity::where('id', $request->id)->delete();
+        Utility::where('id', $request->id)->delete();
         return back()->with('message', 'Utility deleted Successfully');
     }
 
@@ -704,7 +716,67 @@ class DashboardContoller extends Controller
             $data['user'] = User::where('id', $request->id)->first();
             $data['estate'] = Estate::where('status', 2)->get();
             $data['estate_name'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
+
+            backfill_utility_payments($data['user']->id, $data['user']->estate_id);
+
             $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
+
+            $recQuery = UtilityPaymentRecord::where('user_id', $request->id)->with('utility');
+
+            if ($search = $request->get('utility_title')) {
+                $recQuery->whereHas('utility', fn($q) => $q->where('title', 'like', "%{$search}%"));
+            }
+            if ($from = $request->get('payment_date_from')) {
+                $recQuery->whereDate('created_at', '>=', $from);
+            }
+            if ($to = $request->get('payment_date_to')) {
+                $recQuery->whereDate('created_at', '<=', $to);
+            }
+            if ($trxId = $request->get('trx_id')) {
+                $recQuery->where('trx_id', 'like', "%{$trxId}%");
+            }
+            if (($status = $request->get('status')) !== null && $status !== '') {
+                $recQuery->where('status', $status);
+            }
+
+            $data['utility_payment_records'] = $recQuery->latest()->paginate(10);
+            $utilityQuery = function ($type) use ($data) {
+                return \DB::table('utilities')
+                    ->select(
+                        'utilities.id',
+                        'utilities.estate_id',
+                        'utilities.user_id',
+                        'utilities.type',
+                        'utilities.title',
+                        'utilities.amount',
+                        'utilities.duration',
+                        'utilities.start_date',
+                        'utilities.mode_of_payment',
+                        'utilities.payment_amount',
+                        'utilities.operator_id',
+                        'utilities.percent_payment',
+                        'utilities.payment_months',
+                        'utilities.monthly_end_date',
+                        'utilities.created_at',
+                        'utilities.updated_at',
+                        \DB::raw('COALESCE(user_utilities.activated, utilities.activated) as activated'),
+                        \DB::raw('COALESCE(user_utilities.status, utilities.status) as status')
+                    )
+                    ->leftJoin('user_utilities', function ($join) use ($data) {
+                        $join->on('utilities.id', '=', 'user_utilities.utility_id')
+                             ->where('user_utilities.user_id', '=', $data['user']->id);
+                    })
+                    ->where('utilities.estate_id', $data['user']->estate_id)
+                    ->where('utilities.type', $type)
+                    ->where(function ($q) use ($data) {
+                        $q->whereNull('utilities.user_id')
+                          ->orWhere('utilities.user_id', $data['user']->id);
+                    })
+                    ->get();
+            };
+
+            $data['customer_debt_utilities'] = $utilityQuery('debt');
+            $data['customer_service_charges'] = $utilityQuery('service_charge');
             $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
             $data['meters'] = Meter::all();
             $data['tariff_count'] = Tariff::where('user_id', $request->id)->count();
