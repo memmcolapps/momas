@@ -715,7 +715,7 @@
                                         </div>
 
                                         <!-- Hidden template for the new fields -->
-                                        <div id="template" class="d-none">
+                                        <div id="template" class="d-none" data-is-template="true">
                                             <div class="row">
                                                 <div class="col-xl-3 col-sm-12 my-1">
                                                     <label class="my-2">Title</label>
@@ -827,8 +827,20 @@
                                     });
 
                                     document.getElementById('save').addEventListener('click', function () {
-                                        let types = document.querySelectorAll('select[name="type[]"]');
+                                        // Get type selects only from the utility-fields container
+                                        let types = document.querySelectorAll('#utility-fields select[name="type[]"]');
                                         let utilities = [];
+
+                                        // Validate that all utilities have titles
+                                        for (let i = 0; i < types.length; i++) {
+                                            let container = types[i].closest('.row');
+                                            let titleInput = container.querySelector('input[name="title[]"]');
+                                            if (!titleInput || !titleInput.value.trim()) {
+                                                alert('Title is required for utility at position ' + (i + 1));
+                                                titleInput?.focus();
+                                                return;
+                                            }
+                                        }
 
                                         for (let i = 0; i < types.length; i++) {
                                             let container = types[i].closest('.row');
