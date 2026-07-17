@@ -201,25 +201,25 @@
 
 
 
-                                        @else
-                                            TRX ID : <b>{{$ref}}</b></br><br>
-                                            Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
-                                            Tariff Amt : <b>₦ {{number_format($tariff_amount, 2) }}</b></br><br>
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                             Unit :  <b>{{round($unit, 2) ?? "0.00"}}KWH</b></br><br>
-                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                             @if ($kct_token1)
-                                                 KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
-                                                 KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
-                                             @endif
+                                         @else
+                                             TRX ID : <b>{{$ref}}</b></br><br>
+                                             Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
                                              @if(($debt_owed ?? 0) > 0)
                                                  Debt Owed : <b>- ₦ {{number_format($debt_owed, 2)}}</b></br><br>
                                              @endif
                                              @if(($service_charge_owed ?? 0) > 0)
                                                  Service Charge Owed : <b>- ₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
                                              @endif
-                                         @endif
+                                             Tariff Amt : <b>₦ {{number_format($tariff_amount, 2) }}</b></br><br>
+                                             Meter NO : <b>{{$meter_no}}</b></br><br>
+                                             Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
+                                              Unit :  <b>{{round($unit, 2) ?? "0.00"}}KWH</b></br><br>
+                                              Token : <b>{{$token ?? "12345678"}}</b></br><br>
+                                              @if ($kct_token1)
+                                                  KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
+                                                  KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
+                                              @endif
+                                          @endif
 
                                     </p>
                                 </div>
@@ -444,19 +444,25 @@
 
 
 
-                                        @else
+                                         @else
 
-                                            Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
-                                            Tariff Amt : <b>₦ {{number_format($tariff_amount, 2)  }} </b></br><br>
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                            Unit :  <b>{{round($unit) ?? "0.00"}}KWH</b></br><br>
-                                            Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                            @if ($kct_token1)
-                                                KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
-                                                KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
-                                            @endif
-                                        @endif
+                                             Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
+                                             @if(($debt_owed ?? 0) > 0)
+                                                 Debt Owed : <b>- ₦ {{number_format($debt_owed, 2)}}</b></br><br>
+                                             @endif
+                                             @if(($service_charge_owed ?? 0) > 0)
+                                                 Service Charge Owed : <b>- ₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
+                                             @endif
+                                             Tariff Amt : <b>₦ {{number_format($tariff_amount, 2)  }} </b></br><br>
+                                             Meter NO : <b>{{$meter_no}}</b></br><br>
+                                             Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
+                                             Unit :  <b>{{round($unit) ?? "0.00"}}KWH</b></br><br>
+                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
+                                             @if ($kct_token1)
+                                                 KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
+                                                 KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
+                                             @endif
+                                         @endif
 
                                     </p>
                                 </div>
