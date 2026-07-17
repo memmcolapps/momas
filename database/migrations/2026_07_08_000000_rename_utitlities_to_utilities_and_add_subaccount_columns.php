@@ -8,7 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::rename('utitlities', 'utilities');
+        if (Schema::hasTable('utitlities') && !Schema::hasTable('utilities')) {
+            Schema::rename('utitlities', 'utilities');
+        }
 
         Schema::table('utilities', function (Blueprint $table) {
             $table->decimal('balance', 14, 2)->nullable()->after('amount');
