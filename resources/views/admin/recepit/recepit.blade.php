@@ -132,6 +132,12 @@
                                         margin-top: 5mm;
                                     }
 
+                                    .receipt-row {
+                                        display: flex;
+                                        justify-content: space-between;
+                                        margin-bottom: 2px;
+                                        font-size: .7em;
+                                    }
 
                                 }
                             </style>
@@ -157,11 +163,9 @@
 
                             <div id="mid">
                                 <div class="info">
-                                    <p>
-                                        C/Name : <b>{{$full_name ?? "Customer Name"}}</b></br><br>
-                                        C/Address : <b>{{$address ?? "Customer Address"}}</b></br><br>
-                                        Date :  <b>{{$date ?? "12345678"}}</b></br>
-                                    </p>
+                                    <div class="receipt-row"><span>C/Name</span><b>{{$full_name ?? "Customer Name"}}</b></div>
+                                    <div class="receipt-row"><span>C/Address</span><b>{{$address ?? "Customer Address"}}</b></div>
+                                    <div class="receipt-row"><span>Date</span><b>{{$date ?? "12345678"}}</b></div>
                                 </div>
                             </div><!--End Invoice Mid-->
 
@@ -171,61 +175,52 @@
 
 
                                 <div class="info mt-4">
-                                    <p>
 
 
 
-                                        @if($title == "KCT TOKEN")
-                                            TRX ID : <b>{{$ref}}</b></br><br>
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            KCT 1 : <b>{{$token1 ?? "12345678"}}</b></br><br>
-                                            KCT 2 : <b>{{$token2 ?? "12345678"}}</b></br><br>
-                                        @elseif($title == "Clear Tamper Token")
-                                            TRX ID : <b>{{$ref}}</b></br><br>
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-{{--                                            Unit :  <b>{{$unit ?? "0.00"}}KWH</b></br><br>--}}
-                                            Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                        @elseif($title == "Clear Credit Token")
-                                            TRX ID : <b>{{$ref}}</b></br><br>
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                            <!-- VAT, Tariff Amount, and Unit hidden for Clear Credit -->
+                                    @if($title == "KCT TOKEN")
+                                        <div class="receipt-row"><span>TRX ID</span><b>{{$ref}}</b></div>
+                                        <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                        <div class="receipt-row"><span>KCT 1</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token1 ?? '12345678') }}</b></div>
+                                        <div class="receipt-row"><span>KCT 2</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token2 ?? '12345678') }}</b></div>
+                                    @elseif($title == "Clear Tamper Token")
+                                        <div class="receipt-row"><span>TRX ID</span><b>{{$ref}}</b></div>
+                                        <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                        <div class="receipt-row"><span>Token</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token ?? '12345678') }}</b></div>
+                                    @elseif($title == "Clear Credit Token")
+                                        <div class="receipt-row"><span>TRX ID</span><b>{{$ref}}</b></div>
+                                        <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                        <div class="receipt-row"><span>Token</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token ?? '12345678') }}</b></div>
 
-                                        @elseif($title == "Compensation Token")
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Unit :  <b>{{$vend_amount_kw_per_naira ?? "0.00"}}KWH</b></br><br>
-                                            Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                            Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                            Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
+                                    @elseif($title == "Compensation Token")
+                                        <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                        <div class="receipt-row"><span>Unit</span><b>{{$vend_amount_kw_per_naira ?? "0.00"}}KWH</b></div>
+                                        <div class="receipt-row"><span>Token</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token ?? '12345678') }}</b></div>
+                                        <div class="receipt-row"><span>Vat</span><b>{{$vat_amount ?? "0.00"}}</b></div>
+                                        <div class="receipt-row"><span>Amount</span><b>₦ {{number_format($amount, 2) }}</b></div>
 
-
-
-
-                                         @else
-                                             TRX ID : <b>{{$ref}}</b></br><br>
-                                             Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
-                                             @if(($debt_owed ?? 0) > 0)
-                                                 Debt Owed : <b>₦ {{number_format($debt_owed, 2)}}</b></br><br>
-                                             @endif
-                                              @if(($service_charge_owed ?? 0) > 0)
-                                                  Service Charge Owed : <b> ₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
-                                              @endif
-                                              @if(($cost_of_unit ?? 0) > 0)
-                                                  Cost of Unit : <b>₦ {{number_format($cost_of_unit, 2)}}</b></br><br>
-                                              @endif
-                                              Tariff Amt : <b>₦ {{number_format($tariff_amount, 2) }}</b></br><br>
-                                             Meter NO : <b>{{$meter_no}}</b></br><br>
-                                             Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                              Unit :  <b>{{round($unit, 2) ?? "0.00"}}KWH</b></br><br>
-                                              Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                              @if ($kct_token1)
-                                                  KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
-                                                  KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
-                                              @endif
+                                     @else
+                                         <div class="receipt-row"><span>TRX ID</span><b>{{$ref}}</b></div>
+                                         <div class="receipt-row"><span>Amount</span><b>₦ {{number_format($amount, 2) }}</b></div>
+                                         @if(($debt_owed ?? 0) > 0)
+                                             <div class="receipt-row"><span>Debt Owed</span><b>₦ {{number_format($debt_owed, 2)}}</b></div>
+                                         @endif
+                                          @if(($service_charge_owed ?? 0) > 0)
+                                              <div class="receipt-row"><span>Service Charge Owed</span><b>₦ {{number_format($service_charge_owed, 2)}}</b></div>
                                           @endif
-
-                                    </p>
-                                </div>
+                                          @if(($cost_of_unit ?? 0) > 0)
+                                              <div class="receipt-row"><span>Cost of Unit</span><b>₦ {{number_format($cost_of_unit, 2)}}</b></div>
+                                          @endif
+                                          <div class="receipt-row"><span>Tariff Amt</span><b>₦ {{number_format($tariff_amount, 2) }}</b></div>
+                                         <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                         <div class="receipt-row"><span>Vat</span><b>{{$vat_amount ?? "0.00"}}</b></div>
+                                         <div class="receipt-row"><span>Unit</span><b>{{round($unit, 2) ?? "0.00"}}KWH</b></div>
+                                         <div class="receipt-row"><span>Token</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token ?? '12345678') }}</b></div>
+                                         @if ($kct_token1)
+                                             <div class="receipt-row"><span>KCToken1</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $kct_token1 ?? '12345678') }}</b></div>
+                                             <div class="receipt-row"><span>KCToken2</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $kct_token2 ?? '12345678') }}</b></div>
+                                         @endif
+                                     @endif
 
 
                                 <center>
@@ -390,6 +385,12 @@
                                         margin-top: 5mm;
                                     }
 
+                                    .receipt-row {
+                                        display: flex;
+                                        justify-content: space-between;
+                                        margin-bottom: 2px;
+                                        font-size: .7em;
+                                    }
 
                                 }
                             </style>
@@ -414,11 +415,9 @@
 
                             <div id="mid">
                                 <div class="info">
-                                    <p>
-                                        C/Name : <b>{{$full_name ?? "Customer Name"}}</b></br><br>
-                                        C/Address : <b>{{$address ?? "Customer Address"}}</b></br><br>
-                                        Date :  <b>{{$date ?? "12345678"}}</b></br>
-                                    </p>
+                                    <div class="receipt-row"><span>C/Name</span><b>{{$full_name ?? "Customer Name"}}</b></div>
+                                    <div class="receipt-row"><span>C/Address</span><b>{{$address ?? "Customer Address"}}</b></div>
+                                    <div class="receipt-row"><span>Date</span><b>{{$date ?? "12345678"}}</b></div>
                                 </div>
                             </div><!--End Invoice Mid-->
 
@@ -428,50 +427,42 @@
 
 
                                 <div class="info mt-4">
-                                    <p>
 
 
 
-                                        @if($title == "kct_token")
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            KCT 1 : <b>{{$token1 ?? "12345678"}}</b></br><br>
-                                            KCT 2 : <b>{{$token2 ?? "12345678"}}</b></br><br>
-                                        @elseif($title == "Clear Tamper Token")
-                                            TRX ID : <b>{{$ref}}</b></br><br>
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                        @elseif($title == "Clear Credit Token")
-                                            Meter NO : <b>{{$meter_no}}</b></br><br>
-                                            Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                            <!-- VAT, Tariff Amount, and Unit hidden for Clear Credit -->
+                                    @if($title == "kct_token")
+                                        <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                        <div class="receipt-row"><span>KCT 1</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token1 ?? '12345678') }}</b></div>
+                                        <div class="receipt-row"><span>KCT 2</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token2 ?? '12345678') }}</b></div>
+                                    @elseif($title == "Clear Tamper Token")
+                                        <div class="receipt-row"><span>TRX ID</span><b>{{$ref}}</b></div>
+                                        <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                        <div class="receipt-row"><span>Token</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token ?? '12345678') }}</b></div>
+                                    @elseif($title == "Clear Credit Token")
+                                        <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                        <div class="receipt-row"><span>Token</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token ?? '12345678') }}</b></div>
 
-
-
-                                         @else
-
-                                             Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
-                                             @if(($debt_owed ?? 0) > 0)
-                                                 Debt Owed : <b>₦ {{number_format($debt_owed, 2)}}</b></br><br>
-                                             @endif
-                                              @if(($service_charge_owed ?? 0) > 0)
-                                                  Service Charge Owed : <b>₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
-                                              @endif
-                                              @if(($cost_of_unit ?? 0) > 0)
-                                                  Cost of Unit : <b>₦ {{number_format($cost_of_unit, 2)}}</b></br><br>
-                                              @endif
-                                              Tariff Amt : <b>₦ {{number_format($tariff_amount, 2)  }} </b></br><br>
-                                             Meter NO : <b>{{$meter_no}}</b></br><br>
-                                             Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
-                                             Unit :  <b>{{round($unit) ?? "0.00"}}KWH</b></br><br>
-                                             Token : <b>{{$token ?? "12345678"}}</b></br><br>
-                                             @if ($kct_token1)
-                                                 KCToken1 : <b>{{$kct_token1 ?? "12345678"}}</b></br><br>
-                                                 KCToken2 : <b>{{$kct_token2 ?? "12345678"}}</b></br><br>
-                                             @endif
+                                     @else
+                                         <div class="receipt-row"><span>Amount</span><b>₦ {{number_format($amount, 2) }}</b></div>
+                                         @if(($debt_owed ?? 0) > 0)
+                                             <div class="receipt-row"><span>Debt Owed</span><b>₦ {{number_format($debt_owed, 2)}}</b></div>
                                          @endif
-
-                                    </p>
-                                </div>
+                                          @if(($service_charge_owed ?? 0) > 0)
+                                              <div class="receipt-row"><span>Service Charge Owed</span><b>₦ {{number_format($service_charge_owed, 2)}}</b></div>
+                                          @endif
+                                          @if(($cost_of_unit ?? 0) > 0)
+                                              <div class="receipt-row"><span>Cost of Unit</span><b>₦ {{number_format($cost_of_unit, 2)}}</b></div>
+                                          @endif
+                                          <div class="receipt-row"><span>Tariff Amt</span><b>₦ {{number_format($tariff_amount, 2) }}</b></div>
+                                         <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
+                                         <div class="receipt-row"><span>Vat</span><b>{{$vat_amount ?? "0.00"}}</b></div>
+                                         <div class="receipt-row"><span>Unit</span><b>{{round($unit) ?? "0.00"}}KWH</b></div>
+                                         <div class="receipt-row"><span>Token</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $token ?? '12345678') }}</b></div>
+                                         @if ($kct_token1)
+                                             <div class="receipt-row"><span>KCToken1</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $kct_token1 ?? '12345678') }}</b></div>
+                                             <div class="receipt-row"><span>KCToken2</span><b>{{ preg_replace('/(.{4})(?!$)/', '$1-', $kct_token2 ?? '12345678') }}</b></div>
+                                         @endif
+                                     @endif
 
 
                                 <center>
