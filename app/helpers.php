@@ -754,7 +754,11 @@ if (! function_exists('backfill_utility_payments')) {
                     $prevMonthEnd   = (clone $backfillFrom)->subMonth()->endOfMonth();
 
                     $monthUtilityAmount = Utility::where('estate_id', $estateId)
-                        ->serviceCharge()
+                        ->where('type', 'service_charge')
+                        ->where(function($q) use ($userId) {
+                            $q->whereNull('user_id')
+                                ->orWhere('user_id', $userId);
+                        })
                         ->whereBetween('created_at', [$originalBackfillFrom, $prevMonthEnd])
                         ->sum('amount');
 

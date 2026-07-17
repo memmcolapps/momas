@@ -424,34 +424,44 @@ class EstateController extends Controller
             if (empty($request->amount)) {
                 return back()->with('error', 'Amount is required');
             }
-            if (empty($request->start_date)) {
-                return back()->with('error', 'Start date is required');
-            }
-            if (empty($request->mode_of_payment)) {
-                return back()->with('error', 'Mode of payment is required');
-            }
-            if ($request->mode_of_payment === 'percentage_payment' && empty($request->percent_payment)) {
-                return back()->with('error', '% Payment is required when mode is percentage payment');
-            }
-            if ($request->mode_of_payment === 'monthly_payment' && empty($request->payment_months)) {
-                return back()->with('error', 'Number of months is required when mode is monthly payment');
+
+            $type = $request->type ?? 'debt';
+
+            if ($type === 'service_charge') {
+                if (empty($request->duration)) {
+                    return back()->with('error', 'Duration is required for service charge utilities');
+                }
+            } elseif ($type === 'debt') {
+                if (empty($request->start_date)) {
+                    return back()->with('error', 'Start date is required for debt utilities');
+                }
+                if (empty($request->mode_of_payment)) {
+                    return back()->with('error', 'Mode of payment is required for debt utilities');
+                }
+                if ($request->mode_of_payment === 'percentage_payment' && empty($request->percent_payment)) {
+                    return back()->with('error', '% Payment is required when mode is percentage payment');
+                }
+                if ($request->mode_of_payment === 'monthly_payment' && empty($request->payment_months)) {
+                    return back()->with('error', 'Number of months is required when mode is monthly payment');
+                }
             }
 
             $monthlyEndDate = null;
-            if ($request->mode_of_payment === 'monthly_payment' && $request->start_date && $request->payment_months) {
+            if ($type === 'debt' && $request->mode_of_payment === 'monthly_payment' && $request->start_date && $request->payment_months) {
                 $monthlyEndDate = \Carbon\Carbon::parse($request->start_date)->addMonths((int) $request->payment_months)->toDateString();
             }
 
-            $startDate = \Carbon\Carbon::parse($request->start_date);
+            $startDate = $type === 'debt' ? \Carbon\Carbon::parse($request->start_date) : now();
 
             Utility::create([
                 'user_id' => $request->user_id,
                 'estate_id' => $request->estate_id,
-                'type' => 'debt',
+                'type' => $type,
                 'title' => $request->title,
                 'amount' => $request->amount,
-                'start_date' => $request->start_date,
-                'mode_of_payment' => $request->mode_of_payment,
+                'duration' => $type === 'service_charge' ? $request->duration : null,
+                'start_date' => $type === 'debt' ? $request->start_date : null,
+                'mode_of_payment' => $type === 'debt' ? $request->mode_of_payment : null,
                 'activated' => !$startDate->isFuture(),
                 'operator_id' => auth()->id(),
                 'percent_payment' => $request->percent_payment,

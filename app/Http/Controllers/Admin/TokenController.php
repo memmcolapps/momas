@@ -5500,6 +5500,7 @@ class TokenController extends Controller
                     $data['token'] = $trx_comp->token;
                     $data['ref'] = $trx_comp->trx_id;
                     $data['amount'] = $trx->amount ?? $trx_comp->amount_charged;
+                    $data['cost_of_unit'] = $trx_comp->amount;
                     $data['vat_amount'] = $trx_comp->vatAmount;
                     $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
                     $data['tariff_amount'] = $trx_comp->tariff_amount;

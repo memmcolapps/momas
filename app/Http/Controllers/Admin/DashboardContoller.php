@@ -740,38 +740,43 @@ class DashboardContoller extends Controller
             }
 
             $data['utility_payment_records'] = $recQuery->latest()->paginate(10);
-            $data['customer_utilities'] = \DB::table('utilities')
-                ->select(
-                    'utilities.id',
-                    'utilities.estate_id',
-                    'utilities.user_id',
-                    'utilities.type',
-                    'utilities.title',
-                    'utilities.amount',
-                    'utilities.duration',
-                    'utilities.start_date',
-                    'utilities.mode_of_payment',
-                    'utilities.payment_amount',
-                    'utilities.operator_id',
-                    'utilities.percent_payment',
-                    'utilities.payment_months',
-                    'utilities.monthly_end_date',
-                    'utilities.created_at',
-                    'utilities.updated_at',
-                    \DB::raw('COALESCE(user_utilities.activated, utilities.activated) as activated'),
-                    \DB::raw('COALESCE(user_utilities.status, utilities.status) as status')
-                )
-                ->leftJoin('user_utilities', function ($join) use ($data) {
-                    $join->on('utilities.id', '=', 'user_utilities.utility_id')
-                         ->where('user_utilities.user_id', '=', $data['user']->id);
-                })
-                ->where('utilities.estate_id', $data['user']->estate_id)
-                ->where('utilities.type', 'debt')
-                ->where(function ($q) use ($data) {
-                    $q->whereNull('utilities.user_id')
-                      ->orWhere('utilities.user_id', $data['user']->id);
-                })
-                ->get();
+            $utilityQuery = function ($type) use ($data) {
+                return \DB::table('utilities')
+                    ->select(
+                        'utilities.id',
+                        'utilities.estate_id',
+                        'utilities.user_id',
+                        'utilities.type',
+                        'utilities.title',
+                        'utilities.amount',
+                        'utilities.duration',
+                        'utilities.start_date',
+                        'utilities.mode_of_payment',
+                        'utilities.payment_amount',
+                        'utilities.operator_id',
+                        'utilities.percent_payment',
+                        'utilities.payment_months',
+                        'utilities.monthly_end_date',
+                        'utilities.created_at',
+                        'utilities.updated_at',
+                        \DB::raw('COALESCE(user_utilities.activated, utilities.activated) as activated'),
+                        \DB::raw('COALESCE(user_utilities.status, utilities.status) as status')
+                    )
+                    ->leftJoin('user_utilities', function ($join) use ($data) {
+                        $join->on('utilities.id', '=', 'user_utilities.utility_id')
+                             ->where('user_utilities.user_id', '=', $data['user']->id);
+                    })
+                    ->where('utilities.estate_id', $data['user']->estate_id)
+                    ->where('utilities.type', $type)
+                    ->where(function ($q) use ($data) {
+                        $q->whereNull('utilities.user_id')
+                          ->orWhere('utilities.user_id', $data['user']->id);
+                    })
+                    ->get();
+            };
+
+            $data['customer_debt_utilities'] = $utilityQuery('debt');
+            $data['customer_service_charges'] = $utilityQuery('service_charge');
             $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
             $data['meters'] = Meter::all();
             $data['tariff_count'] = Tariff::where('user_id', $request->id)->count();

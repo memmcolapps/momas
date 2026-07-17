@@ -428,6 +428,14 @@
                                     <input type="hidden" name="estate_id" value="{{$user->estate_id}}">
 
                                     <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Type</label>
+                                        <select name="type" id="utility-type" class="form-control" onchange="toggleCustomerUtilityType(this)" required>
+                                            <option value="service_charge">Service Charge</option>
+                                            <option value="debt">Debt</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Title</label>
                                         <input type="text" name="title" class="form-control" required>
                                     </div>
@@ -437,25 +445,32 @@
                                         <input type="number" step="0.01" name="amount" class="form-control" required>
                                     </div>
 
-                                    <input type="hidden" name="type" value="debt">
-
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Start Date</label>
-                                        <input type="date" name="start_date" class="form-control" required>
+                                    <div class="col-xl-3 col-sm-12 my-1 sc-field">
+                                        <label class="my-1">Duration</label>
+                                        <select name="duration" class="form-control">
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly" selected>Monthly</option>
+                                            <option value="yearly">Yearly</option>
+                                        </select>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1">
+                                    <div class="col-xl-3 col-sm-12 my-1 debt-field" style="display: none;">
+                                        <label class="my-1">Start Date</label>
+                                        <input type="date" name="start_date" class="form-control">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1 debt-field" style="display: none;">
                                         <label class="my-1">Mode of Payment</label>
-                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)" required>
+                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
                                             <option value="">Select</option>
                                             <option value="monthly_payment">Monthly Payment</option>
                                             <option value="one_off">One-Off</option>
                                         </select>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: none;">
+                                    <div class="col-xl-3 col-sm-12 my-1 months-field debt-field" style="display: none;">
                                         <label class="my-1">Number of Months</label>
-                                        <input type="number" name="payment_months" min="1" max="60" class="form-control" required>
+                                        <input type="number" name="payment_months" min="1" max="60" class="form-control">
                                     </div>
 
                                     <div class="col-12 my-3">
@@ -465,8 +480,23 @@
                             </div>
                         </div>
                         <script>
+                            function toggleCustomerUtilityType(select) {
+                                var form = select.closest('form');
+                                if (!form) return;
+                                var scFields = form.querySelectorAll('.sc-field');
+                                var debtFields = form.querySelectorAll('.debt-field');
+
+                                if (select.value === 'service_charge') {
+                                    scFields.forEach(f => f.style.display = '');
+                                    debtFields.forEach(f => f.style.display = 'none');
+                                } else {
+                                    scFields.forEach(f => f.style.display = 'none');
+                                    debtFields.forEach(f => f.style.display = '');
+                                }
+                            }
+
                             function togglePaymentFields(select) {
-                                var container = select.closest('.row');
+                                var container = select.closest('.row') || select.closest('form');
                                 if (!container) return;
                                 var monthsField = container.querySelector('.months-field');
 
@@ -476,6 +506,11 @@
                                     monthsField.style.display = 'block';
                                 }
                             }
+
+                            document.addEventListener('DOMContentLoaded', function () {
+                                var typeSelect = document.getElementById('utility-type');
+                                if (typeSelect) toggleCustomerUtilityType(typeSelect);
+                            });
                         </script>
 
 
@@ -621,87 +656,132 @@
 
 
 
-                        <div class="card">
-
-                            <div class="card-body">
-
-
-                            </div>
-
-                        </div>
-                        <div class="card">
-
-                            <div class="card-body">
-
-                                <div class="row">
-
-                                    <h6 class="d-flex justify-content-start my-2">Customer Utilities</h6>
-
+                        {{-- Service Charges Table --}}
+                        <div class="row">
+                            <div class="col-xl-12">
+                                <div class="card overflow-hidden">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h5 class="card-title text-black mb-0">Service Charges</h5>
+                                            <span class="badge text-bg-info">{{ $customer_service_charges->count() }} Total</span>
+                                        </div>
+                                    </div>
                                     <div class="card-body">
-                                        <table
-                                               class="table table-striped table-bordered dt-responsive nowrap">
+                                        <table class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
                                             <tr>
-                                                <th>ID</th>
-                                                <th>Title</th>
-                                                <th>Amount</th>
-                                                <th>Type</th>
-                                                <th>Mode of Payment</th>
-                                                <th>% Payment</th>
-                                                <th>Payment Months</th>
-                                                <th>Monthly End Date</th>
-                                                <th>Activated</th>
-                                                <th>Status</th>
-                                                <th>Created At</th>
+                                                <th scope="col" class="cursor-pointer">ID</th>
+                                                <th scope="col" class="cursor-pointer">Title</th>
+                                                <th scope="col" class="cursor-pointer">Amount</th>
+                                                <th scope="col" class="cursor-pointer">Duration</th>
+                                                <th scope="col" class="cursor-pointer">Activated</th>
+                                                <th scope="col" class="cursor-pointer">Status</th>
+                                                <th scope="col" class="cursor-pointer">Created At</th>
                                             </tr>
                                             </thead>
                                             <tbody>
-
-                                            @forelse($customer_utilities as $cu)
+                                            @forelse($customer_service_charges as $sc)
                                                 <tr>
-                                                    <td>{{ $cu->id }}</td>
-                                                    <td>{{ $cu->title }}</td>
-                                                    <td>{{ number_format($cu->amount, 2) }}</td>
+                                                    <td>{{ $sc->id }}</td>
+                                                    <td>{{ $sc->title }}</td>
+                                                    <td>NGN {{ number_format($sc->amount, 2) }}</td>
+                                                    <td>{{ strtoupper($sc->duration ?? 'N/A') }}</td>
                                                     <td>
-                                                        @if(($cu->type ?? 'service_charge') == 'debt')
-                                                            <span class="badge text-bg-warning">Debt</span>
-                                                        @else
-                                                            <span class="badge text-bg-info">Service Charge</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>{{ str_replace('_', ' ', ucwords($cu->mode_of_payment ?? 'N/A')) }}</td>
-                                                    <td>{{ $cu->percent_payment ? $cu->percent_payment . '%' : '-' }}</td>
-                                                    <td>{{ $cu->payment_months ?? '-' }}</td>
-                                                    <td>{{ $cu->monthly_end_date ? \Carbon\Carbon::parse($cu->monthly_end_date)->format('Y-m-d') : '-' }}</td>
-                                                    <td>
-                                                        @if($cu->activated)
+                                                        @if($sc->activated)
                                                             <span class="badge text-bg-success">Yes</span>
                                                         @else
                                                             <span class="badge text-bg-secondary">No</span>
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        @if($cu->status == 1)
+                                                        @if($sc->status == 1)
                                                             <span class="badge text-bg-success">Active</span>
-                                                        @else
+                                                        @elseif($sc->status == 0)
                                                             <span class="badge text-bg-warning">Inactive</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">N/A</span>
                                                         @endif
                                                     </td>
-                                                    <td>{{ $cu->created_at }}</td>
+                                                    <td>{{ $sc->created_at }}</td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="11" class="text-center">No customer utilities found.</td>
+                                                    <td colspan="7" class="text-center">No service charge utilities found.</td>
                                                 </tr>
                                             @endforelse
-
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
-
                             </div>
+                        </div>
 
+                        {{-- Debt Type Utilities Table --}}
+                        <div class="row">
+                            <div class="col-xl-12">
+                                <div class="card overflow-hidden">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h5 class="card-title text-black mb-0">Debt Type Utilities</h5>
+                                            <span class="badge text-bg-warning">{{ $customer_debt_utilities->count() }} Total</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-striped table-bordered dt-responsive nowrap">
+                                            <thead>
+                                            <tr>
+                                                <th scope="col" class="cursor-pointer">ID</th>
+                                                <th scope="col" class="cursor-pointer">Title</th>
+                                                <th scope="col" class="cursor-pointer">Amount</th>
+                                                <th scope="col" class="cursor-pointer">Mode of Payment</th>
+                                                <th scope="col" class="cursor-pointer">% Payment</th>
+                                                <th scope="col" class="cursor-pointer">Payment Months</th>
+                                                <th scope="col" class="cursor-pointer">Monthly End Date</th>
+                                                <th scope="col" class="cursor-pointer">Start Date</th>
+                                                <th scope="col" class="cursor-pointer">Activated</th>
+                                                <th scope="col" class="cursor-pointer">Status</th>
+                                                <th scope="col" class="cursor-pointer">Created At</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            @forelse($customer_debt_utilities as $debt)
+                                                <tr>
+                                                    <td>{{ $debt->id }}</td>
+                                                    <td>{{ $debt->title }}</td>
+                                                    <td>NGN {{ number_format($debt->amount, 2) }}</td>
+                                                    <td>{{ str_replace('_', ' ', ucwords($debt->mode_of_payment ?? 'N/A')) }}</td>
+                                                    <td>{{ $debt->percent_payment ? $debt->percent_payment . '%' : '-' }}</td>
+                                                    <td>{{ $debt->payment_months ?? '-' }}</td>
+                                                    <td>{{ $debt->monthly_end_date ? \Carbon\Carbon::parse($debt->monthly_end_date)->format('Y-m-d') : '-' }}</td>
+                                                    <td>{{ $debt->start_date ? \Carbon\Carbon::parse($debt->start_date)->format('Y-m-d') : '-' }}</td>
+                                                    <td>
+                                                        @if($debt->activated)
+                                                            <span class="badge text-bg-success">Yes</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">No</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($debt->status == 1)
+                                                            <span class="badge text-bg-success">Active</span>
+                                                        @elseif($debt->status == 0)
+                                                            <span class="badge text-bg-warning">Inactive</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">N/A</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ $debt->created_at }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="11" class="text-center">No debt type utilities found.</td>
+                                                </tr>
+                                            @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="card">
 
@@ -1420,87 +1500,132 @@
 
 
 
-                        <div class="card">
-
-                            <div class="card-body">
-
-
-                            </div>
-
-                        </div>
-                        <div class="card">
-
-                            <div class="card-body">
-
-                                <div class="row">
-
-                                    <h6 class="d-flex justify-content-start my-2">Customer Utilities</h6>
-
+                        {{-- Service Charges Table --}}
+                        <div class="row">
+                            <div class="col-xl-12">
+                                <div class="card overflow-hidden">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h5 class="card-title text-black mb-0">Service Charges</h5>
+                                            <span class="badge text-bg-info">{{ $customer_service_charges->count() }} Total</span>
+                                        </div>
+                                    </div>
                                     <div class="card-body">
-                                        <table
-                                               class="table table-striped table-bordered dt-responsive nowrap">
+                                        <table class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
                                             <tr>
-                                                <th>ID</th>
-                                                <th>Title</th>
-                                                <th>Amount</th>
-                                                <th>Type</th>
-                                                <th>Mode of Payment</th>
-                                                <th>% Payment</th>
-                                                <th>Payment Months</th>
-                                                <th>Monthly End Date</th>
-                                                <th>Activated</th>
-                                                <th>Status</th>
-                                                <th>Created At</th>
+                                                <th scope="col" class="cursor-pointer">ID</th>
+                                                <th scope="col" class="cursor-pointer">Title</th>
+                                                <th scope="col" class="cursor-pointer">Amount</th>
+                                                <th scope="col" class="cursor-pointer">Duration</th>
+                                                <th scope="col" class="cursor-pointer">Activated</th>
+                                                <th scope="col" class="cursor-pointer">Status</th>
+                                                <th scope="col" class="cursor-pointer">Created At</th>
                                             </tr>
                                             </thead>
                                             <tbody>
-
-                                            @forelse($customer_utilities as $cu)
+                                            @forelse($customer_service_charges as $sc)
                                                 <tr>
-                                                    <td>{{ $cu->id }}</td>
-                                                    <td>{{ $cu->title }}</td>
-                                                    <td>{{ number_format($cu->amount, 2) }}</td>
+                                                    <td>{{ $sc->id }}</td>
+                                                    <td>{{ $sc->title }}</td>
+                                                    <td>NGN {{ number_format($sc->amount, 2) }}</td>
+                                                    <td>{{ strtoupper($sc->duration ?? 'N/A') }}</td>
                                                     <td>
-                                                        @if(($cu->type ?? 'service_charge') == 'debt')
-                                                            <span class="badge text-bg-warning">Debt</span>
-                                                        @else
-                                                            <span class="badge text-bg-info">Service Charge</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>{{ str_replace('_', ' ', ucwords($cu->mode_of_payment ?? 'N/A')) }}</td>
-                                                    <td>{{ $cu->percent_payment ? $cu->percent_payment . '%' : '-' }}</td>
-                                                    <td>{{ $cu->payment_months ?? '-' }}</td>
-                                                    <td>{{ $cu->monthly_end_date ? \Carbon\Carbon::parse($cu->monthly_end_date)->format('Y-m-d') : '-' }}</td>
-                                                    <td>
-                                                        @if($cu->activated)
+                                                        @if($sc->activated)
                                                             <span class="badge text-bg-success">Yes</span>
                                                         @else
                                                             <span class="badge text-bg-secondary">No</span>
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        @if($cu->status == 1)
+                                                        @if($sc->status == 1)
                                                             <span class="badge text-bg-success">Active</span>
-                                                        @else
+                                                        @elseif($sc->status == 0)
                                                             <span class="badge text-bg-warning">Inactive</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">N/A</span>
                                                         @endif
                                                     </td>
-                                                    <td>{{ $cu->created_at }}</td>
+                                                    <td>{{ $sc->created_at }}</td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="11" class="text-center">No customer utilities found.</td>
+                                                    <td colspan="7" class="text-center">No service charge utilities found.</td>
                                                 </tr>
                                             @endforelse
-
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
-
                             </div>
+                        </div>
 
+                        {{-- Debt Type Utilities Table --}}
+                        <div class="row">
+                            <div class="col-xl-12">
+                                <div class="card overflow-hidden">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between">
+                                            <h5 class="card-title text-black mb-0">Debt Type Utilities</h5>
+                                            <span class="badge text-bg-warning">{{ $customer_debt_utilities->count() }} Total</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-striped table-bordered dt-responsive nowrap">
+                                            <thead>
+                                            <tr>
+                                                <th scope="col" class="cursor-pointer">ID</th>
+                                                <th scope="col" class="cursor-pointer">Title</th>
+                                                <th scope="col" class="cursor-pointer">Amount</th>
+                                                <th scope="col" class="cursor-pointer">Mode of Payment</th>
+                                                <th scope="col" class="cursor-pointer">% Payment</th>
+                                                <th scope="col" class="cursor-pointer">Payment Months</th>
+                                                <th scope="col" class="cursor-pointer">Monthly End Date</th>
+                                                <th scope="col" class="cursor-pointer">Start Date</th>
+                                                <th scope="col" class="cursor-pointer">Activated</th>
+                                                <th scope="col" class="cursor-pointer">Status</th>
+                                                <th scope="col" class="cursor-pointer">Created At</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            @forelse($customer_debt_utilities as $debt)
+                                                <tr>
+                                                    <td>{{ $debt->id }}</td>
+                                                    <td>{{ $debt->title }}</td>
+                                                    <td>NGN {{ number_format($debt->amount, 2) }}</td>
+                                                    <td>{{ str_replace('_', ' ', ucwords($debt->mode_of_payment ?? 'N/A')) }}</td>
+                                                    <td>{{ $debt->percent_payment ? $debt->percent_payment . '%' : '-' }}</td>
+                                                    <td>{{ $debt->payment_months ?? '-' }}</td>
+                                                    <td>{{ $debt->monthly_end_date ? \Carbon\Carbon::parse($debt->monthly_end_date)->format('Y-m-d') : '-' }}</td>
+                                                    <td>{{ $debt->start_date ? \Carbon\Carbon::parse($debt->start_date)->format('Y-m-d') : '-' }}</td>
+                                                    <td>
+                                                        @if($debt->activated)
+                                                            <span class="badge text-bg-success">Yes</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">No</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($debt->status == 1)
+                                                            <span class="badge text-bg-success">Active</span>
+                                                        @elseif($debt->status == 0)
+                                                            <span class="badge text-bg-warning">Inactive</span>
+                                                        @else
+                                                            <span class="badge text-bg-secondary">N/A</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ $debt->created_at }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="11" class="text-center">No debt type utilities found.</td>
+                                                </tr>
+                                            @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="card">
 

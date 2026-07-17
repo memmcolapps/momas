@@ -205,12 +205,15 @@
                                              TRX ID : <b>{{$ref}}</b></br><br>
                                              Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
                                              @if(($debt_owed ?? 0) > 0)
-                                                 Debt Owed : <b>- ₦ {{number_format($debt_owed, 2)}}</b></br><br>
+                                                 Debt Owed : <b>₦ {{number_format($debt_owed, 2)}}</b></br><br>
                                              @endif
-                                             @if(($service_charge_owed ?? 0) > 0)
-                                                 Service Charge Owed : <b>- ₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
-                                             @endif
-                                             Tariff Amt : <b>₦ {{number_format($tariff_amount, 2) }}</b></br><br>
+                                              @if(($service_charge_owed ?? 0) > 0)
+                                                  Service Charge Owed : <b> ₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
+                                              @endif
+                                              @if(($cost_of_unit ?? 0) > 0)
+                                                  Cost of Unit : <b>₦ {{number_format($cost_of_unit, 2)}}</b></br><br>
+                                              @endif
+                                              Tariff Amt : <b>₦ {{number_format($tariff_amount, 2) }}</b></br><br>
                                              Meter NO : <b>{{$meter_no}}</b></br><br>
                                              Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
                                               Unit :  <b>{{round($unit, 2) ?? "0.00"}}KWH</b></br><br>
@@ -448,12 +451,15 @@
 
                                              Amount : <b>₦ {{number_format($amount, 2) }}</b></br><br>
                                              @if(($debt_owed ?? 0) > 0)
-                                                 Debt Owed : <b>- ₦ {{number_format($debt_owed, 2)}}</b></br><br>
+                                                 Debt Owed : <b>₦ {{number_format($debt_owed, 2)}}</b></br><br>
                                              @endif
-                                             @if(($service_charge_owed ?? 0) > 0)
-                                                 Service Charge Owed : <b>- ₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
-                                             @endif
-                                             Tariff Amt : <b>₦ {{number_format($tariff_amount, 2)  }} </b></br><br>
+                                              @if(($service_charge_owed ?? 0) > 0)
+                                                  Service Charge Owed : <b>₦ {{number_format($service_charge_owed, 2)}}</b></br><br>
+                                              @endif
+                                              @if(($cost_of_unit ?? 0) > 0)
+                                                  Cost of Unit : <b>₦ {{number_format($cost_of_unit, 2)}}</b></br><br>
+                                              @endif
+                                              Tariff Amt : <b>₦ {{number_format($tariff_amount, 2)  }} </b></br><br>
                                              Meter NO : <b>{{$meter_no}}</b></br><br>
                                              Vat :  <b>{{$vat_amount ?? "0.00"}}</b></br><br>
                                              Unit :  <b>{{round($unit) ?? "0.00"}}KWH</b></br><br>

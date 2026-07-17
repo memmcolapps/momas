@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -9,43 +10,43 @@ return new class extends Migration
     {
         $database = DB::getDatabaseName();
 
-        DB::statement(
-            "ALTER DATABASE `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-        );
-
         $tables = DB::select("
             SELECT TABLE_NAME
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = ?
-              AND TABLE_TYPE = 'BASE TABLE'
+            AND TABLE_TYPE = 'BASE TABLE'
         ", [$database]);
 
         foreach ($tables as $table) {
-            DB::statement(
-                "ALTER TABLE `{$table->TABLE_NAME}` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-            );
+
+            $tableName = $table->TABLE_NAME;
+
+            if (Schema::hasColumn($tableName, 'created_at')) {
+                DB::statement("
+                    ALTER TABLE `{$tableName}`
+                    MODIFY `created_at`
+                    TIMESTAMP NULL DEFAULT NULL
+                ");
+            }
+
+            if (Schema::hasColumn($tableName, 'updated_at')) {
+                DB::statement("
+                    ALTER TABLE `{$tableName}`
+                    MODIFY `updated_at`
+                    TIMESTAMP NULL DEFAULT NULL
+                ");
+            }
+
+            DB::statement("
+                ALTER TABLE `{$tableName}`
+                CONVERT TO CHARACTER SET utf8mb4
+                COLLATE utf8mb4_unicode_ci
+            ");
         }
     }
 
     public function down(): void
     {
-        $database = DB::getDatabaseName();
-
-        DB::statement(
-            "ALTER DATABASE `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
-        );
-
-        $tables = DB::select("
-            SELECT TABLE_NAME
-            FROM information_schema.TABLES
-            WHERE TABLE_SCHEMA = ?
-              AND TABLE_TYPE = 'BASE TABLE'
-        ", [$database]);
-
-        foreach ($tables as $table) {
-            DB::statement(
-                "ALTER TABLE `{$table->TABLE_NAME}` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
-            );
-        }
+        //
     }
 };
