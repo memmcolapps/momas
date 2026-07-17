@@ -550,10 +550,10 @@
                                                 Choose Duration
                                             </option>
 
-                                            <option value="per_transaction"
+                                            <!-- <option value="per_transaction"
                                                 {{ old('duration', $org->duration ?? '') === 'per_transaction' ? 'selected' : '' }}>
                                                 Per Transaction
-                                            </option>
+                                            </option> -->
 
                                             <option value="weekly"
                                                 {{ old('duration', $org->duration ?? '') === 'weekly' ? 'selected' : '' }}>
@@ -654,7 +654,7 @@
                                                         <option value="">Select</option>
                                                         <option value="monthly_payment" @selected($data->mode_of_payment == 'monthly_payment')>Monthly Payment</option>
                                                         <option value="one_off" @selected($data->mode_of_payment == 'one_off')>One-Off</option>
-                                                        <option value="fixed_charge" @selected($data->mode_of_payment == 'fixed_charge')>Fixed Charge</option>
+                                                        <!-- <option value="fixed_charge" @selected($data->mode_of_payment == 'fixed_charge')>Fixed Charge</option> -->
                                                     </select>
                                                 </div>
 
@@ -728,7 +728,7 @@
                                                 <div class="col-xl-3 col-sm-12 my-1 sc-field" style="display: none;">
                                                     <label class="my-2">Duration</label>
                                                     <select name="duration[]" class="form-control" required>
-                                                        <option value="per_transaction">Per Transaction</option>
+                                                        <!-- <option value="per_transaction">Per Transaction</option> -->
                                                         <option value="weekly">Weekly</option>
                                                         <option value="monthly" selected>Monthly</option>
                                                         <option value="yearly">Yearly</option>
@@ -755,7 +755,7 @@
                                                         <option value="">Select</option>
                                                         <option value="monthly_payment">Monthly Payment</option>
                                                         <option value="one_off">One-Off</option>
-                                                        <option value="fixed_charge">Fixed Charge</option>
+                                                        <!-- <option value="fixed_charge">Fixed Charge</option> -->
                                                     </select>
                                                 </div>
                                                 <div class="col-xl-3 col-sm-12 my-1 months-field debt-field" style="display: none;">
