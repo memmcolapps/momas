@@ -1116,6 +1116,10 @@ class DashboardContoller extends Controller
     {
         $query = User::where('role', 2);
 
+        if (Auth::user()->isEstateAdmin()) {
+            $query->where('estate_id', Auth::user()->estate_id);
+        }
+
         if ($request->has('search') && $request->search != '') {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
@@ -1126,7 +1130,7 @@ class DashboardContoller extends Controller
             });
         }
 
-        $data['users_lists'] = $query->paginate(20); // final filtered, paginated users
+        $data['users_lists'] = $query->paginate(20)->withQueryString(); // final filtered, paginated users
         $data['inactive_count'] = User::where('status', 2)->where('role', 2)->count();
         $data['estate'] = Estate::latest()->where('status', 2)->get();
         $data['users'] = User::latest()->where('status', 2)->where('role', 2)->count();
