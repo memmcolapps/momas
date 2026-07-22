@@ -130,7 +130,7 @@ class Meter extends Model
 
         // If  1% of Amount Tendered >= paystack cap 2000 percentage = 1%
         $transactionCharge = 0;
-        if (((1 / 100) * $amount) > 2000) {
+        if (((1 / 100) * $amount) >= 2000) {
             $transactionCharge = (1/100) * $amount;
         } else if (((1.5 / 100) * $amount) > 2000 &&  ((1 / 100) * $amount) < 2000) {
             $transactionCharge = 2000 + ((1/100) * $amount);
@@ -242,7 +242,7 @@ class Meter extends Model
 
         // If  1% of Amount Tendered >= paystack cap 2000 percentage = 1%
         $transactionCharge = 0;
-        if (((1 / 100) * $amount) > 2000) {
+        if (((1 / 100) * $amount) >= 2000) {
             $transactionCharge = (1/100) * $amount;
         } else if (((1.5 / 100) * $amount) > 2000 &&  ((1 / 100) * $amount) < 2000) {
             $transactionCharge = 2000 + ((1/100) * $amount);
