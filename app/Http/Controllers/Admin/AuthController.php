@@ -52,7 +52,7 @@ class AuthController extends Controller
         }
 
         $estate = Estate::where('id', $get_user->estate_id)->first();
-        if ($estate && $estate->ptype == EstatePaytype::APP_ONLY) {
+        if ($estate && $estate->ptype == EstatePaytype::APP_ONLY && ! $get_user->isSuperAdmin()) {
             return back()->with('error', "This estate only supports mobile app login.");
         }
 
