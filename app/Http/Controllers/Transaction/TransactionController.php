@@ -469,8 +469,17 @@ class TransactionController extends Controller
         $trx = Transaction::latest()
             ->where('user_id', Auth::id())
             ->where('status', '!=', 0)
+            ->with('creditToken')
             ->take(1000)
-            ->get();
+            ->get()
+            ->map(function ($transaction) {
+                $data = $transaction->toArray();
+                $data['meterNo'] = $transaction->creditToken
+                    ? ($transaction->creditToken->receiver_meterNo ?: $transaction->creditToken->meterNo)
+                    : null;
+                unset($data['credit_token']);
+                return $data;
+            });
 
         return response()->json([
             'status' => true,

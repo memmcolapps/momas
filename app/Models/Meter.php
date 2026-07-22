@@ -125,9 +125,20 @@ class Meter extends Model
         $fixedCharge = $tariffState->fixed_charge ?? 0;
 
         // [1] 2.5% Service Fee
-        $amount = $trx->vending_amount ?? $trx->amount;
-        $percn = (2.5 / 100) * (int)$amount;
-        $afterServiceFee = $amount - $percn;
+        $amount = (int)($trx->vending_amount ?? $trx->amount);
+        // [1] 2.5% Service Fee
+
+        // If  1% of Amount Tendered >= paystack cap 2000 percentage = 1%
+        $transactionCharge = 0;
+        if (((1 / 100) * $amount) >= 2000) {
+            $transactionCharge = (1/100) * $amount;
+        } else if (((1.5 / 100) * $amount) > 2000 &&  ((1 / 100) * $amount) < 2000) {
+            $transactionCharge = 2000 + ((1/100) * $amount);
+        } else if (((1.5 / 100) * $amount) < 2000 &&  ((1 / 100) * $amount) < 2000) {
+            $transactionCharge = (2.5/100) * $amount;
+        }
+
+        $afterServiceFee = $amount - $transactionCharge;
 
         // [2] Estate Service Charge
         $est = Estate::where('id', $this->estate_id)->first();
@@ -162,8 +173,8 @@ class Meter extends Model
 
         // Validate that amount after deductions is not negative or too small
         if ($afterFixedCharge <= 0) {
-            $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10;
-            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
+            $minimumRequired = $transactionCharge + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10;
+            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($transactionCharge, 2) .
                 '), estate fee (NGN ' . number_format($estateFee, 2) .
                 '), arrears (NGN ' . number_format($arrearsAmount, 2) .
                 '), utility owed (NGN ' . number_format($utilityOwed, 2) .
@@ -193,7 +204,7 @@ class Meter extends Model
             'tariffAmount' => $tariffAmount,
             'vat' => $vat,
             'fixedCharge' => $fixedCharge,
-            'serviceFee' => $percn,
+            'serviceFee' => $transactionCharge,
             'afterServiceFee' => $afterServiceFee,
             'estateFee' => $estateFee,
             'afterEstateFee' => $afterEstateFee,
@@ -228,8 +239,18 @@ class Meter extends Model
         $fixedCharge = $tariffState->fixed_charge ?? 0;
 
         // [1] 2.5% Service Fee
-        $percn = (2.5 / 100) * $amount;
-        $afterServiceFee = $amount - $percn;
+
+        // If  1% of Amount Tendered >= paystack cap 2000 percentage = 1%
+        $transactionCharge = 0;
+        if (((1 / 100) * $amount) >= 2000) {
+            $transactionCharge = (1/100) * $amount;
+        } else if (((1.5 / 100) * $amount) > 2000 &&  ((1 / 100) * $amount) < 2000) {
+            $transactionCharge = 2000 + ((1/100) * $amount);
+        } else if (((1.5 / 100) * $amount) < 2000 &&  ((1 / 100) * $amount) < 2000) {
+            $transactionCharge = (2.5/100) * $amount;
+        }
+
+        $afterServiceFee = $amount - $transactionCharge;
 
         // [2] Estate Service Charge
         $est = Estate::where('id', $this->estate_id)->first();
@@ -270,8 +291,8 @@ class Meter extends Model
 
         // Validate that amount after deductions is not negative or too small
         if ($afterFixedCharge <= 0) {
-            $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10;
-            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
+            $minimumRequired = $transactionCharge + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10;
+            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($transactionCharge, 2) .
                 '), estate fee (NGN ' . number_format($estateFee, 2) .
                 '), arrears (NGN ' . number_format($arrearsAmount, 2) .
                 '), utility owed (NGN ' . number_format($utilityOwed, 2) .
@@ -302,7 +323,7 @@ class Meter extends Model
             'tariffAmount' => $tariffAmount,
             'vat' => round($vat, 2),
             'fixedCharge' => round($fixedCharge, 2),
-            'serviceFee' => round($percn, 2),
+            'serviceFee' => round($transactionCharge, 2),
             'afterServiceFee' => round($afterServiceFee, 2),
             'estateFee' => round($estateFee, 2),
             'afterEstateFee' => round($afterEstateFee, 2),

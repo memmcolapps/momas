@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Constants\Feature;
+use App\Constants\EstatePaytype;
 use App\Http\Controllers\Controller;
 use App\Models\Estate;
 use App\Models\EstateModFeature;
@@ -81,6 +82,15 @@ class LoginController extends Controller
         $userId   = Auth::id();
         $estateId = Auth::user()->estate_id;
         $estate   = Estate::where('id', $estateId)->first();
+
+        if ($estate->ptype == EstatePaytype::WEB_ONLY) {
+            Logger::warning('Login attempt: estate only supports web login', [
+                'user_id'   => $userId,
+                'estate_id' => $estateId,
+                'ptype'     => $estate->ptype,
+            ]);
+            return error("This estate only supports web login. Please use the web portal.", 403);
+        }
 
         $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
             ->where('estate_id', $estateId)
