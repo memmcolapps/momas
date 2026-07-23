@@ -69,7 +69,7 @@ class UtilityManagementService
                 ],
                 [
                     'amount' => $utility->amount,
-                    'amount_paid' => 0,
+                    'amount_paid' => $utility->amount - ($utility->balance ?? 0),
                     'activated' => $utility->activated,
                     'status' => UserUtilityStatus::INACTIVE,
                 ]
@@ -122,13 +122,14 @@ class UtilityManagementService
             }
 
             $remaining = max(0, (float) $utility->amount - (float) $userUtility->amount_paid);
-            // dump($remaining, $userUtility->toArray());
+
             if ($remaining <= 0) {
                 continue;
             }
 
             $installment = $this->getPeriodicAmount($utility, $userUtility->user_id);
             $owed = min($installment, $remaining);
+            dump($remaining, $userUtility->toArray(), $owed);
 
             $items[] = [
                 'utility' => $utility,
@@ -138,6 +139,7 @@ class UtilityManagementService
 
             $totalOwed += $owed;
         }
+        dd('');
 
         return [
             'items' => $items,

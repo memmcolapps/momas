@@ -13,6 +13,8 @@ use App\Models\Tariff;
 use App\Models\TarrifState;
 use App\Models\Transformer;
 use App\Models\User;
+use App\Models\UserUtility;
+use App\Models\UtilityPaymentRecord;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +26,7 @@ class ImportLegacyEcmiData extends Command
                             {--path=           : Path to legacy export folder}
                             {--dry-run         : Preview changes without writing to DB}
                             {--transactions=5  : Max recent transactions to import per meter}
-                            {--module=         : Run a single module only (estate|transformer|tariff|meter|user_info|user_data|customer|transaction|subaccount|attach_meters)}
+                            {--module=         : Run a single module only (estate|transformer|tariff|meter|user_info|user_data|customer|transaction|subaccount|attach_meters|utility-subaccount|subaccpayment)}
                             {--reset           : Delete saved migration state and start fresh}';
 
     protected $description = 'Import legacy ECMI JSON export into MySQL (resumable, module-by-module)';
@@ -42,6 +44,7 @@ class ImportLegacyEcmiData extends Command
         'customer',
         'utility-subaccount',
         'transaction',
+        'subaccpayment',
     ];
 
     protected const MODULE_DEPS = [
@@ -52,6 +55,7 @@ class ImportLegacyEcmiData extends Command
         'customer'    => ['estate', 'tariff', 'meter'],
         'transaction' => ['meter', 'user_data'],
         'utility-subaccount' => ['customer'],
+        'subaccpayment'      => ['utility-subaccount'],
         // estate, user_data have no deps
     ];
 
@@ -97,6 +101,7 @@ class ImportLegacyEcmiData extends Command
         'transactions_data'       => 0,
         'transformers'            => 0,
         'customers'               => 0,
+        'sub_acc_payment_records' => 0,
     ];
 
     /** Modules that have been committed successfully (persisted in DB) */
@@ -127,13 +132,14 @@ class ImportLegacyEcmiData extends Command
 
         if ($targetModule !== null) {
 
-            if ($targetModule === 'subaccount' || $targetModule === 'attach_meters' || $targetModule === 'utility-subaccount') {
+            if ($targetModule === 'subaccount' || $targetModule === 'attach_meters' || $targetModule === 'utility-subaccount' || $targetModule === 'subaccpayment') {
                 $this->info("▶ Running standalone module: {$targetModule}");
                 try {
                     match ($targetModule) {
                         'subaccount'         => $this->importSubAccounts($path),
                         'attach_meters'      => $this->attachMeters(),
                         'utility-subaccount' => $this->importUtilitySubAccounts($path),
+                        'subaccpayment'      => $this->importSubAccPayments($path),
                     };
                     $this->info("✔ Module [{$targetModule}] complete.");
                 } catch (\Throwable $e) {
@@ -232,6 +238,7 @@ class ImportLegacyEcmiData extends Command
             'transaction' => $this->runTransactionModule($path),
             'subaccount' => $this->importSubAccounts($path),
             'utility-subaccount' => $this->importUtilitySubAccounts($path),
+            'subaccpayment'      => $this->importSubAccPayments($path),
         };
     }
 
@@ -1200,6 +1207,156 @@ class ImportLegacyEcmiData extends Command
                 $payload
             );
 
+            // Fetch the id back — updateOrInsert() doesn't return it
+            $utility = DB::table('utilities')
+                ->where('user_id', $user->id)
+                ->where('title', $row->SubAccountAbbre)
+                ->first();
+
+            $utilityId = $utility->id;
+
+            DB::table('user_utilities')->updateOrInsert(
+                [
+                    'utility_id' => $utilityId,
+                    'user_id'    => $user->id,
+                    'estate_id'  => $user->estate_id,
+                ],
+                [
+                    'amount'       => $row->AmountAttached ?? 0,
+                    'amount_paid'  => $utility->amount - ($utility->balance ?? 0),
+                    'activated'    => true,
+                    'status'       => 1,
+                    'created_at'   => $row->Date ?? now(),
+                    'updated_at'   => $row->lastmodified ?? now(),
+                ]
+            );
+
+            $created++;
+        }
+
+        $this->table(
+            ['Metric', 'Count'],
+            [
+                ['Imported', $created],
+                ['Skipped', $skipped],
+            ]
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // SUBACC PAYMENT RECORDS → utility_payment_records
+    // -----------------------------------------------------------------------
+
+    protected function importSubAccPayments(string $path): void
+    {
+        $rows = $this->read('sub_acc_payments.json', $path);
+        $customers = $this->read('customers.json', $path);
+        $subAccounts = $this->read('subaccounts.json', $path);
+
+        // AccountNo → MeterNo
+        $customerMeterMap = [];
+        foreach ($customers as $c) {
+            $acctNo = trim($c->AccountNo ?? '');
+            if ($acctNo !== '') {
+                $customerMeterMap[$acctNo] = trim($c->MeterNo ?? '');
+            }
+        }
+
+        // SubAccountNo → { SubAccountAbbre, AmountAttached, AccountNo }
+        $subAccountMap = [];
+        foreach ($subAccounts as $sa) {
+            $saNo = trim($sa->SubAccountNo ?? '');
+            if ($saNo !== '') {
+                $subAccountMap[$saNo] = [
+                    'title'           => $sa->SubAccountAbbre ?? null,
+                    'amount_attached' => $sa->AmountAttached ?? 0,
+                ];
+            }
+        }
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($rows as $row) {
+            $subAccountNo = trim($row->SubAccountNo ?? '');
+            $acctNo       = trim($row->AccountNo ?? '');
+
+            // Resolve user via AccountNo → MeterNo → User
+            $meterNo = $customerMeterMap[$acctNo] ?? null;
+
+            if (!$meterNo) {
+                $this->warn("SubAccPayment {$row->TransactionNo}: no meter found for AccountNo {$acctNo}");
+                $skipped++;
+                continue;
+            }
+
+            $user = User::where('meterNo', $meterNo)->first();
+
+            if (!$user) {
+                $this->warn("SubAccPayment {$row->TransactionNo}: no user found for meter {$meterNo}");
+                $skipped++;
+                continue;
+            }
+
+            // Resolve utility via SubAccountNo → SubAccountAbbre → Utility
+            $saInfo = $subAccountMap[$subAccountNo] ?? null;
+
+            if (!$saInfo || !$saInfo['title']) {
+                $this->warn("SubAccPayment {$row->TransactionNo}: no SubAccountAbbre for SubAccountNo {$subAccountNo}");
+                $skipped++;
+                continue;
+            }
+
+            $utility = \App\Models\Utility::where('user_id', $user->id)
+                ->where('title', $saInfo['title'])
+                ->first();
+
+            if (!$utility) {
+                $this->warn("SubAccPayment {$row->TransactionNo}: no utility [user_id={$user->id}, title={$saInfo['title']}]");
+                $skipped++;
+                continue;
+            }
+
+            // Resolve user_utility
+            $userUtility = UserUtility::where('utility_id', $utility->id)
+                ->where('user_id', $user->id)
+                ->where('estate_id', $user->estate_id)
+                ->first();
+
+            if (!$userUtility) {
+                $this->warn("SubAccPayment {$row->TransactionNo}: no UserUtility [utility_id={$utility->id}, user_id={$user->id}]");
+                $skipped++;
+                continue;
+            }
+
+            // Idempotency: skip if trx_id already exists
+            if (UtilityPaymentRecord::where('trx_id', (string) $row->TransactionNo)->exists()) {
+                $this->warn("SubAccPayment {$row->TransactionNo}: already imported, skipping");
+                $skipped++;
+                continue;
+            }
+
+            $payload = [
+                'user_utility_id' => $userUtility->id,
+                'utility_id'      => $utility->id,
+                'user_id'         => $user->id,
+                'estate_id'       => $user->estate_id,
+                'utility_amount'  => $saInfo['amount_attached'],
+                'amount_paid'     => $row->AmountPaid ?? 0,
+                'trx_id'          => (string) $row->TransactionNo,
+                'status'          => 2,
+                'created_at'      => $row->PayDate ?? now(),
+                'updated_at'      => now(),
+            ];
+
+            $this->stats['sub_acc_payment_records']++;
+
+            if ($this->isDryRun()) {
+                $this->preview("SubAccPayment {$row->TransactionNo}", $payload);
+                continue;
+            }
+
+            UtilityPaymentRecord::create($payload);
             $created++;
         }
 
@@ -1233,6 +1390,7 @@ class ImportLegacyEcmiData extends Command
             ['Users (mobile/customer) created', $this->stats['users_data']],
             ['Customers created',               $this->stats['customers']],
             ['Transactions imported',           $this->stats['transactions_data']],
+            ['SubAcc payment records imported', $this->stats['sub_acc_payment_records']],
         ]);
 
         $this->newLine();
