@@ -1224,7 +1224,7 @@ class ImportLegacyEcmiData extends Command
                 [
                     'amount'       => $row->AmountAttached ?? 0,
                     'amount_paid'  => $utility->amount - ($utility->balance ?? 0),
-                    'activated'    => true,
+                    'activated'    => (bool) $row->activated,
                     'status'       => 1,
                     'created_at'   => $row->Date ?? now(),
                     'updated_at'   => $row->lastmodified ?? now(),

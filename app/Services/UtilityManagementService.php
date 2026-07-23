@@ -127,9 +127,9 @@ class UtilityManagementService
                 continue;
             }
 
+
             $installment = $this->getPeriodicAmount($utility, $userUtility->user_id);
             $owed = min($installment, $remaining);
-            dump($remaining, $userUtility->toArray(), $owed);
 
             $items[] = [
                 'utility' => $utility,
@@ -139,7 +139,6 @@ class UtilityManagementService
 
             $totalOwed += $owed;
         }
-        dd('');
 
         return [
             'items' => $items,
