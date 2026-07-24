@@ -25,7 +25,7 @@ class VatCalculator
     {
         $amount = $this->parseAmount($params['amountText'] ?? '');
         $vatPercentage = $params['vat'] ?? 0;
-        return $amount * ($vatPercentage / (100 + $vatPercentage));
+        return $amount * (($vatPercentage/100) / ((100/100) + ($vatPercentage/100)));
     }
 
     public function calculateCostOfUnit($params)
@@ -39,6 +39,7 @@ class VatCalculator
     {
         $costOfUnit = $this->calculateCostOfUnit($params);
         $rate = $params['tariffAmount'] ?? 0;
+        // dd($costOfUnit, $rate, $params);
         return $rate > 0 ? $costOfUnit / $rate : 0;
     }
 }

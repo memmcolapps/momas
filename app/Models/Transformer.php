@@ -10,7 +10,7 @@ class Transformer extends Model
     use HasFactory;
 
     protected $fillable = [
-
+        'legacy_trans_id',
         'Estate_id',
         'Capacity',
         'MDMeterSN',
@@ -20,10 +20,6 @@ class Transformer extends Model
         'Title',
         'City',
         'State',
-
-
-
-
     ];
 
 

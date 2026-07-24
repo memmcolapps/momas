@@ -181,12 +181,6 @@
                                                             <select class="form-control" required name="pay_type">
                                                                 <option value=" ">--Choose Payment Gateway---</option>
                                                                 <option value="paystack">Pay with Paystack</option>
-                                                                <option value="flutterwave">Pay with Flutterwave
-                                                                </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
-                                                                @if (app()->environment('staging'))
-                                                                    <option value="test_bypass">Payment Bypass (Testing Only)</option>
-                                                                @endif
                                                             </select>
                                                         </div>
 
@@ -547,12 +541,6 @@
                                                         <select class="form-control" required name="pay_type">
                                                             <option value=" ">--Choose Payment Gateway---</option>
                                                             <option value="paystack">Pay with Paystack</option>
-                                                            <option value="flutterwave">Pay with Flutterwave</option>
-                                                            <option value="enkpay">Pay with Enkpay</option>
-                                                            <!-- <option value="vend">Bypass</option> -->
-                                                            @if (app()->environment('staging'))
-                                                                <option value="test_bypass">Payment Bypass (Testing Only)</option>
-                                                            @endif
                                                         </select>
                                                     </div>
 

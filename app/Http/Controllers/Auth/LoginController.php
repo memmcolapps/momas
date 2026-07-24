@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Constants\Feature;
+use App\Constants\EstatePaytype;
 use App\Http\Controllers\Controller;
 use App\Models\Estate;
 use App\Models\EstateModFeature;
@@ -82,6 +83,15 @@ class LoginController extends Controller
         $estateId = Auth::user()->estate_id;
         $estate   = Estate::where('id', $estateId)->first();
 
+        if ($estate->ptype == EstatePaytype::WEB_ONLY) {
+            Logger::warning('Login attempt: estate only supports web login', [
+                'user_id'   => $userId,
+                'estate_id' => $estateId,
+                'ptype'     => $estate->ptype,
+            ]);
+            return error("This estate only supports web login. Please use the web portal.", 403);
+        }
+
         $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
             ->where('estate_id', $estateId)
             ->get();
@@ -109,88 +119,7 @@ class LoginController extends Controller
                 &$adminFeeFlag, $meter, &$user, $utilityAmount,
                 $duration, &$mod_features
             ) {
-                // ── Helper ────────────────────────────────────────────────────────────
-                $createPayment = function (string $type, float $amount, string $duration, Carbon $startDate) use ($userId, $estateId) {
-                    $nextDueDate = $startDate->copy();
-
-                    match ($duration) {
-                        'weekly'  => $nextDueDate->addWeek(),
-                        'monthly' => $nextDueDate->addMonth(),
-                        'yearly'  => $nextDueDate->addYear(),
-                        default   => send_notification("Unknown duration '{$duration}'"),
-                    };
-
-                    return UtilitiesPayment::create([
-                        'estate_id'     => $estateId,
-                        'user_id'       => $userId,
-                        'amount'        => $amount,
-                        'total_amount'  => $amount,
-                        'next_due_date' => $nextDueDate,
-                        'duration'      => $duration,
-                        'type'          => $type,
-                        'status'        => 0,
-                    ]);
-                };
-
-                if ($duration === null) {
-                    throw new \RuntimeException('Estate utility duration not set');
-                }
-
-                // ── Utility backfill ──────────────────────────────────────────────────
-                if ($utilityAmount > 0) {
-                    $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
-                        ->where('type', 'utilities')
-                        ->orderByDesc('created_at')
-                        ->value('created_at');
-
-                    $backfillFrom = $lastUtilityDate
-                        ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
-                        : Carbon::parse(Auth::user()->created_at)->startOfMonth();
-
-                    $now = Carbon::now()->startOfMonth();
-
-                    while ($backfillFrom->lte($now)) {
-                        $exists = UtilitiesPayment::where('user_id', $userId)
-                            ->where('type', 'utilities')
-                            ->whereYear('created_at', $backfillFrom->year)
-                            ->whereMonth('created_at', $backfillFrom->month)
-                            ->exists();
-
-                        if (!$exists) {
-                            $createPayment('utilities', $utilityAmount, $duration, $backfillFrom->copy());
-                        }
-
-                        $backfillFrom->addMonth();
-                    }
-                }
-
-                // ── Admin fee backfill ────────────────────────────────────────────────
-                if ($adminFeeAmount > 0) {
-                    $lastAdminFeeDate = UtilitiesPayment::where('user_id', $userId)
-                        ->where('type', 'admin_fee')
-                        ->orderByDesc('created_at')
-                        ->value('created_at');
-
-                    $backfillFrom = $lastAdminFeeDate
-                        ? Carbon::parse($lastAdminFeeDate)->addMonth()->startOfMonth()
-                        : Carbon::parse(Auth::user()->created_at)->startOfMonth();
-
-                    $now = Carbon::now()->startOfMonth();
-
-                    while ($backfillFrom->lte($now)) {
-                        $exists = UtilitiesPayment::where('user_id', $userId)
-                            ->where('type', 'admin_fee')
-                            ->whereYear('created_at', $backfillFrom->year)
-                            ->whereMonth('created_at', $backfillFrom->month)
-                            ->exists();
-
-                        if (!$exists) {
-                            $createPayment('admin_fee', $adminFeeAmount, 'monthly', $backfillFrom->copy());
-                        }
-
-                        $backfillFrom->addMonth();
-                    }
-                }
+                backfill_utility_payments($userId, $estateId);
 
                 // ── Admin fee paid flag (current month) ───────────────────────────────
                 $adminFeeFlag = UtilitiesPayment::where('user_id', $userId)
@@ -207,7 +136,7 @@ class LoginController extends Controller
                 $user['meter']             = $meter;
                 $user['tariff']            = $tariffs;
                 $user['monthly_admin_fee'] = $adminFeeFlag;
-                $user['meter_status']      = $meter?->status;
+                $user['meter_status']      = $meter?->isActive();
 
                 // ── Mod features ──────────────────────────────────────────────────────
                 $features =  EstateModFeature::byUser($user)

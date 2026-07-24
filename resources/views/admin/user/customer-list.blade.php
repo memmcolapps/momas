@@ -78,7 +78,7 @@
 
                                         <h6 class="element-header ">Search</h6>
 
-                                        <form action="filter-customer" method="GET" action="search">
+                                        <form action="filter-customer" method="GET">
                                             @csrf
 
                                             <div class="row">

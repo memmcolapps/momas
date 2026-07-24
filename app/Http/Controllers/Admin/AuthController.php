@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Constants\EstatePaytype;
 use App\Http\Controllers\Controller;
+use App\Models\Estate;
 use App\Models\User;
 use BaconQrCode\Renderer\Image\Png;
 use BaconQrCode\Writer;
@@ -47,6 +49,11 @@ class AuthController extends Controller
         $get_status = User::where('email', $request->email)->first()->status ?? null;
         if ($get_status == 0) {
             return back()->with('error', "Account deactivated, contact admin");
+        }
+
+        $estate = Estate::where('id', $get_user->estate_id)->first();
+        if ($estate && $estate->ptype == EstatePaytype::APP_ONLY && ! $get_user->isSuperAdmin()) {
+            return back()->with('error', "This estate only supports mobile app login.");
         }
 
 

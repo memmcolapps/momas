@@ -10,7 +10,7 @@ use App\Models\ModFeature;
 use App\Models\Setting;
 use App\Models\Tariff;
 use App\Models\User;
-use App\Models\Utitlity;
+use App\Models\Utility;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -167,9 +167,11 @@ class EstateController extends Controller
 
 
             $data['tar'] = Tariff::where('estate_id', $request->id)->first();
-            $data['utl'] = Utitlity::where('estate_id', $request->id)->first() ?? null;
-            $data['total_utility'] = Utitlity::where('estate_id', $request->id)->sum('amount');
-            $data['utility'] = Utitlity::where('estate_id', $request->id)->get() ?? null;
+            // $data['utl'] = Utility::where('estate_id', $request->id)->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', $request->id)->serviceCharge()->sum('amount');
+            $data['utility'] = Utility::where('estate_id', $request->id)->whereNull('user_id')->get() ?? null;
+            $data['service_charges'] = Utility::where('estate_id', $request->id)->serviceCharge()->get();
+            $data['debt_utilities'] = Utility::where('estate_id', $request->id)->debt()->whereNull('user_id')->get();
             $data['total_meters'] = Meter::where('estate_id', $request->id)->count() ?? null;
             $data['customers'] = User::where('estate_id', $request->id)->count() ?? null;
             $data['estate_features'] = ModFeature::query()
@@ -195,11 +197,12 @@ class EstateController extends Controller
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
-            $data['utl'] = Utitlity::where('estate_id', Auth::user()->estate_id)->first() ?? null;
-            $data['total_utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->sum('amount');
+            $data['utl'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->first() ?? null;
+            $data['total_utility'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->sum('amount');
 
-
-            $data['utility'] = Utitlity::where('estate_id', Auth::user()->estate_id)->get() ?? null;
+            $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->with('user')->get() ?? null;
+            $data['service_charges'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get();
+            $data['debt_utilities'] = Utility::where('estate_id', Auth::user()->estate_id)->debt()->whereNull('user_id')->get();
 
 
         } elseif (Auth::user()->role == 4) {
@@ -267,39 +270,74 @@ class EstateController extends Controller
 
     public function estate_update_utilities(request $request)
     {
-
-
-
         try {
-
             $utilitiesData = json_decode($request->input('utilities_data'), true);
-            if (is_array($utilitiesData)) {
-                foreach ($utilitiesData as $utility) {
-                    if (!empty($utility['title']) && !empty($utility['amount'])) {
-                        Utitlity::create([
-                            'title' => $utility['title'],
-                            'amount' => $utility['amount'],
-                            'duration' => $request->duration,
-                            'estate_id' => $request->estate_id,
-
-                        ]);
-                    }
-                }
+            if (!is_array($utilitiesData) || empty($utilitiesData)) {
+                return back()->with('error', 'No utility data provided');
             }
 
-            $utility_amount = Utitlity::where('estate_id', $request->estate_id)->sum('amount');
+            foreach ($utilitiesData as $index => $utility) {
+                $pos = $index + 1;
+
+                if (empty($utility['title'])) {
+                    return back()->with('error', "Title is required for utility at position {$pos}");
+                }
+                if (empty($utility['amount'])) {
+                    return back()->with('error', "Amount is required for utility at position {$pos}");
+                }
+
+                $type = $utility['type'] ?? 'service_charge';
+
+                if ($type === 'service_charge' && empty($utility['duration'])) {
+                    return back()->with('error', 'Duration is required for service charge utilities');
+                }
+
+                if ($type === 'debt') {
+                    if (empty($utility['start_date'])) {
+                        return back()->with('error', 'Start date is required for debt utilities');
+                    }
+                    if (empty($utility['mode_of_payment'])) {
+                        return back()->with('error', 'Mode of payment is required for debt utilities');
+                    }
+                    if (($utility['mode_of_payment'] ?? null) === 'percentage_payment' && empty($utility['percent_payment'])) {
+                        return back()->with('error', '% Payment is required when mode is percentage payment');
+                    }
+                    if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && empty($utility['payment_months'])) {
+                        return back()->with('error', 'Number of months is required when mode is monthly payment');
+                    }
+                }
+
+                $monthlyEndDate = null;
+                if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && !empty($utility['start_date']) && !empty($utility['payment_months'])) {
+                    $monthlyEndDate = \Carbon\Carbon::parse($utility['start_date'])->addMonths((int) $utility['payment_months'])->toDateString();
+                }
+
+                $startDate = \Carbon\Carbon::parse($utility['start_date'] ?? now());
+                // dd($utility);
+
+                Utility::create([
+                    'title' => $utility['title'],
+                    'amount' => $utility['amount'],
+                    'duration' => $utility['duration'] ?? null,
+                    'estate_id' => $request->estate_id,
+                    'type' => $type,
+                    'start_date' => $utility['start_date'] ?? null,
+                    'mode_of_payment' => $utility['mode_of_payment'] ?? null,
+                    'activated' => !$startDate->isFuture(),
+                    'operator_id' => auth()->id(),
+                    // 'percent_payment' => $utility['percent_payment'] ?? null,
+                    // 'payment_months' => $utility['payment_months'] ?? null,
+                    'monthly_end_date' => $monthlyEndDate,
+                ]);
+            }
+
+            $utility_amount = Utility::where('estate_id', $request->estate_id)->serviceCharge()->sum('amount');
             Estate::where('id', $request->estate_id)->update(['total_utility_amount' => $utility_amount]);
 
             return back()->with('message', 'Utilities Saved successfully');
-
-
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
-
-
-
-
     }
 
 
@@ -377,6 +415,64 @@ class EstateController extends Controller
         return back()->with('message', 'Features updated successfully');
     }
 
+    public function customer_store_utility(Request $request)
+    {
+        try {
+            if (empty($request->title)) {
+                return back()->with('error', 'Title is required');
+            }
+            if (empty($request->amount)) {
+                return back()->with('error', 'Amount is required');
+            }
 
+            $type = $request->type ?? 'debt';
+
+            if ($type === 'service_charge') {
+                if (empty($request->duration)) {
+                    return back()->with('error', 'Duration is required for service charge utilities');
+                }
+            } elseif ($type === 'debt') {
+                if (empty($request->start_date)) {
+                    return back()->with('error', 'Start date is required for debt utilities');
+                }
+                if (empty($request->mode_of_payment)) {
+                    return back()->with('error', 'Mode of payment is required for debt utilities');
+                }
+                if ($request->mode_of_payment === 'percentage_payment' && empty($request->percent_payment)) {
+                    return back()->with('error', '% Payment is required when mode is percentage payment');
+                }
+                if ($request->mode_of_payment === 'monthly_payment' && empty($request->payment_months)) {
+                    return back()->with('error', 'Number of months is required when mode is monthly payment');
+                }
+            }
+
+            $monthlyEndDate = null;
+            if ($type === 'debt' && $request->mode_of_payment === 'monthly_payment' && $request->start_date && $request->payment_months) {
+                $monthlyEndDate = \Carbon\Carbon::parse($request->start_date)->addMonths((int) $request->payment_months)->toDateString();
+            }
+
+            $startDate = $type === 'debt' ? \Carbon\Carbon::parse($request->start_date) : now();
+
+            Utility::create([
+                'user_id' => $request->user_id,
+                'estate_id' => $request->estate_id,
+                'type' => $type,
+                'title' => $request->title,
+                'amount' => $request->amount,
+                'duration' => $type === 'service_charge' ? $request->duration : null,
+                'start_date' => $type === 'debt' ? $request->start_date : null,
+                'mode_of_payment' => $type === 'debt' ? $request->mode_of_payment : null,
+                'activated' => !$startDate->isFuture(),
+                'operator_id' => auth()->id(),
+                'percent_payment' => $request->percent_payment,
+                'payment_months' => $request->payment_months,
+                'monthly_end_date' => $monthlyEndDate,
+            ]);
+
+            return back()->with('message', 'Customer Utility Saved successfully');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
 
 }

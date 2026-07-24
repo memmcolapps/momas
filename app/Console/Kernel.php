@@ -17,6 +17,9 @@ class Kernel extends ConsoleKernel
 
         // Generate monthly arrears daily (checks for 5-day grace period internally)
         $schedule->command('arrears:generate')->daily();
+
+        // Backfill utility and admin fee payments daily at 23:55
+        $schedule->command('app:backfill-utility-payments')->dailyAt('23:55');
     }
 
     /**
