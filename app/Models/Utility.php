@@ -30,6 +30,7 @@ class Utility extends Model implements AuditableContract
         'percent_payment',
         'payment_months',
         'monthly_end_date',
+        'balance',
     ];
 
     protected $casts = [
@@ -40,6 +41,7 @@ class Utility extends Model implements AuditableContract
         'operator_id' => 'integer',
         'payment_months' => 'integer',
         'monthly_end_date' => 'date',
+        'balance' => 'double',
     ];
 
     protected static function boot()

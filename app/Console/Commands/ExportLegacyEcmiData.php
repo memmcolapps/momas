@@ -17,7 +17,7 @@ class ExportLegacyEcmiData extends Command
                         {--chunk=100 : Number of unprocessed estates per run}
                         {--reset     : Clear export state and start fresh}
                         {--status    : Show export progress without exporting}
-                        {--module=   : Run a single export module only (subaccount|utility-subaccount)}';
+                        {--module=   : Run a single export module only (subaccount|utility-subaccount|subaccpayment)}';
 
     protected $description = 'Export MSSQL legacy data into JSON files (chunked, resumable)';
 
@@ -59,6 +59,7 @@ class ExportLegacyEcmiData extends Command
             return match ($module) {
                 'subaccount'         => $this->exportPaystackSubAccounts($path) ?? self::SUCCESS,
                 'utility-subaccount' => $this->exportUtilitySubAccounts($path) ?? self::SUCCESS,
+                'subaccpayment'      => $this->exportSubAccPayments($path, $estateArg) ?? self::SUCCESS,
                 default              => $this->error("Unknown module: {$module}") ?? self::FAILURE,
             };
         }
@@ -84,6 +85,7 @@ class ExportLegacyEcmiData extends Command
         $this->exportCustomers($path, $estateArg);
         $this->exportTransactions($path, $estateArg);
         $this->exportSubAccounts($path, $estateArg);
+        $this->exportSubAccPayments($path, $estateArg);
 
         // Persist export state (only for chunk mode, not single-estate mode)
         if (!$estateArg) {
@@ -559,5 +561,31 @@ class ExportLegacyEcmiData extends Command
         $this->write('subaccounts.json', $rows, $path);
 
         $this->info("Exported ".count($rows)." subaccounts");
+    }
+
+    protected function exportSubAccPayments(string $path, ?string $estate): void
+    {
+        $query = $this->legacy()
+            ->table('SubAccPayment')
+            ->join('SubAccount', 'SubAccount.SubAccountNo', '=', 'SubAccPayment.SubAccountNo')
+            ->join('Meters', 'Meters.AccountNo', '=', 'SubAccount.AccountNo')
+            ->select(
+                'SubAccPayment.*',
+                'SubAccount.SubAccountAbbre',
+                'SubAccount.AmountAttached',
+                'Meters.BUID'
+            );
+
+        if ($estate) {
+            $query->where('Meters.BUID', $estate);
+        } elseif (!empty($this->chunkBuids)) {
+            $query->whereIn('Meters.BUID', $this->chunkBuids);
+        }
+
+        $rows = $query->get()->toArray();
+
+        $this->write('sub_acc_payments.json', $rows, $path);
+
+        $this->info("Exported " . count($rows) . " SubAccPayment(s) → sub_acc_payments.json");
     }
 }

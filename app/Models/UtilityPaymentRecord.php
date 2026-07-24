@@ -17,6 +17,7 @@ class UtilityPaymentRecord extends Model
         'amount_paid',
         'trx_id',
         'status',
+        'created_at',
     ];
 
     protected $casts = [
