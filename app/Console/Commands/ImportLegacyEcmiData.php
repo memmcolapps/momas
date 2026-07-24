@@ -1187,6 +1187,9 @@ class ImportLegacyEcmiData extends Command
                 'start_date'       => $row->StartDate,
                 'mode_of_payment'  => $row->ModeOfPayment,
                 'payment_amount'   => $row->PaymentAmount,
+                'payment_months'   => str_contains(strtolower(trim($row->ModeOfPayment ?? '')), 'monthly')
+                    ? (int) ceil(($row->AmountAttached ?? 0) / ($row->PaymentAmount ?? 1))
+                    : null,
                 'activated'        => (bool)$row->activated,
                 'operator_id'      => $row->OperatorID,
                 'status'           => 2,
