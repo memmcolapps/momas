@@ -807,6 +807,11 @@ if (! function_exists('get_user_arrears')) {
 
     function get_user_arrears(int $user_id, string $return_type = 'all') {
 
+        UtilitiesPayment::where('user_id', $user_id)
+            ->where('amount', 0)
+            ->where('status', '!=', 2)
+            ->update(['status' => 2]);
+
         $baseQuery = UtilitiesPayment::where('user_id', $user_id)
             ->where('status', '!=', 2);
 
