@@ -111,9 +111,9 @@ return [
             'prefix'   => '',
             'prefix_indexes'         => true,
             'TrustServerCertificate' => true,
-            'options'  => [
+            'options'  => extension_loaded('pdo_sqlsrv') ? [
                 PDO::SQLSRV_ATTR_FETCHES_NUMERIC_TYPE => true,
-            ],
+            ] : [],
         ],
 
     ],
