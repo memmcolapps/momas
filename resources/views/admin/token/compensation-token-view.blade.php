@@ -264,7 +264,7 @@
                                             </div>
 
                                             <hr>
-                                            
+
                                             <!-- TABLE SECTION -->
                                             <div class="card-body">
                                                 <table id="datatable-buttons" class="table table-striped table-bordered dt-responsive nowrap">
@@ -311,7 +311,7 @@
                                                     </tbody>
                                                 </table>
                                             </div>
-                                            
+
                                         </div>
                                     </div>
                                 </div>
@@ -438,8 +438,8 @@
                                                                             var meterNo = $('#meterNo').val();
 
                                                                             if (estate_id && (meterNo.length === 11 || meterNo.length === 13)) {
-                                                                             
-                                                                             
+
+
                                                                                 $.ajax({
                                                                                     url: '/admin/fetch-meter-tariffs', // New endpoint
                                                                                     method: 'GET',
@@ -461,7 +461,7 @@
                                                                                             alert("Error: Tariff index not set for customer.");
                                                                                             return;
                                                                                         }
-                                                                                    
+
                                                                                         if (response && response.tariffs) {
                                                                                             console.log('Meter tariffs:', response);
                                                                                             populateTariffOptions(response.tariffs, response.meter);
@@ -490,8 +490,8 @@
                                                                             var isDualTariff = meter.isDualTariff === 'on' || meter.isDualTariff === '1' || meter.isDualTariff === 1 || meter.isDualTariff === true;
 
                                                                             // Separate tariffs by type
-                                                                            var nepaTariffs = tariffs.filter(t => t.type === 'nepa');
-                                                                            var genTariffs = tariffs.filter(t => t.type === 'gen');
+                                                                            var nepaTariffs = tariffs.filter(t => t.type === 'nepa' || t.type === 'Grid');
+                                                                            var genTariffs = tariffs.filter(t => t.type === 'gen' || t.type === 'Off Grid');
 
                                                                             if (isDualTariff) {
                                                                                 // Show both NEPA and Generator tariffs for dual tariff meters
@@ -503,7 +503,7 @@
                                                                                     });
                                                                                     tariffSelect.append('</optgroup>');
                                                                                 }
-                                                                            
+
                                                                                 if (genTariffs.length > 0) {
                                                                                     tariffSelect.append('<optgroup label="Generator Tariffs">');
                                                                                     genTariffs.forEach(function (tariff) {
@@ -519,18 +519,18 @@
                                                                                     tariffSelect.append('<option value="' + tariff.id + '">' + label + '</option>');
                                                                                 });
                                                                             }
-                                                                        
-                                                                            tariffSelect.prop('disabled', false);           
-                                                                        
+
+                                                                            tariffSelect.prop('disabled', false);
+
                                                                         }
-                                                                    
+
                                                                         function getActiveTariffLabel(tariff, meter, type) {
                                                                                var label = tariff.title;
                                                                                var isCurrentlyActive = false;
                                                                                var tariffStatus = '';
 
                                                                                // Check if this tariff is currently active for the meter
-                                                                               if (type === 'nepa') {
+                                                                               if (type === 'nepa' || type === 'Grid') {
                                                                                    if (meter.NewTariffID == tariff.id) {
                                                                                        isCurrentlyActive = true;
                                                                                        tariffStatus = ' (New NEPA)';
@@ -538,7 +538,7 @@
                                                                                        isCurrentlyActive = true;
                                                                                        tariffStatus = ' (Old NEPA)';
                                                                                    }
-                                                                               } else if (type === 'gen') {
+                                                                               } else if (type === 'gen' || type === 'Off Grid') {
                                                                                    if (meter.NewTariffDual == tariff.id) {
                                                                                        isCurrentlyActive = true;
                                                                                        tariffStatus = ' (New Gen)';
@@ -550,7 +550,7 @@
 
                                                                                return label + tariffStatus;
                                                                         }
-                                                                        
+
 
                                                                 </script>
 
@@ -638,7 +638,7 @@
 
 
 
-                                                                
+
 
                                                                 <div class="row">
 

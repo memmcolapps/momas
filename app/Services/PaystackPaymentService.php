@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Contracts\PaymentServiceInterface;
+use App\Jobs\ProcessPaystackWebhook;
 use App\Models\Logger;
 use App\Models\Setting;
+use App\Models\Transaction;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -205,7 +207,7 @@ class PaystackPaymentService implements PaymentServiceInterface
 
             // Extract detailed transaction information
             $transactionData = $responseData['data'] ?? [];
-            $amount = $transactionData['amount'] ?? 0;
+            $amount = ($transactionData['amount'] ?? 0) / 100;
             $currency = $transactionData['currency'] ?? 'NGN';
             $customerEmail = $transactionData['customer']['email'] ?? '';
             $channel = $transactionData['channel'] ?? '';
@@ -351,7 +353,7 @@ class PaystackPaymentService implements PaymentServiceInterface
             'is_successful' => $paymentStatus === 'success',
             'data' => [
                 'reference' => $transactionData['reference'] ?? null,
-                'amount' => $transactionData['amount'] ?? 0,
+                'amount' => ($transactionData['amount'] ?? 0) / 100,
                 'currency' => $transactionData['currency'] ?? 'NGN',
                 'customer_email' => $transactionData['customer']['email'] ?? '',
                 'channel' => $transactionData['channel'] ?? '',
@@ -425,11 +427,17 @@ class PaystackPaymentService implements PaymentServiceInterface
     protected static function handleSuccessfulCharge(array $paymentData): array
     {
         $reference = $paymentData['reference'] ?? '';
-        $amount = $paymentData['amount'] ?? 0;
+        $amount = ($paymentData['amount'] ?? 0) / 100;
         $customerEmail = $paymentData['customer']['email'] ?? '';
 
-        // Process the successful payment - update your transaction records
-        // Example: Transaction::where('reference', $reference)->update(['status' => 'completed', ...]);
+        $transaction = Transaction::where('trx_id', $reference)->first();
+
+        if ($transaction) {
+            $transaction->status = 3;
+            $transaction->save();
+
+            ProcessPaystackWebhook::dispatch($reference);
+        }
 
         return [
             'status' => true,
@@ -449,8 +457,12 @@ class PaystackPaymentService implements PaymentServiceInterface
     {
         $reference = $paymentData['reference'] ?? '';
 
-        // Process the failed payment - update your transaction records here
-        // Example: Transaction::where('reference', $reference)->update(['status' => 'failed', ...]);
+        $transaction = Transaction::where('trx_id', $reference)->first();
+
+        if ($transaction) {
+            $transaction->status = 1;
+            $transaction->save();
+        }
 
         return [
             'status' => true,
@@ -469,8 +481,12 @@ class PaystackPaymentService implements PaymentServiceInterface
     {
         $reference = $paymentData['reference'] ?? '';
 
-        // Process the pending payment - update your transaction records here
-        // Example: Transaction::where('reference', $reference)->update(['status' => 'pending', ...]);
+        $transaction = Transaction::where('trx_id', $reference)->first();
+
+        if ($transaction) {
+            $transaction->status = 0;
+            $transaction->save();
+        }
 
         return [
             'status' => true,
@@ -531,7 +547,7 @@ class PaystackPaymentService implements PaymentServiceInterface
             'Authorization' => 'Bearer ' . (new self())->paystack_secret,
             'Accept' => 'application/json',
         ])
-        ->timeout(0.1)
+        ->timeout(10)
         ->get("https://api.paystack.co/subaccount/{$subaccountCode}");
 
         $data = $response->json();

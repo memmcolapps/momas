@@ -9,3 +9,4 @@ output_db.sh
 momas_production_backup.sql
 *.sql
 .vscode/
+./storage/app/legacy-export

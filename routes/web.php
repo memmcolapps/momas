@@ -55,7 +55,7 @@ Route::get('/fetch-tariff', [MeterController::class, 'fetchTariff']);
 
 
 Route::get('/clear', function(){
-    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    // \Illuminate\Support\Facades\Artisan::call('optimize:clear');
 });
 
 
@@ -103,8 +103,8 @@ Route::any('pay-flutter', [TransactionController::class, 'flutter_payment']);
 Route::any('payment-check', [TransactionController::class, 'flutter_verify']);
 Route::any('paystack-check', [TransactionController::class, 'paystack_verify']);
 Route::any('payment-check', [TransactionController::class, 'paystack_verify']);
-Route::any('payment', [TokenController::class, 'payment']);
-Route::any('fund_wallet', [TransactionController::class, 'fund_wallet']);
+Route::any('payment', [TokenController::class, 'payment'])->middleware('auth');
+Route::any('fund_wallet', [TransactionController::class, 'fund_wallet'])->middleware('auth');
 
 
 Route::any('set-2fa', [AuthController::class, 'set_2fa']);
@@ -177,6 +177,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('view-estate', [EstateController::class, 'estate_view']);
     Route::post('estate-update-info', [EstateController::class, 'estate_update']);
     Route::post('estate-update-utilities', [EstateController::class, 'estate_update_utilities']);
+    Route::post('customer-store-utility', [EstateController::class, 'customer_store_utility']);
     Route::post('estate-feature-update', [EstateController::class, 'estate_feature_update']);
     Route::post('feature-update', [EstateController::class, 'feature_update']);
     Route::post('update-duration', [EstateController::class, 'update_duration']);

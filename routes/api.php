@@ -81,6 +81,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     // ── Feature::OTHER_METER ──────────────────
     Route::group(['defaults' => ['feature' => \App\Constants\Feature::OTHER_METER]], function () {
         Route::post('buy-meter-others', [MeterController::class, 'pay_for_others_meter_token']);
+        Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
     });
 
     // ── Feature::PRINT_TOKEN ──────────────────
@@ -151,7 +152,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
 
 Route::get('check-app-version', [NotificationController::class, 'checkAppVersion']);
 Route::post('paystack-webhook', [TransactionController::class, 'paystackWebhook'])->name('paystack.webhook');
-Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
+// Route::post('test-paystack-webhook', [TransactionController::class, 'triggerPaystackWebhook']);
 
 // ─────────────────────────────────────────────
 // Log Routes

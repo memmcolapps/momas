@@ -329,6 +329,8 @@ class TransactionController extends Controller
                 if (! $sub_account && in_array($request->pay_type, ['paystack', 'flutterwave'])) {
                     Log::warning("User {$auth_user->id} transaction terminated due to absence of estate {$request->pay_type} subaccount id");
 
+                    // dd($est->toArray());
+
                     return StandardResponse::error(
                         422,
                         "Transaction terminated due to absence of estate subaccount reach out to your estate admin"
@@ -467,8 +469,17 @@ class TransactionController extends Controller
         $trx = Transaction::latest()
             ->where('user_id', Auth::id())
             ->where('status', '!=', 0)
+            ->with('creditToken')
             ->take(1000)
-            ->get();
+            ->get()
+            ->map(function ($transaction) {
+                $data = $transaction->toArray();
+                $data['meterNo'] = $transaction->creditToken
+                    ? ($transaction->creditToken->receiver_meterNo ?: $transaction->creditToken->meterNo)
+                    : null;
+                unset($data['credit_token']);
+                return $data;
+            });
 
         return response()->json([
             'status' => true,
@@ -801,10 +812,21 @@ class TransactionController extends Controller
                 if ($trx) {
                     $action_payload = json_decode($trx->action_payload);
 
-                    if ($action_payload?->action == 'momas_meter_web') {
+                    $action = $action_payload?->action;
+                    if (
+                        in_array($action,
+                        ['momas_meter_web', 'momas_clear_credit_token', 'momas_kct_token', 'momas_tamper_token']
+                    )) {
                         RequestActionHandler::handleRequestAction($trx->trx_id);
 
-                        return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type=credit_token"));
+                        $action_to_type = [
+                            'momas_meter_web' => 'credit_token',
+                            'momas_clear_credit_token' => 'clear_credit',
+                            'momas_kct_token' => 'kct_token',
+                            'momas_tamper_token' => 'tamper'
+                        ];
+
+                        return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type={$action_to_type[$action]}"));
                     }
                 }
                 ProcessPaystackWebhook::dispatch($transactionData['reference']);
@@ -1480,11 +1502,6 @@ class TransactionController extends Controller
 
             Logger::info("Paystack Webhook: Event={$event}, Reference={$reference}, Result=" . json_encode($result));
 
-            // Update transaction status based on the event
-            if (isset($payload['data']['reference'])) {
-                $this->updateTransactionFromWebhook($payload);
-            }
-
             // Return 200 OK to acknowledge receipt of the webhook
             // Paystack expects this response to stop retrying the webhook
             return response()->json([
@@ -1501,59 +1518,6 @@ class TransactionController extends Controller
                 'status' => false,
                 'message' => 'Webhook processing failed: ' . $e->getMessage()
             ], 500);
-        }
-    }
-
-    /**
-     * Update transaction status based on webhook data
-     *
-     * @param array $payload
-     * @return void
-     */
-    protected function updateTransactionFromWebhook(array $payload): void
-    {
-        $event = $payload['event'] ?? '';
-        $data = $payload['data'] ?? [];
-        $reference = $data['reference'] ?? '';
-
-        if (empty($reference)) {
-            return;
-        }
-
-        // Find the transaction by or trx_id
-        $transaction = Transaction::where('trx_id', $reference)
-            ->first();
-
-        if (!$transaction) {
-            Logger::warning("Paystack Webhook: Transaction not found for reference: {$reference}");
-            return;
-        }
-
-        // if ($transaction->status == 2 || $transaction->status == 3) {
-        //     Logger::warning("Paystack Webhook: Transaction duplicate call for reference: {$reference}");
-        //     return;
-        // }
-
-        switch ($event) {
-            case 'charge.success':
-                $transaction->status = 3; // Payment Completed Action yet to be taken
-                $transaction->save();
-                Logger::info("Paystack Webhook: Transaction {$reference} marked as paid");
-
-                ProcessPaystackWebhook::dispatch($reference);
-                break;
-
-            case 'charge.failed':
-                $transaction->status = 1; // Failed
-                $transaction->save();
-                Logger::info("Paystack Webhook: Transaction {$reference} marked as failed");
-                break;
-
-            case 'charge.pending':
-                $transaction->status = 0; // Pending
-                $transaction->save();
-                Logger::info("Paystack Webhook: Transaction {$reference} marked as pending");
-                break;
         }
     }
 

@@ -48,8 +48,7 @@ class User extends Authenticatable
         'tariffidgen',
         'gen_source_amount',
         'nepa_source_amount',
-
-
+        'role',
     ];
 
     /**
@@ -190,8 +189,8 @@ class User extends Authenticatable
 
         $amount = (double) $amount;
 
+        self::where('id', $this->id)->increment('main_wallet', $amount);
         $this->main_wallet += $amount;
-        $this->save();
     }
 
     public function debitWallet($amount) {
@@ -203,18 +202,23 @@ class User extends Authenticatable
             throw new Exception('Cannot debit value less than or equal to 0 to wallet');
         }
 
-        if ($amount > $this->main_wallet) {
+        $amount = (double) $amount;
+
+        $affected = self::where('id', $this->id)
+            ->where('main_wallet', '>=', $amount)
+            ->decrement('main_wallet', $amount);
+
+        if (! $affected) {
             throw new Exception('Insufficient Funds');
         }
 
         $this->main_wallet -= $amount;
-        $this->save();
     }
 
     public function payWithWallet($transaction_id)
     {
         $payment_engine = app(PaystackPaymentService::class);
-        $verify = $payment_engine->verifyTranscation($transaction_id);
+        $verify = $payment_engine->verifyTransaction($transaction_id);
 
         if (! $verify['is_successful']) {
             throw new Exception("Payment failed cannot be used for transaction");

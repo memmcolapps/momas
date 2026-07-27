@@ -162,8 +162,8 @@
                                                                 var isDualTariff = meter.isDualTariff === 'on' || meter.isDualTariff === '1' || meter.isDualTariff === 1 || meter.isDualTariff === true;
 
                                                                 // Separate tariffs by type
-                                                                var nepaTariffs = tariffs.filter(t => t.type === 'nepa');
-                                                                var genTariffs = tariffs.filter(t => t.type === 'gen');
+                                                                var nepaTariffs = tariffs.filter(t => t.type === 'nepa' || t.type === 'Grid');
+                                                                var genTariffs = tariffs.filter(t => t.type === 'gen' || t.type === 'Off Grid');
 
                                                                 if (isDualTariff) {
                                                                     // Show both NEPA and Generator tariffs for dual tariff meters
@@ -202,7 +202,7 @@
                                                                    var tariffStatus = '';
 
                                                                    // Check if this tariff is currently active for the meter
-                                                                   if (type === 'nepa') {
+                                                                   if (type === 'nepa' || type === 'Grid') {
                                                                        if (meter.NewTariffID == tariff.id) {
                                                                            isCurrentlyActive = true;
                                                                            tariffStatus = ' (New NEPA)';
@@ -210,7 +210,7 @@
                                                                            isCurrentlyActive = true;
                                                                            tariffStatus = ' (Old NEPA)';
                                                                        }
-                                                                   } else if (type === 'gen') {
+                                                                   } else if (type === 'gen' || type === 'Off Grid') {
                                                                        if (meter.NewTariffDual == tariff.id) {
                                                                            isCurrentlyActive = true;
                                                                            tariffStatus = ' (New Gen)';
@@ -538,8 +538,8 @@
                                                                 var isDualTariff = meter.isDualTariff === 'on' || meter.isDualTariff === '1' || meter.isDualTariff === 1 || meter.isDualTariff === true;
 
                                                                 // Separate tariffs by type
-                                                                var nepaTariffs = tariffs.filter(t => t.type === 'nepa');
-                                                                var genTariffs = tariffs.filter(t => t.type === 'gen');
+                                                                var nepaTariffs = tariffs.filter(t => t.type === 'nepa' || t.type === 'Grid');
+                                                                var genTariffs = tariffs.filter(t => t.type === 'gen' || t.type === 'Off Grid');
 
                                                                 if (isDualTariff) {
                                                                     // Show both NEPA and Generator tariffs for dual tariff meters
@@ -578,7 +578,7 @@
                                                                    var tariffStatus = '';
 
                                                                    // Check if this tariff is currently active for the meter
-                                                                   if (type === 'nepa') {
+                                                                   if (type === 'nepa' || type === 'Grid') {
                                                                        if (meter.NewTariffID == tariff.id) {
                                                                            isCurrentlyActive = true;
                                                                            tariffStatus = ' (New NEPA)';
@@ -586,7 +586,7 @@
                                                                            isCurrentlyActive = true;
                                                                            tariffStatus = ' (Old NEPA)';
                                                                        }
-                                                                   } else if (type === 'gen') {
+                                                                   } else if (type === 'gen' || type === 'Off Grid') {
                                                                        if (meter.NewTariffDual == tariff.id) {
                                                                            isCurrentlyActive = true;
                                                                            tariffStatus = ' (New Gen)';
