@@ -592,7 +592,7 @@ class TokenController extends Controller
 
             backfill_utility_payments($user->id, $estate_id);
 
-            if (!app()->environment('staging') && $request->amount < $momas_min_vend) {
+            if ($request->amount < $momas_min_vend) {
                 return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
             }
 
@@ -746,7 +746,7 @@ class TokenController extends Controller
             //     return back()->with('error', 'Amount can not be less than NGN 1,000');
             // }
 
-            if (!app()->environment('staging') && $request->amount < $momas_min_vend) {
+            if ($request->amount < $momas_min_vend) {
                 return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
             }
 
