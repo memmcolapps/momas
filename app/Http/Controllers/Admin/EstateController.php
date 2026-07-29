@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Estate;
 use App\Models\EstateModFeature;
+use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\ModFeature;
 use App\Models\Setting;
@@ -225,6 +226,13 @@ class EstateController extends Controller
         }
 
 
+        $auth_user = Auth::user();
+        $old_data = Estate::firstWhere('id', $request->id);
+
+        if (! $old_data) {
+            return back()->with('error', 'Error: Invalid estate_id');
+        }
+
         Estate::where('id', $request->id)->update([
             'title' => $request->title,
             'status' => $request->status,
@@ -242,8 +250,13 @@ class EstateController extends Controller
             'pos_tariff_id' => $request->pos_tariff_id,
             'serial_no' => $request->serial_no,
             'admin_fee' => $request->estate_admin_fee,
-
         ]);
+
+        Logger::info("User {$auth_user->id}  updates estate info", [
+            'old_data' => $old_data,
+            'new_data' => Estate::firstWhere('id', $request->id)
+        ]);
+
         return redirect('admin/estate')->with('message', 'Estate updated successfully');
     }
 
