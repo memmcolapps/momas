@@ -570,6 +570,8 @@ class TokenController extends Controller
             'request' => $request->all(),
         ]);
 
+        $momas_min_vend = config('constants.momas_minimum_vend');
+
         if (Auth::user()->role == 0) {
 
 
@@ -590,8 +592,8 @@ class TokenController extends Controller
 
             backfill_utility_payments($user->id, $estate_id);
 
-            if (!app()->environment('staging') && $request->amount < 1000) {
-                return back()->with('error', 'Amount can not be less than NGN 1,000');
+            if ($request->amount < $momas_min_vend) {
+                return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
             }
 
             $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
@@ -744,8 +746,8 @@ class TokenController extends Controller
             //     return back()->with('error', 'Amount can not be less than NGN 1,000');
             // }
 
-            if (!app()->environment('staging') && $request->amount < 1000) {
-                return back()->with('error', 'Amount can not be less than NGN 1,000');
+            if ($request->amount < $momas_min_vend) {
+                return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
             }
 
             if ($user == null) {

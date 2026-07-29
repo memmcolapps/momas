@@ -32,4 +32,6 @@ return [
         'app_appstore_url' => env('APP_APPSTORE_URL'),
         'app_update_description' => env('APP_UPDATE_DESCRIPTION'),
     ],
+
+    'momas_minimum_vend' => env('MOMAS_MINIMUM_VEND', 100),
 ];
