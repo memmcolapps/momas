@@ -10,3 +10,5 @@ momas_production_backup.sql
 *.sql
 .vscode/
 ./storage/app/legacy-export
+export_legacy.php
+migrate_legacy.php

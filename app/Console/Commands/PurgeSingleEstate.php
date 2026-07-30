@@ -49,6 +49,11 @@ class PurgeSingleEstate extends Command
 
             // DELETE CHILD DATA FIRST (important)
 
+            DB::table('utility_payment_records')->where('estate_id', $estateId)->delete();
+            DB::table('user_utilities')->where('estate_id', $estateId)->delete();
+            DB::table('utilities')->where('estate_id', $estateId)->delete();
+            DB::table('credit_tokens')->where('estate_id', $estateId)->delete();
+            DB::table('estate_mod_features')->where('estate_id', $estateId)->delete();
             DB::table('transactions')->where('estate_id', $estateId)->delete();
             DB::table('meters')->where('estate_id', $estateId)->delete();
             DB::table('tarrif_states')->where('estate_id', $estateId)->delete();
