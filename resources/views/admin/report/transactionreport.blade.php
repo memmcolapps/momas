@@ -137,7 +137,6 @@
                                                     <option value="0">Pending</option>
                                                     <option value="2">Approved</option>
                                                     <option value="3">Failed</option>
-                                                    <option value="4">Completed</option>
                                                 </select>
 
                                             </div>
@@ -523,7 +522,6 @@
                                                     <option value="0">Pending</option>
                                                     <option value="2">Approved</option>
                                                     <option value="3">Failed</option>
-                                                    <option value="4">Completed</option>
                                                 </select>
 
                                             </div>
