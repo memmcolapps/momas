@@ -21,8 +21,7 @@ class Tariff extends Model
 
     public const POWER_SOURCE = [
         'Grid',
-        'Off Grid',
-        'Middle Of Grid'
+        'Off Grid'
     ];
 
 
