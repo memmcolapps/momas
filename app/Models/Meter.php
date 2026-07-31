@@ -393,6 +393,7 @@ class Meter extends Model
                 $trx = Transaction::where('trx_id', $trx_id)
                     ->firstOrFail();
 
+
                 // Calculate token values using the dedicated method
                 // For "pay for others", use the receiver's user/estate for debt calculation
                 $debtUserId = $other_meter ? $other_meter->user_id : null;

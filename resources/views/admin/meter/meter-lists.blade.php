@@ -77,17 +77,16 @@
 
                                         <h6 class="element-header ">Filter</h6>
 
-                                        <form action="filter-meter" method="post">
-                                            @csrf
+                                        <form action="filter-meter" method="get">
 
                                             <div class="row">
                                                 <div class="col-3">
                                                     <label>Choose Estate</label>
                                                     <select  class="form-control" required name="estate_id">
 
-                                                        <option value=" ">All</option>
+                                                        <option value="" {{ request('estate_id') == '' || request('estate_id') === null ? 'selected' : '' }}>All</option>
                                                         @foreach($estate as $data)
-                                                            <option value="{{$data->id}}">{{$data->title}}</option>
+                                                            <option value="{{$data->id}}" {{ request('estate_id') == $data->id ? 'selected' : '' }}>{{$data->title}}</option>
                                                         @endforeach
 
                                                     </select>
@@ -96,7 +95,7 @@
 
                                                 <div class="col-3">
                                                     <label>Enter Meter No</label>
-                                                    <input type="number" class="form-control" name="meterNo">
+                                                    <input type="number" class="form-control" name="meterNo" value="{{ request('meterNo') }}">
                                                 </div>
 
                                                 <div class="col-2 mt-3">
@@ -389,17 +388,16 @@
 
                                         <h6 class="element-header ">Filter</h6>
 
-                                        <form action="filter-meter" method="post">
-                                            @csrf
+                                        <form action="filter-meter" method="get">
 
                                             <div class="row">
                                                 <div class="col-3">
                                                     <label>Choose Estate</label>
                                                     <select  class="form-control" required name="estate_id">
 
-                                                        <option value=" ">All</option>
+                                                        <option value="" {{ request('estate_id') == '' || request('estate_id') === null ? 'selected' : '' }}>All</option>
                                                         @foreach($estate as $data)
-                                                            <option value="{{$data->id}}">{{$data->title}}</option>
+                                                            <option value="{{$data->id}}" {{ request('estate_id') == $data->id ? 'selected' : '' }}>{{$data->title}}</option>
                                                         @endforeach
 
                                                     </select>
@@ -408,7 +406,7 @@
 
                                                 <div class="col-3">
                                                     <label>Enter Meter No</label>
-                                                    <input type="number" class="form-control" name="meterNo">
+                                                    <input type="number" class="form-control" name="meterNo" value="{{ request('meterNo') }}">
                                                 </div>
 
                                                 <div class="col-2 mt-3">
