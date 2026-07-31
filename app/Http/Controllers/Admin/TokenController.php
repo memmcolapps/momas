@@ -3673,7 +3673,7 @@ class TokenController extends Controller
 
                     handle_pay_arrears($trx_id, $trx->user_id, 'utilities');
 
-                    $meter->getNewToken($tariff_id, $trx_id, verify:"null", receiver_meterNo:$receiver_meterNo, action:$action);
+                    $meter->getNewToken($tariff_id, $trx_id, verify:"verify", receiver_meterNo:$receiver_meterNo, action:$action);
 
 
 
