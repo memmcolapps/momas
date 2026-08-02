@@ -277,6 +277,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('support-set', [DashboardContoller::class, 'support_set']);
     Route::get('update-utility', [DashboardContoller::class, 'update_utility']);
     Route::get('delete-utility', [DashboardContoller::class, 'delete_utility']);
+    Route::get('delete-customer-utility', [DashboardContoller::class, 'detach_customer_utility']);
     Route::post('clear-utility-payment-by-estate', [DashboardContoller::class, 'clearUtilityPaymentByEstate']);
     Route::post('clear-single-utility-payment', [DashboardContoller::class, 'clearSingleUtilityPayment']);
     Route::post('edit-utility-payment', [DashboardContoller::class, 'editUtilityPayment']);
