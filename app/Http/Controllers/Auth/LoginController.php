@@ -92,7 +92,10 @@ class LoginController extends Controller
             return error("This estate only supports web login. Please use the web portal.", 403);
         }
 
+        $meter = meter();
+
         $tariffs = Tariff::select('id', 'type', 'estate_id', 'title')
+            ->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
             ->where('estate_id', $estateId)
             ->get();
 
@@ -105,7 +108,6 @@ class LoginController extends Controller
 
         $adminFeeAmount = $estate->getAdminFee();
         $adminFeeFlag   = "0";
-        $meter          = meter();
         $meter = $meter ? $meter : null;
         $user           = user();
         $utilityAmount  = $estate->total_utility_amount ?? 0;
