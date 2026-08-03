@@ -44,7 +44,7 @@ class FixEstateMeterTransformer extends Command
                 ->first();
 
             $meters = Meter::where('estate_id', $estate->id)
-                ->whereNotNull('TransformerID')
+                // ->whereNotNull('TransformerID')
                 ->where(function ($query) use ($estate) {
                     $query->whereNotExists(function ($sub) use ($estate) {
                         $sub->select(DB::raw(1))
