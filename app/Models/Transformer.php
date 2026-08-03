@@ -29,8 +29,8 @@ class Transformer extends Model
         return $this->belongsTo(Meter::class);
     }
 
-    public function estate()
+    public function ownEstate()
     {
-        return $this->belongsTo(Estate::class);
+        return $this->belongsTo(Estate::class, 'Estate_id');
     }
 }

@@ -121,7 +121,7 @@ class TransformerController extends Controller
 
      public function view_transformer(request $request)
      {
-         $data['trans'] = Transformer::where('id', $request->id)->first();
+         $data['trans'] = Transformer::where('id', $request->id)->with('ownEstate')->first();
          $data['estate'] = Estate::where('status', 2)->get();
 
          return view('admin/transformer/transformer-view', $data);
