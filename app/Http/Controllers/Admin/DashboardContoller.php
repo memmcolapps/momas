@@ -574,6 +574,10 @@ class DashboardContoller extends Controller
             return back()->with('error', 'Customer not found');
         }
 
+        if ((Auth::user()->isEstateAdmin() || Auth::user()->isEstateStaff()) && $customer->estate_id != Auth::user()->estate_id) {
+            return back()->with('error', 'You cannot manage customers outside your estate');
+        }
+
         $utility = Utility::where('id', $request->utility_id)->where('estate_id', $customer->estate_id)->first();
         if (!$utility) {
             return back()->with('error', 'Utility not found');

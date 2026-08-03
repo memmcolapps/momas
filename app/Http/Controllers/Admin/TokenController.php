@@ -2529,7 +2529,7 @@ class TokenController extends Controller
                     // "ref" => $trx_id,
                     // 'callback_url' => url('') . "/admin/paystack-check-kct",
                     // 'subaccount' => $est->paystack_subaccount,
-                    'subaccount' => 'ACCT_nd2zcvugcv5zfqp',
+                    'sub_account' => 'ACCT_nd2zcvugcv5zfqp',
                     'metadata' => [],
                 );
 
