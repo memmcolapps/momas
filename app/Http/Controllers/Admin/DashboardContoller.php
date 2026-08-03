@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Constants\UserUtilityStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Auditlog;
 use App\Models\Estate;
@@ -20,6 +21,7 @@ use App\Models\Token;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
+use App\Models\UserUtility;
 use App\Models\Utility;
 use App\Models\UtilityPaymentRecord;
 use Exception;
@@ -565,6 +567,43 @@ class DashboardContoller extends Controller
         return back()->with('message', 'Utility deleted Successfully');
     }
 
+    public function detach_customer_utility(request $request)
+    {
+        $customer = User::where('id', $request->customer_id)->first();
+        if (!$customer) {
+            return back()->with('error', 'Customer not found');
+        }
+
+        if ((Auth::user()->isEstateAdmin() || Auth::user()->isEstateStaff()) && $customer->estate_id != Auth::user()->estate_id) {
+            return back()->with('error', 'You cannot manage customers outside your estate');
+        }
+
+        $utility = Utility::where('id', $request->utility_id)->where('estate_id', $customer->estate_id)->first();
+        if (!$utility) {
+            return back()->with('error', 'Utility not found');
+        }
+
+        if ((int) $utility->user_id === (int) $customer->id) {
+            $utility->delete();
+            return back()->with('message', 'Utility detached from customer successfully');
+        }
+
+        UserUtility::updateOrCreate(
+            [
+                'utility_id' => $utility->id,
+                'user_id' => $customer->id,
+                'estate_id' => $customer->estate_id,
+            ],
+            [
+                'amount' => $utility->amount,
+                'activated' => false,
+                'status' => UserUtilityStatus::DEACTIVATED,
+            ]
+        );
+
+        return back()->with('message', 'Utility detached from customer successfully');
+    }
+
 
     public function update_pay(request $request)
     {
@@ -771,6 +810,13 @@ class DashboardContoller extends Controller
                     ->where(function ($q) use ($data) {
                         $q->whereNull('utilities.user_id')
                           ->orWhere('utilities.user_id', $data['user']->id);
+                    })
+                    ->whereNotExists(function ($q) use ($data) {
+                        $q->select(\DB::raw(1))
+                          ->from('user_utilities')
+                          ->whereColumn('user_utilities.utility_id', 'utilities.id')
+                          ->where('user_utilities.user_id', $data['user']->id)
+                          ->where('user_utilities.status', UserUtilityStatus::DEACTIVATED);
                     })
                     ->get();
             };
