@@ -677,6 +677,7 @@
                                                 <th scope="col" class="cursor-pointer">Activated</th>
                                                 <th scope="col" class="cursor-pointer">Status</th>
                                                 <th scope="col" class="cursor-pointer">Created At</th>
+                                                <th scope="col" class="cursor-pointer">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -703,10 +704,15 @@
                                                         @endif
                                                     </td>
                                                     <td>{{ $sc->created_at }}</td>
+                                                    <td>
+                                                        <a href="delete-customer-utility?utility_id={{ $sc->id }}&customer_id={{ $user->id }}"
+                                                           onclick="return confirmDeleteUtility('{{ addslashes($sc->title) }}');"
+                                                           class="badge text-bg-danger">Delete</a>
+                                                    </td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center">No service charge utilities found.</td>
+                                                    <td colspan="8" class="text-center">No service charge utilities found.</td>
                                                 </tr>
                                             @endforelse
                                             </tbody>
@@ -741,6 +747,7 @@
                                                 <th scope="col" class="cursor-pointer">Activated</th>
                                                 <th scope="col" class="cursor-pointer">Status</th>
                                                 <th scope="col" class="cursor-pointer">Created At</th>
+                                                <th scope="col" class="cursor-pointer">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -771,10 +778,15 @@
                                                         @endif
                                                     </td>
                                                     <td>{{ $debt->created_at }}</td>
+                                                    <td>
+                                                        <a href="delete-customer-utility?utility_id={{ $debt->id }}&customer_id={{ $user->id }}"
+                                                           onclick="return confirmDeleteUtility('{{ addslashes($debt->title) }}');"
+                                                           class="badge text-bg-danger">Delete</a>
+                                                    </td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="11" class="text-center">No debt type utilities found.</td>
+                                                    <td colspan="12" class="text-center">No debt type utilities found.</td>
                                                 </tr>
                                             @endforelse
                                             </tbody>
@@ -1521,6 +1533,7 @@
                                                 <th scope="col" class="cursor-pointer">Activated</th>
                                                 <th scope="col" class="cursor-pointer">Status</th>
                                                 <th scope="col" class="cursor-pointer">Created At</th>
+                                                <th scope="col" class="cursor-pointer">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -1547,10 +1560,15 @@
                                                         @endif
                                                     </td>
                                                     <td>{{ $sc->created_at }}</td>
+                                                    <td>
+                                                        <a href="delete-customer-utility?utility_id={{ $sc->id }}&customer_id={{ $user->id }}"
+                                                           onclick="return confirmDeleteUtility('{{ addslashes($sc->title) }}');"
+                                                           class="badge text-bg-danger">Delete</a>
+                                                    </td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center">No service charge utilities found.</td>
+                                                    <td colspan="8" class="text-center">No service charge utilities found.</td>
                                                 </tr>
                                             @endforelse
                                             </tbody>
@@ -1585,6 +1603,7 @@
                                                 <th scope="col" class="cursor-pointer">Activated</th>
                                                 <th scope="col" class="cursor-pointer">Status</th>
                                                 <th scope="col" class="cursor-pointer">Created At</th>
+                                                <th scope="col" class="cursor-pointer">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -1615,10 +1634,15 @@
                                                         @endif
                                                     </td>
                                                     <td>{{ $debt->created_at }}</td>
+                                                    <td>
+                                                        <a href="delete-customer-utility?utility_id={{ $debt->id }}&customer_id={{ $user->id }}"
+                                                           onclick="return confirmDeleteUtility('{{ addslashes($debt->title) }}');"
+                                                           class="badge text-bg-danger">Delete</a>
+                                                    </td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="11" class="text-center">No debt type utilities found.</td>
+                                                    <td colspan="12" class="text-center">No debt type utilities found.</td>
                                                 </tr>
                                             @endforelse
                                             </tbody>
@@ -1793,5 +1817,11 @@
         </div>
 
     @endif
+
+    <script>
+        function confirmDeleteUtility(title) {
+            return confirm('Are you sure you want to detach the utility "' + title + '" from this customer?');
+        }
+    </script>
 
 @endsection
