@@ -69,7 +69,7 @@
                                 <div class="col-3">
                                     <label class="my-2">Estate</label>
                                     <select type="text" name="Estate_id" class="form-control" required>
-                                        <option value="{{$trans->Estate_id}}">{{$trans->estate}}</option>
+                                        <option value="{{$trans->Estate_id}}">{{$trans->ownEstate->title}}</option>
                                      @foreach($estate as $data)
                                             <option value="{{$data->id}}">{{$data->title}} </option>
                                         @endforeach

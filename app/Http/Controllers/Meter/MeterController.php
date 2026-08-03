@@ -184,7 +184,9 @@ class MeterController extends Controller
         }
 
 
-        $tariffs = Tariff::where('estate_id', $user_info->estate_id)->get();
+        $tariffs = Tariff::where('estate_id', $user_info->estate_id)
+            ->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
+            ->get();
 
 
         $data['customer_name'] = $user->first_name . " " . $user->last_name . ' | ' . $user->estate_name;
