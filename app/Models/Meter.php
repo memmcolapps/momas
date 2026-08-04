@@ -576,10 +576,10 @@ class Meter extends Model
 
             $trx = Transaction::where('trx_id', $trx_id)->first();
 
-            if ($action !== 'momas_meter_web') {
+            if ($action == 'momas_meter') {
                 $trx->status = 3;
                 $user = User::where('id', $trx->user_id)->first();
-                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                $user && !in_array($trx->status, [2, 1, 0]) && $user->creditWallet($trx->vending_amount ?? $trx->amount);
                 $trx->save();
             }
 

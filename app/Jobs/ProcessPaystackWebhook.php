@@ -27,8 +27,8 @@ class ProcessPaystackWebhook implements ShouldQueue
 
     protected $reference;
 
-    public $tries = 5;
-    public $backoff = 15;
+    public $tries = 10;
+    public $backoff = 10;
 
     public function __construct($reference)
     {

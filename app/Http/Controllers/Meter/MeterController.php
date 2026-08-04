@@ -508,13 +508,20 @@ class MeterController extends Controller
             // ============================
 
             // Using "null" for verify since transaction is already verified
-            $meter->getNewToken(
-                $tariff_id,
-                $trx_id,
-                "null",
-                '',
-                'momas_meter'
-            );
+            try {
+                $meter->getNewToken(
+                    $tariff_id,
+                    $trx_id,
+                    "null",
+                    '',
+                    'momas_meter'
+                );
+
+            } catch (Exception $e) {
+                if ($trx->status !== 2) {
+                    throw $e;
+                }
+            }
 
             // Get the created CreditToken to retrieve the token
             $credit = CreditToken::where('trx_id', $trx_id)->first();

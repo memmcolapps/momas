@@ -369,6 +369,7 @@ class TransactionController extends Controller
                 // If action payload is not passed do not assign user id and maintain backward compatibilty with previous designs
                 if ($action_payload) {
                     $action_payload['user_id'] = Auth::user()->id;
+                    $request->tariff_id && $action_payload['tariff_id'] = $request->tariff_id;
                 } else {
                     $action_payload = [
                         'action' => $request->service_type,
