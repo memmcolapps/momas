@@ -97,7 +97,7 @@ class LoginController extends Controller
         $tariffs = Tariff::select('id', 'type', 'estate_id', 'title');
 
         if ($meter) {
-            // checks if a valid meter is returned as against an empty array
+            // checks if a valid meter is returned as against an empty array\
             $tariffs->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual]);
         }
 
