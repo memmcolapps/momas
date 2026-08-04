@@ -34,13 +34,13 @@ class UpdateEstateMinMax extends Command
         foreach ($estates as $estate) {
             $updates = [];
 
-            if (is_null($estate->min_pur)) {
+            if (is_null($estate->min_pur) or ((int) $estate->min_pur == 0)) {
                 $updates['min_pur'] = 1000;
                 $this->line("  {$estate->id} [{$estate->legacy_buid}] {$estate->title} -> min_pur: 1000");
                 $minUpdated++;
             }
 
-            if (is_null($estate->max_pur)) {
+            if (is_null($estate->max_pur) || (int) $estate->max_pur == 0) {
                 $updates['max_pur'] = 10000000;
                 $this->line("  {$estate->id} [{$estate->legacy_buid}] {$estate->title} -> max_pur: 10000000");
                 $maxUpdated++;
