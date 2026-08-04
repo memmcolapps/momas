@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use Illuminate\Mail\Events\MessageSending;
 use App\Models\User;
+use App\Support\RequestContext;
 
 class CheckEmailVerification
 {
@@ -13,6 +14,10 @@ class CheckEmailVerification
             $to = collect($event->message->getTo())
                 ->keys()
                 ->first();
+
+            if (app(RequestContext::class)->get('login_otp_email')) {
+                return true;
+            }
 
             $user = User::where('email', $to)->first();
 
