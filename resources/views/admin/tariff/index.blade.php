@@ -1,6 +1,10 @@
 @extends('layouts.main')
 @section('content')
 
+<style>
+    #datatable-buttons_wrapper .dataTables_filter { display: none; }
+</style>
+
 
 
     @if(Auth::user()->role == 0)
@@ -69,6 +73,27 @@
 
 
 
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 col-xl-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="mb-3">Search</h6>
+                                <form action="tariff-list" method="GET">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <input type="text" name="search" placeholder="Search by title, type or estate"
+                                                class="form-control" value="{{ request('search') }}">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-primary w-100">Search</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -234,6 +259,27 @@
 
 
 
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 col-xl-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="mb-3">Search</h6>
+                                <form action="tariff-list" method="GET">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <input type="text" name="search" placeholder="Search by title, type or estate"
+                                                class="form-control" value="{{ request('search') }}">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-primary w-100">Search</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
 

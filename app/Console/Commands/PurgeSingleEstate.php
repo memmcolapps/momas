@@ -8,7 +8,7 @@ use Carbon\Carbon;
 
 class PurgeSingleEstate extends Command
 {
-    protected $signature = 'estate:purge {estate_id} {--force}';
+    protected $signature = 'estate:purge {estate_id} {--force} {--older}';
 
     protected $description = 'Safely delete ONE estate only if it was created within the last month';
 
@@ -27,7 +27,7 @@ class PurgeSingleEstate extends Command
 
         $cutoff = Carbon::now()->subMonth();
 
-        if (Carbon::parse($estate->created_at)->lt($cutoff)) {
+        if (Carbon::parse($estate->created_at)->lt($cutoff) && !$this->option('older')) {
             $this->error("Blocked: Estate is older than 1 month. Cannot delete.");
             return self::FAILURE;
         }
