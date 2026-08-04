@@ -107,26 +107,50 @@ class DashboardContoller extends Controller
     }
 
 
-    public function list_users()
+    public function list_users(request $request)
     {
 
         if (Auth::user()->isSuperAdmin()) {
 
+            $query = User::latest()->where('role', '!=', 2);
+
+            if ($request->has('search') && $request->search != '') {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('first_name', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('phone', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                });
+            }
+
             $data['users'] = User::latest()->where('status', 2)->count();
-            $data['users_lists'] = User::latest()->where('role', '!=', 2)->paginate('20');
+            $data['users_lists'] = $query->paginate(20)->withQueryString();
             return view('admin/user/user-list', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
         } elseif (Auth::user()->isEstateAdmin()) {
 
+            $query = User::where([
+                'role' => 3,
+                'estate_id' => Auth::user()->estate_id,
+            ])->orWhere('role', 4);
+
+            if ($request->has('search') && $request->search != '') {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('first_name', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('phone', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                });
+            }
+
             $data['users'] = User::where([
                 'role' => 3,
                 'estate_id' => Auth::user()->estate_id,
             ])->orWhere('role', 4)->count();
-            $data['users_lists'] = User::where([
-                'role' => 3,
-                'estate_id' => Auth::user()->estate_id,
-            ])->ORwhere('role', 4)->paginate('20');
+            $data['users_lists'] = $query->paginate(20)->withQueryString();
             return view('admin/user/user-list', $data);
         } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {

@@ -28,8 +28,22 @@ class TariffController extends Controller
 
         if(Auth::user()->role == 0){
 
-            $data['tariff_list'] = Tariff::latest()->paginate(20);
-            $data['tariffis'] = Tariff::all();
+            $query = Tariff::latest();
+
+            if ($request->has('search') && $request->search != '') {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('title', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('type', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('tariff_index', 'like', '%' . $searchTerm . '%')
+                        ->orWhereHas('estate', function ($eq) use ($searchTerm) {
+                            $eq->where('title', 'like', '%' . $searchTerm . '%');
+                        });
+                });
+            }
+
+            $data['tariff_list'] = $query->paginate(20)->withQueryString();
+            $data['tariffis'] = $query->get();
             $data['tarifftariffis'] = Tariff::count();
             $data['estate'] = Estate::all();
 
@@ -45,8 +59,19 @@ class TariffController extends Controller
 
         } elseif(Auth::user()->role == 3){
 
-            $data['tariff_list'] = Tariff::latest()->where('estate_id', Auth::user()->estate_id)->paginate(20);
-            $data['tariffis'] = Tariff::latest()->latest()->where('estate_id', Auth::user()->estate_id)->get();
+            $query = Tariff::latest()->where('estate_id', Auth::user()->estate_id);
+
+            if ($request->has('search') && $request->search != '') {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('title', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('type', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('tariff_index', 'like', '%' . $searchTerm . '%');
+                });
+            }
+
+            $data['tariff_list'] = $query->paginate(20)->withQueryString();
+            $data['tariffis'] = $query->get();
             $data['tarifftariffis'] = Tariff::where('estate_id', Auth::user()->estate_id)->count();
             // $data['estate']  = Estate::all();
              $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();

@@ -21,7 +21,19 @@ class EstateController extends Controller
 {
     public function estate_index(request $request)
     {
-        $data['estate_list'] = Estate::latest()->paginate(20);
+        $query = Estate::latest();
+
+        if ($request->has('search') && $request->search != '') {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('state', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('city', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('lga', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        $data['estate_list'] = $query->paginate(20)->withQueryString();
         $data['estate'] = Estate::count();
 
 
