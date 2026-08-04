@@ -94,15 +94,18 @@ class LoginController extends Controller
 
         $meter = meter();
 
-        $tariffs = Tariff::select('id', 'type', 'estate_id', 'title');
+        $tariffs = Tariff::where('estate_id', $estateId);
 
         if ($meter) {
-            // checks if a valid meter is returned as against an empty array
             $tariffs->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual]);
         }
 
-        $tariffs->where('estate_id', $estateId)
-            ->get();
+        $tariffs = $tariffs->select(
+            'id',
+            'type',
+            'estate_id',
+            'title'
+        )->get();
 
         foreach ($tariffs as $tariff) {
             $tariffState = TarrifState::where('tariff_id', $tariff->id)
