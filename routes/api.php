@@ -75,6 +75,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
         Route::post('request-meter', [MeterController::class, 'request_meter']);
         Route::post('retry-meter', [TokenController::class, 'retry_generate_credit_token']);
+        Route::post('retry-credit-token', [TransactionController::class, 'retry_credit_token']);
         Route::get('vending-properties', [MeterController::class, 'vending_properties']);
     });
 

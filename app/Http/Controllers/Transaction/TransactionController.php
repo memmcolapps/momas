@@ -465,6 +465,147 @@ class TransactionController extends Controller
     }
 
 
+    public function retry_credit_token(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'trx_id' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return StandardResponse::error(422, 'Validation error', [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
+
+            $trx_id = $request->trx_id;
+
+            $trx = Transaction::where('trx_id', $trx_id)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (!$trx) {
+                return StandardResponse::error(404, 'Resource not found: Invalid transaction reference', []);
+            }
+
+            if ($trx->status === 2) {
+                $receipt = self::getReceiptData($trx->id, Auth::id());
+
+                return StandardResponse::success(200, 'Transaction has previously been completed', [
+                    'receipt' => $receipt,
+                ]);
+            }
+
+            $paystack = new PaystackPaymentService();
+            $user = User::find($trx->user_id);
+
+            if ($trx->status === 0) {
+                $verify = $paystack->verifyTransaction($trx_id);
+
+                if (!$verify['is_successful']) {
+                    $trx->status = 1;
+                    $trx->save();
+                    Logger::warning("retry_credit_token: paystack re-verification failed for {$trx_id}");
+
+                    return StandardResponse::error(403, 'Transaction failed', []);
+                }
+
+                $trx->status = 3;
+                $trx->save();
+                $user && $user->creditWallet($trx->amount);
+
+                return $this->processRetryTokenGeneration($trx, $user);
+            }
+
+            if ($trx->status === 1) {
+                $verify = $paystack->verifyTransaction($trx_id);
+
+                if (!$verify['is_successful']) {
+                    return StandardResponse::error(403, 'Transaction failed', []);
+                }
+
+                $trx->status = 3;
+                $trx->save();
+                $user && $user->creditWallet($trx->amount);
+
+                return $this->processRetryTokenGeneration($trx, $user);
+            }
+
+            return $this->processRetryTokenGeneration($trx, $user);
+        } catch (Exception $e) {
+            Logger::error('retry_credit_token error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return StandardResponse::error(500, 'An Error Occurred', [], debug: [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
+    }
+
+    protected function processRetryTokenGeneration(Transaction $trx, ?User $user)
+    {
+        $trx_id = $trx->trx_id;
+
+        if (!$user) {
+            return StandardResponse::error(404, 'User not found for this transaction', []);
+        }
+
+        $debited = false;
+
+        if ($trx->pay_type !== 'wallet') {
+            try {
+                $user->debitWallet($trx->amount);
+            } catch (Exception $e) {
+                return StandardResponse::error(403, 'Insufficient wallet balance, kindly fund your wallet', []);
+            }
+
+            $debited = true;
+        }
+
+        $meter = Meter::where('user_id', $trx->user_id)->first();
+
+        if (!$meter) {
+            return StandardResponse::error(404, 'Meter not found for this transaction', []);
+        }
+
+        $action_payload = json_decode($trx->action_payload, true) ?? [];
+        $tariff_id = $trx->tariff_id ?? ($action_payload['tariff_id'] ?? null);
+        $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
+
+        if (!$tariff_id) {
+            return StandardResponse::error(422, 'Unable to determine tariff for this transaction', []);
+        }
+
+        try {
+            $meter->getNewToken($tariff_id, $trx_id, 'null', $receiver_meterNo, 'momas_meter');
+        } catch (Exception $e) {
+            if ($debited) {
+                $freshTrx = Transaction::where('trx_id', $trx_id)->first();
+
+                if ($freshTrx && $freshTrx->status !== 2) {
+                    $freshUser = User::find($trx->user_id);
+
+                    if ($freshUser && $freshUser->main_wallet <= $user->main_wallet) {
+                        $freshUser->creditWallet($trx->amount);
+                    }
+
+                    $freshTrx->status = 3;
+                    $freshTrx->save();
+                }
+            }
+
+            throw $e;
+        }
+
+        $receipt = self::getReceiptData($trx->id, Auth::id());
+
+        return StandardResponse::success(200, 'Transaction retried successfully', [
+            'receipt' => $receipt,
+        ]);
+    }
+
+
     public function all_transactions(request $request)
     {
         $trx = Transaction::latest()
