@@ -296,7 +296,9 @@ class MeterController extends Controller
             $tarf->save();
         }
 
-        $tariffs = Tariff::where('user_id', $user_info->id)->get();
+        $tariffs = Tariff::where('user_id', $user_info->id)
+            ->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
+            ->get();
 
         $data['tariffs'] = $tariffs;
         $pur['min_purchase'] = (int)$min_pur;
@@ -1117,6 +1119,24 @@ class MeterController extends Controller
             }
         }
 
+        if ($meter->NewTariffDual && !$meter->NewTariffDualID) {
+            $meter->NewTariffDualID = $meter->NewTariffDual;
+        }
+
+        if ($meter->OldTariffDual && !$meter->OldTariffDualID) {
+            $meter->OldTariffDualID = $meter->OldTariffDual;
+        }
+
+        if ($meter->NewTariffDualID && !$meter->NewTariffDual) {
+            $meter->NewTariffDual = $meter->NewTariffDualID;
+        }
+
+        if ($meter->OldTariffDualID && !$meter->OldTariffDual) {
+            $meter->OldTariffDual = $meter->OldTariffDualID;
+        }
+
+        $meter->save();
+
 
         $data['estate'] = Estate::where('status', 2)->get();
         $data['transformer'] = Transformer::latest()->where('status', 2)->get();
@@ -1607,6 +1627,7 @@ class MeterController extends Controller
 
 
         $user_info = User::where('meterNo', $request->meterNo)->first();
+        $meter = Meter::where('meterNo', $meterNo)->first();
         $estate_id = $user_info->estate_id ?? null;
         if ($estate_id == null) {
             return 1;
@@ -1617,7 +1638,10 @@ class MeterController extends Controller
             return 2;
         }
 
-        $tariffs = Tariff::where('estate_id', $user_info->estate_id)->get(['id', 'title', 'type']);
+        $tariffs = Tariff::where('estate_id', $user_info->estate_id)
+            ->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
+            ->get(['id', 'title', 'type']);
+
         return response()->json(['tariffs' => $tariffs]);
     }
 
