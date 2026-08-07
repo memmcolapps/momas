@@ -8,6 +8,7 @@ use App\Models\ModFeature;
 use App\Services\FlutterwavePaymentService;
 use App\Services\PaystackPaymentService;
 use App\Services\WalletPaymentService;
+use App\Support\RequestContext;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         Sanctum::ignoreMigrations();
+        $this->app->singleton(RequestContext::class);
         $this->app->bind(PaymentServiceInterface::class, function ($app, $params) {
 
             $provider = $params['provider'] ?? config('payments.default');

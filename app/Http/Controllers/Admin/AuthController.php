@@ -100,6 +100,7 @@ class AuthController extends Controller
             $email = $request->email;
             User::where('email', $request->email)->update(['code' => $code]);
 
+            app(\App\Support\RequestContext::class)->put('login_otp_email', true);
             send_login_code($email, $code);
             return view('auth.code', compact('code', 'email'));
 
@@ -116,6 +117,7 @@ class AuthController extends Controller
     {
         $code = Auth::user()->code;
         $email = Auth::user()->email;
+        app(\App\Support\RequestContext::class)->put('login_otp_email', $email);
         send_login_code($email, $code);
         return view('auth.code', compact('email'));
 
