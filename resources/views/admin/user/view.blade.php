@@ -248,9 +248,15 @@
 
                                     </div>
 
-                                    <button type="submit" class="col-xl-3 col-sm-12 d-flex btn btn-primary my-3">
-                                        Update Customer Information
-                                    </button>
+                                    <div class="col-xl-6 col-sm-12 d-flex gap-2 my-3">
+                                        <button type="submit" class="btn btn-primary flex-fill">
+                                            Update Customer Information
+                                        </button>
+
+                                        <a href="user-delete?id={{$user->id}}"
+                                           onclick="return confirm('Are you sure you want to delete this user? It will be detached from any meters and permanently removed.');"
+                                           class="btn btn-danger flex-fill">Delete User</a>
+                                    </div>
 
                                 </form>
                             </div>
