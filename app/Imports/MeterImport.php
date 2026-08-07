@@ -50,7 +50,7 @@ class MeterImport implements ToModel, WithHeadingRow, WithLimit
         ];
 
         return new Meter(array_merge($defaults, [
-            'meterNo' => $row['meterno'],
+            'meterNo' => preg_replace('/[^\d]/', '', $row['meterno']),
             'MeterSIMNo' => $row['metersimno'] ?? null,
             'meterModel' => $row['metermodel'],
             'AccountNo' => $row['accountno'],
