@@ -3607,11 +3607,16 @@ class TokenController extends Controller
                 'request' => $request->all(),
             ]);
 
+            $type = "credit_token";
             $trx_id = $request->trx_id ?? $request->trxref;
 
             $get_trx =  Transaction::where('trx_id', $trx_id)->first() ?? null;
 
             if($get_trx){
+
+                if ($get_trx->status == 2) {
+                    return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+                }
 
                 if($get_trx->pay_type == "paystack"){
 
@@ -3864,9 +3869,6 @@ class TokenController extends Controller
                     // } else {
                     //     return back()->with('error', "Payment not found or failed on Paystack, Please initiate a new purchase");
                     // }
-
-
-                    $type = "credit_token";
 
                     if ($access_point === 'mobile') {
                         return StandardResponse::success(201, 'Generated token successfully', [
@@ -5501,12 +5503,12 @@ class TokenController extends Controller
                     $data['trx_id'] = $trx_comp->trx_id;
                     $data['token'] = $trx_comp->token;
                     $data['ref'] = $trx_comp->trx_id;
-                    $data['amount'] = $trx->amount ?? $trx_comp->amount_charged;
-                    $data['cost_of_unit'] = $trx_comp->amount;
-                    $data['vat_amount'] = $trx_comp->vatAmount;
-                    $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
-                    $data['tariff_amount'] = $trx_comp->tariff_amount;
-                    $data['unit'] = $trx_comp->unitkwh;
+                    $data['amount'] = round($trx->amount ?? $trx_comp->amount_charged, 2);
+                    $data['cost_of_unit'] = round($trx_comp->amount, 2);
+                    $data['vat_amount'] = round($trx_comp->vatAmount, 2);
+                    $data['vend_amount_kw_per_naira'] = round($trx_comp->costOfUnit, 2);
+                    $data['tariff_amount'] = round($trx_comp->tariff_amount, 2);
+                    $data['unit'] = round($trx_comp->unitkwh, 2);
                     $data['title'] = "Credit Token";
                     $data['date'] = $trx_comp->created_at;
                     $data['meter_no'] = $trx_comp->meterNo;
@@ -5515,8 +5517,8 @@ class TokenController extends Controller
 
                     $debt_breakdown = json_decode($trx->action_payload, true)['debt_breakdown'] ?? null;
                     if ($debt_breakdown) {
-                        $data['debt_owed'] = $debt_breakdown['debt_owed'];
-                        $data['service_charge_owed'] = $debt_breakdown['service_charge_owed'];
+                        $data['debt_owed'] = round($debt_breakdown['debt_owed'], 2);
+                        $data['service_charge_owed'] = round($debt_breakdown['service_charge_owed'], 2);
                     }
 
                     return view('admin/recepit.recepit', $data);
@@ -5536,11 +5538,11 @@ class TokenController extends Controller
                     $data['phone'] = $user_comp->phone;
                     $data['ref'] = $trx_comp->trx_id;
                     $data['token'] = $trx_comp->token;
-                    $data['amount'] = $trx_comp->amount;
-                    $data['vat_amount'] = $trx_comp->vatAmount;
-                    $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
-                    $data['tariff_amount'] = $trx_comp->tariff_amount;
-                    $data['unit'] = $trx_comp->unitkwh;
+                    $data['amount'] = round($trx_comp->amount, 2);
+                    $data['vat_amount'] = round($trx_comp->vatAmount, 2);
+                    $data['vend_amount_kw_per_naira'] = round($trx_comp->costOfUnit, 2);
+                    $data['tariff_amount'] = round($trx_comp->tariff_amount, 2);
+                    $data['unit'] = round($trx_comp->unitkwh, 2);
                     $data['title'] = "Clear Tamper Token";
                     $data['date'] = date('d-m-y h:i:s');
                     $data['meter_no'] = $trx_comp->meterNo;
@@ -5600,9 +5602,9 @@ class TokenController extends Controller
                     $data['ref'] = $trx_comp->trx_id;
                     $data['token'] = $trx_comp->token;
                     $data['amount'] = 0;
-                    $data['vat_amount'] = $trx_comp->vatAmount;
-                    $data['tariff_amount'] = $trx_comp->tariff_amount;
-                    $data['vend_amount_kw_per_naira'] = $trx_comp->costOfUnit;
+                    $data['vat_amount'] = round($trx_comp->vatAmount, 2);
+                    $data['tariff_amount'] = round($trx_comp->tariff_amount, 2);
+                    $data['vend_amount_kw_per_naira'] = round($trx_comp->costOfUnit, 2);
                     $data['title'] = "Compensation Token";
                     $data['date'] = date('d-m-y h:i:s');
                     $data['meter_no'] = $trx_comp->meterNo;
