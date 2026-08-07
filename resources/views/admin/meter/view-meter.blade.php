@@ -218,9 +218,15 @@
 
                             <hr class="my-4">
 
-                            <button type="submit" class="col-2 d-flex btn btn-primary">
-                                Update Meter
-                            </button>
+                            <div class="col-6 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-fill">
+                                    Update Meter
+                                </button>
+
+                                <a href="meter-delete?id={{$meter->id}}"
+                                   onclick="return confirm('Are you sure you want to delete this meter? It will be detached from its customer and permanently removed.');"
+                                   class="btn btn-danger flex-fill">Delete Meter</a>
+                            </div>
 
 
                         </form>
