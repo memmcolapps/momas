@@ -137,7 +137,7 @@ class MeterImportController extends Controller
 
                     // Map CSV fields to database columns
                     $meterRecord = array_merge($defaults, [
-                        'meterNo' => $meterData['meterno'],
+                        'meterNo' => preg_replace('/[^\d]/', '', $meterData['meterno']),
                         'meterModel' => isset($meterData['metermodel']) ? strtolower($meterData['metermodel']) : null,
                         'AccountNo' => $meterData['accountno'],
                         'TransformerID' => $transformerId,

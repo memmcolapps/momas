@@ -1489,16 +1489,18 @@ class TransactionController extends Controller
                 return StandardResponse::error(400, 'Empty webhook payload', []);
             }
 
+            // Log the webhook event for debugging purposes
+            $event = $payload['event'] ?? 'unknown';
+            $reference = $payload['data']['reference'] ?? 'unknown';
+
+            Logger::info("Paystack Webhook: Event={$event}, Reference={$reference}, Result=" . json_encode($payload));
+
             // Handle the webhook using PaystackPaymentService
             $result = PaystackPaymentService::handlePaystackWebhook($request);
 
             if (! $result['status']) {
                 return StandardResponse::error(400, 'Invalid Webhook signature', []);
             }
-
-            // Log the webhook event for debugging purposes
-            $event = $payload['event'] ?? 'unknown';
-            $reference = $payload['data']['reference'] ?? 'unknown';
 
             Logger::info("Paystack Webhook: Event={$event}, Reference={$reference}, Result=" . json_encode($result));
 
