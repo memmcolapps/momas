@@ -3607,11 +3607,16 @@ class TokenController extends Controller
                 'request' => $request->all(),
             ]);
 
+            $type = "credit_token";
             $trx_id = $request->trx_id ?? $request->trxref;
 
             $get_trx =  Transaction::where('trx_id', $trx_id)->first() ?? null;
 
             if($get_trx){
+
+                if ($get_trx->status == 2) {
+                    return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+                }
 
                 if($get_trx->pay_type == "paystack"){
 
@@ -3864,9 +3869,6 @@ class TokenController extends Controller
                     // } else {
                     //     return back()->with('error', "Payment not found or failed on Paystack, Please initiate a new purchase");
                     // }
-
-
-                    $type = "credit_token";
 
                     if ($access_point === 'mobile') {
                         return StandardResponse::success(201, 'Generated token successfully', [
