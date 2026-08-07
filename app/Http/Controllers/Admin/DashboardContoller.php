@@ -35,9 +35,15 @@ class DashboardContoller extends Controller
     public function pay_utility(request $request)
     {
         $payment = UtilitiesPayment::find($request->id);
-        $payment->status = 1;
+        $payment->status = 2;
         $payment->save();
-        return back()->with('message', 'Utility has been updated');
+
+        Logger::info('Manually triggered pay utility', [
+            'user' => Auth::id(),
+            'utility' => $request->id,
+        ]);
+
+        return back()->with('message', 'Utility has been updated -> paid');
     }
 
     public function unpay_utility(request $request)
@@ -46,7 +52,13 @@ class DashboardContoller extends Controller
         $payment = UtilitiesPayment::find($request->id);
         $payment->status = 0;
         $payment->save();
-        return back()->with('message', 'Utility has been updated');
+
+        Logger::info('Manually triggered unpay utility', [
+            'user' => Auth::id(),
+            'utility' => $request->id,
+        ]);
+
+        return back()->with('message', 'Utility has been updated -> unpaid');
 
 
     }
