@@ -589,7 +589,10 @@ class Meter extends Model
             if ($trx && $action == 'momas_meter' && $shouldRefund) {
                 $trx->status = 3;
                 $user = User::where('id', $trx->user_id)->first();
-                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                if ($user) {
+                    $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                    $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
+                }
                 $trx->save();
             }
 
@@ -694,6 +697,7 @@ class Meter extends Model
                 $user = User::find($trx->user_id);
                 if ($user) {
                     $user->creditWallet($trx->amount);
+                    $trx->wallet_creditted = $trx->amount;
                 }
                 $trx->status = 3;
                 $trx->save();
@@ -818,6 +822,7 @@ class Meter extends Model
                 $user = User::find($trx->user_id);
                 if ($user) {
                     $user->creditWallet($trx->amount);
+                    $trx->wallet_creditted = $trx->amount;
                 }
                 $trx->status = 3;
                 $trx->save();
@@ -937,6 +942,7 @@ class Meter extends Model
                 $user = User::find($trx->user_id);
                 if ($user) {
                     $user->creditWallet($trx->amount);
+                    $trx->wallet_creditted = $trx->amount;
                 }
                 $trx->status = 3;
                 $trx->save();

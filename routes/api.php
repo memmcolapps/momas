@@ -74,7 +74,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::post('buy-meter', [MeterController::class, 'buy_meter_token']);
         Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
         Route::post('request-meter', [MeterController::class, 'request_meter']);
-        Route::post('retry-meter', [TokenController::class, 'retry_generate_credit_token']);
+        // Route::post('retry-meter', [TokenController::class, 'retry_generate_credit_token']);
         Route::post('retry-credit-token', [TransactionController::class, 'retry_credit_token']);
         Route::get('vending-properties', [MeterController::class, 'vending_properties']);
     });
@@ -132,6 +132,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     Route::get('arrears', [TransactionController::class, 'arrears']);
     Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
     Route::get('get-trx', [TransactionController::class, 'get_trx']);
+    Route::get('failed-credit-token-transactions', [TransactionController::class, 'failed_credit_token_transactions']);
 
     // ── Feature::ANALYSIS ────────────────────
     Route::group(['defaults' => ['feature' => \App\Constants\Feature::ANALYSIS]], function () {

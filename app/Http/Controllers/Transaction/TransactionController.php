@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Transaction;
 
+use App\Constants\Feature;
+use App\Constants\ServiceTypeConstants;
 use App\Contracts\PaymentServiceInterface;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
@@ -510,9 +512,10 @@ class TransactionController extends Controller
                     return StandardResponse::error(403, 'Transaction failed', []);
                 }
 
+                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
                 $trx->status = 3;
+                $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
                 $trx->save();
-                $user && $user->creditWallet($trx->amount);
 
                 return $this->processRetryTokenGeneration($trx, $user);
             }
@@ -524,9 +527,10 @@ class TransactionController extends Controller
                     return StandardResponse::error(403, 'Transaction failed', []);
                 }
 
+                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
                 $trx->status = 3;
+                $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
                 $trx->save();
-                $user && $user->creditWallet($trx->amount);
 
                 return $this->processRetryTokenGeneration($trx, $user);
             }
@@ -552,15 +556,18 @@ class TransactionController extends Controller
         }
 
         $debited = false;
+        $shouldDebit = $trx->pay_type !== 'wallet' || (float) $trx->wallet_creditted > 0;
 
-        if ($trx->pay_type !== 'wallet') {
+        if ($shouldDebit) {
             try {
-                $user->debitWallet($trx->amount);
+                $user->debitWallet($trx->vending_amount ?? $trx->amount);
             } catch (Exception $e) {
                 return StandardResponse::error(403, 'Insufficient wallet balance, kindly fund your wallet', []);
             }
 
             $debited = true;
+            $trx->wallet_creditted = 0;
+            $trx->save();
         }
 
         $meter = Meter::where('user_id', $trx->user_id)->first();
@@ -583,11 +590,12 @@ class TransactionController extends Controller
             if ($debited) {
                 $freshTrx = Transaction::where('trx_id', $trx_id)->first();
 
-                if ($freshTrx && $freshTrx->status !== 2) {
+                if ($freshTrx && $freshTrx->status !== 2 && (float) $freshTrx->wallet_creditted == 0) {
                     $freshUser = User::find($trx->user_id);
 
-                    if ($freshUser && $freshUser->main_wallet <= $user->main_wallet) {
-                        $freshUser->creditWallet($trx->amount);
+                    if ($freshUser) {
+                        $freshUser->creditWallet($freshTrx->vending_amount ?? $freshTrx->amount);
+                        $freshTrx->wallet_creditted = $freshTrx->vending_amount ?? $freshTrx->amount;
                     }
 
                     $freshTrx->status = 3;
@@ -666,6 +674,85 @@ class TransactionController extends Controller
 
         }
 
+
+    /**
+     * List credit token transactions stuck or failed at status 0 (payment pending)
+     * or status 3 (service pending).
+     */
+    public function failed_credit_token_transactions(Request $request)
+    {
+        $status_map = [
+            0 => 'PAYMENT_PENDING',
+            3 => 'TOKEN_PENDING'
+        ];
+
+        try {
+            $perPage = (int) $request->query('per_page', 20);
+            $perPage = min(max($perPage, 1), 100);
+
+            $transactions = Transaction::where('user_id', Auth::id())
+                ->whereIn('status', [
+                    TransactionStatus::PAYMENT_PENDING->value,
+                    TransactionStatus::SERVICE_PENDING->value,
+                ])
+                ->where(function ($q) {
+                    $q->whereIn('service_type', [
+                            ServiceTypeConstants::CREDIT_TOKEN,
+                            ServiceTypeConstants::CREDIT_TOKEN_OTHERS,
+                            Feature::MOMAS_METER,
+                        ])
+                        ->orWhere('service', 'like', 'CREDIT TOKEN PURCHASE%')
+                        ->orWhereRaw(
+                            "JSON_UNQUOTE(JSON_EXTRACT(action_payload, '$.action')) IN (?, ?, ?, ?)",
+                            ['momas_meter', 'momas_meter_web', 'momas_meter_other', 'others_meter']
+                        )
+                        ->orWhereHas('creditToken');
+                })
+                ->with('creditToken')
+                ->latest()
+                ->paginate($perPage);
+
+            $items = $transactions->map(function ($trx) use ($status_map) {
+                $credit = $trx->creditToken;
+                $payload = json_decode($trx->action_payload, true) ?? [];
+
+                return [
+                    'trx_id' => $trx->trx_id,
+                    'pay_type' => $trx->pay_type,
+                    'service_type' => $trx->service_type,
+                    'service' => $trx->service,
+                    'amount' => $trx->amount,
+                    'status' => $status_map[(int) $trx->status],
+                    'meterNo' => $credit
+                        ? ($credit->receiver_meterNo ?: $credit->meterNo)
+                        : ($payload['receiver_meterNo'] ?? Auth::user()->meterNo),
+                    'token' => $credit?->token,
+                    'unitkwh' => $credit?->unitkwh,
+                    'vatAmount' => $credit?->vatAmount,
+                    'estate_id' => $credit?->estate_id ?? Auth::user()->estate_id,
+                    'estate_name' => $credit?->estate_name,
+                    'created_at' => $trx->created_at?->toDateTimeString(),
+                    'updated_at' => $trx->updated_at?->toDateTimeString(),
+                ];
+            });
+
+            return StandardResponse::success(200, 'Failed credit token transactions fetched successfully', [
+                'transactions' => $items,
+                'pagination' => [
+                    'total' => $transactions->total(),
+                    'per_page' => $transactions->perPage(),
+                    'current_page' => $transactions->currentPage(),
+                    'last_page' => $transactions->lastPage(),
+                ],
+            ]);
+        } catch (Exception $e) {
+            return StandardResponse::error(500, 'An Error Occurred', [], debug: [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
+    }
 
     /**
      * Get receipt data for a transaction.
