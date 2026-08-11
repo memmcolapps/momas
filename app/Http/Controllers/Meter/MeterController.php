@@ -296,7 +296,9 @@ class MeterController extends Controller
             $tarf->save();
         }
 
-        $tariffs = Tariff::where('user_id', $user_info->id)->get();
+        $tariffs = Tariff::where('user_id', $user_info->id)
+            ->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
+            ->get();
 
         $data['tariffs'] = $tariffs;
         $pur['min_purchase'] = (int)$min_pur;
@@ -413,7 +415,6 @@ class MeterController extends Controller
 
     public function buy_meter_token(request $request)
     {
-        DB::beginTransaction();
         try {
             $validator = Validator::make($request->all(), [
                 'tariff_id' => 'required|integer|exists:tariffs,id',
@@ -473,11 +474,18 @@ class MeterController extends Controller
                 if (! $verifier['is_successful']) {
 
                     $trx->status = 1;
-                    $trx->save();
                     Logger::warning("User {$auth_user->id} tried buying a token with a failed transaction {$trx->trx_id}");
 
                     return StandardResponse::error(403, 'Payment failed please try again', []);
+                } else {
+                    $trx->status = 3;
+
+                    Logger::warning('Callback and webhook seems to have failed!', [
+                        'request' => $request->all(),
+                    ]);
                 }
+
+                $trx->save();
             }
 
             $meter = Meter::where('meterNo', Auth::user()->meterNo)
@@ -500,7 +508,11 @@ class MeterController extends Controller
             // ============================
 
             if ($utility_amount > 0 && in_array($duration, ["weekly", "monthly", "yearly"])) {
-                handle_pay_arrears($trx_id, Auth::user()->id, 'utilities');
+                handle_pay_arrears(
+                    $trx_id,
+                    $auth_user->id,
+                    'utilities'
+                );
             }
 
             // ============================
@@ -508,13 +520,21 @@ class MeterController extends Controller
             // ============================
 
             // Using "null" for verify since transaction is already verified
-            $meter->getNewToken(
-                $tariff_id,
-                $trx_id,
-                "null",
-                '',
-                'momas_meter'
-            );
+            try {
+                $meter->getNewToken(
+                    $tariff_id,
+                    $trx_id,
+                    "null",
+                    '',
+                    'momas_meter'
+                );
+
+            } catch (Exception $e) {
+                $trx->refresh();
+                if ($trx->status !== 2) {
+                    throw $e;
+                }
+            }
 
             // Get the created CreditToken to retrieve the token
             $credit = CreditToken::where('trx_id', $trx_id)->first();
@@ -527,14 +547,11 @@ class MeterController extends Controller
 
             $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id);
 
-            DB::commit();
-
             return StandardResponse::success(code: 200, message: 'Bought token successfully', data:[
                 'receipt' => $receipt,
             ]);
 
         } catch (Exception $e) {
-            DB::rollBack();
 
             Logger::error('MeterController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(code: 500, message: 'An Error Occured', debug: [
@@ -1110,6 +1127,24 @@ class MeterController extends Controller
             }
         }
 
+        if ($meter->NewTariffDual && !$meter->NewTariffDualID) {
+            $meter->NewTariffDualID = $meter->NewTariffDual;
+        }
+
+        if ($meter->OldTariffDual && !$meter->OldTariffDualID) {
+            $meter->OldTariffDualID = $meter->OldTariffDual;
+        }
+
+        if ($meter->NewTariffDualID && !$meter->NewTariffDual) {
+            $meter->NewTariffDual = $meter->NewTariffDualID;
+        }
+
+        if ($meter->OldTariffDualID && !$meter->OldTariffDual) {
+            $meter->OldTariffDual = $meter->OldTariffDualID;
+        }
+
+        $meter->save();
+
 
         $data['estate'] = Estate::where('status', 2)->get();
         $data['transformer'] = Transformer::latest()->where('status', 2)->get();
@@ -1617,6 +1652,7 @@ class MeterController extends Controller
 
 
         $user_info = User::where('meterNo', $request->meterNo)->first();
+        $meter = Meter::where('meterNo', $meterNo)->first();
         $estate_id = $user_info->estate_id ?? null;
         if ($estate_id == null) {
             return 1;
@@ -1627,7 +1663,10 @@ class MeterController extends Controller
             return 2;
         }
 
-        $tariffs = Tariff::where('estate_id', $user_info->estate_id)->get(['id', 'title', 'type']);
+        $tariffs = Tariff::where('estate_id', $user_info->estate_id)
+            ->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
+            ->get(['id', 'title', 'type']);
+
         return response()->json(['tariffs' => $tariffs]);
     }
 

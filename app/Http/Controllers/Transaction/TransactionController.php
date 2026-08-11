@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Transaction;
 
+use App\Constants\Feature;
+use App\Constants\ServiceTypeConstants;
 use App\Contracts\PaymentServiceInterface;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
@@ -369,6 +371,7 @@ class TransactionController extends Controller
                 // If action payload is not passed do not assign user id and maintain backward compatibilty with previous designs
                 if ($action_payload) {
                     $action_payload['user_id'] = Auth::user()->id;
+                    $request->tariff_id && $action_payload['tariff_id'] = $request->tariff_id;
                 } else {
                     $action_payload = [
                         'action' => $request->service_type,
@@ -464,6 +467,145 @@ class TransactionController extends Controller
     }
 
 
+    public function retry_credit_token(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'trx_id' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return StandardResponse::error(422, 'Validation error', [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
+
+            $trx_id = $request->trx_id;
+
+            $trx = Transaction::where('trx_id', $trx_id)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (!$trx) {
+                return StandardResponse::error(404, 'Resource not found: Invalid transaction reference', []);
+            }
+
+            if ($trx->status === 2) {
+                $receipt = self::getReceiptData($trx->id, Auth::id());
+
+                return StandardResponse::success(200, 'Transaction has previously been completed', [
+                    'receipt' => $receipt,
+                ]);
+            }
+
+            $paystack = new PaystackPaymentService();
+            $user = User::find($trx->user_id);
+
+            if ($trx->status === 0) {
+                $verify = $paystack->verifyTransaction($trx_id);
+
+                if (!isset($verify['is_successful']) || !$verify['is_successful']) {
+                    $trx->status = 1;
+                    $trx->save();
+                    Logger::warning("retry_credit_token: paystack re-verification failed for {$trx_id}");
+
+                    return StandardResponse::error(403, 'Transaction failed', []);
+                }
+
+                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                $trx->status = 3;
+                $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
+                $trx->save();
+
+                return $this->processRetryTokenGeneration($trx, $user);
+            }
+
+            if ($trx->status === 1) {
+                $verify = $paystack->verifyTransaction($trx_id);
+
+                if (!$verify['is_successful']) {
+                    return StandardResponse::error(403, 'Transaction failed', []);
+                }
+
+                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                $trx->status = 3;
+                $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
+                $trx->save();
+
+                return $this->processRetryTokenGeneration($trx, $user);
+            }
+
+            return $this->processRetryTokenGeneration($trx, $user);
+        } catch (Exception $e) {
+            Logger::error('retry_credit_token error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return StandardResponse::error(500, 'An Error Occurred', [], debug: [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
+    }
+
+    protected function processRetryTokenGeneration(Transaction $trx, ?User $user)
+    {
+        $trx_id = $trx->trx_id;
+
+        if (!$user) {
+            return StandardResponse::error(404, 'User not found for this transaction', []);
+        }
+
+        $debited = false;
+        $shouldDebit = $trx->pay_type !== 'wallet' || (float) $trx->wallet_creditted > 0;
+
+        $meter = Meter::where('user_id', $trx->user_id)->first();
+
+        if (!$meter) {
+            return StandardResponse::error(404, 'Meter not found for this transaction', []);
+        }
+
+        $action_payload = json_decode($trx->action_payload, true) ?? [];
+        $tariff_id = $trx->tariff_id ?? ($action_payload['tariff_id'] ?? null);
+        $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
+
+        if (!$tariff_id) {
+            return StandardResponse::error(422, 'Unable to determine tariff for this transaction', []);
+        }
+
+        try {
+            $meter->getNewToken($tariff_id, $trx_id, 'null', $receiver_meterNo, 'momas_meter');
+
+            if ($shouldDebit) {
+                try {
+                    $user->debitWallet($trx->vending_amount ?? $trx->amount);
+                } catch (Exception $e) {
+                    return StandardResponse::error(403, 'Insufficient wallet balance, kindly fund your wallet', []);
+                }
+
+                $trx->wallet_creditted = 0;
+                $trx->save();
+            }
+        } catch (Exception $e) {
+            Logger::error('Token Retry Failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, 'Token Retry Failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $receipt = self::getReceiptData($trx->id, Auth::id());
+
+        return StandardResponse::success(200, 'Transaction retried successfully', [
+            'receipt' => $receipt,
+        ]);
+    }
+
+
     public function all_transactions(request $request)
     {
         $trx = Transaction::latest()
@@ -524,6 +666,85 @@ class TransactionController extends Controller
 
         }
 
+
+    /**
+     * List credit token transactions stuck or failed at status 0 (payment pending)
+     * or status 3 (service pending).
+     */
+    public function failed_credit_token_transactions(Request $request)
+    {
+        $status_map = [
+            0 => 'PAYMENT_PENDING',
+            3 => 'TOKEN_PENDING'
+        ];
+
+        try {
+            $perPage = (int) $request->query('per_page', 20);
+            $perPage = min(max($perPage, 1), 100);
+
+            $transactions = Transaction::where('user_id', Auth::id())
+                ->whereIn('status', [
+                    TransactionStatus::PAYMENT_PENDING->value,
+                    TransactionStatus::SERVICE_PENDING->value,
+                ])
+                ->where(function ($q) {
+                    $q->whereIn('service_type', [
+                            ServiceTypeConstants::CREDIT_TOKEN,
+                            ServiceTypeConstants::CREDIT_TOKEN_OTHERS,
+                            Feature::MOMAS_METER,
+                        ])
+                        ->orWhere('service', 'like', 'CREDIT TOKEN PURCHASE%')
+                        ->orWhereRaw(
+                            "JSON_UNQUOTE(JSON_EXTRACT(action_payload, '$.action')) IN (?, ?, ?, ?)",
+                            ['momas_meter', 'momas_meter_web', 'momas_meter_other', 'others_meter']
+                        )
+                        ->orWhereHas('creditToken');
+                })
+                ->with('creditToken')
+                ->latest()
+                ->paginate($perPage);
+
+            $items = $transactions->map(function ($trx) use ($status_map) {
+                $credit = $trx->creditToken;
+                $payload = json_decode($trx->action_payload, true) ?? [];
+
+                return [
+                    'trx_id' => (string) $trx->trx_id,
+                    'pay_type' => (string) $trx->pay_type,
+                    'service_type' => (string) $trx->service_type,
+                    'service' => (string) $trx->service,
+                    'amount' => (string) $trx->amount,
+                    'status' => (string) $status_map[(int) $trx->status],
+                    'meterNo' => (string) $credit
+                        ? ($credit->receiver_meterNo ?: $credit->meterNo)
+                        : ($payload['receiver_meterNo'] ?? Auth::user()->meterNo),
+                    'token' => (string) $credit?->token,
+                    'unitkwh' => (string) $credit?->unitkwh,
+                    'vatAmount' => (string) $credit?->vatAmount,
+                    'estate_id' => (string) $credit?->estate_id ?? Auth::user()->estate_id,
+                    'estate_name' => (string) $credit?->estate_name,
+                    'created_at' => (string) $trx->created_at?->toDateTimeString(),
+                    'updated_at' => (string) $trx->updated_at?->toDateTimeString(),
+                ];
+            });
+
+            return StandardResponse::success(200, 'Failed credit token transactions fetched successfully', [
+                'transactions' => $items,
+                'pagination' => [
+                    'total' => $transactions->total(),
+                    'per_page' => $transactions->perPage(),
+                    'current_page' => $transactions->currentPage(),
+                    'last_page' => $transactions->lastPage(),
+                ],
+            ]);
+        } catch (Exception $e) {
+            return StandardResponse::error(500, 'An Error Occurred', [], debug: [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
+    }
 
     /**
      * Get receipt data for a transaction.
@@ -829,7 +1050,7 @@ class TransactionController extends Controller
                         return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type={$action_to_type[$action]}"));
                     }
                 }
-                ProcessPaystackWebhook::dispatch($transactionData['reference']);
+                // ProcessPaystackWebhook::dispatch($transactionData['reference']);
 
                 if ($access_point === 'mobile') {
                     return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [

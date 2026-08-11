@@ -48,6 +48,7 @@ class RequestActionHandler {
 
         $action = json_decode($trx->action_payload, true);
 
+        // dd($action);
         if (! $action['action'] && ! in_array($action['action'], array_keys($features))) {
             throw new Exception('Invalid action passed to paystack: Action not recognized');
         }
@@ -149,10 +150,6 @@ class RequestActionHandler {
         $meter = Meter::where('user_id', $user->id)->firstOrFail();
 
         $tariffId = $action_payload['tariff_id'];
-        $unit = $action_payload['vend_amount_kw_per_naira'];
-        $vat = $action_payload['vat_amount'];
-        $needKct = $meter->NeedKCT;
-        $vending_amount = $action_payload['vending_amount'];
         $reciever_meterNo = $action_payload['reciever_meterNo'] ?? null;
 
         if ($action === 'momas_meter_web') {
@@ -168,6 +165,7 @@ class RequestActionHandler {
                 $trx->save();
             }
         }
+        // dd($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 
         $meter->getNewToken($tariffId, $this->reference, $verify='null', $reciever_meterNo, $action);
 
