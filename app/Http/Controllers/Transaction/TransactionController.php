@@ -504,7 +504,7 @@ class TransactionController extends Controller
             if ($trx->status === 0) {
                 $verify = $paystack->verifyTransaction($trx_id);
 
-                if (!$verify['is_successful']) {
+                if (!isset($verify['is_successful']) || !$verify['is_successful']) {
                     $trx->status = 1;
                     $trx->save();
                     Logger::warning("retry_credit_token: paystack re-verification failed for {$trx_id}");
@@ -558,18 +558,6 @@ class TransactionController extends Controller
         $debited = false;
         $shouldDebit = $trx->pay_type !== 'wallet' || (float) $trx->wallet_creditted > 0;
 
-        if ($shouldDebit) {
-            try {
-                $user->debitWallet($trx->vending_amount ?? $trx->amount);
-            } catch (Exception $e) {
-                return StandardResponse::error(403, 'Insufficient wallet balance, kindly fund your wallet', []);
-            }
-
-            $debited = true;
-            $trx->wallet_creditted = 0;
-            $trx->save();
-        }
-
         $meter = Meter::where('user_id', $trx->user_id)->first();
 
         if (!$meter) {
@@ -586,24 +574,28 @@ class TransactionController extends Controller
 
         try {
             $meter->getNewToken($tariff_id, $trx_id, 'null', $receiver_meterNo, 'momas_meter');
-        } catch (Exception $e) {
-            if ($debited) {
-                $freshTrx = Transaction::where('trx_id', $trx_id)->first();
 
-                if ($freshTrx && $freshTrx->status !== 2 && (float) $freshTrx->wallet_creditted == 0) {
-                    $freshUser = User::find($trx->user_id);
-
-                    if ($freshUser) {
-                        $freshUser->creditWallet($freshTrx->vending_amount ?? $freshTrx->amount);
-                        $freshTrx->wallet_creditted = $freshTrx->vending_amount ?? $freshTrx->amount;
-                    }
-
-                    $freshTrx->status = 3;
-                    $freshTrx->save();
+            if ($shouldDebit) {
+                try {
+                    $user->debitWallet($trx->vending_amount ?? $trx->amount);
+                } catch (Exception $e) {
+                    return StandardResponse::error(403, 'Insufficient wallet balance, kindly fund your wallet', []);
                 }
-            }
 
-            throw $e;
+                $trx->wallet_creditted = 0;
+                $trx->save();
+            }
+        } catch (Exception $e) {
+            Logger::error('Token Retry Failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTrace(),
+            ]);
+
+            return StandardResponse::error(500, 'Token Retry Failed', [
+                'error' => $e->getMessage(),
+            ]);
         }
 
         $receipt = self::getReceiptData($trx->id, Auth::id());
