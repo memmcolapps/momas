@@ -87,6 +87,29 @@
                     </div>
                 </div>
 
+                <!-- Search -->
+                <div class="col-md-12 col-xl-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="element-box">
+                                    <h6 class="element-header">Search</h6>
+                                    <form action="search-meter-trx" method="GET">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <input type="text" name="search" placeholder="Enter meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                            </div>
+                                            <div class="col-2">
+                                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Transactions Table -->
                 <div class="row">
                     <div class="col-xl-12">
@@ -235,6 +258,29 @@
                                     <div class="d-flex align-items-center">
                                         <h3 class="mb-0 fs-24 text-black me-2">NGN {{number_format($total_vat ?? 0, 2)}}</h3>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="col-md-12 col-xl-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="element-box">
+                                    <h6 class="element-header">Search</h6>
+                                    <form action="search-meter-trx" method="GET">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <input type="text" name="search" placeholder="Enter meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                            </div>
+                                            <div class="col-2">
+                                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                                            </div>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>

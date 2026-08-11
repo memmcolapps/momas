@@ -96,6 +96,40 @@
 
                                 <div class="element-box">
 
+                                    <h6 class="element-header ">Search</h6>
+
+                                    <form action="search-transactions" method="GET">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <input type="text" name="search" placeholder="Enter meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                            </div>
+                                            <div class="col-2">
+                                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+
+
+
+                <div class="col-md-12 col-xl-12">
+
+                    <div class="card">
+                        <div class="card-body">
+
+                            <div class="row">
+
+                                <div class="element-box">
+
                                     <h6 class="element-header ">Filter</h6>
 
                                     <form action="search-trx" method="post">
@@ -466,6 +500,40 @@
                         </div>
                     </div>
 
+
+                </div>
+
+
+
+
+                <div class="col-md-12 col-xl-12">
+
+                    <div class="card">
+                        <div class="card-body">
+
+                            <div class="row">
+
+                                <div class="element-box">
+
+                                    <h6 class="element-header ">Search</h6>
+
+                                    <form action="search-transactions" method="GET">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <input type="text" name="search" placeholder="Enter meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                            </div>
+                                            <div class="col-2">
+                                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
 
                 </div>
 

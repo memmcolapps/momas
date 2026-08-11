@@ -337,6 +337,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('estate/get-assigned-meters', [EstateCustomerImportController::class, 'get_assigned_meters']);
     Route::post('estate/bulk-save-customers', [EstateCustomerImportController::class, 'bulk_save_customers']);
 
+    Route::get('search-meter-trx', [MeterController::class, 'search_meter_transactions_report']);
+    Route::get('search-transactions', [TransactionController::class, 'search_transactions']);
     Route::post('search-meter-transactions', [MeterController::class, 'search_meter_transactions']);
     Route::post('search-trx', [TransactionController::class, 'search_trx']);
     Route::post('search-utility-trx', [TransactionController::class, 'search_utility_trx']);
@@ -348,6 +350,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
 
     //token
     Route::get('credit-token', [TokenController::class, 'credit_token_index']);
+    Route::get('search-credit-token', [TokenController::class, 'search_credit_token']);
     Route::get('compensation-token', [TokenController::class, 'compensation_index']);
     Route::get('tamper-token', [TokenController::class, 'tamper_index']);
     Route::get('kct-token', [TokenController::class, 'kct_token_index']);
