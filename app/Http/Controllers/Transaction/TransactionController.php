@@ -673,6 +673,8 @@ class TransactionController extends Controller
      */
     public function failed_credit_token_transactions(Request $request)
     {
+        $deployment_date = Carbon::parse(config('constants.token_retry_deployment_date'));
+
         $status_map = [
             0 => 'PAYMENT_PENDING',
             3 => 'TOKEN_PENDING'
@@ -700,6 +702,7 @@ class TransactionController extends Controller
                         )
                         ->orWhereHas('creditToken');
                 })
+                ->where('created_at', '>=', $deployment_date)
                 ->with('creditToken')
                 ->latest()
                 ->paginate($perPage);
