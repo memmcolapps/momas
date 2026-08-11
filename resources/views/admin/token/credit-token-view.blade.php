@@ -212,6 +212,18 @@
                                     </div>
                                     <hr>
                                     <div class="card-body">
+
+                                        <form action="search-credit-token" method="GET">
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <input type="text" name="search" placeholder="Search by meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                                </div>
+                                                <div class="col-2">
+                                                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                                                </div>
+                                            </div>
+                                        </form>
+
                                         <table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
@@ -638,6 +650,18 @@
                                     </div>
                                     <hr>
                                     <div class="card-body">
+
+                                        <form action="search-credit-token" method="GET">
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <input type="text" name="search" placeholder="Search by meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                                </div>
+                                                <div class="col-2">
+                                                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                                                </div>
+                                            </div>
+                                        </form>
+
                                         <<table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>

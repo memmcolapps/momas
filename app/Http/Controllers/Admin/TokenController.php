@@ -58,6 +58,42 @@ class TokenController extends Controller
     }
 
 
+    public function search_credit_token(Request $request)
+    {
+        $search = $request->search;
+
+        if (Auth::user()->role == 0) {
+            $data['estate'] = Estate::all();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+
+            $query = CreditToken::query();
+        } elseif (Auth::user()->role == 3) {
+            $data['estate_id'] = Auth::user()->estate_id;
+            $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+
+            $query = CreditToken::where('estate_id', Auth::user()->estate_id);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('meterNo', 'like', '%' . $search . '%')
+                    ->orWhere('trx_id', 'like', '%' . $search . '%')
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('first_name', 'like', '%' . $search . '%')
+                            ->orWhere('last_name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $data['credit_tokens'] = $query->latest()->paginate(20)->withQueryString();
+
+        return view('admin.token.credit-token-view', $data);
+    }
+
+
     public function clear_credit_token_index()
     {
 

@@ -1766,6 +1766,33 @@ class MeterController extends Controller
         }
     }
 
+    public function search_meter_transactions_report(Request $request)
+    {
+        $search = $request->search;
+
+        $query = CreditToken::with(['user:id,first_name,last_name,email,phone'])
+            ->where('status', 2)
+            ->when(Auth::user()->role == 3, fn($q) => $q->where('estate_id', Auth::user()->estate_id));
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('meterNo', 'like', '%' . $search . '%')
+                    ->orWhere('trx_id', 'like', '%' . $search . '%')
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('first_name', 'like', '%' . $search . '%')
+                            ->orWhere('last_name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $data['meter_transactions'] = (clone $query)->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+        $data['total_amount'] = (float) (clone $query)->sum('amount');
+        $data['total_vat'] = (float) (clone $query)->sum('vatAmount');
+        $data['total_units'] = (float) (clone $query)->sum('unitkwh');
+
+        return view('admin.report.meter-transaction-report', $data);
+    }
+
     public function search_meter_transactions(request $request)
     {
         if (Auth::user()->role == 3) {

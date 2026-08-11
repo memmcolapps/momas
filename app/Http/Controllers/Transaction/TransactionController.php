@@ -1143,6 +1143,33 @@ class TransactionController extends Controller
     }
 
 
+    public function search_transactions(Request $request)
+    {
+        $search = $request->search;
+
+        $baseQuery = Transaction::query()
+            ->when(Auth::user()->role == 3, fn($q) => $q->where('estate_id', Auth::user()->estate_id));
+
+        if ($search) {
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('trx_id', 'like', '%' . $search . '%')
+                    ->orWhereHas('creditToken', fn($q) => $q->where('meterNo', 'like', '%' . $search . '%'))
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('first_name', 'like', '%' . $search . '%')
+                            ->orWhere('last_name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $data['transactions'] = $baseQuery->latest()->paginate(20)->withQueryString();
+        $data['total'] = Transaction::where('status', 2)
+            ->when(Auth::user()->role == 3, fn($q) => $q->where('estate_id', Auth::user()->estate_id))
+            ->sum('amount');
+        $data['estate'] = Estate::all();
+
+        return view('admin.report.transactionreport', $data);
+    }
+
     public function search_trx(Request $request)
     {
         $user = Auth::user();
