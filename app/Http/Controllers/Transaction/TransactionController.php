@@ -717,22 +717,22 @@ class TransactionController extends Controller
                 $payload = json_decode($trx->action_payload, true) ?? [];
 
                 return [
-                    'trx_id' => $trx->trx_id,
-                    'pay_type' => $trx->pay_type,
-                    'service_type' => $trx->service_type,
-                    'service' => $trx->service,
-                    'amount' => $trx->amount,
-                    'status' => $status_map[(int) $trx->status],
-                    'meterNo' => $credit
+                    'trx_id' => (string) $trx->trx_id,
+                    'pay_type' => (string) $trx->pay_type,
+                    'service_type' => (string) $trx->service_type,
+                    'service' => (string) $trx->service,
+                    'amount' => (string) $trx->amount,
+                    'status' => (string) $status_map[(int) $trx->status],
+                    'meterNo' => (string) $credit
                         ? ($credit->receiver_meterNo ?: $credit->meterNo)
                         : ($payload['receiver_meterNo'] ?? Auth::user()->meterNo),
-                    'token' => $credit?->token,
-                    'unitkwh' => $credit?->unitkwh,
-                    'vatAmount' => $credit?->vatAmount,
-                    'estate_id' => $credit?->estate_id ?? Auth::user()->estate_id,
-                    'estate_name' => $credit?->estate_name,
-                    'created_at' => $trx->created_at?->toDateTimeString(),
-                    'updated_at' => $trx->updated_at?->toDateTimeString(),
+                    'token' => (string) $credit?->token,
+                    'unitkwh' => (string) $credit?->unitkwh,
+                    'vatAmount' => (string) $credit?->vatAmount,
+                    'estate_id' => (string) $credit?->estate_id ?? Auth::user()->estate_id,
+                    'estate_name' => (string) $credit?->estate_name,
+                    'created_at' => (string) $trx->created_at?->toDateTimeString(),
+                    'updated_at' => (string) $trx->updated_at?->toDateTimeString(),
                 ];
             });
 
@@ -1058,7 +1058,7 @@ class TransactionController extends Controller
                         return redirect(url("/admin/recepit?trx_id=$trx->trx_id&type={$action_to_type[$action]}"));
                     }
                 }
-                ProcessPaystackWebhook::dispatch($transactionData['reference']);
+                // ProcessPaystackWebhook::dispatch($transactionData['reference']);
 
                 if ($access_point === 'mobile') {
                     return StandardResponse::success(code: 200, message: 'Payment Succesful', data: [

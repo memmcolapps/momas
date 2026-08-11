@@ -586,7 +586,7 @@ class Meter extends Model
 
             $trx = Transaction::where('trx_id', $trx_id)->first();
 
-            if ($trx && $action == 'momas_meter' && $shouldRefund) {
+            if ($trx && $action == 'momas_meter' && $shouldRefund && $trx->wallet_creditted <= 0) {
                 $trx->status = 3;
                 $user = User::where('id', $trx->user_id)->first();
                 if ($user) {

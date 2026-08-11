@@ -415,7 +415,6 @@ class MeterController extends Controller
 
     public function buy_meter_token(request $request)
     {
-        DB::beginTransaction();
         try {
             $validator = Validator::make($request->all(), [
                 'tariff_id' => 'required|integer|exists:tariffs,id',
@@ -475,11 +474,18 @@ class MeterController extends Controller
                 if (! $verifier['is_successful']) {
 
                     $trx->status = 1;
-                    $trx->save();
                     Logger::warning("User {$auth_user->id} tried buying a token with a failed transaction {$trx->trx_id}");
 
                     return StandardResponse::error(403, 'Payment failed please try again', []);
+                } else {
+                    $trx->status = 3;
+
+                    Logger::warning('Callback and webhook seems to have failed!', [
+                        'request' => $request->all(),
+                    ]);
                 }
+
+                $trx->save();
             }
 
             $meter = Meter::where('meterNo', Auth::user()->meterNo)
@@ -502,7 +508,11 @@ class MeterController extends Controller
             // ============================
 
             if ($utility_amount > 0 && in_array($duration, ["weekly", "monthly", "yearly"])) {
-                handle_pay_arrears($trx_id, Auth::user()->id, 'utilities');
+                handle_pay_arrears(
+                    $trx_id,
+                    $auth_user->id,
+                    'utilities'
+                );
             }
 
             // ============================
@@ -520,6 +530,7 @@ class MeterController extends Controller
                 );
 
             } catch (Exception $e) {
+                $trx->refresh();
                 if ($trx->status !== 2) {
                     throw $e;
                 }
@@ -536,14 +547,11 @@ class MeterController extends Controller
 
             $receipt = TransactionController::getReceiptData($trx->id, Auth::user()->id);
 
-            DB::commit();
-
             return StandardResponse::success(code: 200, message: 'Bought token successfully', data:[
                 'receipt' => $receipt,
             ]);
 
         } catch (Exception $e) {
-            DB::rollBack();
 
             Logger::error('MeterController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(code: 500, message: 'An Error Occured', debug: [

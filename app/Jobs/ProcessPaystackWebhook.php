@@ -27,7 +27,8 @@ class ProcessPaystackWebhook implements ShouldQueue
 
     protected $reference;
 
-    public $tries = 10;
+    // Number of tries should be one to avoid over creditting of wallet for credit token failure
+    public $tries = 1;
     public $backoff = 10;
 
     public function __construct($reference)
