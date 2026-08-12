@@ -34,4 +34,6 @@ return [
     ],
 
     'momas_minimum_vend' => env('MOMAS_MINIMUM_VEND', 100),
+    'simulate_failed_token_gen' => env('SIMULATE_FAILED_TOKEN', false),
+    'token_retry_deployment_date' => env('TOKEN_RETRY_DEPLOYMENT_DATE', '2026-08-11'),
 ];

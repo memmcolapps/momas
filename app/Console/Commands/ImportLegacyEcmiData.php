@@ -684,6 +684,7 @@ class ImportLegacyEcmiData extends Command
                 'OldTariffDual'   => $oldTariffId,
                 'OldTariffID'     => $oldTariffId,
                 'NewSGCDual'      => $row->SGC2,
+                'OldSGCDual'      => $row->SGC,
                 'KRN1'            => $row->KRN1,
                 'KRN2'            => $row->KRN2,
                 'NeedKCT'         => $row->NeedKCT ? '1' : '0',
@@ -882,9 +883,7 @@ class ImportLegacyEcmiData extends Command
                 'status'      => 2,
                 'can_login'   => 0,
                 'password'    => Hash::make('default123'),
-                'created_at'  => $row->OpenDate
-                    ? date('Y-m-d H:i:s', strtotime($row->OpenDate))
-                    : now(),
+                'created_at'  => now(),
                 'updated_at'  => now(),
             ];
 

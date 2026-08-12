@@ -396,8 +396,42 @@ class DashboardContoller extends Controller
 
     public function delete_user(request $request)
     {
-        User::where('id', $request->id)->delete();
-        Transaction::where('user_id', $request->id)->delete();
+
+        $user = User::where('id', $request->id)->first();
+
+        if (!$user) {
+            return back()->with('error', "User not found");
+        }
+
+        if ($user->id == Auth::user()->id) {
+            return back()->with('error', "You cannot delete your own account");
+        }
+
+        if ($user->role == 0) {
+            return back()->with('error', "You cannot delete a super admin");
+        }
+
+        // Estate admins can only delete customers in their estate
+        if (Auth::user()->role == 3) {
+            if ($user->role != 2 || $user->estate_id != Auth::user()->estate_id) {
+                return back()->with('error', 'You can only delete customers from your estate');
+            }
+        }
+
+        \DB::transaction(function () use ($user) {
+            // Detach any meters assigned to this user
+            Meter::where('user_id', $user->id)->update(['user_id' => null]);
+            Meter::where('meterNo', $user->meterNo)->update(['user_id' => null]);
+
+            // Detach any tariffs assigned to this user
+            Tariff::where('user_id', $user->id)->update(['user_id' => null]);
+
+            $user->delete();
+        });
+
+        if ($user->role == 2) {
+            return redirect('admin/customers')->with('message', "Customer deleted successfully");
+        }
 
         return redirect('admin/users-list')->with('message', "User deleted successfully");
     }

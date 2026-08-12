@@ -379,6 +379,7 @@ class Meter extends Model
 
         $user = User::where('id', $this->user_id)->firstOrFail();
 
+        $shouldRefund = false;
 
         try {
             DB::transaction(function () use (
@@ -388,7 +389,8 @@ class Meter extends Model
                 $user,
                 $receiver_meterNo,
                 $other_meter,
-                $action
+                $action,
+                &$shouldRefund
             ) {
                 $trx = Transaction::where('trx_id', $trx_id)
                     ->firstOrFail();
@@ -398,7 +400,13 @@ class Meter extends Model
                 // For "pay for others", use the receiver's user/estate for debt calculation
                 $debtUserId = $other_meter ? $other_meter->user_id : null;
                 $debtEstateId = $other_meter ? $other_meter->estate_id : null;
-                $calculatedValues = $this->calculateTokenValues($tariff_id, $trx, $debtUserId, $debtEstateId);
+
+                try {
+                    $calculatedValues = $this->calculateTokenValues($tariff_id, $trx, $debtUserId, $debtEstateId);
+                } catch (Exception $e) {
+                    $shouldRefund = true;
+                    throw $e;
+                }
 
                 // Extract calculated values
                 $tariffAmount = $calculatedValues['tariffAmount'];
@@ -423,6 +431,7 @@ class Meter extends Model
 
 
                 if (! $meter->isActive() || ($receiver_meterNo && ! $this->isActive())) {
+                    $shouldRefund = true;
                     throw new Exception("Meter is unable to carrying out operations");
                 }
 
@@ -492,6 +501,7 @@ class Meter extends Model
                      ]);
 
 
+                    $shouldRefund = true;
                     throw new Exception("Vending server not connected, Retry again on transaction history");
                 }
 
@@ -576,10 +586,13 @@ class Meter extends Model
 
             $trx = Transaction::where('trx_id', $trx_id)->first();
 
-            if ($action !== 'momas_meter_web') {
+            if ($trx && $action == 'momas_meter' && $shouldRefund && $trx->wallet_creditted <= 0) {
                 $trx->status = 3;
                 $user = User::where('id', $trx->user_id)->first();
-                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                if ($user) {
+                    $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                    $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
+                }
                 $trx->save();
             }
 
@@ -684,6 +697,7 @@ class Meter extends Model
                 $user = User::find($trx->user_id);
                 if ($user) {
                     $user->creditWallet($trx->amount);
+                    $trx->wallet_creditted = $trx->amount;
                 }
                 $trx->status = 3;
                 $trx->save();
@@ -808,6 +822,7 @@ class Meter extends Model
                 $user = User::find($trx->user_id);
                 if ($user) {
                     $user->creditWallet($trx->amount);
+                    $trx->wallet_creditted = $trx->amount;
                 }
                 $trx->status = 3;
                 $trx->save();
@@ -927,6 +942,7 @@ class Meter extends Model
                 $user = User::find($trx->user_id);
                 if ($user) {
                     $user->creditWallet($trx->amount);
+                    $trx->wallet_creditted = $trx->amount;
                 }
                 $trx->status = 3;
                 $trx->save();
