@@ -385,6 +385,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('retry-generate-credit-token', [TokenController::class, 'retry_generate_credit_token']);
     Route::any('retry-generate-kct-token', [TokenController::class, 'retry_generate_kct_token']);
     Route::any('retry-generate-clear-credit-token', [TokenController::class, 'retry_generate_clear_credit_token']);
+    Route::get('retry-token-transactions', [TokenController::class, 'retry_token_transactions_index']);
+    Route::any('retry-generate-token-web', [TokenController::class, 'retry_credit_token_web']);
     Route::get('view-logs', [TokenController::class, 'view_logs']);
 
     Route::get('retry-generate-token', [TokenController::class, 'retry_generate_credit_token']);

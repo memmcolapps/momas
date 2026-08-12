@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Transaction\TransactionController;
 use App\Models\ClearcreditToken;
@@ -91,6 +92,156 @@ class TokenController extends Controller
         $data['credit_tokens'] = $query->latest()->paginate(20)->withQueryString();
 
         return view('admin.token.credit-token-view', $data);
+    }
+
+
+    /**
+     * Retry module: list all transactions stuck at status 0 (payment pending)
+     * or status 3 (service pending) so they can be retried.
+     */
+    public function retry_token_transactions_index(Request $request)
+    {
+        if (Auth::user()->role !== 0) {
+            return back()->with('error', 'Unauthorized');
+        }
+
+        $query = Transaction::whereIn('status', [
+            TransactionStatus::PAYMENT_PENDING->value,
+            TransactionStatus::SERVICE_PENDING->value,
+        ]);
+
+        $search = $request->search;
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('trx_id', 'like', '%' . $search . '%')
+                    ->orWhereHas('creditToken', function ($q) use ($search) {
+                        $q->where('meterNo', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('first_name', 'like', '%' . $search . '%')
+                            ->orWhere('last_name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $data['transactions'] = $query->with(['creditToken', 'user', 'estate'])
+            ->latest()
+            ->paginate(20);
+
+        return view('admin.token.retry-token-view', $data);
+    }
+
+    /**
+     * Retry a stuck credit token transaction. Mirrors the retry_credit_token
+     * flow on TransactionController: verify payment for status 0/1, credit the
+     * wallet, then generate the token. If the meter is not dual tariff and no
+     * tariff can be resolved from the transaction, fall back to the meter's
+     * single tariff (NewTariffID, then OldTariffID).
+     */
+    public function retry_credit_token_web(Request $request)
+    {
+        try {
+            $trx_id = $request->trx_id;
+
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+
+            if (! $trx) {
+                return back()->with('error', 'Resource not found: Invalid transaction reference');
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id=$trx_id&type=credit_token");
+            }
+
+            $paystack = new PaystackPaymentService();
+            $user = User::find($trx->user_id);
+
+            if ($trx->status === 0) {
+                $verify = $paystack->verifyTransaction($trx_id);
+
+                if (! isset($verify['is_successful']) || ! $verify['is_successful']) {
+                    $trx->status = 1;
+                    $trx->save();
+                    Logger::warning("retry_credit_token_web: payment re-verification failed for {$trx_id}");
+
+                    return back()->with('error', 'Transaction failed');
+                }
+
+                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                $trx->status = 3;
+                $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
+                $trx->save();
+            }
+
+            if ($trx->status === 1) {
+                $verify = $paystack->verifyTransaction($trx_id);
+
+                if (! isset($verify['is_successful']) || ! $verify['is_successful']) {
+                    return back()->with('error', 'Transaction failed');
+                }
+
+                $user && $user->creditWallet($trx->vending_amount ?? $trx->amount);
+                $trx->status = 3;
+                $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
+                $trx->save();
+            }
+
+            if (! $user) {
+                return back()->with('error', 'User not found for this transaction');
+            }
+
+            $meter = Meter::where('user_id', $trx->user_id)->first();
+
+            if (! $meter) {
+                return back()->with('error', 'Meter not found for this transaction');
+            }
+
+            $action_payload = json_decode($trx->action_payload, true) ?? [];
+            $tariff_id = $trx->tariff_id ?? ($action_payload['tariff_id'] ?? null);
+            $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
+
+            if (! $tariff_id) {
+                $isDualTariff = ($meter->isDualTariff === 'on'
+                    || $meter->isDualTariff === true
+                    || $meter->isDualTariff === 1
+                    || $meter->isDualTariff === '1');
+
+                if (! $isDualTariff) {
+                    $tariff_id = $meter->NewTariffID ?? $meter->OldTariffID;
+                }
+            }
+
+            if (! $tariff_id) {
+                return back()->with('error', 'Unable to determine tariff for this transaction');
+            }
+
+            try {
+                $meter->getNewToken($tariff_id, $trx_id, 'null', $receiver_meterNo, 'momas_meter');
+
+                $shouldDebit = $trx->pay_type !== 'wallet' || (float) $trx->wallet_creditted > 0;
+
+                if ($shouldDebit) {
+                    $user->debitWallet($trx->vending_amount ?? $trx->amount);
+                    $trx->wallet_creditted = 0;
+                    $trx->save();
+                }
+            } catch (Exception $e) {
+                Logger::error('Token Retry Failed', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTrace(),
+                ]);
+
+                return back()->with('error', 'Token Retry Failed: ' . $e->getMessage());
+            }
+
+            return redirect("admin/recepit?trx_id=$trx_id&type=credit_token");
+        } catch (Exception $e) {
+            Logger::error('retry_credit_token_web error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return back()->with('error', 'An Error Occurred: ' . $e->getMessage());
+        }
     }
 
 
