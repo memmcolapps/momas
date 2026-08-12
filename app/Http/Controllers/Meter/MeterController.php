@@ -1327,10 +1327,27 @@ class MeterController extends Controller
 
         $meter = Meter::where('id', $request->id)->first();
 
-        if (isset($meter->user_id) || User::where('meterNo', $meter->meterNo)->exists()) {
-            return redirect('admin/meter-list')->with('error', "Deactivate meter before deleting");
+        if (!$meter) {
+            return redirect('admin/meter-list')->with('error', "Meter not found");
         }
 
+        // Estate admins can only delete meters from their estate
+        if (Auth::user()->role == 3) {
+            if ($meter->estate_id != Auth::user()->estate_id) {
+                return redirect('admin/meter-list')->with('error', 'You can only delete meters from your estate');
+            }
+        }
+
+        DB::transaction(function () use ($meter) {
+            // Detach the meter from any customer
+            User::where('meterNo', $meter->meterNo)->update(['meterNo' => null, 'meterid' => null]);
+            User::where('meterid', $meter->id)->update(['meterNo' => null, 'meterid' => null]);
+
+            $meter->user_id = null;
+            $meter->save();
+
+            $meter->delete();
+        });
 
         return redirect('admin/meter-list')->with('message', "Meter deleted successfully");
 
