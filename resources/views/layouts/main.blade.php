@@ -184,6 +184,9 @@
                                     <li>
                                         <a class='tp-link' href='credit-token'>Credit Token</a>
                                     </li>
+                                    <li>
+                                        <a class='tp-link' href='retry-token-transactions'>Retry Token</a>
+                                    </li>
                                 </ul>
                             </div>
 
