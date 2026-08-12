@@ -684,6 +684,7 @@ class ImportLegacyEcmiData extends Command
                 'OldTariffDual'   => $oldTariffId,
                 'OldTariffID'     => $oldTariffId,
                 'NewSGCDual'      => $row->SGC2,
+                'OldSGCDual'      => $row->SGC,
                 'KRN1'            => $row->KRN1,
                 'KRN2'            => $row->KRN2,
                 'NeedKCT'         => $row->NeedKCT ? '1' : '0',

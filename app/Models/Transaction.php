@@ -27,6 +27,7 @@ class Transaction extends Model
         'status',
         'note',
         'wallet_creditted',
+        'migrated',
     ];
 
 
