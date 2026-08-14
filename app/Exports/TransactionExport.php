@@ -22,8 +22,8 @@ class TransactionExport implements FromCollection, WithHeadings
         $this->estate_id = $estate_id;
         $this->status = $status;
         $this->transaction_type = $transaction_type;
-        $this->from_date = Carbon::parse($from_date);
-        $this->to_date = Carbon::parse($to_date);
+        $this->from_date = $from_date ? Carbon::parse($from_date) : null;
+        $this->to_date = $to_date ? Carbon::parse($to_date) : null;
         $this->rrn = $rrn;
     }
 
@@ -53,8 +53,8 @@ class TransactionExport implements FromCollection, WithHeadings
 
         // Filter by date range if provided
         if ($this->from_date && $this->to_date) {
-            $query->where('created_at', '>=', $this->to_date->endOfDay())
-                ->where('created_at', '<=', $this->from_date->endOfDay());
+            $query->where('created_at', '>=', $this->from_date->startOfDay())
+                ->where('created_at', '<=', $this->to_date->endOfDay());
         }
 
         return $query->orderBy('created_at', 'desc')

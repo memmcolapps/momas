@@ -1087,6 +1087,18 @@ class MeterController extends Controller
             return back()->with('error', "Meter Already Exists");
         }
 
+        $orphaned_user = User::where('meterNo', $request->meterNo)->first();
+
+        // According to the system flow a meter must be created before a user thus any user already with a meter
+        // number yet to be added (absent on the system) is considered orphaned
+
+        if ($orphaned_user) {
+            $orphaned_user->meterNo = null;
+            $orphaned_user->meterid = null;
+
+            $orphaned_user->save();
+        }
+
         // Meter::create($request->all());
 
         // Handles the checkbox for isDualTariff and KCT fields
