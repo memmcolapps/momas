@@ -573,7 +573,18 @@ class TransactionController extends Controller
         $tariff_id = $trx->tariff_id ?? ($action_payload['tariff_id'] ?? null);
         $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
 
-        if (!$tariff_id) {
+        if (! $tariff_id) {
+            $isDualTariff = ($meter->isDualTariff === 'on'
+                || $meter->isDualTariff === true
+                || $meter->isDualTariff === 1
+                || $meter->isDualTariff === '1');
+
+            if (! $isDualTariff) {
+                $tariff_id = $meter->NewTariffID ?? $meter->OldTariffID;
+            }
+        }
+
+        if (! $tariff_id) {
             return StandardResponse::error(422, 'Unable to determine tariff for this transaction', []);
         }
 
