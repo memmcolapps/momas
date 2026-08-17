@@ -517,6 +517,11 @@ class TransactionController extends Controller
                 $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
                 $trx->save();
 
+                Logger::info('Wallet Creditted on retry', [
+                    'trx_id' => $trx->trx_id,
+                    'amount' => $trx->vending_amount ?? $trx->amount,
+                ]);
+
                 return $this->processRetryTokenGeneration($trx, $user);
             }
 
