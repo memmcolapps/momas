@@ -579,6 +579,13 @@ class TransactionController extends Controller
                 try {
                     $user->debitWallet($trx->vending_amount ?? $trx->amount);
                 } catch (Exception $e) {
+                    Logger::error('Debit wallet failed', [
+                        'error' => $e->getMessage(),
+                        'line' => $e->getLine(),
+                        'file' => $e->getFile(),
+                        'trace' => $e->getTrace(),
+                    ]);
+
                     return StandardResponse::error(403, 'Insufficient wallet balance, kindly fund your wallet', []);
                 }
 
