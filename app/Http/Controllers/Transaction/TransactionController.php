@@ -218,6 +218,14 @@ class TransactionController extends Controller
 
     public function make_payment(request $request)
     {
+        if (! $request->filled('tariff_id')) {
+            Logger::info('Tariff ID not passed on make_payment', [
+                'request' => $request->all(),
+            ]);
+
+            return StandardResponse::error(422, 'Tariff Id must be passed', []);
+        }
+
         try {
 
             $email = Auth::user()->email;

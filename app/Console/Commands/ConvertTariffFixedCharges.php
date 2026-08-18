@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ConvertTariffFixedCharges extends Command
@@ -99,15 +100,15 @@ class ConvertTariffFixedCharges extends Command
                             ]);
 
                             $hasTransaction = Transaction::where('user_id', $customer->id)
-                                ->whereMonth('created_at', now()->month)
-                                ->whereYear('created_at', now()->year)
+                                ->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year)
                                 ->exists();
 
                             if ($hasTransaction) {
                                 $paymentExists = UtilitiesPayment::where('user_id', $customer->id)
                                     ->where('type', 'utilities')
-                                    ->whereMonth('created_at', now()->month)
-                                    ->whereYear('created_at', now()->year)
+                                    ->whereMonth('created_at', Carbon::now()->month)
+                                    ->whereYear('created_at', Carbon::now()->year)
                                     ->exists();
 
                                 if (!$paymentExists) {
@@ -118,9 +119,9 @@ class ConvertTariffFixedCharges extends Command
                                         'amount'        => $state->fixed_charge,
                                         'total_amount'  => $state->fixed_charge,
                                         'duration'      => 'monthly',
-                                        'next_due_date' => now()->addMonth()->startOfMonth(),
+                                        'next_due_date' => Carbon::now()->addMonth()->startOfMonth(),
                                         'status'        => 2,
-                                        'created_at'    => now()->startOfMonth(),
+                                        'created_at'    => Carbon::now()->startOfMonth(),
                                     ]);
                                     $totalPayments++;
                                     $estatePayments++;
