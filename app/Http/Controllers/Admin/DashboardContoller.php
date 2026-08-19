@@ -113,6 +113,7 @@ class DashboardContoller extends Controller
 
             return view('admin.dashboard', $data);
         } elseif (Auth::user()->isEstateStaff()) {
+            return redirect('admin/access-token');
         } elseif (Auth::user()->role == 5) {
         } else {
         }

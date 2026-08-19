@@ -147,7 +147,7 @@ class AuthController extends Controller
         }
 
 
-        if ($usr->role == 1 || $usr->role == 0 || $usr->role == 3) {
+        if ($usr->role == 1 || $usr->role == 0 || $usr->role == 3 || $usr->role == 4) {
             User::where('id', Auth::id())->update(['can_login' => 1]);
             return redirect('admin/admin-dashboard')->with('message', "Welcome Admin!");
 

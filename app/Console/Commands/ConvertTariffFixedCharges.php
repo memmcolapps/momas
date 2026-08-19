@@ -4,9 +4,12 @@ namespace App\Console\Commands;
 
 use App\Models\Estate;
 use App\Models\TarrifState;
+use App\Models\Transaction;
 use App\Models\User;
+use App\Models\UtilitiesPayment;
 use App\Models\Utility;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ConvertTariffFixedCharges extends Command
@@ -32,6 +35,7 @@ class ConvertTariffFixedCharges extends Command
         $totalStates = 0;
         $totalCharges = 0;
         $totalSkipped = 0;
+        $totalPayments = 0;
 
         foreach ($estates as $estate) {
             $states = TarrifState::where('estate_id', $estate->id)
@@ -46,8 +50,9 @@ class ConvertTariffFixedCharges extends Command
 
             $estateCharges = 0;
             $estateSkipped = 0;
+            $estatePayments = 0;
 
-            DB::transaction(function () use ($states, $estate, $dryRun, &$totalStates, &$totalCharges, &$totalSkipped, &$estateCharges, &$estateSkipped) {
+            DB::transaction(function () use ($states, $estate, $dryRun, &$totalStates, &$totalCharges, &$totalSkipped, &$totalPayments, &$estateCharges, &$estateSkipped, &$estatePayments) {
                 foreach ($states as $state) {
                     $totalStates++;
 
@@ -93,6 +98,35 @@ class ConvertTariffFixedCharges extends Command
                                 'duration' => 'monthly',
                                 'activated' => true,
                             ]);
+
+                            $hasTransaction = Transaction::where('user_id', $customer->id)
+                                ->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year)
+                                ->exists();
+
+                            if ($hasTransaction) {
+                                $paymentExists = UtilitiesPayment::where('user_id', $customer->id)
+                                    ->where('type', 'utilities')
+                                    ->whereMonth('created_at', Carbon::now()->month)
+                                    ->whereYear('created_at', Carbon::now()->year)
+                                    ->exists();
+
+                                if (!$paymentExists) {
+                                    UtilitiesPayment::create([
+                                        'estate_id'     => $estate->id,
+                                        'user_id'       => $customer->id,
+                                        'type'          => 'utilities',
+                                        'amount'        => $state->fixed_charge,
+                                        'total_amount'  => $state->fixed_charge,
+                                        'duration'      => 'monthly',
+                                        'next_due_date' => Carbon::now()->addMonth()->startOfMonth(),
+                                        'status'        => 2,
+                                        'created_at'    => Carbon::now()->startOfMonth(),
+                                    ]);
+                                    $totalPayments++;
+                                    $estatePayments++;
+                                }
+                            }
                         }
 
                         $totalCharges++;
@@ -116,12 +150,12 @@ class ConvertTariffFixedCharges extends Command
 
             $this->info(
                 "  {$estate->id} [{$estate->legacy_buid}] {$estate->title}: " .
-                "{$estateCharges} service charge(s) created, {$estateSkipped} skipped"
+                "{$estateCharges} service charge(s) created, {$estateSkipped} skipped, {$estatePayments} payment record(s) created"
             );
         }
 
         $this->newLine();
-        $this->info("Done: {$totalStates} tariff state(s) processed, {$totalCharges} service charge(s) created, {$totalSkipped} skipped.");
+        $this->info("Done: {$totalStates} tariff state(s) processed, {$totalCharges} service charge(s) created, {$totalSkipped} skipped, {$totalPayments} payment record(s) created.");
 
         return self::SUCCESS;
     }

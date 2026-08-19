@@ -218,6 +218,14 @@ class TransactionController extends Controller
 
     public function make_payment(request $request)
     {
+        if (! $request->filled('tariff_id')) {
+            Logger::info('Tariff ID not passed on make_payment', [
+                'request' => $request->all(),
+            ]);
+
+            return StandardResponse::error(422, 'Tariff Id must be passed', []);
+        }
+
         try {
 
             $email = Auth::user()->email;
@@ -573,7 +581,18 @@ class TransactionController extends Controller
         $tariff_id = $trx->tariff_id ?? ($action_payload['tariff_id'] ?? null);
         $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
 
-        if (!$tariff_id) {
+        if (! $tariff_id) {
+            $isDualTariff = ($meter->isDualTariff === 'on'
+                || $meter->isDualTariff === true
+                || $meter->isDualTariff === 1
+                || $meter->isDualTariff === '1');
+
+            if (! $isDualTariff) {
+                $tariff_id = $meter->NewTariffID ?? $meter->OldTariffID;
+            }
+        }
+
+        if (! $tariff_id) {
             return StandardResponse::error(422, 'Unable to determine tariff for this transaction', []);
         }
 

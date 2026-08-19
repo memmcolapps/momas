@@ -36,6 +36,10 @@ class AccessTokenConroller extends Controller
 
         } elseif(Auth::user()->role == 4){
 
+            $data['token'] = Token::latest()->where('estate_id', Auth::user()->estate_id)->paginate(20);
+            $data['token_count'] = Token::where('estate_id', Auth::user()->estate_id)->count();
+            return view('admin.estatetoken.token_view', $data);
+
         } elseif(Auth::user()->role == 5){
 
         }

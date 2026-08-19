@@ -411,8 +411,20 @@
 
                     </ul>
 
-                {{-- ===================== ROLE 4 ===================== --}}
+                {{-- ===================== ROLE 4: Estate Staff ===================== --}}
                 @elseif(Auth::user()->role == 4)
+                    <ul id="side-menu">
+
+                        <li class="menu-title">Menu</li>
+
+                        <li>
+                            <a class='tp-link' href="access-token">
+                                <i data-feather="lock"></i>
+                                <span> Access Token </span>
+                            </a>
+                        </li>
+
+                    </ul>
 
                 {{-- ===================== ROLE 5 ===================== --}}
                 @elseif(Auth::user()->role == 5)
