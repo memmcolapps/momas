@@ -12,3 +12,4 @@ momas_production_backup.sql
 ./storage/app/legacy-export
 export_legacy.php
 migrate_legacy.php
+meters.txt

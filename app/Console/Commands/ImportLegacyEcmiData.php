@@ -814,6 +814,11 @@ class ImportLegacyEcmiData extends Command
         $rows = $this->read('user_data.json', $path);
 
         foreach ($rows as $row) {
+
+            if (is_null($row->FullName)) {
+                continue;
+            }
+
             [$first, $last] = $this->splitName($row->FullName);
 
             $email = $this->uniqueEmail(strtolower($row->OperatorName));
