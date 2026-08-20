@@ -69,7 +69,7 @@ class UtilityManagementService
                 ],
                 [
                     'amount' => $utility->amount,
-                    'amount_paid' => $utility->amount - ($utility->balance ?? 0),
+                    'amount_paid' => $utility->amount - ($utility->balance ?? $utility->amount),
                     'activated' => $utility->activated,
                     'status' => UserUtilityStatus::INACTIVE,
                 ]
