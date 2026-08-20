@@ -31,18 +31,19 @@ class BulkAddDebt extends Command
 
         $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         $meterNumbers = array_map('trim', $lines);
-        $meterNumbers = array_filter($meterNumbers);
+        $meterNumbers = array_values(array_unique($meterNumbers));
 
         if (empty($meterNumbers)) {
             $this->error('No meter numbers found in file.');
             return 1;
         }
 
-        $this->info("Processing " . count($meterNumbers) . " meter(s) with debt of {$amount}...");
+        $this->info("Processing " . count($meterNumbers) . " unique meter(s) with debt of {$amount}...");
 
         $created = 0;
         $skipped = 0;
         $skippedMeters = [];
+        $processedUserIds = [];
 
         DB::beginTransaction();
 
@@ -56,6 +57,12 @@ class BulkAddDebt extends Command
                     $this->warn("  Meter not found: {$meterNo}");
                     continue;
                 }
+
+                if (in_array($meter->user_id, $processedUserIds)) {
+                    $this->warn("  Skipping meter {$meterNo} — user_id {$meter->user_id} already processed");
+                    continue;
+                }
+                $processedUserIds[] = $meter->user_id;
 
                 Utility::create([
                     'user_id' => $meter->user_id,
