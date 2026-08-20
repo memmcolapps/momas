@@ -51,7 +51,7 @@ class BulkAddDebt extends Command
             foreach ($meterNumbers as $meterNo) {
                 $meter = Meter::where('meterNo', $meterNo)->first();
 
-                if (!$meter) {
+                if (!$meter || !$meter->user_id) {
                     $skipped++;
                     $skippedMeters[] = $meterNo;
                     $this->warn("  Meter not found: {$meterNo}");
