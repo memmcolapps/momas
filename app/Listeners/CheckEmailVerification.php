@@ -15,7 +15,7 @@ class CheckEmailVerification
                 ->keys()
                 ->first();
 
-            if (app(RequestContext::class)->get('login_otp_email')) {
+            if (app(RequestContext::class)->get('login_otp_email') || app(RequestContext::class)->get('forgot_password_email')) {
                 return true;
             }
 
