@@ -178,6 +178,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-info', [EstateController::class, 'estate_update']);
     Route::post('estate-update-utilities', [EstateController::class, 'estate_update_utilities']);
     Route::post('customer-store-utility', [EstateController::class, 'customer_store_utility']);
+    Route::post('customer-debt-payment', [DashboardContoller::class, 'customer_debt_payment']);
     Route::post('estate-feature-update', [EstateController::class, 'estate_feature_update']);
     Route::post('feature-update', [EstateController::class, 'feature_update']);
     Route::post('update-duration', [EstateController::class, 'update_duration']);
