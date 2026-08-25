@@ -13,6 +13,14 @@ return new class extends Migration
     {
         Schema::create('token_ledgers', function (Blueprint $table) {
             $table->id();
+            $table->string('trx_id');
+            $table->unsignedBigInteger('user_id');
+            $table->string('meterNo');
+            $table->unsignedBigInteger('credit_token_id');
+            $table->decimal('trx_amount', 14, 2);
+            $table->decimal('expected_fee', 14, 2);
+            $table->timestamp('paid_at')->nullable();
+            $table->unsignedBigInteger('receiver_id');
             $table->timestamps();
         });
     }

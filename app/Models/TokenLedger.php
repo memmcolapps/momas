@@ -8,4 +8,21 @@ use Illuminate\Database\Eloquent\Model;
 class TokenLedger extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'trx_id',
+        'user_id',
+        'meterNo',
+        'credit_token_id',
+        'trx_amount',
+        'expected_fee',
+        'paid_at',
+        'receiver_id',
+    ];
+
+    protected $casts = [
+        'trx_amount' => 'decimal:2',
+        'expected_fee' => 'decimal:2',
+        'paid_at' => 'datetime',
+    ];
 }
