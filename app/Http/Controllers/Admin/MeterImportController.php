@@ -94,24 +94,24 @@ class MeterImportController extends Controller
                         'estate_id' => $request->estate_id,
                     ];
 
-                    // Map tariff INDICES to tariff IDs
+                    // Validate tariff IDs from CSV (values are tariff IDs, not indices)
                     $newTariffId = null;
                     $oldTariffId = null;
                     $newTariffDualId = null;
                     $oldTariffDualId = null;
 
                     if (!empty($meterData['newtariffid'])) {
-                        $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
-                            ->where('tariff_index', $meterData['newtariffid'])
-                            ->where('type', 'nepa')
+                        $tariff = \App\Models\Tariff::where('id', $meterData['newtariffid'])
+                            ->where('estate_id', $request->estate_id)
+                            ->whereIn('type', ['nepa', 'Grid'])
                             ->first();
                         $newTariffId = $tariff ? $tariff->id : null;
                     }
 
                     if (!empty($meterData['oldtariffid'])) {
-                        $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
-                            ->where('tariff_index', $meterData['oldtariffid'])
-                            ->where('type', 'nepa')
+                        $tariff = \App\Models\Tariff::where('id', $meterData['oldtariffid'])
+                            ->where('estate_id', $request->estate_id)
+                            ->whereIn('type', ['nepa', 'Grid'])
                             ->first();
                         $oldTariffId = $tariff ? $tariff->id : null;
                     }
@@ -154,19 +154,19 @@ class MeterImportController extends Controller
 
                     // Handle dual tariff fields only if isDualTariff is 1
                     if ($meterData['isdualtariff'] == 1) {
-                        // Map generator tariff indices to IDs
+                        // Validate generator tariff IDs from CSV
                         if (!empty($meterData['newtariffdual'])) {
-                            $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
-                                ->where('tariff_index', $meterData['newtariffdual'])
-                                ->where('type', 'gen')
+                            $tariff = \App\Models\Tariff::where('id', $meterData['newtariffdual'])
+                                ->where('estate_id', $request->estate_id)
+                                ->whereIn('type', ['gen', 'Off Grid'])
                                 ->first();
                             $newTariffDualId = $tariff ? $tariff->id : null;
                         }
 
                         if (!empty($meterData['oldtariffdual'])) {
-                            $tariff = \App\Models\Tariff::where('estate_id', $request->estate_id)
-                                ->where('tariff_index', $meterData['oldtariffdual'])
-                                ->where('type', 'gen')
+                            $tariff = \App\Models\Tariff::where('id', $meterData['oldtariffdual'])
+                                ->where('estate_id', $request->estate_id)
+                                ->whereIn('type', ['gen', 'Off Grid'])
                                 ->first();
                             $oldTariffDualId = $tariff ? $tariff->id : null;
                         }
