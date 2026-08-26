@@ -5,11 +5,11 @@ namespace App\Services;
 use App\Contracts\PaymentServiceInterface;
 use App\Jobs\ProcessRemitaWebhook;
 use App\Models\Logger;
-use App\Models\Setting;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 
@@ -33,28 +33,23 @@ class RemitaPaymentService implements PaymentServiceInterface
      */
     protected function initializeRemitaSettings()
     {
-        $settings = Setting::where('id', 1)->first();
+        $isTest = in_array(env('APP_ENV'), ['local', 'staging', 'stg', 'lcl']);
 
-        if (! $settings) {
-            throw new Exception('Cannot find required keys to initialize Remita');
+        if ($isTest) {
+            $this->remita_merchant_id = config('services.remita.test_merchant_id');
+            $this->remita_api_key = config('services.remita.test_api_key');
+            $this->remita_service_type_id = config('services.remita.test_service_type_id');
+        } else {
+            $this->remita_merchant_id = config('services.remita.merchant_id');
+            $this->remita_api_key = config('services.remita.api_key');
+            $this->remita_service_type_id = config('services.remita.service_type_id');
         }
 
-        if (empty($settings->remita_merchant_id) || empty($settings->remita_api_key) || empty($settings->remita_service_type_id)) {
+        if (empty($this->remita_merchant_id) || empty($this->remita_api_key) || empty($this->remita_service_type_id)) {
             throw new Exception('Remita API keys are not configured');
         }
 
-        $this->remita_merchant_id = $settings->remita_merchant_id;
-        $this->remita_api_key = $settings->remita_api_key;
-        $this->remita_service_type_id = $settings->remita_service_type_id;
-        $this->remita_env = 'live';
-
-        if (in_array(env('APP_ENV'), ['local', 'staging', 'stg', 'lcl'])) {
-            $this->remita_merchant_id = env('REMITA_TEST_MERCHANT_ID');
-            $this->remita_api_key = env('REMITA_TEST_API_KEY');
-            $this->remita_service_type_id = env('REMITA_TEST_SERVICE_TYPE_ID');
-            $this->remita_env = 'test';
-        }
-
+        $this->remita_env = $isTest ? 'test' : 'live';
         $this->payment_endpoint = config('constants.remita_payment_endpoint');
         $this->status_endpoint = config('constants.remita_status_endpoint');
         $this->rrr_generate_url = config('constants.remita_rrr_generate_endpoint');
@@ -122,14 +117,16 @@ class RemitaPaymentService implements PaymentServiceInterface
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
                 'Authorization' => "remitaConsumerKey={$this->remita_merchant_id},remitaConsumerToken={$hash}",
-            ])->post($this->rrr_generate_url, $dataBody);
+            ])
+            ->timeout(30)
+            ->post($this->payment_endpoint, $dataBody);
 
             $responseData = $response->json();
 
             $statusCode = $responseData['statuscode'] ?? null;
 
             // '025' / '01' are Remita's "RRR generated" success codes depending on API version
-            if ($response->failed() || !in_array($statusCode, ['025', '01'])) {
+            if ($response->failed() || !in_array((string) $statusCode, ['00', '025'], true)) {
                 Logger::warning('Remita RRR generation failed for unknown reasons', [
                     'remita_response' => $responseData,
                 ]);
@@ -141,7 +138,22 @@ class RemitaPaymentService implements PaymentServiceInterface
                 ];
             }
 
-            $rrr = $responseData['RRR'] ?? null;
+            $rrr = $responseData['RRR']
+                ?? $responseData['rrr']
+                ?? null;
+
+            if (!$rrr) {
+                Logger::warning('Remita RRR generation returned no RRR', [
+                    'status_code' => $statusCode,
+                    'response' => $responseData,
+                ]);
+
+                return [
+                    'status' => false,
+                    'message' => 'Remita did not return an RRR',
+                    'data' => $responseData,
+                ];
+            }
 
             // There is no plain "redirect to this URL" checkout for the inline
             // flow — Remita's inline checkout is a JS widget
@@ -185,13 +197,21 @@ class RemitaPaymentService implements PaymentServiceInterface
         try {
             $hash = hash('sha512', $transactionId . $this->remita_api_key . $this->remita_merchant_id);
 
+            $url = sprintf(
+                '%s/%s/%s/%s/status.reg',
+                rtrim($this->status_endpoint, '/'),
+                $this->remita_merchant_id,
+                $transactionId,
+                $hash
+            );
+
             $response = Http::withHeaders([
                 'Authorization' => "remitaConsumerKey={$this->remita_merchant_id},remitaConsumerToken={$hash}",
                 'Cache-Control' => 'no-cache',
             ])
             ->timeout(15)
             ->retry(3, 1000)
-            ->get("{$this->status_endpoint}/{$this->remita_merchant_id}/{$transactionId}/{$hash}/status.reg");
+            ->get($url);
 
             if ($response->failed()) {
                 return [
@@ -259,12 +279,21 @@ class RemitaPaymentService implements PaymentServiceInterface
 
                 $hash = hash('sha512', $transactionReference . $this->remita_api_key . $this->remita_merchant_id);
 
+                $url = sprintf(
+                    '%s/%s/%s/%s/status.reg',
+                    rtrim($this->status_endpoint, '/'),
+                    $this->remita_merchant_id,
+                    $transactionReference,
+                    $hash
+                );
+
                 $response = Http::withHeaders([
                     'Authorization' => "remitaConsumerKey={$this->remita_merchant_id},remitaConsumerToken={$hash}",
                     'Cache-Control' => 'no-cache',
                 ])
-                ->timeout(30)
-                ->get("{$this->status_endpoint}/{$this->remita_merchant_id}/{$transactionReference}/{$hash}/status.reg");
+                ->timeout(15)
+                ->retry(3, 1000)
+                ->get($url);
 
                 if ($response->failed()) {
                     return [
@@ -340,10 +369,17 @@ class RemitaPaymentService implements PaymentServiceInterface
      */
     protected function normalizeStatusCode(?string $code): string
     {
-        return match ($code) {
+        return match ((string) $code) {
+            // Successful
             '00', '01' => 'success',
-            '021', '022', '020' => 'pending',
-            default => $code === null ? 'failed' : 'failed',
+
+            // Still processing / awaiting confirmation
+            '020',
+            '021',
+            '045' => 'pending',
+
+            // Everything else is not a successful payment
+            default => 'failed',
         };
     }
 
@@ -410,16 +446,35 @@ class RemitaPaymentService implements PaymentServiceInterface
             $transaction = $orderId ? Transaction::where('trx_id', $orderId)->first() : null;
 
             if ($transaction) {
-                $transaction->status = match ($verification['payment_status']) {
-                    'success' => 3,
-                    'pending' => 0,
-                    default => 1,
-                };
-                $transaction->save();
+                DB::transaction(function () use ($transaction, $verification, $orderId) {
+                    $paymentStatus = $verification['payment_status'];
 
-                if ($verification['payment_status'] === 'success') {
-                    ProcessRemitaWebhook::dispatch($orderId);
-                }
+                    if ($paymentStatus === 'success') {
+
+                        // Only transition to "paid" once.
+                        $updated = Transaction::whereKey($transaction->id)
+                            ->where('status', '!=', 3)
+                            ->update([
+                                'status' => 3,
+                                'updated_at' => now(),
+                            ]);
+
+                        // Only dispatch if this request actually performed
+                        // the transition to successful.
+                        if ($updated === 1) {
+                            ProcessRemitaWebhook::dispatch($orderId);
+                        }
+
+                    } elseif ($paymentStatus === 'pending') {
+
+                        Transaction::whereKey($transaction->id)
+                            ->where('status', '!=', 3) // Never downgrade a paid transaction
+                            ->update([
+                                'status' => 0,
+                                'updated_at' => now(),
+                            ]);
+                    }
+                });
             }
 
             return [

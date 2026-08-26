@@ -379,6 +379,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('pay-flutter-web', [TokenController::class, 'flutter_verify_web']);
     Route::any('paystack-clear-credit', [TokenController::class, 'paystack_clear_credit']);
     Route::any('flutter-verify-clear-credit', [TokenController::class, 'flutter_verify_clear_credit']);
+    Route::any('remita-check-web', [TokenController::class, 'remita_verify_web']);
+    Route::any('remita-check-kct', [TokenController::class, 'remita_verify_kct']);
+    Route::any('remita-check-web-tamper', [TokenController::class, 'remita_verify_web_tamper']);
+    Route::any('remita-clear-credit', [TokenController::class, 'remita_clear_credit']);
     Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
 
     Route::any('recepit', [TokenController::class, 'recepit']);

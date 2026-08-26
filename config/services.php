@@ -36,4 +36,13 @@ return [
         'base_url' => 'https://api.paybeta.ng/v2',
     ],
 
+    'remita' => [
+        'merchant_id' => env('REMITA_MERCHANT_ID'),
+        'api_key' => env('REMITA_API_KEY'),
+        'service_type_id' => env('REMITA_SERVICE_TYPE_ID'),
+        'test_merchant_id' => env('REMITA_TEST_MERCHANT_ID'),
+        'test_api_key' => env('REMITA_TEST_API_KEY'),
+        'test_service_type_id' => env('REMITA_TEST_SERVICE_TYPE_ID'),
+    ],
+
 ];
