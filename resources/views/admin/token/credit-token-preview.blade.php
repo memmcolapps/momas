@@ -243,6 +243,8 @@
                                                                                  </option>
                                                                                  <option value="paystack">Pay with Paystack
                                                                                  </option>
+                                                                                 <option value="remita">Pay with Remita
+                                                                                 </option>
                                                                                  {{-- <option value="flutterwave">Pay with Flutterwave
                                                                                  </option> --}}
                                                                                  {{-- <option value="enkpay">Pay with Enkpay</option> --}}
@@ -627,6 +629,8 @@
                                                                                  <option value=" ">--Choose Payment Gateway---
                                                                                  </option>
                                                                                  <option value="paystack">Pay with Paystack
+                                                                                 </option>
+                                                                                 <option value="remita">Pay with Remita
                                                                                  </option>
                                                                              </select>
                                                                          </div>

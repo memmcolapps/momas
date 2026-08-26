@@ -76,6 +76,38 @@ class RemitaPaymentService implements PaymentServiceInterface
     }
 
     /**
+     * Get the Remita hosted payment page URL (environment-specific:
+     * demo.remita.net for test, configured production host for live).
+     *
+     * @return string
+     */
+    public function hostedPaymentPageUrl(): string
+    {
+        return rtrim((string) config('services.remita.payment_page_url'), '/');
+    }
+
+    /**
+     * Build the hidden-field payload Remita's hosted payment page
+     * (onepage/api/v1/so.spa) expects for an RRR-initiated payment.
+     *
+     * The hash is SHA512 of rrr + api_key + merchant_id per Remita's
+     * hosted checkout spec.
+     *
+     * @param string|int $rrr The Remita Retrieval Reference
+     * @return array Hidden form fields (rrr, merchantId, hash)
+     */
+    public function hostedPaymentPayload(string | int $rrr): array
+    {
+        $rrr = (string) $rrr;
+
+        return [
+            'rrr' => $rrr,
+            'merchantId' => $this->remita_merchant_id,
+            'hash' => hash('sha512', $rrr . $this->remita_api_key . $this->remita_merchant_id),
+        ];
+    }
+
+    /**
      * Generate a payment RRR using Remita's standard invoice flow
      *
      * @param array $data Payment data containing 'amount', 'email', 'name', 'phone', 'metadata'

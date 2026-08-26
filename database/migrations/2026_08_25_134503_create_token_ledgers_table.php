@@ -21,6 +21,7 @@ return new class extends Migration
             $table->decimal('expected_fee', 14, 2);
             $table->timestamp('paid_at')->nullable();
             $table->unsignedBigInteger('receiver_id');
+            $table->unsignedBigInteger('estate_id');
             $table->timestamps();
         });
     }

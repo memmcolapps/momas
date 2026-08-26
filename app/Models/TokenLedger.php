@@ -18,6 +18,7 @@ class TokenLedger extends Model
         'expected_fee',
         'paid_at',
         'receiver_id',
+        'estate_id'
     ];
 
     protected $casts = [

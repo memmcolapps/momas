@@ -1891,11 +1891,7 @@ class TokenController extends Controller
                     'status' => 0,
                 ]);
 
-                return response()->json([
-                    'status' => true,
-                    'rrr' => $rrr,
-                    'trx_id' => $trx_id,
-                ], 200);
+                return redirect()->route('remita.pay', ['trx_id' => $trx_id]);
 
             } catch (Exception $e) {
                 Logger::error('Remita credit token transaction error', ['exception' => $e]);
@@ -5081,6 +5077,84 @@ class TokenController extends Controller
 
         }
 
+    }
+
+
+    // ==================== REMITA HOSTED PAYMENT ====================
+
+    /**
+     * Interstitial page that hands the user off to Remita's hosted payment
+     * page (onepage/api/v1/so.spa) with the RRR generated at init time.
+     */
+    public function remita_pay(Request $request)
+    {
+        try {
+            $trx_id = $request->trx_id;
+            $trx = Transaction::where('trx_id', $trx_id)
+                ->where('pay_type', 'remita')
+                ->first();
+
+            if (! $trx || ! $trx->payment_ref) {
+                return redirect('/admin/credit-token')->with('error', 'Remita transaction not found');
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id=$trx_id&type=credit_token");
+            }
+
+            $remitaService = new RemitaPaymentService();
+
+            $data['action'] = $remitaService->hostedPaymentPageUrl();
+            $data['payload'] = $remitaService->hostedPaymentPayload($trx->payment_ref);
+            $data['response_url'] = route('remita.result');
+            $data['trx_id'] = $trx_id;
+            $data['rrr'] = $trx->payment_ref;
+            $data['amount'] = $trx->amount;
+
+            return view('admin.token.remita-pay', $data);
+        } catch (Exception $e) {
+            Logger::error('remita_pay error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return redirect('/admin/credit-token')->with('error', 'Unable to initialize Remita payment: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remita hosted-payment return (response_url). Display-only: resolves the
+     * transaction by RRR and routes the user to the appropriate local page.
+     * Never treated as proof of payment — confirmation happens server-side
+     * through verifyTransaction(RRR).
+     */
+    public function remita_payment_result(Request $request)
+    {
+        try {
+            Logger::info('remita_payment_result called', ['request' => $request->all()]);
+
+            $rrr = $request->input('rrr') ?? $request->input('RRR');
+
+            if (! $rrr) {
+                return redirect('/admin/credit-token')->with('error', 'No RRR supplied in Remita response');
+            }
+
+            $trx = Transaction::where('payment_ref', $rrr)->first();
+
+            if (! $trx) {
+                return redirect('/admin/credit-token')->with('error', 'Transaction not found for RRR ' . $rrr);
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id={$trx->trx_id}&type=credit_token");
+            }
+
+            return redirect('/admin/credit-token')->with(
+                'message',
+                'Your Remita payment is being confirmed. This page will reflect the result once verification completes.'
+            );
+        } catch (Exception $e) {
+            Logger::error('remita_payment_result error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return redirect('/admin/credit-token')->with('error', 'An Error Occurred: ' . $e->getMessage());
+        }
     }
 
 

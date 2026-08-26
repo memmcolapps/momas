@@ -43,6 +43,7 @@ return [
         'test_merchant_id' => env('REMITA_TEST_MERCHANT_ID'),
         'test_api_key' => env('REMITA_TEST_API_KEY'),
         'test_service_type_id' => env('REMITA_TEST_SERVICE_TYPE_ID'),
+        'payment_page_url' => env('REMITA_PAYMENT_PAGE_URL', 'https://demo.remita.net/remita/onepage/api/v1/so.spa'),
     ],
 
 ];

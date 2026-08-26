@@ -383,6 +383,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('remita-check-kct', [TokenController::class, 'remita_verify_kct']);
     Route::any('remita-check-web-tamper', [TokenController::class, 'remita_verify_web_tamper']);
     Route::any('remita-clear-credit', [TokenController::class, 'remita_clear_credit']);
+    Route::get('pay-remita', [TokenController::class, 'remita_pay'])->name('remita.pay');
+    Route::any('remita-payment-result', [TokenController::class, 'remita_payment_result'])->name('remita.result');
     Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
 
     Route::any('recepit', [TokenController::class, 'recepit']);
