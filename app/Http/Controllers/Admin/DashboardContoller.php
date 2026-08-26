@@ -63,6 +63,104 @@ class DashboardContoller extends Controller
 
     }
 
+    public function customer_debt_payment(request $request)
+    {
+        try {
+            $request->validate([
+                'user_id' => 'required|integer',
+                'utility_id' => 'required|integer',
+                'amount' => 'required|numeric|min:0.01',
+                'payment_date' => 'required|date|before_or_equal:today',
+                'trx_id' => 'nullable|string|max:255',
+            ]);
+
+            if (Auth::user()->role != 0) {
+                return back()->with('error', 'You are not authorized to perform this action');
+            }
+
+            $user = User::where('id', $request->user_id)->first();
+
+            if ($user == null) {
+                return back()->with('error', 'Customer not found');
+            }
+
+            $utility = Utility::where('id', $request->utility_id)
+                ->where('type', 'debt')
+                ->where('estate_id', $user->estate_id)
+                ->where(function ($q) use ($user) {
+                    $q->whereNull('user_id')->orWhere('user_id', $user->id);
+                })
+                ->first();
+
+            if ($utility == null) {
+                return back()->with('error', 'Debt not found for this customer');
+            }
+
+            $amount = round((float) $request->amount, 2);
+
+            \DB::transaction(function () use ($utility, $user, $amount, $request) {
+
+                $userUtility = UserUtility::where('utility_id', $utility->id)
+                    ->where('user_id', $user->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($userUtility == null) {
+                    $userUtility = new UserUtility();
+                    $userUtility->utility_id = $utility->id;
+                    $userUtility->user_id = $user->id;
+                    $userUtility->estate_id = $user->estate_id;
+                    $userUtility->amount = $utility->amount;
+                    $userUtility->amount_paid = 0;
+                    $userUtility->activated = true;
+                    $userUtility->status = UserUtilityStatus::INACTIVE;
+                    $userUtility->save();
+                }
+
+                $remaining = max(0, (float) $utility->amount - (float) $userUtility->amount_paid);
+
+                if ($amount > $remaining) {
+                    throw new Exception('Amount exceeds remaining balance of NGN ' . number_format($remaining, 2));
+                }
+
+                $newAmountPaid = (float) $userUtility->amount_paid + $amount;
+                $fullyPaid = $newAmountPaid >= (float) $utility->amount;
+
+                $userUtility->amount_paid = $newAmountPaid;
+                $userUtility->activated = !$fullyPaid;
+                $userUtility->status = $fullyPaid ? UserUtilityStatus::PAID : UserUtilityStatus::ACTIVE;
+                $userUtility->save();
+
+                UtilityPaymentRecord::create([
+                    'user_utility_id' => $userUtility->id,
+                    'utility_id' => $utility->id,
+                    'user_id' => $user->id,
+                    'estate_id' => $user->estate_id,
+                    'utility_amount' => $utility->amount,
+                    'amount_paid' => $amount,
+                    'trx_id' => $request->trx_id ?: ('MANUAL-' . strtoupper(uniqid())),
+                    'status' => $fullyPaid ? 2 : 1,
+                    'created_at' => $request->payment_date,
+                ]);
+
+                Logger::info('Manual debt payment recorded by superadmin', [
+                    'admin' => Auth::id(),
+                    'user_id' => $user->id,
+                    'utility_id' => $utility->id,
+                    'amount' => $amount,
+                    'payment_date' => $request->payment_date,
+                    'fully_paid' => $fullyPaid,
+                ]);
+            });
+
+            return back()->with('message', "Debt payment of NGN {$amount} recorded successfully");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
 
     public function index()
     {
@@ -893,6 +991,7 @@ class DashboardContoller extends Controller
 
             $data['customer_debt_utilities'] = $utilityQuery('debt');
             $data['customer_service_charges'] = $utilityQuery('service_charge');
+            $data['customer_debt_paid'] = UserUtility::where('user_id', $request->id)->get()->keyBy('utility_id');
             $data['vending'] = MeterToken::where('user_id', $request->id)->paginate(10);
             $data['meters'] = Meter::all();
             $data['tariff_count'] = Tariff::where('user_id', $request->id)->count();

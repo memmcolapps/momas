@@ -485,6 +485,53 @@
                                 </form>
                             </div>
                         </div>
+                        @if($customer_debt_utilities->count())
+                            <div class="card my-4">
+                                <div class="card-body">
+                                    <h6 class="d-flex justify-content-start my-2">Update Debt Payment</h6>
+                                    <form action="customer-debt-payment" method="post" class="row">
+                                        @csrf
+                                        <input type="hidden" name="user_id" value="{{$user->id}}">
+                                        <input type="hidden" name="estate_id" value="{{$user->estate_id}}">
+
+                                        <div class="col-xl-3 col-sm-12 my-1">
+                                            <label class="my-1">Select Debt</label>
+                                            <select name="utility_id" class="form-control" required>
+                                                <option value="">--Select Debt--</option>
+                                                @foreach($customer_debt_utilities as $debt)
+                                                    @php
+                                                        $debtPaid = optional($customer_debt_paid->get($debt->id))->amount_paid ?? 0;
+                                                        $debtBalance = max(0, (float) $debt->amount - (float) $debtPaid);
+                                                    @endphp
+                                                    <option value="{{ $debt->id }}" @if($debtBalance <= 0) disabled @endif>
+                                                        {{ $debt->title }} | NGN {{ number_format($debt->amount, 2) }} | Balance: NGN {{ number_format($debtBalance, 2) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="col-xl-3 col-sm-12 my-1">
+                                            <label class="my-1">Amount Paid</label>
+                                            <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required>
+                                        </div>
+
+                                        <div class="col-xl-3 col-sm-12 my-1">
+                                            <label class="my-1">Payment Date</label>
+                                            <input type="date" name="payment_date" class="form-control" max="{{ now()->toDateString() }}" required>
+                                        </div>
+
+                                        <div class="col-xl-3 col-sm-12 my-1">
+                                            <label class="my-1">Transaction ID (Optional)</label>
+                                            <input type="text" name="trx_id" class="form-control" placeholder="e.g. TRX-12345">
+                                        </div>
+
+                                        <div class="col-12 my-3">
+                                            <button type="submit" class="btn btn-primary">Record Payment</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
                         <script>
                             function toggleCustomerUtilityType(select) {
                                 var form = select.closest('form');
