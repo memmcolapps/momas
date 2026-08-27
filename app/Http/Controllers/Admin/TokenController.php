@@ -16,9 +16,12 @@ use App\Models\Setting;
 use App\Models\TamperToken;
 use App\Models\Tariff;
 use App\Models\TarrifState;
+use App\Models\TokenLedger;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
+use App\Models\PostpaidAccumulationPayment;
+use App\Services\LedgerService;
 use App\Services\PaystackPaymentService;
 use App\Services\RemitaPaymentService;
 use App\Services\StandardResponse;
@@ -6508,6 +6511,409 @@ class TokenController extends Controller
     private function generateBypassReference(): string
     {
         return Str::lower(Str::random(10));
+    }
+
+    public function postpaid_token_index()
+    {
+        if (Auth::user()->role == 0) {
+            $data['estate'] = Estate::all();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')->latest()->paginate(20);
+
+            return view('admin.token.postpaid-token-view', $data);
+
+        } elseif (Auth::user()->role == 3) {
+            $estate = Estate::where('id', Auth::user()->estate_id)->first();
+
+            if (!LedgerService::estateCanVendPostpaid($estate)) {
+                return redirect()->route('postpaid.accumulation-due', $estate->id);
+            }
+
+            $data['estate_id'] = Auth::user()->estate_id;
+            $data['title'] = $estate->title;
+            $data['preview'] = null;
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')
+                ->where('estate_id', Auth::user()->estate_id)
+                ->latest()
+                ->paginate(20);
+
+            return view('admin.token.postpaid-token-view', $data);
+        }
+    }
+
+    public function search_postpaid_token(Request $request)
+    {
+        $search = $request->search;
+
+        if (Auth::user()->role == 0) {
+            $data['estate'] = Estate::all();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+
+            $query = TokenLedger::with('user', 'estate');
+        } elseif (Auth::user()->role == 3) {
+            $data['estate_id'] = Auth::user()->estate_id;
+            $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+
+            $query = TokenLedger::with('user', 'estate')->where('estate_id', Auth::user()->estate_id);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('trx_id', 'like', '%' . $search . '%')
+                    ->orWhere('meterNo', 'like', '%' . $search . '%')
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('first_name', 'like', '%' . $search . '%')
+                            ->orWhere('last_name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $data['token_ledgers'] = $query->latest()->paginate(20)->withQueryString();
+
+        return view('admin.token.postpaid-token-view', $data);
+    }
+
+    public function postpaid_validate_meter(Request $request)
+    {
+        Logger::info('postpaid_validate_meter called', [
+            'user_id' => Auth::id(),
+            'request' => $request->all(),
+        ]);
+
+        $momas_min_vend = config('constants.momas_minimum_vend');
+
+        if (Auth::user()->role == 0) {
+            $estate_id = Estate::where('id', $request->estate_id)->first()->id;
+            $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;
+            $user = User::where('meterNo', $request->meterNo)->first() ?? null;
+            $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
+            $ck_user_id = Meter::where('MeterNo', $request->meterNo)->first()->user_id ?? null;
+
+            if ($user == null && $ck_meter == null) {
+                return back()->with('error', 'Meter has not properly configured to user');
+            }
+
+            if ($ck_meter != null && $ck_user_id == null) {
+                Meter::where('MeterNo', $request->meterNo)->update(['user_id' => $user->id]);
+            }
+
+            backfill_utility_payments($user->id, $estate_id);
+
+            if ($request->amount < $momas_min_vend) {
+                return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
+            }
+
+            $estate = Estate::where('id', $estate_id)->first();
+            if (!LedgerService::estateCanVendPostpaid($estate)) {
+                return redirect()->route('postpaid.accumulation-due', $estate->id);
+            }
+
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+
+            $data['vatAmount'] = $calculatedValues['vatAmount'];
+            $data['costOfUnit'] = $calculatedValues['vendingAmount'];
+            $data['tariffPerKWatt'] = $calculatedValues['unit'];
+            $data['user'] = $user;
+            $data['meter'] = $meter;
+            $data['estate'] = $estate;
+            $data['preview'] = "on";
+            $data['amount'] = $request->amount;
+            $data['vat'] = $calculatedValues['vat'];
+            $data['estate_id'] = $estate_id;
+            $data['estate_name'] = $request->estate_id;
+            $data['tarrif_amount'] = $calculatedValues['tariffAmount'];
+            $data['utility_owed'] = $calculatedValues['utilityOwed'];
+            $data['arrears_owed'] = $calculatedValues['arrearsOwed'];
+            $data['serviceFee'] = $calculatedValues['serviceFee'];
+            $data['estateFee'] = $calculatedValues['estateFee'];
+            $data['fixedCharge'] = $calculatedValues['fixedCharge'];
+
+            $tariff = Tariff::find($request->tariff_id);
+            $data['tarrif_index'] = $tariff ? $tariff->tariff_index : null;
+            $data['tariff_id'] = $request->tariff_id;
+
+            if ($data['tarrif_index'] === null) {
+                return back()->with('error', 'Tariff Index is not set for the selected tariff. Please contact admin to set it.');
+            }
+
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')->latest()->paginate(20);
+
+            return view('admin.token.postpaid-token-preview', $data);
+
+        } elseif (Auth::user()->role == 3) {
+            $estate_id = Estate::where('id', Auth::user()->estate_id)->first()->id;
+            $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;
+            $user = User::where('meterNo', $request->meterNo)->first() ?? null;
+            $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
+            $ck_user_id = Meter::where('MeterNo', $request->meterNo)->first()->user_id ?? null;
+
+            if ($user == null && $ck_meter == null) {
+                return back()->with('error', 'Meter has not properly configured to user');
+            }
+
+            if ($ck_meter != null && $ck_user_id == null) {
+                Meter::where('MeterNo', $request->meterNo)->update(['user_id' => $user->id]);
+            }
+
+            if ($meter == null) {
+                return back()->with('error', 'Meter not found on our system');
+            }
+            if ($meter->estate_id != $estate_id) {
+                return back()->with('error', 'Meter does not belong to estate selected');
+            }
+
+            if ($request->amount < $momas_min_vend) {
+                return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
+            }
+
+            if ($user == null) {
+                return back()->with('error', 'Meter has not been attached to any customer');
+            }
+
+            backfill_utility_payments($user->id, $estate_id);
+
+            $estate = Estate::where('id', $estate_id)->first();
+            if (!LedgerService::estateCanVendPostpaid($estate)) {
+                return redirect()->route('postpaid.accumulation-due', $estate->id);
+            }
+
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+
+            $data['vatAmount'] = $calculatedValues['vatAmount'];
+            $data['costOfUnit'] = $calculatedValues['vendingAmount'];
+            $data['tariffPerKWatt'] = $calculatedValues['unit'];
+            $data['user'] = $user;
+            $data['meter'] = $meter;
+            $data['estate'] = $estate;
+            $data['preview'] = "on";
+            $data['amount'] = $request->amount;
+            $data['vat'] = $calculatedValues['vat'];
+            $data['estate_id'] = $estate_id;
+            $data['estate_name'] = $estate_id;
+            $data['tarrif_amount'] = $calculatedValues['tariffAmount'];
+            $data['utility_owed'] = $calculatedValues['utilityOwed'];
+            $data['arrears_owed'] = $calculatedValues['arrearsOwed'];
+            $data['serviceFee'] = $calculatedValues['serviceFee'];
+            $data['estateFee'] = $calculatedValues['estateFee'];
+            $data['fixedCharge'] = $calculatedValues['fixedCharge'];
+
+            $tariff = Tariff::find($request->tariff_id);
+            $data['tarrif_index'] = $tariff ? $tariff->tariff_index : null;
+            $data['tariff_id'] = $request->tariff_id;
+
+            if ($data['tarrif_index'] === null) {
+                return back()->with('error', 'Tariff Index is not set for the selected tariff. Please contact admin to set it.');
+            }
+
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')
+                ->where('estate_id', Auth::user()->estate_id)
+                ->latest()
+                ->paginate(20);
+
+            return view('admin.token.postpaid-token-preview', $data);
+        }
+    }
+
+    public function postpaid_generate_token(Request $request)
+    {
+        Logger::info('postpaid_generate_token called', [
+            'user_id' => Auth::id(),
+            'request' => $request->all(),
+        ]);
+
+        try {
+            $meter = Meter::where('meterNo', $request->meterNo)->firstOrFail();
+            $email = $request->email ?? null;
+            $result = $meter->getNewPostpaidToken(
+                (int) $request->tariff_id,
+                (float) $request->amount,
+                null,
+                $email
+            );
+            $type = 'credit_token';
+            $trx_id = $result['trx_id'] ?? null;
+
+            // return redirect('/admin/postpaid-token')->with('message', 'Token generated successfully. Token: ' . $result['token']);
+            return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+
+        } catch (\Exception $e) {
+            Logger::error('postpaid_generate_token failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            if (str_contains($e->getMessage(), 'accumulation period')) {
+                $estateId = $meter->estate_id ?? Auth::user()->estate_id;
+                return redirect()->route('postpaid.accumulation-due', $estateId);
+            }
+
+            return redirect('/admin/postpaid-token')->with('error', $e->getMessage());
+        }
+    }
+
+    public function accumulation_due($estateId)
+    {
+        $estate = Estate::findOrFail($estateId);
+
+        $totalDue = LedgerService::computeEstateFee($estate);
+        $unpaidCount = TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->count();
+        $oldestUnpaid = TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->oldest('created_at')
+            ->first();
+        $accumulationPeriod = $estate->fee_accumulation_period ?? 1;
+        $paymentHistory = LedgerService::getAccumulationPaymentHistory($estate);
+
+        $data = [
+            'estate' => $estate,
+            'totalDue' => $totalDue,
+            'unpaidCount' => $unpaidCount,
+            'oldestUnpaid' => $oldestUnpaid,
+            'accumulationPeriod' => $accumulationPeriod,
+            'paymentHistory' => $paymentHistory,
+        ];
+
+        return view('admin.token.postpaid-accumulation-due', $data);
+    }
+
+    public function init_accumulation_payment(Request $request)
+    {
+        try {
+            $estate = Estate::findOrFail($request->estate_id);
+            $totalDue = LedgerService::computeEstateFee($estate);
+
+            if ($totalDue <= 0) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No outstanding accumulation fees for this estate.',
+                ]);
+            }
+
+            $trxRef = generate_unique_string('MOMAS');
+
+            $paystackService = new PaystackPaymentService();
+            $email = Auth::user()->email;
+
+            $result = $paystackService->makePayment([
+                'amount' => (int) ($totalDue * 100),
+                'email' => $email,
+                'callback_url' => url('') . '/admin/postpaid-accumulation-callback',
+                'metadata' => [
+                    'ref' => $trxRef,
+                    'estate_id' => $estate->id,
+                    'purpose' => 'postpaid_accumulation_payment',
+                    'custom_fields' => [
+                        [
+                            'display_name' => 'Payment Reference',
+                            'variable_name' => 'payment_ref',
+                            'value' => $trxRef,
+                        ],
+                        [
+                            'display_name' => 'Estate ID',
+                            'variable_name' => 'estate_id',
+                            'value' => (string) $estate->id,
+                        ],
+                    ],
+                ],
+            ], true);
+
+            $trxRef = $result['reference'] ?? null;
+
+            $accumulationPayment = PostpaidAccumulationPayment::create([
+                'estate_id' => $estate->id,
+                'user_id' => Auth::id(),
+                'amount' => $totalDue,
+                'trx_ref' => $trxRef,
+                'status' => 0,
+            ]);
+
+            if (!$result['status']) {
+                $accumulationPayment->update(['status' => 2]);
+                return response()->json([
+                    'status' => false,
+                    'message' => $result['message'] ?? 'Payment initialization failed',
+                ]);
+            }
+
+            $accumulationPayment->update([
+                'paystack_reference' => $result['reference'],
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'authorization_url' => $result['data']['authorization_url'] ?? null,
+                'reference' => $result['reference'],
+            ]);
+        } catch (\Exception $e) {
+            Logger::error('init_accumulation_payment failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occurred: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function accumulation_callback(Request $request)
+    {
+        try {
+            $trxRef = $request->trx_ref ?? $request->reference;
+
+            if (!$trxRef) {
+                return redirect()->route('postpaid.accumulation-due', Auth::user()->estate_id)
+                    ->with('error', 'Invalid payment callback.');
+            }
+
+            $accumulationPayment = PostpaidAccumulationPayment::where('trx_ref', $trxRef)->first();
+
+            if (!$accumulationPayment) {
+                return redirect()->route('postpaid.accumulation-due', Auth::user()->estate_id)
+                    ->with('error', 'Payment record not found.');
+            }
+
+            if ($accumulationPayment->status == 1) {
+                return redirect()->route('postpaid.accumulation-due', $accumulationPayment->estate_id)
+                    ->with('message', 'Payment was already processed successfully.');
+            }
+
+            $paystackService = new PaystackPaymentService();
+            $verification = $paystackService->verifyTransaction($trxRef);
+
+            if (!$verification['status'] || !$verification['is_successful']) {
+                $accumulationPayment->update(['status' => 2]);
+                return redirect()->route('postpaid.accumulation-due', $accumulationPayment->estate_id)
+                    ->with('error', 'Payment verification failed: ' . ($verification['message'] ?? 'Unknown error'));
+            }
+
+            $accumulationPayment->update([
+                'status' => 1,
+                'paid_at' => now(),
+            ]);
+
+            LedgerService::markEstatePostpaidLedgersAsPaid($accumulationPayment->estate_id, $trxRef);
+
+            Logger::info('Postpaid accumulation payment completed', [
+                'trx_ref' => $trxRef,
+                'estate_id' => $accumulationPayment->estate_id,
+                'amount' => $accumulationPayment->amount,
+            ]);
+
+            return redirect()->route('postpaid.accumulation-due', $accumulationPayment->estate_id)
+                ->with('message', 'Payment of ₦' . number_format($accumulationPayment->amount, 2) . ' processed successfully. All unpaid postpaid ledger fees have been cleared.');
+        } catch (\Exception $e) {
+            Logger::error('accumulation_callback failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return redirect()->route('postpaid.accumulation-due', Auth::user()->estate_id ?? 0)
+                ->with('error', 'Payment callback processing failed: ' . $e->getMessage());
+        }
     }
 
 }

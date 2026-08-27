@@ -370,6 +370,17 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('generate-kctclear-token', [TokenController::class, 'generate_kctclear_token']);
     Route::post('generate-clear-credit-meter-token', [TokenController::class, 'generate_clear_credit_meter_token']);
 
+    //postpaid token
+    Route::get('postpaid-token', [TokenController::class, 'postpaid_token_index']);
+    Route::get('search-postpaid-token', [TokenController::class, 'search_postpaid_token']);
+    Route::match(['GET', 'POST'], 'postpaid-validate-meter', [TokenController::class, 'postpaid_validate_meter']);
+    Route::post('postpaid-generate-token', [TokenController::class, 'postpaid_generate_token']);
+
+    //postpaid accumulation payment
+    Route::get('postpaid-accumulation-due/{estate}', [TokenController::class, 'accumulation_due'])->name('postpaid.accumulation-due');
+    Route::post('postpaid-accumulation-pay', [TokenController::class, 'init_accumulation_payment'])->name('postpaid.accumulation-pay');
+    Route::get('postpaid-accumulation-callback', [TokenController::class, 'accumulation_callback'])->name('postpaid.accumulation-callback');
+
 
     Route::any('paystack-check-web', [TokenController::class, 'paystack_verify_web']);
     Route::any('paystack-check-kct', [TokenController::class, 'paystack_verify_kct']);

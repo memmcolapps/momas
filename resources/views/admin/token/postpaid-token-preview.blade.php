@@ -1,0 +1,632 @@
+@extends('layouts.main')
+@section('content')
+
+    @if(Auth::user()->role == 0)
+        <div class="content">
+
+            <!-- Start Content-->
+            <div class="container-fluid">
+
+
+                <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
+                    <div class="flex-grow-1">
+                        <h4 class="fs-18 fw-semibold m-0">Postpaid Token</h4>
+                    </div>
+                </div>
+
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                @if (session()->has('message'))
+                    <div class="alert alert-success">
+                        {{ session()->get('message') }}
+                    </div>
+                @endif
+                @if (session()->has('error'))
+                    <div class="alert alert-danger">
+                        {{ session()->get('error') }}
+                    </div>
+                @endif
+
+
+                <div class="row">
+                    <div class="col-xl-12">
+                        <div class="card overflow-hidden">
+
+                            <div class="card">
+
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Vending Information</h5>
+                                </div><!-- end card header -->
+
+                                <div class="card-body">
+                                    <div class="row">
+
+
+                                        <div class="d-flex justify-content-between my-4">
+                                            <h5 class="card-title text-black mb-0">Postpaid Token Preview</h5>
+                                        </div>
+
+                                        <div class="col-xl-12 col-sm-12">
+
+                                                <div class="modal-body">
+
+                                                    @if($preview == null)
+                                                        <form action="postpaid-validate-meter" method="POST"
+                                                              enctype="multipart/form-data">
+                                                            @csrf
+                                                        <div class="row">
+                                                            <div class="col-xl-6 my-2 col-sm-12">
+                                                                <label class="my-2">Estate</label>
+                                                                <select class="form-control" required name="estate_id">
+                                                                    <option value="">-- Select Estate --</option>
+                                                                    @foreach($estate as $data)
+                                                                        <option value="{{$data->id}}">{{$data->title}}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+
+
+                                                            <div class="col-xl-6 my-2 col-sm-12">
+                                                                <label class="my-2">Enter Meter No</label>
+                                                                <input type="number" class="form-control mb-3"
+                                                                       name="meterNo" required>
+                                                            </div>
+
+
+                                                            <div class="col-xl-6 my-2 col-sm-12">
+                                                                <label class="my-2">Amount</label>
+                                                                <input type="number" class="form-control mb-3"
+                                                                       name="amount" required>
+                                                            </div>
+
+                                                        </div>
+                                                        <button type="submit" class="btn btn-primary">Continue</button>
+                                                        </form>
+
+                                                    @else
+
+                                                        <div class="row">
+
+
+                                                            <div class="col-xl-5  my-2 col-sm-12">
+
+                                                                <div>
+                                                                    <label class="my-2">Enter Meter No</label>
+                                                                    <input type="number" disabled
+                                                                           class="form-control mb-3"
+                                                                           value="{{$meter->meterNo}}" name="meterNo"
+                                                                           required>
+                                                                </div>
+
+
+                                                                <div>
+                                                                    <label class="my-2">Tarrif Amount</label>
+                                                                    <input type="number" disabled
+                                                                           value="{{$tarrif_amount}}"
+                                                                           class="form-control mb-3"
+                                                                           name="tarrif_amount"
+                                                                           required>
+                                                                </div>
+
+
+                                                                <div>
+                                                                    <label class="my-2">Amount</label>
+                                                                    <input type="number" disabled value="{{$amount}}"
+                                                                           class="form-control mb-3" name="amount"
+                                                                           required>
+                                                                </div>
+
+
+                                                            </div>
+
+                                                            <div class="col-xl-7 my-2 col-sm-12">
+
+                                                                <form action="postpaid-generate-token" method="POST"
+                                                                      enctype="multipart/form-data">
+                                                                    @csrf
+
+                                                                    <div class="modal-body">
+
+                                                                        <div class="">
+                                                                            <h5 class="card-title text-black mb-0">Postpaid Token
+                                                                                Preview</h5>
+                                                                        </div>
+
+
+                                                                        <div class="row">
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Estate</label>
+                                                                                <h6>{{$estate->title}}</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Customer</label>
+                                                                                <input required name="user_id"
+                                                                                       value="{{$user->id}}"
+                                                                                       hidden="">
+                                                                                <h6>{{$user->first_name}} {{$user->last_name}}</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Meter No</label>
+                                                                                <input required name="meterNo"
+                                                                                       value="{{$meter->meterNo}}" hidden="">
+                                                                                <h6>{{$meter->meterNo}}</h6>
+                                                                            </div>
+
+                                                                        </div>
+
+
+                                                                        <hr>
+
+                                                                        <div class="row">
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Unit</label>
+                                                                                @php
+                                                                                    $unnit = $costOfUnit / $tarrif_amount;
+                                                                                @endphp
+                                                                                <input required name="unit"
+                                                                                       value="{{$unnit}}"
+                                                                                       hidden="">
+                                                                                <h6>{{number_format($unnit, 2)}}kw/h</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Vat Amount</label>
+                                                                                <input required name="vatAmount"
+                                                                                       value="{{$vatAmount}}"
+                                                                                       hidden="">
+                                                                                <h6>{{number_format($vatAmount, 2)}}</h6>
+                                                                            </div>
+
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Cost Of Unit</label>
+                                                                                 <input required name="costOfUnit"
+                                                                                        value="{{$costOfUnit}}"
+                                                                                        hidden="">
+                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
+                                                                             </div>
+
+                                                                             @if(($utility_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Utility Owed</label>
+                                                                                 <input required name="utility_owed"
+                                                                                        value="{{$utility_owed}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($utility_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             @if(($arrears_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Arrears Owed</label>
+                                                                                 <h6 class="text-danger">- {{number_format($arrears_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             <input required name="vat" value="{{$vat}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_id"
+                                                                                    value="{{$estate_id}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_name"
+                                                                                    value="{{$estate_name}}"
+                                                                                    hidden="">
+                                                                             <input required name="amount" value="{{$amount}}"
+                                                                                    hidden="">
+                                                                             <input required name="tariff_amount"
+                                                                                    value="{{$tarrif_amount}}" hidden="">
+
+                                                                             <input required name="t_index"
+                                                                                    value="{{$tarrif_index}}" hidden="">
+                                                                             <input required name="tariff_id"
+                                                                                    value="{{$tariff_id}}" hidden="">
+
+                                                                         </div>
+
+                                                                         <hr>
+
+
+                                                                         <div
+                                                                             class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
+                                                                             <button type="submit" class="btn btn-primary">Generate
+                                                                                 Token
+                                                                             </button>
+                                                                         </div>
+
+
+                                                                    </div>
+
+
+                                                                </form>
+
+
+                                                            </div>
+
+                                                            </div>
+
+                                                    @endif
+
+
+                                                </div>
+
+                                        </div>
+
+
+
+
+                                    </div>
+                                    <hr>
+                                    <div class="card-body">
+
+                                        <form action="search-postpaid-token" method="GET">
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <input type="text" name="search" placeholder="Search by meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                                </div>
+                                                <div class="col-2">
+                                                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                                                </div>
+                                            </div>
+                                        </form>
+
+                                        <table id=""
+                                               class="table table-striped table-bordered dt-responsive nowrap">
+                                            <thead>
+                                            <tr>
+                                                <th scope="col" class="cursor-pointer">Customer Name</th>
+                                                <th scope="col" class="cursor-pointer">Meter Number</th>
+                                                <th scope="col" class="cursor-pointer">Estate</th>
+                                                <th scope="col" class="cursor-pointer">Amount</th>
+                                                <th scope="col" class="cursor-pointer">Expected Fee</th>
+                                                <th scope="col" class="cursor-pointer desc">Status</th>
+                                                <th scope="col" class="cursor-pointer desc">Date/Time</th>
+                                                <th scope="col" class="cursor-pointer desc">Action</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+
+                                            @foreach($token_ledgers as $data)
+
+                                                <tr>
+                                                    <td>
+                                                        <a href="view-user?id={{$data->user?->id ?? null}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
+                                                    </td>
+                                                    <td>{{$data->meterNo}}</td>
+                                                    <td>{{$data->estate->title ?? "name"}}</td>
+                                                    <td>{{number_format($data->trx_amount, 2)}}</td>
+                                                    <td>{{number_format($data->expected_fee, 2)}}</td>
+                                                    <td>
+                                                        @if($data->paid_at)
+                                                            <span class="badge text-bg-primary">Paid</span>
+                                                        @else
+                                                            <span class="badge text-bg-warning">Unpaid</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{$data->created_at}}</td>
+                                                    <td>
+                                                        <a href="recepit?trx_id={{$data->trx_id}}&type=credit_token"
+                                                           onclick="return confirmreprint();"
+                                                           class="btn btn-primary">View Receipt</a>
+                                                        <script>
+                                                            function confirmreprint() {
+                                                                return confirm('Are you sure you want to view receipt');
+                                                            }
+                                                        </script>
+                                                    </td>
+                                                </tr>
+
+                                            @endforeach
+
+                                            </tbody>
+
+                                            <tfoot>
+
+
+                                            </tfoot>
+                                        </table><!-- end table -->
+
+                                    <!-- ADD THIS -->
+                                    <div class="d-flex justify-content-end mt-3">
+                                        {{ $token_ledgers->links() }}
+                                    </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+            </div> <!-- container-fluid -->
+        </div>
+
+    @elseif(Auth::user()->role == 1)
+    @elseif(Auth::user()->role == 2)
+    @elseif(Auth::user()->role == 3)
+
+        <div class="content">
+
+            <!-- Start Content-->
+            <div class="container-fluid">
+
+
+                <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
+                    <div class="flex-grow-1">
+                        <h4 class="fs-18 fw-semibold m-0">Postpaid Token</h4>
+                    </div>
+                </div>
+
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                @if (session()->has('message'))
+                    <div class="alert alert-success">
+                        {{ session()->get('message') }}
+                    </div>
+                @endif
+                @if (session()->has('error'))
+                    <div class="alert alert-danger">
+                        {{ session()->get('error') }}
+                    </div>
+                @endif
+
+
+                <div class="row">
+                    <div class="col-xl-12">
+                        <div class="card overflow-hidden">
+
+                            <div class="card">
+
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Vending Information</h5>
+                                </div><!-- end card header -->
+
+                                <div class="card-body">
+
+                                    <div class="row">
+
+
+                                        <div class="d-flex justify-content-between my-4">
+                                            <h5 class="card-title text-black mb-0">Postpaid Token Preview</h5>
+                                        </div>
+
+                                        <div class="col-xl-12 col-sm-12">
+
+                                                <div class="modal-body">
+
+                                                    @if($preview == null)
+                                                        <form action="postpaid-validate-meter" method="POST"
+                                                              enctype="multipart/form-data">
+                                                            @csrf
+                                                        <div class="row">
+                                                            <div class="col-xl-6 my-2 col-sm-12">
+                                                                <label class="my-2">Enter Meter No</label>
+                                                                <input type="number" class="form-control mb-3"
+                                                                       name="meterNo" required>
+                                                            </div>
+
+
+                                                            <div class="col-xl-6 my-2 col-sm-12">
+                                                                <label class="my-2">Amount</label>
+                                                                <input type="number" class="form-control mb-3"
+                                                                       name="amount" required>
+                                                            </div>
+
+                                                        </div>
+                                                        <button type="submit" class="btn btn-primary">Continue</button>
+                                                        </form>
+
+                                                    @else
+
+                                                        <div class="row">
+
+
+                                                            <div class="col-xl-5  my-2 col-sm-12">
+
+                                                                <div>
+                                                                    <label class="my-2">Enter Meter No</label>
+                                                                    <input type="number" disabled
+                                                                           class="form-control mb-3"
+                                                                           value="{{$meter->meterNo}}" name="meterNo"
+                                                                           required>
+                                                                </div>
+
+
+                                                                <div>
+                                                                    <label class="my-2">Tarrif Amount</label>
+                                                                    <input type="number" disabled
+                                                                           value="{{$tarrif_amount}}"
+                                                                           class="form-control mb-3"
+                                                                           name="tarrif_amount"
+                                                                           required>
+                                                                </div>
+
+
+                                                                <div>
+                                                                    <label class="my-2">Amount</label>
+                                                                    <input type="number" disabled value="{{$amount}}"
+                                                                           class="form-control mb-3" name="amount"
+                                                                           required>
+                                                                </div>
+
+
+                                                            </div>
+
+                                                            <div class="col-xl-7 my-2 col-sm-12">
+
+                                                                <form action="postpaid-generate-token" method="POST"
+                                                                      enctype="multipart/form-data">
+                                                                    @csrf
+
+                                                                    <div class="modal-body">
+
+                                                                        <div class="">
+                                                                            <h5 class="card-title text-black mb-0">Postpaid Token
+                                                                                Preview</h5>
+                                                                        </div>
+
+
+                                                                        <div class="row">
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Estate</label>
+                                                                                <h6>{{$estate->title}}</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Customer</label>
+                                                                                <input required name="user_id"
+                                                                                       value="{{$user->id}}"
+                                                                                       hidden="">
+                                                                                <h6>{{$user->first_name}} {{$user->last_name}}</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Meter No</label>
+                                                                                <input required name="meterNo"
+                                                                                       value="{{$meter->meterNo}}" hidden="">
+                                                                                <h6>{{$meter->meterNo}}</h6>
+                                                                            </div>
+
+                                                                        </div>
+
+
+                                                                        <hr>
+
+                                                                        <div class="row">
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Unit</label>
+                                                                                @php
+                                                                                    $unnit = $costOfUnit / $tarrif_amount;
+                                                                                @endphp
+                                                                                <input required name="unit"
+                                                                                       value="{{$unnit}}"
+                                                                                       hidden="">
+                                                                                <h6>{{number_format($unnit, 2)}}kw/h</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Vat Amount</label>
+                                                                                <input required name="vatAmount"
+                                                                                       value="{{$vatAmount}}"
+                                                                                       hidden="">
+                                                                                <h6>{{number_format($vatAmount, 2)}}</h6>
+                                                                            </div>
+
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Cost Of Unit</label>
+                                                                                 <input required name="costOfUnit"
+                                                                                        value="{{$costOfUnit}}"
+                                                                                        hidden="">
+                                                                                 <h6>{{number_format($costOfUnit, 2)}}</h6>
+                                                                             </div>
+
+                                                                             @if(($utility_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Utility Owed</label>
+                                                                                 <input required name="utility_owed"
+                                                                                        value="{{$utility_owed}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($utility_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             @if(($arrears_owed ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Arrears Owed</label>
+                                                                                 <h6 class="text-danger">- {{number_format($arrears_owed, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             <input required name="vat" value="{{$vat}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_id"
+                                                                                    value="{{$estate_id}}"
+                                                                                    hidden="">
+                                                                             <input required name="estate_name"
+                                                                                    value="{{$estate_name}}"
+                                                                                    hidden="">
+                                                                             <input required name="amount" value="{{$amount}}"
+                                                                                    hidden="">
+                                                                             <input required name="tariff_amount"
+                                                                                    value="{{$tarrif_amount}}" hidden="">
+
+                                                                             <input required name="t_index"
+                                                                                    value="{{$tarrif_index}}" hidden="">
+                                                                             <input required name="tariff_id"
+                                                                                    value="{{$tariff_id}}" hidden="">
+
+                                                                         </div>
+
+                                                                         <hr>
+
+
+                                                                         <div
+                                                                             class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
+                                                                             <button type="submit" class="btn btn-primary">Generate
+                                                                                 Token
+                                                                             </button>
+                                                                         </div>
+
+
+                                                                    </div>
+
+
+                                                                </form>
+
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    @endif
+
+
+                                                </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <hr>
+
+
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+                </div>
+
+
+            </div> <!-- container-fluid -->
+
+        </div>
+
+    @elseif(Auth::user()->role == 4)
+    @elseif(Auth::user()->role == 5)
+    @else
+    @endif
+
+@endsection

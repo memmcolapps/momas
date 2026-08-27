@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Constants\ServiceTypeConstants;
 use App\Events\MeterTokenGenerated;
 use App\Services\PaystackPaymentService;
+use App\Services\LedgerService;
 use App\Services\TokenGenerationService;
 use App\Models\UtilitiesPayment;
 use App\Services\VatCalculator;
@@ -598,6 +599,198 @@ class Meter extends Model
 
             throw $e;
         }
+    }
+
+    /**
+     * Generate a postpaid token without payment verification.
+     *
+     * Creates a token for the given amount after deducting service fees,
+     * estate fees, arrears, utility debts, and VAT. Creates the transaction,
+     * credit token, and meter token records internally. Checks estate
+     * postpaid eligibility via LedgerService.
+     *
+     * @param int $tariff_id The tariff to use
+     * @param float $amount The amount paid
+     * @param string|null $receiver_meterNo Optional pay-for-others target meter
+     * @param string|null $email Optional email override
+     * @param int|null $userId Optional payer user ID (defaults to meter owner)
+     * @return array ['token' => string, 'credit_token' => CreditToken]
+     */
+    public function getNewPostpaidToken(
+        int $tariff_id,
+        float $amount,
+        ?string $receiver_meterNo = null,
+        ?string $email = null,
+        ?int $userId = null
+    ): array {
+        $other_meter = null;
+
+        if ($receiver_meterNo) {
+            $other_meter = self::where('meterNo', $receiver_meterNo)->first();
+
+            if (!$other_meter) {
+                throw new Exception('You Cannot Vend for this Meter');
+            }
+        }
+
+        $payerUserId = $userId ?? $this->user_id;
+        $user = User::where('id', $payerUserId)->firstOrFail();
+        $estate = Estate::where('id', $this->estate_id)->firstOrFail();
+
+        if (!LedgerService::estateCanVendPostpaid($estate)) {
+            throw new Exception('Estate cannot vend postpaid — unpaid fees have exceeded the accumulation period');
+        }
+
+        if (!$this->isActive()) {
+            throw new Exception('Meter is unable to carry out operations');
+        }
+
+        $postpaid_token = DB::transaction(function () use (
+            $tariff_id,
+            $amount,
+            $receiver_meterNo,
+            $email,
+            $payerUserId,
+            $user,
+            $other_meter
+        ) {
+            $email = $email ?? $user->email;
+
+            $calculatedValues = $this->calculateTokenValuesByAmount(
+                $tariff_id,
+                (int) $amount,
+                $receiver_meterNo
+            );
+
+            $tariffAmount = $calculatedValues['tariffAmount'];
+            $vat = $calculatedValues['vat'];
+            $fixedCharge = $calculatedValues['fixedCharge'];
+            $estateFee = $calculatedValues['estateFee'];
+            $afterFixedCharge = $calculatedValues['afterFixedCharge'];
+            $vatAmount = $calculatedValues['vatAmount'];
+            $vending_amount = $calculatedValues['vendingAmount'];
+            $unit = $calculatedValues['unit'];
+
+            $service = $other_meter ? 'CREDIT TOKEN PURCHASE(OTHERS)' : 'CREDIT TOKEN PURCHASE';
+            $service_type = $other_meter
+                ? ServiceTypeConstants::CREDIT_TOKEN_OTHERS
+                : ServiceTypeConstants::CREDIT_TOKEN;
+
+            $trx_id = generate_unique_string('MOMAS');
+
+            $trx = Transaction::create([
+                'trx_id'           => $trx_id,
+                'user_id'          => $payerUserId,
+                'estate_id'        => $this->estate_id,
+                'amount'           => $amount,
+                'vending_amount'   => $amount,
+                'service'          => $service,
+                'service_type'     => $service_type,
+                'tariff_id'        => $tariff_id,
+                'status'           => 2,
+            ]);
+
+            $tariff = Tariff::where('id', $tariff_id)->first();
+            $tariff_index = $tariff->tariff_index ?? null;
+            $need_kct = $this->NeedKCT;
+
+            $token_gen = TokenGenerationService::generateMeterToken(
+                $this,
+                $tariff_index,
+                $unit,
+                $need_kct
+            );
+
+            if (!$token_gen['success']) {
+                $trx->update([
+                    'note'   => 'token generation failed',
+                    'status' => 3,
+                ]);
+                throw new Exception('Vending server not connected, Retry again on transaction history');
+            }
+
+            $token = $token_gen['data']['token'];
+
+            // Settle debt-type utility
+            try {
+                $utilityService = new \App\Services\UtilityManagementService();
+                $utilityService->processPayment(
+                    $payerUserId,
+                    $this->estate_id,
+                    $amount,
+                    $trx_id
+                );
+            } catch (\Throwable $e) {
+                \App\Models\Logger::error('Debt utility settlement failed', [
+                    'trx_id' => $trx_id,
+                    'error'  => $e->getMessage(),
+                ]);
+            }
+
+            $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+            $tariffAmount = $tariffState->amount ?? 0;
+
+            $cdt = CreditToken::updateOrCreate(
+                [
+                    'trx_id'   => $trx_id,
+                    'user_id'  => $payerUserId,
+                    'meterNo'  => $this->meterNo,
+                ],
+                [
+                    'amount'           => $vending_amount,
+                    'amount_charged'   => $amount,
+                    'customer_email'   => $email,
+                    'receiver_meterNo' => $receiver_meterNo,
+                    'unitkwh'          => $unit,
+                    'vat'              => $vat,
+                    'estate_id'        => $this->estate_id,
+                    'estate_name'      => $user->estate_name,
+                    'token'            => $token,
+                    'status'           => 2,
+                    'vatAmount'        => $vatAmount,
+                    'tariff_amount'    => $tariffAmount,
+                    'tariff_id'        => $tariff_id,
+                ]
+            );
+
+            if ($need_kct) {
+                $kct_tokens = $token_gen['data']['kct_token'];
+
+                MeterToken::create([
+                    'user_id'          => $payerUserId,
+                    'trx_id'           => $trx_id,
+                    'meterNo'          => $this->meterNo,
+                    'token'            => $token,
+                    'amount'           => $amount,
+                    'unit'             => $unit,
+                    'kct_tokens'       => $kct_tokens[0] . ',' . $kct_tokens[1],
+                    'vat'              => $vat,
+                    'estate_id'        => $this->estate_id,
+                    'status'           => 2,
+                    'receiver_meterNo' => $receiver_meterNo,
+                ]);
+            }
+
+            LedgerService::recordTransactionLedger(
+                $trx,
+                $this->meterNo,
+                $cdt->id,
+                $other_meter ? $other_meter->user_id : null
+            );
+
+            MeterTokenGenerated::dispatch(
+                $cdt,
+                $amount,
+                $need_kct ? ($token_gen['data']['kct_token'][0] ?? null) : null,
+                $need_kct ? ($token_gen['data']['kct_token'][1] ?? null) : null,
+                $receiver_meterNo,
+                $other_meter ? 'CREDIT TOKEN PURCHASE(OTHERS)' : null
+            );
+
+            return ['token' => $token, 'credit_token' => $cdt, 'trx_id' => $trx_id];
+        });
+
+        return $postpaid_token;
     }
 
     /**
