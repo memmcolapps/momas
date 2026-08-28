@@ -6610,7 +6610,7 @@ class TokenController extends Controller
 
             $estate = Estate::where('id', $estate_id)->first();
             if (!LedgerService::estateCanVendPostpaid($estate)) {
-                return redirect()->route('postpaid.accumulation-due', $estate->id);
+                return redirect("/admin/postpaid-accumulation-due/{$estate->id}");
             }
 
             $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
