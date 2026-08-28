@@ -178,6 +178,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-info', [EstateController::class, 'estate_update']);
     Route::post('estate-update-utilities', [EstateController::class, 'estate_update_utilities']);
     Route::post('customer-store-utility', [EstateController::class, 'customer_store_utility']);
+    Route::post('customer-debt-payment', [DashboardContoller::class, 'customer_debt_payment']);
     Route::post('estate-feature-update', [EstateController::class, 'estate_feature_update']);
     Route::post('feature-update', [EstateController::class, 'feature_update']);
     Route::post('update-duration', [EstateController::class, 'update_duration']);
@@ -369,6 +370,17 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('generate-kctclear-token', [TokenController::class, 'generate_kctclear_token']);
     Route::post('generate-clear-credit-meter-token', [TokenController::class, 'generate_clear_credit_meter_token']);
 
+    //postpaid token
+    Route::get('postpaid-token', [TokenController::class, 'postpaid_token_index']);
+    Route::get('search-postpaid-token', [TokenController::class, 'search_postpaid_token']);
+    Route::match(['GET', 'POST'], 'postpaid-validate-meter', [TokenController::class, 'postpaid_validate_meter']);
+    Route::post('postpaid-generate-token', [TokenController::class, 'postpaid_generate_token']);
+
+    //postpaid accumulation payment
+    Route::get('postpaid-accumulation-due/{estate}', [TokenController::class, 'accumulation_due'])->name('postpaid.accumulation-due');
+    Route::post('postpaid-accumulation-pay', [TokenController::class, 'init_accumulation_payment'])->name('postpaid.accumulation-pay');
+    Route::get('postpaid-accumulation-callback', [TokenController::class, 'accumulation_callback'])->name('postpaid.accumulation-callback');
+
 
     Route::any('paystack-check-web', [TokenController::class, 'paystack_verify_web']);
     Route::any('paystack-check-kct', [TokenController::class, 'paystack_verify_kct']);
@@ -378,6 +390,12 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('pay-flutter-web', [TokenController::class, 'flutter_verify_web']);
     Route::any('paystack-clear-credit', [TokenController::class, 'paystack_clear_credit']);
     Route::any('flutter-verify-clear-credit', [TokenController::class, 'flutter_verify_clear_credit']);
+    Route::any('remita-check-web', [TokenController::class, 'remita_verify_web']);
+    Route::any('remita-check-kct', [TokenController::class, 'remita_verify_kct']);
+    Route::any('remita-check-web-tamper', [TokenController::class, 'remita_verify_web_tamper']);
+    Route::any('remita-clear-credit', [TokenController::class, 'remita_clear_credit']);
+    Route::get('pay-remita', [TokenController::class, 'remita_pay'])->name('remita.pay');
+    Route::any('remita-payment-result', [TokenController::class, 'remita_payment_result'])->name('remita.result');
     Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
 
     Route::any('recepit', [TokenController::class, 'recepit']);

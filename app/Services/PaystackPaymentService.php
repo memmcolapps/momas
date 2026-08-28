@@ -73,11 +73,17 @@ class PaystackPaymentService implements PaymentServiceInterface
      * @return array Payment initialization response
      * @throws InvalidArgumentException
      */
-    public function makePayment(array $data): array
+    public function makePayment(array $data, $ignoreSubaccount = false): array
     {
-        $requiredParameters = ['amount', 'email', 'sub_account', 'metadata'];
-        if ($this->paystack_env === 'test') {
-            unset($requiredParameters[array_search('sub_account', $requiredParameters)], $data['sub_account']);
+        $requiredParameters = ['amount', 'email', 'metadata'];
+        ! $ignoreSubaccount && $requiredParameters[] = 'sub_account';
+
+        if ($this->paystack_env === 'test' && ! $ignoreSubaccount) {
+            unset($requiredParameters[array_search('sub_account', $requiredParameters)]);
+
+            if ($data['sub_account']) {
+                unset($data['sub_account']);
+            }
         }
 
         // dd()
@@ -104,11 +110,11 @@ class PaystackPaymentService implements PaymentServiceInterface
             "amount" => (int) ($data['amount']), // Paystack expects amount in kobo
             "email" => $data['email'],
             "reference" => $transactionRef,
-            "callback_url" => url('') . "/paystack-check",
+            "callback_url" => $data['callback_url'] ?? (url('') . "/paystack-check"),
             "metadata" => $metadata,
         ];
 
-        if ($this->paystack_env === 'live') {
+        if ($this->paystack_env === 'live' && ! $ignoreSubaccount) {
             $dataBody["subaccount"] = $data['sub_account'];
 
             $validate_subaccount = self::validateSubaccount($data['sub_account']);

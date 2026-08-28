@@ -10,7 +10,7 @@
 
                 <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
                     <div class="flex-grow-1">
-                        <h4 class="fs-18 fw-semibold m-0">Credit Token</h4>
+                        <h4 class="fs-18 fw-semibold m-0">Postpaid Token</h4>
                     </div>
                 </div>
 
@@ -50,7 +50,7 @@
 
 
                                         <div class="d-flex justify-content-between my-4">
-                                            <h5 class="card-title text-black mb-0">Meter Information</h5>
+                                            <h5 class="card-title text-black mb-0">Postpaid Token Preview</h5>
                                         </div>
 
                                         <div class="col-xl-12 col-sm-12">
@@ -58,7 +58,7 @@
                                                 <div class="modal-body">
 
                                                     @if($preview == null)
-                                                        <form action="validate-meter" method="POST"
+                                                        <form action="postpaid-validate-meter" method="POST"
                                                               enctype="multipart/form-data">
                                                             @csrf
                                                         <div class="row">
@@ -128,14 +128,14 @@
 
                                                             <div class="col-xl-7 my-2 col-sm-12">
 
-                                                                <form action="generate-credit-meter-token" method="POST"
+                                                                <form action="postpaid-generate-token" method="POST"
                                                                       enctype="multipart/form-data">
                                                                     @csrf
 
                                                                     <div class="modal-body">
 
                                                                         <div class="">
-                                                                            <h5 class="card-title text-black mb-0">Credit Token
+                                                                            <h5 class="card-title text-black mb-0">Postpaid Token
                                                                                 Preview</h5>
                                                                         </div>
 
@@ -236,32 +236,11 @@
 
 
                                                                          <div
-                                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                                             <select class="form-control" required
-                                                                                     name="pay_type">
-                                                                                 <option value=" ">--Choose Payment Gateway---
-                                                                                 </option>
-                                                                                 <option value="paystack">Pay with Paystack
-                                                                                 </option>
-                                                                                 <option value="remita">Pay with Remita
-                                                                                 </option>
-                                                                                 {{-- <option value="flutterwave">Pay with Flutterwave
-                                                                                 </option> --}}
-                                                                                 {{-- <option value="enkpay">Pay with Enkpay</option> --}}
-                                                                                 <!-- <option value="test_bypass">Payment Bypass (Testing Only)</option> -->
-                                                                                 @if (app()->environment('staging'))
-                                                                                     <option value="test_bypass">Payment Bypass (Testing Only)</option>
-                                                                                 @endif
-                                                                             </select>
+                                                                             class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
+                                                                             <button type="submit" class="btn btn-primary">Generate
+                                                                                 Token
+                                                                             </button>
                                                                          </div>
-
-
-                                                                        <div
-                                                                            class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
-                                                                            <button type="submit" class="btn btn-primary">Pay
-                                                                                Now
-                                                                            </button>
-                                                                        </div>
 
 
                                                                     </div>
@@ -287,6 +266,18 @@
                                     </div>
                                     <hr>
                                     <div class="card-body">
+
+                                        <form action="search-postpaid-token" method="GET">
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <input type="text" name="search" placeholder="Search by meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                                </div>
+                                                <div class="col-2">
+                                                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                                                </div>
+                                            </div>
+                                        </form>
+
                                         <table id=""
                                                class="table table-striped table-bordered dt-responsive nowrap">
                                             <thead>
@@ -295,79 +286,47 @@
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
-                                                <th scope="col" class="cursor-pointer">Tariff Index</th>
-                                                <th scope="col" class="cursor-pointer desc">Unit</th>
+                                                <th scope="col" class="cursor-pointer">Expected Fee</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
                                                 <th scope="col" class="cursor-pointer desc">Date/Time</th>
                                                 <th scope="col" class="cursor-pointer desc">Action</th>
-
-
                                             </tr>
                                             </thead>
                                             <tbody>
 
-
-                                            @foreach($credit_tokens as $data)
+                                            @foreach($token_ledgers as $data)
 
                                                 <tr>
                                                     <td>
                                                         <a href="view-user?id={{$data->user?->id ?? null}}">{{$data->user->last_name ?? "name"}} {{$data->user->first_name ?? "name"}}</a>
                                                     </td>
-                                                    <td>{{$data->meterNo}}</a> </td>
+                                                    <td>{{$data->meterNo}}</td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
-                                                    <td>{{number_format($data->amount, 2)}}</td>
-                                                    <td>{{$data->tariff_id}}</td>
-                                                    <td>{{$data->unitkwh}}kw/N</td>
+                                                    <td>{{number_format($data->trx_amount, 2)}}</td>
+                                                    <td>{{number_format($data->expected_fee, 2)}}</td>
                                                     <td>
-                                                        @if($data->status == 2)
-                                                            <span class="badge text-bg-primary">Successful</span>
-                                                        @elseif($data->status == 0)
-                                                            <span class="badge text-bg-warning">Pending</span>
-                                                        @elseif($data->status == 3)
-                                                            <span class="badge text-bg-danger">Declined</span>
+                                                        @if($data->paid_at)
+                                                            <span class="badge text-bg-primary">Paid</span>
+                                                        @else
+                                                            <span class="badge text-bg-warning">Unpaid</span>
                                                         @endif
-
                                                     </td>
                                                     <td>{{$data->created_at}}</td>
-
-
                                                     <td>
-                                                        @if($data->status == 2)
-                                                            <a href="recepit?trx_id={{$data->trx_id}}&type=credit_token"
-                                                               onclick="return confirmreprint();"
-                                                               class="btn btn-primary">Reprint</a>
-                                                            <script>
-
-                                                                function confirmreprint() {
-                                                                    return confirm('Are you sure you want to reprint');
-                                                                }
-                                                            </script>
-
-                                                        @elseif($data->status == 0)
-
-                                                            <a href="retry-generate-token?trx_id={{$data->trx_id}}&type=credit_token"
-                                                               onclick="return confirmgenertetoken();"
-                                                               class="btn btn-secondary">Generate Token</a>
-                                                            <script>
-
-                                                                function confirmgenertetoken() {
-                                                                    return confirm('Are you sure you want to generate token');
-                                                                }
-                                                            </script>
-
-                                                        @elseif($data->status == 3)
-                                                            <span class="badge text-bg-danger">Declined</span>
-                                                        @endif
-
+                                                        <a href="recepit?trx_id={{$data->trx_id}}&type=credit_token"
+                                                           onclick="return confirmreprint();"
+                                                           class="btn btn-primary">View Receipt</a>
+                                                        <script>
+                                                            function confirmreprint() {
+                                                                return confirm('Are you sure you want to view receipt');
+                                                            }
+                                                        </script>
                                                     </td>
-
-
                                                 </tr>
 
                                             @endforeach
 
-
-                                            </tbody><!-- end tbody -->
+                                            </tbody>
 
                                             <tfoot>
 
@@ -377,7 +336,7 @@
 
                                     <!-- ADD THIS -->
                                     <div class="d-flex justify-content-end mt-3">
-                                        {{ $credit_tokens->links() }}
+                                        {{ $token_ledgers->links() }}
                                     </div>
                                     </div>
                                 </div>
@@ -389,10 +348,7 @@
                 </div>
 
 
-            </div>
-
-
-        </div> <!-- container-fluid -->
+            </div> <!-- container-fluid -->
         </div>
 
     @elseif(Auth::user()->role == 1)
@@ -407,7 +363,7 @@
 
                 <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
                     <div class="flex-grow-1">
-                        <h4 class="fs-18 fw-semibold m-0">Credit Token</h4>
+                        <h4 class="fs-18 fw-semibold m-0">Postpaid Token</h4>
                     </div>
                 </div>
 
@@ -448,7 +404,7 @@
 
 
                                         <div class="d-flex justify-content-between my-4">
-                                            <h5 class="card-title text-black mb-0">Generate Credit Token</h5>
+                                            <h5 class="card-title text-black mb-0">Postpaid Token Preview</h5>
                                         </div>
 
                                         <div class="col-xl-12 col-sm-12">
@@ -456,7 +412,7 @@
                                                 <div class="modal-body">
 
                                                     @if($preview == null)
-                                                        <form action="validate-meter" method="POST"
+                                                        <form action="postpaid-validate-meter" method="POST"
                                                               enctype="multipart/form-data">
                                                             @csrf
                                                         <div class="row">
@@ -515,14 +471,14 @@
 
                                                             <div class="col-xl-7 my-2 col-sm-12">
 
-                                                                <form action="generate-credit-meter-token" method="POST"
+                                                                <form action="postpaid-generate-token" method="POST"
                                                                       enctype="multipart/form-data">
                                                                     @csrf
 
                                                                     <div class="modal-body">
 
                                                                         <div class="">
-                                                                            <h5 class="card-title text-black mb-0">Credit Token
+                                                                            <h5 class="card-title text-black mb-0">Postpaid Token
                                                                                 Preview</h5>
                                                                         </div>
 
@@ -623,25 +579,11 @@
 
 
                                                                          <div
-                                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                                             <select class="form-control" required
-                                                                                     name="pay_type">
-                                                                                 <option value=" ">--Choose Payment Gateway---
-                                                                                 </option>
-                                                                                 <option value="paystack">Pay with Paystack
-                                                                                 </option>
-                                                                                 <option value="remita">Pay with Remita
-                                                                                 </option>
-                                                                             </select>
+                                                                             class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
+                                                                             <button type="submit" class="btn btn-primary">Generate
+                                                                                 Token
+                                                                             </button>
                                                                          </div>
-
-
-                                                                        <div
-                                                                            class="col-xl-12 my-4 d-flex justify-content-start col-sm-12">
-                                                                            <button type="submit" class="btn btn-primary">Pay
-                                                                                Now
-                                                                            </button>
-                                                                        </div>
 
 
                                                                     </div>
@@ -665,7 +607,6 @@
 
 
                                     <hr>
-
 
 
 

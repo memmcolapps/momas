@@ -21,6 +21,7 @@ class Estate extends Model
         'status',
         'min_pur',
         'max_pur',
+        'fee_accumulation_period',
         'created_at',
         'updated_at',
     ];

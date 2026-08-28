@@ -16,10 +16,14 @@ use App\Models\Setting;
 use App\Models\TamperToken;
 use App\Models\Tariff;
 use App\Models\TarrifState;
+use App\Models\TokenLedger;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
+use App\Models\PostpaidAccumulationPayment;
+use App\Services\LedgerService;
 use App\Services\PaystackPaymentService;
+use App\Services\RemitaPaymentService;
 use App\Services\StandardResponse;
 use App\Services\VatCalculator;
 use Carbon\Carbon;
@@ -1814,27 +1818,88 @@ class TokenController extends Controller
         }
 
 
-        try {
+        if ($request->pay_type == 'remita') {
+            try {
+                $estate_id = $request->estate_id ?? Auth::user()->estate_id;
+                $est = Estate::where('id', $estate_id)->first();
 
-            if ($request->pay_type == 'remita') {
-                $trx_id = "TRX" . random_int(0000000, 9999999);
+                if ($est->charge_fee_flat == null) {
+                    $fee = ($est->charge_fee_precent / 100) * (int)$request->amount;
+                } else {
+                    $fee = $est->charge_fee_flat;
+                }
+
                 $email = Auth::user()->email;
+                $phone = Auth::user()->phone ?? "012345678";
+                $userName = Auth::user()->first_name . " " . Auth::user()->last_name;
+
+                $remitaService = new RemitaPaymentService();
+                $payment_init = $remitaService->makePayment([
+                    'amount' => $request->amount,
+                    'email' => strtolower(trim($email)),
+                    'name' => $userName,
+                    'phone' => $phone,
+                    'description' => 'Payment for credit token',
+                ]);
+
+                if (!isset($payment_init['status']) || !$payment_init['status']) {
+                    Logger::warning("Remita payment init failed", ['response' => $payment_init]);
+                    return redirect('/admin/credit-token')->with('error',
+                        $payment_init['message'] ?? 'Payment not available, kindly select another option');
+                }
+
+                $trx_id = $payment_init['reference'];
+                $rrr = $payment_init['rrr'];
+
+                $utilityAmount = (float) ($request->utility_owed ?? 0);
+                $vendingAmount = (float) $request->amount - $utilityAmount;
+
+                $action_payload = [
+                    'action' => 'momas_meter_web',
+                    'tariff_id' => $request->tariff_id,
+                    'vend_amount_kw_per_naira' => $request->unit,
+                    'utility_amount' => $utilityAmount,
+                    'total_paid_amount' => $request->amount,
+                    'vat_amount' => $request->vatAmount ?? 0,
+                    'vending_amount' => $vendingAmount,
+                    'amount' => $amount,
+                    'user_id' => $user_id,
+                    'meterNo' => $request->meterNo,
+                ];
+
                 $trx = new Transaction();
-                $trx->user_id = Auth::id();
+                $trx->user_id = $request->user_id;
+                $trx->estate_id = $estate_id;
                 $trx->pay_type = "remita";
-                $trx->service_type = "fund";
                 $trx->amount = $request->amount;
+                $trx->fee = $fee;
                 $trx->trx_id = $trx_id;
+                $trx->payment_ref = $rrr;
+                $trx->service_type = "credit_token";
+                $trx->status = 0;
+                $trx->action_payload = json_encode($action_payload);
                 $trx->save();
 
-                return response()->json([
-                    'status' => true,
-                    'url' => url('') . "/pay-remita?amount=$request->amount&trx_id=$trx_id&email=$email"
-                ], 200);
-            }
+                CreditToken::create([
+                    'trx_id' => $trx_id,
+                    'user_id' => $action_payload['user_id'],
+                    'meterNo' => $action_payload['meterNo'],
+                    'amount' => $action_payload['vending_amount'],
+                    'amount_charged' => $action_payload['vending_amount'],
+                    'unitkwh' => $action_payload['vend_amount_kw_per_naira'],
+                    'vat' => $action_payload['vat_amount'],
+                    'estate_id' => $estate_id,
+                    'estate_name' => $request->estate_name,
+                    'token' => null,
+                    'status' => 0,
+                ]);
 
-        } catch (Exception $e) {
-            return back()->with('error', $e);
+                return redirect()->route('remita.pay', ['trx_id' => $trx_id]);
+
+            } catch (Exception $e) {
+                Logger::error('Remita credit token transaction error', ['exception' => $e]);
+                return redirect('/admin/credit-token')->with('error', $e->getMessage());
+            }
         }
 
 
@@ -2102,27 +2167,71 @@ class TokenController extends Controller
         }
 
 
-        try {
+        if ($request->pay_type == 'remita') {
+            try {
+                $estate_id = $request->estate_id ?? Auth::user()->estate_id;
+                $est = Estate::where('id', $estate_id)->first();
+                if ($est->charge_fee < 0) {
+                    $fee = ($est->charge_fee_percent / $request->amount) * 100;
+                } else {
+                    $fee = $est->charge_fee;
+                }
+                $amount -= $fee;
 
-            if ($request->pay_type == 'remita') {
-                $trx_id = "TRX" . random_int(0000000, 9999999);
                 $email = Auth::user()->email;
+                $phone = Auth::user()->phone ?? "012345678";
+                $userName = Auth::user()->first_name . " " . Auth::user()->last_name;
+
+                $remitaService = new RemitaPaymentService();
+                $payment_init = $remitaService->makePayment([
+                    'amount' => $request->amount,
+                    'email' => strtolower(trim($email)),
+                    'name' => $userName,
+                    'phone' => $phone,
+                    'description' => 'Payment for tamper token',
+                ]);
+
+                if (!isset($payment_init['status']) || !$payment_init['status']) {
+                    return back()->with('error', $payment_init['message'] ?? 'Payment not available');
+                }
+
+                $trx_id = $payment_init['reference'];
+                $rrr = $payment_init['rrr'];
+
+                $action_payload = [
+                    'action' => 'momas_tamper_token',
+                    'tariff_id' => $request->tariff_id,
+                    'vending_amount' => $amount,
+                    'estate_id' => $est->id,
+                    'meterNo' => $request->meterNo,
+                    'user_id' => User::where('meterNo', $request->meterNo)->firstOrFail()->id,
+                    'reference' => $trx_id,
+                ];
+
                 $trx = new Transaction();
                 $trx->user_id = Auth::id();
+                $trx->estate_id = Auth::user()->estate_id;
                 $trx->pay_type = "remita";
-                $trx->service_type = "fund";
                 $trx->amount = $request->amount;
+                $trx->fee = $fee;
                 $trx->trx_id = $trx_id;
+                $trx->payment_ref = $rrr;
+                $trx->service_type = "tamper_token";
+                $trx->action_payload = json_encode($action_payload);
                 $trx->save();
+
+                $cdt->trx_id = $trx_id;
+                $cdt->save();
 
                 return response()->json([
                     'status' => true,
-                    'url' => url('') . "/pay-remita?amount=$request->amount&trx_id=$trx_id&email=$email"
+                    'rrr' => $rrr,
+                    'trx_id' => $trx_id,
                 ], 200);
-            }
 
-        } catch (Exception $e) {
-            return back()->with('error', $e);
+            } catch (Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
         }
 
 
@@ -2799,27 +2908,97 @@ class TokenController extends Controller
         }
 
 
-        try {
+        if ($request->pay_type == 'remita') {
+            try {
+                $estate_id = $request->estate_id ?? $request->estate_name;
+                $est = Estate::where('id', $estate_id)->first();
+                if ($request->amount != 0) {
+                    if ($est->charge_fee < 0) {
+                        $fee = ($est->charge_fee_percent / $request->amount) * 100;
+                    } else {
+                        $fee = $est->charge_fee;
+                    }
+                } else {
+                    $fee = 0;
+                }
 
-            if ($request->pay_type == 'remita') {
-                $trx_id = "TRX" . random_int(0000000, 9999999);
                 $email = Auth::user()->email;
+                $phone = Auth::user()->phone ?? "012345678";
+                $userName = Auth::user()->first_name . " " . Auth::user()->last_name;
+
+                $remitaService = new RemitaPaymentService();
+                $payment_init = $remitaService->makePayment([
+                    'amount' => $request->amount,
+                    'email' => strtolower(trim($email)),
+                    'name' => $userName,
+                    'phone' => $phone,
+                    'description' => 'Payment for KCT token',
+                ]);
+
+                if (!isset($payment_init['status']) || !$payment_init['status']) {
+                    return back()->with('error', $payment_init['message'] ?? 'Payment not available');
+                }
+
+                $trx_id = $payment_init['reference'];
+                $rrr = $payment_init['rrr'];
+
+                $isDualTariff = ($meter->isDualTariff === 'on' || $meter->isDualTariff === true || $meter->isDualTariff === 1);
+                $isGenTariff = $isDualTariff && ($request->tariff_id === $meter->NewTariffDualID || $request->tariff_id == $meter->OldTariffDualID);
+
+                try {
+                    if ($isGenTariff) {
+                        $ti = $this->getTariffIndexWithValidation($meter->OldTariffDualID);
+                        $toti = $this->getTariffIndexWithValidation($meter->NewTariffDualID);
+                        $sgc = (int)$meter->OldSGCDual;
+                        $tosgc = (int)$meter->NewSGCDual;
+                    } else {
+                        $ti = $this->getTariffIndexWithValidation($meter->OldTariffID);
+                        $toti = $this->getTariffIndexWithValidation($meter->NewTariffID);
+                        $sgc = (int)$meter->OldSGC;
+                        $tosgc = (int)$meter->NewSGC;
+                    }
+                } catch (\Exception $e) {
+                    return back()->with('error', 'Tariff Index Error: ' . $e->getMessage());
+                }
+
+                $user = User::where('meterNo', $request->meterNo)->first();
+
+                $action_payload = [
+                    'action' => 'momas_kct_token',
+                    'meterNo' => $request->meterNo,
+                    'sgc' => $sgc,
+                    'tosgc' => $tosgc,
+                    'ti' => $ti,
+                    'toti' => $toti,
+                    'user_id' => $user?->id,
+                    'email' => $email,
+                ];
+
                 $trx = new Transaction();
-                $trx->user_id = Auth::id();
+                $trx->user_id = $user_id;
+                $trx->estate_id = $estate_id;
                 $trx->pay_type = "remita";
-                $trx->service_type = "fund";
                 $trx->amount = $request->amount;
+                $trx->fee = $fee;
                 $trx->trx_id = $trx_id;
+                $trx->payment_ref = $rrr;
+                $trx->service_type = "kct_token";
+                $trx->status = 0;
+                $trx->action_payload = json_encode($action_payload);
                 $trx->save();
+
+                $cdt->trx_id = $trx_id;
+                $cdt->save();
 
                 return response()->json([
                     'status' => true,
-                    'url' => url('') . "/pay-remita?amount=$request->amount&trx_id=$trx_id&email=$email"
+                    'rrr' => $rrr,
+                    'trx_id' => $trx_id,
                 ], 200);
-            }
 
-        } catch (Exception $e) {
-            return back()->with('error', $e);
+            } catch (Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
         }
 
 
@@ -3291,27 +3470,73 @@ class TokenController extends Controller
         }
 
 
-        try {
+        if ($request->pay_type == 'remita') {
+            try {
+                $estate_id = $request->estate_id ?? Auth::user()->estate_id;
+                $est = Estate::where('id', $estate_id)->first();
+                if ($est->charge_fee < 0) {
+                    $fee = ($est->charge_fee_percent / $request->amount) * 100;
+                } else {
+                    $fee = $est->charge_fee;
+                }
 
-            if ($request->pay_type == 'remita') {
-                $trx_id = "TRX" . random_int(0000000, 9999999);
                 $email = Auth::user()->email;
+                $phone = Auth::user()->phone ?? "012345678";
+                $userName = Auth::user()->first_name . " " . Auth::user()->last_name;
+                $user_id = User::where('meterNo', $request->meterNo)->firstOrFail()->id;
+
+                $remitaService = new RemitaPaymentService();
+                $payment_init = $remitaService->makePayment([
+                    'amount' => $request->amount,
+                    'email' => strtolower(trim($email)),
+                    'name' => $userName,
+                    'phone' => $phone,
+                    'description' => 'Payment for clear credit token',
+                ]);
+
+                if (!isset($payment_init['status']) || !$payment_init['status']) {
+                    Logger::warning("Remita payment init failed for clear credit token");
+                    return redirect('/admin/clear-credit-token')->with('error',
+                        $payment_init['message'] ?? 'Payment not available');
+                }
+
+                $trx_id = $payment_init['reference'];
+                $rrr = $payment_init['rrr'];
+
+                $action_payload = [
+                    'action' => 'momas_clear_credit_token',
+                    'tariff_id' => $request->tariff_id,
+                    'user_id' => $user_id,
+                    'email' => $email,
+                    'meterNo' => $request->meterNo,
+                ];
+
+                $cdt->trx_id = $trx_id;
+                $cdt->save();
+
                 $trx = new Transaction();
                 $trx->user_id = Auth::id();
+                $trx->estate_id = $estate_id;
                 $trx->pay_type = "remita";
-                $trx->service_type = "fund";
                 $trx->amount = $request->amount;
+                $trx->fee = $fee;
                 $trx->trx_id = $trx_id;
+                $trx->payment_ref = $rrr;
+                $trx->service_type = "clear_credit_token";
+                $trx->status = 0;
+                $trx->action_payload = json_encode($action_payload);
                 $trx->save();
 
                 return response()->json([
                     'status' => true,
-                    'url' => url('') . "/pay-remita?amount=$request->amount&trx_id=$trx_id&email=$email"
+                    'rrr' => $rrr,
+                    'trx_id' => $trx_id,
                 ], 200);
-            }
 
-        } catch (Exception $e) {
-            return back()->with('error', $e);
+            } catch (Exception $e) {
+                Logger::error('Remita clear credit token error', ['exception' => $e]);
+                return redirect('/admin/clear-credit-token')->with('error', $e->getMessage());
+            }
         }
 
 
@@ -4855,8 +5080,432 @@ class TokenController extends Controller
 
         }
 
-
     }
+
+
+    // ==================== REMITA HOSTED PAYMENT ====================
+
+    /**
+     * Interstitial page that hands the user off to Remita's hosted payment
+     * page (onepage/api/v1/so.spa) with the RRR generated at init time.
+     */
+    public function remita_pay(Request $request)
+    {
+        try {
+            $trx_id = $request->trx_id;
+            $trx = Transaction::where('trx_id', $trx_id)
+                ->where('pay_type', 'remita')
+                ->first();
+
+            if (! $trx || ! $trx->payment_ref) {
+                return redirect('/admin/credit-token')->with('error', 'Remita transaction not found');
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id=$trx_id&type=credit_token");
+            }
+
+            $remitaService = new RemitaPaymentService();
+
+            $data['action'] = $remitaService->hostedPaymentPageUrl();
+            $data['payload'] = $remitaService->hostedPaymentPayload($trx->payment_ref);
+            $data['response_url'] = route('remita.result');
+            $data['trx_id'] = $trx_id;
+            $data['rrr'] = $trx->payment_ref;
+            $data['amount'] = $trx->amount;
+
+            return view('admin.token.remita-pay', $data);
+        } catch (Exception $e) {
+            Logger::error('remita_pay error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return redirect('/admin/credit-token')->with('error', 'Unable to initialize Remita payment: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remita hosted-payment return (response_url). Display-only: resolves the
+     * transaction by RRR and routes the user to the appropriate local page.
+     * Never treated as proof of payment — confirmation happens server-side
+     * through verifyTransaction(RRR).
+     */
+    public function remita_payment_result(Request $request)
+    {
+        try {
+            Logger::info('remita_payment_result called', ['request' => $request->all()]);
+
+            $rrr = $request->input('rrr') ?? $request->input('RRR');
+
+            if (! $rrr) {
+                return redirect('/admin/credit-token')->with('error', 'No RRR supplied in Remita response');
+            }
+
+            $trx = Transaction::where('payment_ref', $rrr)->first();
+
+            if (! $trx) {
+                return redirect('/admin/credit-token')->with('error', 'Transaction not found for RRR ' . $rrr);
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id={$trx->trx_id}&type=credit_token");
+            }
+
+            return redirect('/admin/credit-token')->with(
+                'message',
+                'Your Remita payment is being confirmed. This page will reflect the result once verification completes.'
+            );
+        } catch (Exception $e) {
+            Logger::error('remita_payment_result error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return redirect('/admin/credit-token')->with('error', 'An Error Occurred: ' . $e->getMessage());
+        }
+    }
+
+
+    // ==================== REMITA VERIFY HANDLERS ====================
+
+    public function remita_verify_web(request $request)
+    {
+        try {
+            Logger::info('remita_verify_web called', ['request' => $request->all()]);
+
+            $trx_id = $request->trx_id;
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+
+            if (!$trx) {
+                return redirect('/admin/credit-token')->with('error', 'Transaction not found');
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id=$trx_id&type=credit_token");
+            }
+
+            $rrr = $trx->payment_ref;
+            $remitaService = new RemitaPaymentService();
+            $verify = $remitaService->verifyTransaction($rrr);
+
+            if (!$verify['status'] || !$verify['is_successful']) {
+                return redirect('/admin/credit-token')->with('error', $verify['message'] ?? 'Payment verification failed');
+            }
+
+            $cdt = CreditToken::where('trx_id', $trx_id)->first();
+            if (!$cdt) {
+                return redirect('/admin/credit-token')->with('error', 'Credit token record not found');
+            }
+
+            $meter = Meter::where('meterNo', $cdt->meterNo)->first();
+            if (!$meter) {
+                return redirect('/admin/credit-token')->with('error', 'Meter not found');
+            }
+
+            $tariff_index = $cdt->tariff_id;
+
+            $databody = [
+                'meterType' => $meter->KRN1,
+                'meterNo' => $meter->meterNo,
+                'sgc' => (int)$meter->NewSGC,
+                'ti' => $tariff_index,
+                'amount' => (float)$cdt->unitkwh,
+            ];
+
+            Logger::info('Remita credit token data body', ['request body' => $databody]);
+
+            $response = Http::withOptions([
+                'verify' => false,
+                'timeout' => 10,
+            ])->post('http://169.239.189.91:19071/tokenGen', $databody);
+
+            if ($response->successful()) {
+                $respData = json_decode($response->json(), true);
+
+                if (($respData['code'] ?? null) === "SUCCESS") {
+                    $token = $respData['tokens'][0];
+                    CreditToken::where('trx_id', $trx_id)->update(['token' => $token, 'status' => 2]);
+                    Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+
+                    $user = User::where('id', $cdt->user_id)->first();
+                    if ($user) {
+                        send_email_token($user->email, $token, $cdt->amount);
+                    }
+
+                    return redirect("admin/recepit?trx_id=$trx_id&type=credit_token");
+                }
+            }
+
+            Transaction::where('trx_id', $trx_id)->update(['status' => 3, 'note' => json_encode($response->json() ?? $response->body()) . "|" . json_encode($databody)]);
+            User::where('id', $cdt->user_id)->increment('main_wallet', $trx->amount);
+            return redirect('/admin/credit-token')->with('error', 'Token generation failed');
+
+        } catch (Exception $e) {
+            Logger::error('Remita verify web error', ['exception' => $e]);
+            return redirect('/admin/credit-token')->with('error', $e->getMessage());
+        }
+    }
+
+
+    public function remita_verify_web_tamper(request $request)
+    {
+        try {
+            Logger::info('remita_verify_web_tamper called', ['request' => $request->all()]);
+
+            $trx_id = $request->trx_id;
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+
+            if (!$trx) {
+                return redirect('/admin/tamper-token')->with('error', 'Transaction not found');
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id=$trx_id&type=tamper");
+            }
+
+            $rrr = $trx->payment_ref;
+            $remitaService = new RemitaPaymentService();
+            $verify = $remitaService->verifyTransaction($rrr);
+
+            if (!$verify['status'] || !$verify['is_successful']) {
+                return redirect('/admin/tamper-token')->with('error', $verify['message'] ?? 'Payment verification failed');
+            }
+
+            $tamperTrx = TamperToken::where('trx_id', $trx_id)->first();
+            if (!$tamperTrx) {
+                return redirect('/admin/tamper-token')->with('error', 'Tamper token record not found');
+            }
+
+            $meter = Meter::where('meterNo', $tamperTrx->meterNo)->first();
+            if (!$meter) {
+                return redirect('/admin/tamper-token')->with('error', 'Meter not found');
+            }
+
+            $tariff_index = $tamperTrx->tariff_id;
+
+            $databody = [
+                'meterType' => $meter->KRN2,
+                'meterNo' => $meter->meterNo,
+                'sgc' => (int)$meter->NewSGC,
+                'ti' => $tariff_index,
+                'sbc' => 5,
+                'amount' => 10,
+            ];
+
+            Logger::info('Remita tamper token data body', ['request body' => $databody]);
+
+            $response = Http::withOptions([
+                'verify' => false,
+                'timeout' => 10,
+            ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
+
+            if ($response->successful()) {
+                $respData = json_decode($response->json(), true);
+
+                if (($respData['code'] ?? null) === "SUCCESS") {
+                    $token = $respData['tokens'][0];
+                    TamperToken::where('trx_id', $trx_id)->update(['token' => $token, 'status' => 2]);
+                    Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+
+                    $user = User::where('id', $tamperTrx->user_id)->first();
+                    if ($user) {
+                        send_email_token($user->email, $token, $tamperTrx->amount);
+                    }
+
+                    return redirect("admin/recepit?trx_id=$trx_id&type=tamper");
+                }
+            }
+
+            Transaction::where('trx_id', $trx_id)->update(['status' => 3, 'note' => json_encode($response->json() ?? $response->body()) . "|" . json_encode($databody)]);
+            User::where('id', $tamperTrx->user_id)->increment('main_wallet', $trx->amount);
+            return redirect('/admin/tamper-token')->with('error', 'Token generation failed');
+
+        } catch (Exception $e) {
+            Logger::error('Remita verify tamper error', ['exception' => $e]);
+            return redirect('/admin/tamper-token')->with('error', $e->getMessage());
+        }
+    }
+
+
+    public function remita_verify_kct(request $request)
+    {
+        try {
+            Logger::info('remita_verify_kct called', ['request' => $request->all()]);
+
+            $trx_id = $request->trx_id;
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+
+            if (!$trx) {
+                return redirect('admin/kct-token')->with('error', 'Transaction not found');
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id=$trx_id&type=kct_token");
+            }
+
+            $rrr = $trx->payment_ref;
+            $remitaService = new RemitaPaymentService();
+            $verify = $remitaService->verifyTransaction($rrr);
+
+            if (!$verify['status'] || !$verify['is_successful']) {
+                return redirect('admin/kct-token')->with('error', $verify['message'] ?? 'Payment verification failed');
+            }
+
+            $kctTrx = KctToken::where('trx_id', $trx_id)->first();
+            if (!$kctTrx) {
+                return redirect('admin/kct-token')->with('error', 'KCT token record not found');
+            }
+
+            $meter = Meter::where('meterNo', $kctTrx->meterNo)->first();
+            if (!$meter) {
+                return redirect('admin/kct-token')->with('error', 'Meter not found');
+            }
+
+            $isDualTariff = ($meter->isDualTariff === 'on' || $meter->isDualTariff === true || $meter->isDualTariff === 1);
+            $isGenTariff = $isDualTariff && ($kctTrx->tariff_id === $meter->NewTariffDualID || $kctTrx->tariff_id == $meter->OldTariffDualID);
+
+            try {
+                if ($isGenTariff) {
+                    $ti = $this->getTariffIndexWithValidation($meter->OldTariffDualID);
+                    $toti = $this->getTariffIndexWithValidation($meter->NewTariffDualID);
+                    $sgc = (int)$meter->OldSGCDual;
+                    $tosgc = (int)$meter->NewSGCDual;
+                } else {
+                    $ti = $this->getTariffIndexWithValidation($meter->OldTariffID);
+                    $toti = $this->getTariffIndexWithValidation($meter->NewTariffID);
+                    $sgc = (int)$meter->OldSGC;
+                    $tosgc = (int)$meter->NewSGC;
+                }
+            } catch (\Exception $e) {
+                KctToken::where('trx_id', $trx_id)->update(['status' => 3]);
+                Transaction::where('trx_id', $trx_id)->update(['status' => 3]);
+                return redirect('admin/kct-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+            }
+
+            $kctdatabody = [
+                'meterType' => $meter->KRN1,
+                'tometerType' => $meter->KRN2,
+                'meterNo' => $kctTrx->meterNo,
+                'sgc' => $sgc,
+                'tosgc' => $tosgc,
+                'ti' => $ti,
+                'toti' => $toti,
+                'allow' => false,
+                'allowkrn' => true,
+            ];
+
+            Logger::info('Remita KCT token data body', ['request body' => $kctdatabody]);
+
+            $response = Http::withOptions([
+                'verify' => false,
+                'timeout' => 10,
+            ])->post('http://169.239.189.91:19071/kcttokenGen', $kctdatabody);
+
+            if ($response->successful()) {
+                $respData = json_decode($response->json(), true);
+
+                if (($respData['code'] ?? null) === "SUCCESS") {
+                    KctToken::where('trx_id', $trx_id)->update([
+                        'kct_token1' => $respData['tokens'][0],
+                        'kct_token2' => $respData['tokens'][1],
+                        'status' => 2,
+                    ]);
+                    Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+
+                    return redirect("admin/recepit?trx_id=$trx_id&type=kct_token");
+                }
+            }
+
+            Transaction::where('trx_id', $trx_id)->update(['status' => 3, 'note' => json_encode($response->json() ?? $response->body()) . "|" . json_encode($kctdatabody)]);
+            return redirect('admin/kct-token')->with('error', 'KCT token generation failed');
+
+        } catch (Exception $e) {
+            Logger::error('Remita verify KCT error', ['exception' => $e]);
+            return redirect('admin/kct-token')->with('error', $e->getMessage());
+        }
+    }
+
+
+    public function remita_clear_credit(request $request)
+    {
+        try {
+            Logger::info('remita_clear_credit called', ['request' => $request->all()]);
+
+            $trx_id = $request->trx_id;
+            $trx = Transaction::where('trx_id', $trx_id)->first();
+
+            if (!$trx) {
+                return redirect('admin/clear-credit-token')->with('error', 'Transaction not found');
+            }
+
+            if ($trx->status === 2) {
+                return redirect("admin/recepit?trx_id=$trx_id&type=clear_credit");
+            }
+
+            $rrr = $trx->payment_ref;
+            $remitaService = new RemitaPaymentService();
+            $verify = $remitaService->verifyTransaction($rrr);
+
+            if (!$verify['status'] || !$verify['is_successful']) {
+                return redirect('admin/clear-credit-token')->with('error', $verify['message'] ?? 'Payment verification failed');
+            }
+
+            $ccTrx = ClearcreditToken::where('trx_id', $trx_id)->first();
+            if (!$ccTrx) {
+                return redirect('admin/clear-credit-token')->with('error', 'Clear credit token record not found');
+            }
+
+            $meter = Meter::where('meterNo', $ccTrx->meterNo)->first();
+            if (!$meter) {
+                return redirect('admin/clear-credit-token')->with('error', 'Meter not found');
+            }
+
+            try {
+                $tariff_index = $this->getTariffIndexWithValidation($ccTrx->tariff_id);
+            } catch (\Exception $e) {
+                ClearcreditToken::where('trx_id', $trx_id)->update(['status' => 3]);
+                Transaction::where('trx_id', $trx_id)->update(['status' => 3]);
+                return redirect('admin/clear-credit-token')->with('error', 'Tariff Index Error: ' . $e->getMessage());
+            }
+
+            $databody = [
+                'meterType' => $meter->KRN2,
+                'meterNo' => $meter->meterNo,
+                'sgc' => (int)$meter->NewSGC,
+                'ti' => $tariff_index,
+                'sbc' => 1,
+                'amount' => 10,
+            ];
+
+            Logger::info('Remita clear credit token data body', ['request body' => $databody]);
+
+            $response = Http::withOptions([
+                'verify' => false,
+                'timeout' => 10,
+            ])->post('http://169.239.189.91:19071/msetokenGen', $databody);
+
+            if ($response->successful()) {
+                $respData = json_decode($response->json(), true);
+
+                if (($respData['code'] ?? null) === "SUCCESS") {
+                    $token = $respData['tokens'][0];
+                    ClearcreditToken::where('trx_id', $trx_id)->update(['token' => $token, 'status' => 2]);
+                    Transaction::where('trx_id', $trx_id)->update(['status' => 2]);
+
+                    $user = User::where('id', $ccTrx->user_id)->first();
+                    if ($user) {
+                        send_email_token($user->email, $token, $ccTrx->amount);
+                    }
+
+                    return redirect("admin/recepit?trx_id=$trx_id&type=clear_credit");
+                }
+            }
+
+            Transaction::where('trx_id', $trx_id)->update(['status' => 3, 'note' => json_encode($response->json() ?? $response->body()) . "|" . json_encode($databody)]);
+            User::where('id', $ccTrx->user_id)->increment('main_wallet', $trx->amount);
+            return redirect('admin/clear-credit-token')->with('error', 'Token generation failed');
+
+        } catch (Exception $e) {
+            Logger::error('Remita clear credit error', ['exception' => $e]);
+            return redirect('admin/clear-credit-token')->with('error', $e->getMessage());
+        }
+    }
+
 
     public function flutter_verify_web(request $request)
     {
@@ -5862,6 +6511,409 @@ class TokenController extends Controller
     private function generateBypassReference(): string
     {
         return Str::lower(Str::random(10));
+    }
+
+    public function postpaid_token_index()
+    {
+        if (Auth::user()->role == 0) {
+            $data['estate'] = Estate::all();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')->latest()->paginate(20);
+
+            return view('admin.token.postpaid-token-view', $data);
+
+        } elseif (Auth::user()->role == 3) {
+            $estate = Estate::where('id', Auth::user()->estate_id)->first();
+
+            if (!LedgerService::estateCanVendPostpaid($estate)) {
+                return redirect()->route('postpaid.accumulation-due', $estate->id);
+            }
+
+            $data['estate_id'] = Auth::user()->estate_id;
+            $data['title'] = $estate->title;
+            $data['preview'] = null;
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')
+                ->where('estate_id', Auth::user()->estate_id)
+                ->latest()
+                ->paginate(20);
+
+            return view('admin.token.postpaid-token-view', $data);
+        }
+    }
+
+    public function search_postpaid_token(Request $request)
+    {
+        $search = $request->search;
+
+        if (Auth::user()->role == 0) {
+            $data['estate'] = Estate::all();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+
+            $query = TokenLedger::with('user', 'estate');
+        } elseif (Auth::user()->role == 3) {
+            $data['estate_id'] = Auth::user()->estate_id;
+            $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['preview'] = null;
+
+            $query = TokenLedger::with('user', 'estate')->where('estate_id', Auth::user()->estate_id);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('trx_id', 'like', '%' . $search . '%')
+                    ->orWhere('meterNo', 'like', '%' . $search . '%')
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('first_name', 'like', '%' . $search . '%')
+                            ->orWhere('last_name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $data['token_ledgers'] = $query->latest()->paginate(20)->withQueryString();
+
+        return view('admin.token.postpaid-token-view', $data);
+    }
+
+    public function postpaid_validate_meter(Request $request)
+    {
+        Logger::info('postpaid_validate_meter called', [
+            'user_id' => Auth::id(),
+            'request' => $request->all(),
+        ]);
+
+        $momas_min_vend = config('constants.momas_minimum_vend');
+
+        if (Auth::user()->role == 0) {
+            $estate_id = Estate::where('id', $request->estate_id)->first()->id;
+            $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;
+            $user = User::where('meterNo', $request->meterNo)->first() ?? null;
+            $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
+            $ck_user_id = Meter::where('MeterNo', $request->meterNo)->first()->user_id ?? null;
+
+            if ($user == null && $ck_meter == null) {
+                return back()->with('error', 'Meter has not properly configured to user');
+            }
+
+            if ($ck_meter != null && $ck_user_id == null) {
+                Meter::where('MeterNo', $request->meterNo)->update(['user_id' => $user->id]);
+            }
+
+            backfill_utility_payments($user->id, $estate_id);
+
+            if ($request->amount < $momas_min_vend) {
+                return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
+            }
+
+            $estate = Estate::where('id', $estate_id)->first();
+            if (!LedgerService::estateCanVendPostpaid($estate)) {
+                return redirect()->route('postpaid.accumulation-due', $estate->id);
+            }
+
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+
+            $data['vatAmount'] = $calculatedValues['vatAmount'];
+            $data['costOfUnit'] = $calculatedValues['vendingAmount'];
+            $data['tariffPerKWatt'] = $calculatedValues['unit'];
+            $data['user'] = $user;
+            $data['meter'] = $meter;
+            $data['estate'] = $estate;
+            $data['preview'] = "on";
+            $data['amount'] = $request->amount;
+            $data['vat'] = $calculatedValues['vat'];
+            $data['estate_id'] = $estate_id;
+            $data['estate_name'] = $request->estate_id;
+            $data['tarrif_amount'] = $calculatedValues['tariffAmount'];
+            $data['utility_owed'] = $calculatedValues['utilityOwed'];
+            $data['arrears_owed'] = $calculatedValues['arrearsOwed'];
+            $data['serviceFee'] = $calculatedValues['serviceFee'];
+            $data['estateFee'] = $calculatedValues['estateFee'];
+            $data['fixedCharge'] = $calculatedValues['fixedCharge'];
+
+            $tariff = Tariff::find($request->tariff_id);
+            $data['tarrif_index'] = $tariff ? $tariff->tariff_index : null;
+            $data['tariff_id'] = $request->tariff_id;
+
+            if ($data['tarrif_index'] === null) {
+                return back()->with('error', 'Tariff Index is not set for the selected tariff. Please contact admin to set it.');
+            }
+
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')->latest()->paginate(20);
+
+            return view('admin.token.postpaid-token-preview', $data);
+
+        } elseif (Auth::user()->role == 3) {
+            $estate_id = Estate::where('id', Auth::user()->estate_id)->first()->id;
+            $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;
+            $user = User::where('meterNo', $request->meterNo)->first() ?? null;
+            $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
+            $ck_user_id = Meter::where('MeterNo', $request->meterNo)->first()->user_id ?? null;
+
+            if ($user == null && $ck_meter == null) {
+                return back()->with('error', 'Meter has not properly configured to user');
+            }
+
+            if ($ck_meter != null && $ck_user_id == null) {
+                Meter::where('MeterNo', $request->meterNo)->update(['user_id' => $user->id]);
+            }
+
+            if ($meter == null) {
+                return back()->with('error', 'Meter not found on our system');
+            }
+            if ($meter->estate_id != $estate_id) {
+                return back()->with('error', 'Meter does not belong to estate selected');
+            }
+
+            if ($request->amount < $momas_min_vend) {
+                return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
+            }
+
+            if ($user == null) {
+                return back()->with('error', 'Meter has not been attached to any customer');
+            }
+
+            backfill_utility_payments($user->id, $estate_id);
+
+            $estate = Estate::where('id', $estate_id)->first();
+            if (!LedgerService::estateCanVendPostpaid($estate)) {
+                return redirect()->route('postpaid.accumulation-due', $estate->id);
+            }
+
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+
+            $data['vatAmount'] = $calculatedValues['vatAmount'];
+            $data['costOfUnit'] = $calculatedValues['vendingAmount'];
+            $data['tariffPerKWatt'] = $calculatedValues['unit'];
+            $data['user'] = $user;
+            $data['meter'] = $meter;
+            $data['estate'] = $estate;
+            $data['preview'] = "on";
+            $data['amount'] = $request->amount;
+            $data['vat'] = $calculatedValues['vat'];
+            $data['estate_id'] = $estate_id;
+            $data['estate_name'] = $estate_id;
+            $data['tarrif_amount'] = $calculatedValues['tariffAmount'];
+            $data['utility_owed'] = $calculatedValues['utilityOwed'];
+            $data['arrears_owed'] = $calculatedValues['arrearsOwed'];
+            $data['serviceFee'] = $calculatedValues['serviceFee'];
+            $data['estateFee'] = $calculatedValues['estateFee'];
+            $data['fixedCharge'] = $calculatedValues['fixedCharge'];
+
+            $tariff = Tariff::find($request->tariff_id);
+            $data['tarrif_index'] = $tariff ? $tariff->tariff_index : null;
+            $data['tariff_id'] = $request->tariff_id;
+
+            if ($data['tarrif_index'] === null) {
+                return back()->with('error', 'Tariff Index is not set for the selected tariff. Please contact admin to set it.');
+            }
+
+            $data['token_ledgers'] = TokenLedger::with('user', 'estate')
+                ->where('estate_id', Auth::user()->estate_id)
+                ->latest()
+                ->paginate(20);
+
+            return view('admin.token.postpaid-token-preview', $data);
+        }
+    }
+
+    public function postpaid_generate_token(Request $request)
+    {
+        Logger::info('postpaid_generate_token called', [
+            'user_id' => Auth::id(),
+            'request' => $request->all(),
+        ]);
+
+        try {
+            $meter = Meter::where('meterNo', $request->meterNo)->firstOrFail();
+            $email = $request->email ?? null;
+            $result = $meter->getNewPostpaidToken(
+                (int) $request->tariff_id,
+                (float) $request->amount,
+                null,
+                $email
+            );
+            $type = 'credit_token';
+            $trx_id = $result['trx_id'] ?? null;
+
+            // return redirect('/admin/postpaid-token')->with('message', 'Token generated successfully. Token: ' . $result['token']);
+            return redirect("admin/recepit?trx_id=$trx_id&type=$type");
+
+        } catch (\Exception $e) {
+            Logger::error('postpaid_generate_token failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            if (str_contains($e->getMessage(), 'accumulation period')) {
+                $estateId = $meter->estate_id ?? Auth::user()->estate_id;
+                return redirect()->route('postpaid.accumulation-due', $estateId);
+            }
+
+            return redirect('/admin/postpaid-token')->with('error', $e->getMessage());
+        }
+    }
+
+    public function accumulation_due($estateId)
+    {
+        $estate = Estate::findOrFail($estateId);
+
+        $totalDue = LedgerService::computeEstateFee($estate);
+        $unpaidCount = TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->count();
+        $oldestUnpaid = TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->oldest('created_at')
+            ->first();
+        $accumulationPeriod = $estate->fee_accumulation_period ?? 1;
+        $paymentHistory = LedgerService::getAccumulationPaymentHistory($estate);
+
+        $data = [
+            'estate' => $estate,
+            'totalDue' => $totalDue,
+            'unpaidCount' => $unpaidCount,
+            'oldestUnpaid' => $oldestUnpaid,
+            'accumulationPeriod' => $accumulationPeriod,
+            'paymentHistory' => $paymentHistory,
+        ];
+
+        return view('admin.token.postpaid-accumulation-due', $data);
+    }
+
+    public function init_accumulation_payment(Request $request)
+    {
+        try {
+            $estate = Estate::findOrFail($request->estate_id);
+            $totalDue = LedgerService::computeEstateFee($estate);
+
+            if ($totalDue <= 0) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No outstanding accumulation fees for this estate.',
+                ]);
+            }
+
+            $trxRef = generate_unique_string('MOMAS');
+
+            $paystackService = new PaystackPaymentService();
+            $email = Auth::user()->email;
+
+            $result = $paystackService->makePayment([
+                'amount' => (int) ($totalDue * 100),
+                'email' => $email,
+                'callback_url' => url('') . '/admin/postpaid-accumulation-callback',
+                'metadata' => [
+                    'ref' => $trxRef,
+                    'estate_id' => $estate->id,
+                    'purpose' => 'postpaid_accumulation_payment',
+                    'custom_fields' => [
+                        [
+                            'display_name' => 'Payment Reference',
+                            'variable_name' => 'payment_ref',
+                            'value' => $trxRef,
+                        ],
+                        [
+                            'display_name' => 'Estate ID',
+                            'variable_name' => 'estate_id',
+                            'value' => (string) $estate->id,
+                        ],
+                    ],
+                ],
+            ], true);
+
+            $trxRef = $result['reference'] ?? null;
+
+            $accumulationPayment = PostpaidAccumulationPayment::create([
+                'estate_id' => $estate->id,
+                'user_id' => Auth::id(),
+                'amount' => $totalDue,
+                'trx_ref' => $trxRef,
+                'status' => 0,
+            ]);
+
+            if (!$result['status']) {
+                $accumulationPayment->update(['status' => 2]);
+                return response()->json([
+                    'status' => false,
+                    'message' => $result['message'] ?? 'Payment initialization failed',
+                ]);
+            }
+
+            $accumulationPayment->update([
+                'paystack_reference' => $result['reference'],
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'authorization_url' => $result['data']['authorization_url'] ?? null,
+                'reference' => $result['reference'],
+            ]);
+        } catch (\Exception $e) {
+            Logger::error('init_accumulation_payment failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occurred: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function accumulation_callback(Request $request)
+    {
+        try {
+            $trxRef = $request->trx_ref ?? $request->reference;
+
+            if (!$trxRef) {
+                return redirect()->route('postpaid.accumulation-due', Auth::user()->estate_id)
+                    ->with('error', 'Invalid payment callback.');
+            }
+
+            $accumulationPayment = PostpaidAccumulationPayment::where('trx_ref', $trxRef)->first();
+
+            if (!$accumulationPayment) {
+                return redirect()->route('postpaid.accumulation-due', Auth::user()->estate_id)
+                    ->with('error', 'Payment record not found.');
+            }
+
+            if ($accumulationPayment->status == 1) {
+                return redirect()->route('postpaid.accumulation-due', $accumulationPayment->estate_id)
+                    ->with('message', 'Payment was already processed successfully.');
+            }
+
+            $paystackService = new PaystackPaymentService();
+            $verification = $paystackService->verifyTransaction($trxRef);
+
+            if (!$verification['status'] || !$verification['is_successful']) {
+                $accumulationPayment->update(['status' => 2]);
+                return redirect()->route('postpaid.accumulation-due', $accumulationPayment->estate_id)
+                    ->with('error', 'Payment verification failed: ' . ($verification['message'] ?? 'Unknown error'));
+            }
+
+            $accumulationPayment->update([
+                'status' => 1,
+                'paid_at' => now(),
+            ]);
+
+            LedgerService::markEstatePostpaidLedgersAsPaid($accumulationPayment->estate_id, $trxRef);
+
+            Logger::info('Postpaid accumulation payment completed', [
+                'trx_ref' => $trxRef,
+                'estate_id' => $accumulationPayment->estate_id,
+                'amount' => $accumulationPayment->amount,
+            ]);
+
+            return redirect()->route('postpaid.accumulation-due', $accumulationPayment->estate_id)
+                ->with('message', 'Payment of ₦' . number_format($accumulationPayment->amount, 2) . ' processed successfully. All unpaid postpaid ledger fees have been cleared.');
+        } catch (\Exception $e) {
+            Logger::error('accumulation_callback failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return redirect()->route('postpaid.accumulation-due', Auth::user()->estate_id ?? 0)
+                ->with('error', 'Payment callback processing failed: ' . $e->getMessage());
+        }
     }
 
 }

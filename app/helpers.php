@@ -362,6 +362,7 @@ if (!function_exists('send_reset_email_notification')) {
 
     function send_reset_email_notification($email)
     {
+        app(\App\Support\RequestContext::class)->put('forgot_password_email', true);
         $first_name = User::where('email', $email)->first()->first_name;
         $data = array(
             'fromsender' => env('MAIL_FROM_ADDRESS'), 'MOMASPAY',
@@ -412,6 +413,7 @@ if (!function_exists('send_email_reset')) {
 
     function send_email_reset($email, $sms_code)
     {
+        app(\App\Support\RequestContext::class)->put('forgot_password_email', true);
         $first_name = User::where('email', $email)->first()->first_name;
         $data = array(
             'fromsender' => env('MAIL_FROM_ADDRESS'), 'MOMASPAY',

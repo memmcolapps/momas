@@ -216,6 +216,21 @@
                         </li>
 
                         <li>
+                            <a href="charts-mixed.html#sidebarPostpaid" data-bs-toggle="collapse">
+                                <i data-feather="zap"></i>
+                                <span> Postpaid Token </span>
+                                <span class="menu-arrow"></span>
+                            </a>
+                            <div class="collapse" id="sidebarPostpaid">
+                                <ul class="nav-second-level">
+                                    <li>
+                                        <a class='tp-link' href='postpaid-token'>Vend Token</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li>
                             <a class='tp-link' href="pos-index">
                                 <i data-feather="credit-card"></i>
                                 <span> POS Merchant </span>
@@ -370,6 +385,21 @@
                                 </div>
                             @endif
                         </li>
+
+                        @if($ptype == 2 || $ptype == 3)
+                            <li>
+                                <a href="charts-mixed.html#sidebarPostpaid" data-bs-toggle="collapse">
+                                    <i data-feather="zap"></i>
+                                    <span> Postpaid Token </span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <div class="collapse" id="sidebarPostpaid">
+                                    <ul class="nav-second-level">
+                                        <li><a class='tp-link' href='postpaid-token'>Vend Token</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                        @endif
 
                         {{-- Access Token: only shown when status is available (1) --}}
                         @if(($mod_features['access_token'] ?? 0) == 1)

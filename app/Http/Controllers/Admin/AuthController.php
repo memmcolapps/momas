@@ -245,6 +245,8 @@ class AuthController extends Controller
             'user' => $first_name,
         );
 
+        app(\App\Support\RequestContext::class)->put('forgot_password_email', true);
+
         try{
 
         Mail::send('emails.forgotpassword', ["data1" => $data], function ($message) use ($data) {
