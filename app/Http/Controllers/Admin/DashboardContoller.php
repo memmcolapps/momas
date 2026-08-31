@@ -174,10 +174,37 @@ class DashboardContoller extends Controller
             $data['users'] = User::where('status', 2)->count();
             $data['meter'] = Meter::count();
             $data['total_in'] = Transaction::where('status', 2)->sum('amount');
-            $data['estate'] = Estate::where('status', 1)->count();
+            $data['estate'] = Estate::where('status', 2)->count();
             $data['token'] = Token::count();
             $data['meter_token'] = MeterToken::where('status', 2)->count();
-            $data['transaction'] = Transaction::paginate('20');
+
+            $from = request('from');
+            $to = request('to');
+            $status = request('status');
+            $type = request('transaction_type');
+
+            $baseQuery = Transaction::query()
+                ->when($from && $to, fn($q) => $q->whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+                ->when($status !== null && $status !== '', fn($q) => $q->where('status', $status))
+                ->when($type, fn($q) => $q->where('service_type', $type));
+
+            $estateCounts = (clone $baseQuery)
+                ->select('estate_id', \DB::raw('count(*) as total'))
+                ->whereNotNull('estate_id')
+                ->groupBy('estate_id')
+                ->orderByDesc('total')
+                ->get();
+
+            $data['chart_labels'] = $estateCounts
+                ->map(fn($row) => optional($row->estate)->title ?? "Estate #" . $row->estate_id)
+                ->values()
+                ->toArray();
+            $data['chart_values'] = $estateCounts->pluck('total')->toArray();
+            $data['service_types'] = Transaction::whereNotNull('service_type')
+                ->distinct()
+                ->orderBy('service_type')
+                ->pluck('service_type');
+            $data['transaction'] = (clone $baseQuery)->latest()->paginate(20)->withQueryString();
 
             $data['title'] = "Admin Dashboard";
 
