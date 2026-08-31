@@ -1375,6 +1375,14 @@
                                     <input type="hidden" name="estate_id" value="{{$user->estate_id}}">
 
                                     <div class="col-xl-3 col-sm-12 my-1">
+                                        <label class="my-1">Type</label>
+                                        <select name="type" id="utility-type" class="form-control" onchange="toggleCustomerUtilityType(this)" required>
+                                            <option value="service_charge">Service Charge</option>
+                                            <option value="debt">Debt</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1">
                                         <label class="my-1">Title</label>
                                         <input type="text" name="title" class="form-control" required>
                                     </div>
@@ -1384,36 +1392,32 @@
                                         <input type="number" step="0.01" name="amount" class="form-control" required>
                                     </div>
 
-                                    <input type="hidden" name="type" value="debt">
-
-                                    <div class="col-xl-3 col-sm-12 my-1">
-                                        <label class="my-1">Start Date</label>
-                                        <input type="date" name="start_date" class="form-control" required>
+                                    <div class="col-xl-3 col-sm-12 my-1 sc-field">
+                                        <label class="my-1">Duration</label>
+                                        <select name="duration" class="form-control">
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly" selected>Monthly</option>
+                                            <option value="yearly">Yearly</option>
+                                        </select>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1">
+                                    <div class="col-xl-3 col-sm-12 my-1 debt-field" style="display: none;">
+                                        <label class="my-1">Start Date</label>
+                                        <input type="date" name="start_date" class="form-control">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12 my-1 debt-field" style="display: none;">
                                         <label class="my-1">Mode of Payment</label>
-                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)" required>
+                                        <select name="mode_of_payment" class="form-control mode-of-payment" onchange="togglePaymentFields(this)">
                                             <option value="">Select</option>
-                                            <!-- <option value="percentage_payment">Percentage Payment</option> -->
                                             <option value="monthly_payment">Monthly Payment</option>
                                             <option value="one_off">One-Off</option>
                                         </select>
                                     </div>
 
-                                    <div class="col-xl-3 col-sm-12 my-1 percent-field" style="display: none;">
-                                        <label class="my-1">% Payment</label>
-                                        <select name="percent_payment" class="form-control" required>
-                                            <option value="">Select</option>
-                                            @for($pct = 5; $pct <= 70; $pct += 5)
-                                                <option value="{{ $pct }}">{{ $pct }}%</option>
-                                            @endfor
-                                        </select>
-                                    </div>
-
-                                    <div class="col-xl-3 col-sm-12 my-1 months-field" style="display: none;">
+                                    <div class="col-xl-3 col-sm-12 my-1 months-field debt-field" style="display: none;">
                                         <label class="my-1">Number of Months</label>
-                                        <input type="number" name="payment_months" min="1" max="60" class="form-control" required>
+                                        <input type="number" name="payment_months" min="1" max="60" class="form-control">
                                     </div>
 
                                     <div class="col-12 my-3">
@@ -1422,6 +1426,41 @@
                                 </form>
                             </div>
                         </div>
+                        <script>
+                            function toggleCustomerUtilityType(select) {
+                                var form = select.closest('form');
+                                if (!form) return;
+                                var scFields = form.querySelectorAll('.sc-field');
+                                var debtFields = form.querySelectorAll('.debt-field');
+
+                                if (select.value === 'service_charge') {
+                                    scFields.forEach(f => f.style.display = '');
+                                    debtFields.forEach(f => f.style.display = 'none');
+                                } else {
+                                    scFields.forEach(f => f.style.display = 'none');
+                                    debtFields.forEach(f => f.style.display = '');
+                                }
+                            }
+
+                            function togglePaymentFields(select) {
+                                var container = select.closest('.row') || select.closest('form');
+                                if (!container) return;
+                                var monthsField = container.querySelector('.months-field');
+
+                                if (monthsField) monthsField.style.display = 'none';
+
+                                if (select.value === 'monthly_payment' && monthsField) {
+                                    monthsField.style.display = 'block';
+                                }
+                            }
+
+                            document.addEventListener('DOMContentLoaded', function () {
+                                var typeSelect = document.getElementById('utility-type');
+                                if (typeSelect) toggleCustomerUtilityType(typeSelect);
+                            });
+                        </script>
+
+
 
 
 
