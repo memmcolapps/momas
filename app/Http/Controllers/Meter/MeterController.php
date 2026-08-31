@@ -285,8 +285,21 @@ class MeterController extends Controller
 
 
 
+        $estate = Estate::where('id', $request->estateId)->first();
+
         $min_pur = Estate::where('id', $request->estateId)->first()->min_pur ?? null;
         $max_pur = Estate::where('id', $request->estateId)->first()->max_pur ?? null;
+
+        if ($estate && ! $estate->minimum_vend_per_transaction) {
+            $existing_month_transaction = Transaction::where('user_id', $user->id)
+                ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+                ->exists();
+
+            if ($existing_month_transaction) {
+                $min_pur = config('constants.momas_minimum_vend');
+            }
+        }
+
         $data['min_purchase'] = (int)$min_pur;
         $user_info = User::where('meterNo', $request->meterNo)->first();
         $estate_id = $user_info->estate_id ?? null;

@@ -484,6 +484,20 @@
 
                                     </div>
 
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Minimum Vend Per Transaction</label>
+                                        <div class="form-check form-switch mt-2">
+                                            <input type="hidden" name="minimum_vend_per_transaction" value="0">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                   name="minimum_vend_per_transaction" value="1"
+                                                   id="minVendPerTrxSwitch"
+                                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                                   title="When turned off, minimum vend is calculated per month"
+                                                   {{ $org->minimum_vend_per_transaction ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="minVendPerTrxSwitch">Enabled</label>
+                                        </div>
+                                    </div>
+
                                 </div>
 
 
