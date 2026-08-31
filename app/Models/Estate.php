@@ -21,6 +21,7 @@ class Estate extends Model
         'status',
         'min_pur',
         'max_pur',
+        'minimum_vend_per_transaction',
         'created_at',
         'updated_at',
     ];
@@ -102,5 +103,22 @@ class Estate extends Model
 
     protected $casts = [
     'status' => 'integer',
+    'minimum_vend_per_transaction' => 'boolean',
     ];
+
+    public function getUserMinPur($user_id) {
+        $min_pur = $this->min_pur;
+
+        if (! $this->minimum_vend_per_transaction) {
+            $existing_month_transaction = Transaction::where('user_id', $user_id)
+                ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+                ->exists();
+
+            if ($existing_month_transaction) {
+                $min_pur = config('constants.momas_minimum_vend');
+            }
+        }
+
+        return $min_pur;
+    }
 }

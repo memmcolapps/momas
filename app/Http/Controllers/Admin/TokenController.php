@@ -857,7 +857,7 @@ class TokenController extends Controller
                 return back()->with('error', "Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered" . json_encode($params));
             }
 
-            $min_pur = $est->min_pur ?? null;
+            $min_pur = $est->getUserMinPur($user->id) ?? null;
 
             if ($costOfUnit < $min_pur) {
                 return back()->with("error", "Amount after charges can't be less than " . $min_pur);
