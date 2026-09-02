@@ -47,15 +47,16 @@
                                 Click the button below to proceed to Remita's secure payment page.
                             </p>
 
-                            <form id="remita-payment-form"
-                                  action="{{ $action }}"
-                                  method="POST">
-                                @foreach ($payload as $name => $value)
-                                    <input type="hidden" name="{{ $name }}" value="{{ $value }}">
-                                @endforeach
-                                <input type="hidden" name="response_url" value="{{ $response_url }}">
+                            <form
+                                action="https://demo.remita.net/remita/onepage/api/v1/so.spa"
+                                method="POST"
+                                target="_blank"
+                            >
+                                <input type="hidden" name="rrr" value="{{ $rrr }}">
 
-                                <button type="submit" class="btn btn-primary">Pay with Remita</button>
+                                <button type="submit">
+                                    Pay with Remita
+                                </button>
                             </form>
 
                             <a href="/admin/credit-token" class="btn btn-secondary mt-3">Cancel</a>
