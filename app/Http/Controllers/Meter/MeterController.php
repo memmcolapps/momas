@@ -42,6 +42,7 @@ class MeterController extends Controller
         // ]);
 
         $tariffs = Tariff::where('estate_id', $request->estate_id)
+                    ->where('status', 2)
                     ->select('id', 'title', 'type', 'tariff_index')
                     ->get();
 
@@ -1795,6 +1796,8 @@ class MeterController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
 
+            $data['estate'] = Estate::where('status', 2)->get(['id', 'title']);
+
             return view('admin/report/meter-transaction-report', $data);
 
         } elseif (Auth::user()->role == 1) {
@@ -1856,39 +1859,42 @@ class MeterController extends Controller
 
     public function search_meter_transactions(request $request)
     {
-        if (Auth::user()->role == 3) {
-            $meterNo = $request->meter_no;
-            $startofday = $request->from;
-            $endofday = $request->to;
-            $estate_id = Auth::user()->estate_id;
-
-            $query = CreditToken::with(['user:id,first_name,last_name,email,phone'])
-                ->where('estate_id', $estate_id)
-                ->where('status', 2);
-
-            if ($startofday && $endofday) {
-                $query->whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59']);
-            }
-
-            if ($meterNo) {
-                $query->where('meterNo', 'LIKE', '%' . $meterNo . '%');
-            }
-
-            $data['meter_transactions'] = $query->orderBy('created_at', 'desc')
-                ->take(50000)
-                ->paginate(50);
-
-            $data['total_amount'] = $query->sum('amount');
-            $data['total_vat'] = $query->sum('vatAmount');
-            $data['total_units'] = $query->sum('unitkwh');
-            $data['from_date'] = $startofday;
-            $data['to_date'] = $endofday;
-            $data['meterNo'] = $meterNo;
-
-            return view('admin/report/meter-transaction-report', $data);
+        if (!in_array(Auth::user()->role, [0, 3])) {
+            return back()->with('error', 'Unauthorized access');
         }
 
-        return back()->with('error', 'Unauthorized access');
+        $meterNo = $request->meter_no;
+        $startofday = $request->from;
+        $endofday = $request->to;
+        $estateId = $request->estate_id;
+
+        $query = CreditToken::with(['user:id,first_name,last_name,email,phone'])
+            ->where('status', 2)
+            ->when(Auth::user()->role == 3, fn($q) => $q->where('estate_id', Auth::user()->estate_id))
+            ->when(Auth::user()->role == 0 && $estateId, fn($q) => $q->where('estate_id', $estateId));
+
+        if ($startofday && $endofday) {
+            $query->whereBetween('created_at', [$startofday . ' 00:00:00', $endofday . ' 23:59:59']);
+        }
+
+        if ($meterNo) {
+            $query->where('meterNo', 'LIKE', '%' . $meterNo . '%');
+        }
+
+        $data['meter_transactions'] = $query->orderBy('created_at', 'desc')
+            ->take(50000)
+            ->paginate(50);
+
+        $data['total_amount'] = $query->sum('amount');
+        $data['total_vat'] = $query->sum('vatAmount');
+        $data['total_units'] = $query->sum('unitkwh');
+        $data['from_date'] = $startofday;
+        $data['to_date'] = $endofday;
+        $data['meterNo'] = $meterNo;
+        $data['estate_id'] = $estateId;
+        $data['estate'] = Estate::where('status', 2)->get(['id', 'title']);
+
+        return view('admin/report/meter-transaction-report', $data);
     }
 
 }

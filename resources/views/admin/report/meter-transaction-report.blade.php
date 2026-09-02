@@ -110,6 +110,50 @@
                     </div>
                 </div>
 
+                <!-- Filter Section -->
+                <div class="col-md-12 col-xl-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="element-box">
+                                    <h6 class="element-header">Filter Transactions</h6>
+                                    <form action="search-meter-transactions" method="post">
+                                        @csrf
+                                        <div class="row">
+                                            <div class="col-4">
+                                                <label>Date From</label>
+                                                <input type="date" class="form-control" name="from" value="{{ $from_date ?? null }}">
+                                            </div>
+                                            <div class="col-4">
+                                                <label>Date To</label>
+                                                <input type="date" class="form-control" name="to" value="{{ $to_date ?? null }}">
+                                            </div>
+                                            <div class="col-4">
+                                                <label>Meter Number</label>
+                                                <input type="text" class="form-control" name="meter_no" placeholder="Enter meter number" value="{{ $meterNo ?? null }}">
+                                            </div>
+                                        </div>
+                                        <div class="row my-3">
+                                            <div class="col-4">
+                                                <label>Estate</label>
+                                                <select name="estate_id" class="form-control">
+                                                    <option value="">All Estates</option>
+                                                    @foreach($estate ?? [] as $est)
+                                                        <option value="{{ $est->id }}" {{ ($estate_id ?? null) == $est->id ? 'selected' : '' }}>{{ $est->title }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-8 d-flex align-items-end">
+                                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Transactions Table -->
                 <div class="row">
                     <div class="col-xl-12">
@@ -117,8 +161,7 @@
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
                                     <h5 class="card-title text-black mb-0">All Meter Transactions</h5>
-                                    <a href="export-metertransactions" class="btn btn-success btn-sm">
-                                    <a href="export-transactions?from_date={{ $from ?? null }}&to_date={{ $to ?? null }}" class="btn btn-success btn-sm">
+                                    <a href="export-metertransactions?from_date={{ $from_date ?? null }}&to_date={{ $to_date ?? null }}&meterNo={{ $meterNo ?? null }}&estate_id={{ $estate_id ?? null }}" class="btn btn-success btn-sm">
                                         <i class="fas fa-file-excel me-1"></i> Export to Excel
                                     </a>
                                 </div>
