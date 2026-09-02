@@ -791,96 +791,42 @@ class TokenController extends Controller
                 return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
             }
 
-            $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
-            $tariffAmount = $tariffState->amount ?? 0;
-            $vat = $tariffState->vat ?? 0;
-            $fixedCharge = $tariffState->fixed_charge ?? 0;
+            try {
+                $values = $meter->calculateTokenValuesByAmount(
+                    (int) $request->tariff_id,
+                    (int) $request->amount,
+                    $request->receiver_meterNo ?? null
+                );
 
-            // NEW CALCULATION FLOW:
-            // [1] 2.5% Service Fee
-            $percn = (2.5 / 100) * (int)$request->amount;
-            $afterServiceFee = $request->amount - $percn;
+                $values['utilityAmount'] = $values['arrearsOwed'];
+            } catch (\Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
 
-            // [2] Estate Service Charge
             $est = Estate::where('id', $estate_id)->first();
-            if ($est->charge_fee_flat != null) {
-                $estateFee = $est->charge_fee_flat;
-            } else if ($est->charge_fee_precent != null) {
-                $estateFee = ($est->charge_fee_precent / 100) * (int)$request->amount;
-            } else {
-                $estateFee = 0;
-            }
-            $afterEstateFee = $afterServiceFee - $estateFee;
-
-            // [2.3] Unpaid UtilitiesPayment Arrears (old system)
-            $arrearsAmount = UtilitiesPayment::where('user_id', $user->id)
-                ->where('estate_id', $estate_id)
-                ->where('type', 'utilities')
-                ->where('status', '!=', 2)
-                ->sum('amount');
-            $afterArrears = $afterEstateFee - $arrearsAmount;
-
-            // [2.5] Utility Owed
-            $utilityService = new \App\Services\UtilityManagementService();
-            $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
-            $utilityOwed = $utilityResult['total_owed'];
-            $afterUtility = $afterArrears - $utilityOwed;
-
-            // [3] Tariff Fixed Charge
-            $afterFixedCharge = $afterUtility - $fixedCharge;
-
-            // Validate that amount after deductions is not negative or too small
-            if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10; // Adding small buffer
-                return back()->with('error',
-                    'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
-                    '), estate fee (NGN ' . number_format($estateFee, 2) .
-                    '), arrears (NGN ' . number_format($arrearsAmount, 2) .
-                    '), utility owed (NGN ' . number_format($utilityOwed, 2) .
-                    '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
-                    '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
-                    '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
-            }
-
-            // [4] VAT Calculation on remaining amount
-            $calculator = new VatCalculator();
-            $params = [
-                'amountText' => $afterFixedCharge,
-                'tariffAmount' => $tariffAmount,
-                'utilitiesAmount' => $utilityOwed,
-                'vat' => $vat,
-            ];
-
-            // dd($params);
-
-            $vatAmount = $calculator->calculateVatAmount($params);
-            $costOfUnit = $calculator->calculateCostOfUnit($params);
-            $tariffPerKWatt = $calculator->calculateTariffAmountPerKWatt($params);
-
-            if ($tariffPerKWatt < 0.1) {
-                return back()->with('error', "Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered" . json_encode($params));
-            }
-
             $min_pur = $est->getUserMinPur($user->id) ?? null;
 
-            if ($costOfUnit < $min_pur) {
+            if ($values['vendingAmount'] < $min_pur) {
                 return back()->with("error", "Amount after charges can't be less than " . $min_pur);
             }
 
-            $data['vatAmount'] = $vatAmount;
-            $data['costOfUnit'] = $costOfUnit;
-            $data['tariffPerKWatt'] = $tariffPerKWatt;
+            $data['vatAmount'] = $values['vatAmount'];
+            $data['costOfUnit'] = $values['vendingAmount'];
+            $data['tariffPerKWatt'] = $values['unit'];
             $data['user'] = $user;
             $data['meter'] = $meter;
             $data['estate'] = $est;
             $data['preview'] = "on";
             $data['amount'] = $request->amount;
-            $data['vat'] = $vat;
+            $data['vat'] = $values['vat'];
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $request->estate_id;
-            $data['tarrif_amount'] = $tariffAmount;
-            $data['utility_owed'] = $utilityOwed;
-            $data['arrears_owed'] = $arrearsAmount;
+            $data['tarrif_amount'] = $values['tariffAmount'];
+            $data['utility_owed'] = $values['utilityOwed'];
+            $data['arrears_owed'] = $values['arrearsOwed'];
+            $data['serviceFee'] = $values['serviceFee'];
+            $data['estateFee'] = $values['estateFee'];
+            $data['fixedCharge'] = $values['fixedCharge'];
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
@@ -892,9 +838,6 @@ class TokenController extends Controller
             }
 
             $data['credit_tokens'] = CreditToken::latest()->paginate('50');
-            $data['estateFee'] = $estateFee;
-            $data['fixedCharge'] = $fixedCharge;
-            $data['serviceFee'] = $percn;
 
             // Log all data before returning the view
             Logger::info('Credit token preview data', $data);
@@ -952,90 +895,42 @@ class TokenController extends Controller
             backfill_utility_payments($user->id, $estate_id);
 
 
-            $tariffState = TarrifState::where('tariff_id', $request->tariff_id)->where('status', 2)->first();
-            // dd($tariffState, $request->tariff_id);
-            $tariffAmount = $tariffState->amount ?? 0;
-            $vat = $tariffState->vat ?? 0;
-            $fixedCharge = $tariffState->fixed_charge ?? 0;
+            try {
+                $values = $meter->calculateTokenValuesByAmount(
+                    (int) $request->tariff_id,
+                    (int) $request->amount,
+                    $request->receiver_meterNo ?? null
+                );
 
-            // NEW CALCULATION FLOW:
-            // [1] 2.5% Service Fee
-            $percn = (2.5 / 100) * (int)$request->amount;
-            $afterServiceFee = $request->amount - $percn;
+                $values['utilityAmount'] = $values['arrearsOwed'];
+            } catch (\Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
 
-            // [2] Estate Service Charge
             $est = Estate::where('id', $estate_id)->first();
-            if ($est->charge_fee_flat != null) {
-                $estateFee = $est->charge_fee_flat;
-            } else if ($est->charge_fee_precent != null) {
-                $estateFee = ($est->charge_fee_precent / 100) * (int)$request->amount;
-            } else {
-                $estateFee = 0;
-            }
-            $afterEstateFee = $afterServiceFee - $estateFee;
+            $min_pur = $est->getUserMinPur($user->id) ?? null;
 
-            // [2.3] Unpaid UtilitiesPayment Arrears (old system)
-            $arrearsAmount = UtilitiesPayment::where('user_id', $user->id)
-                ->where('estate_id', $estate_id)
-                ->where('type', 'utilities')
-                ->where('status', '!=', 2)
-                ->sum('amount');
-            $afterArrears = $afterEstateFee - $arrearsAmount;
-
-            // [2.5] Utility Owed
-            $utilityService = new \App\Services\UtilityManagementService();
-            $utilityResult = $utilityService->calculateUserOwedUtility($user->id, $estate_id);
-            $utilityOwed = $utilityResult['total_owed'];
-            $afterUtility = $afterArrears - $utilityOwed;
-
-            // [3] Tariff Fixed Charge
-            $afterFixedCharge = $afterUtility - $fixedCharge;
-
-            // Validate that amount after deductions is not negative or too small
-            if ($afterFixedCharge <= 0) {
-                $minimumRequired = $percn + $estateFee + $arrearsAmount + $utilityOwed + $fixedCharge + 10; // Adding small buffer
-                return back()->with('error',
-                    'Amount too small! After deducting service fee (NGN ' . number_format($percn, 2) .
-                    '), estate fee (NGN ' . number_format($estateFee, 2) .
-                    '), arrears (NGN ' . number_format($arrearsAmount, 2) .
-                    '), utility owed (NGN ' . number_format($utilityOwed, 2) .
-                    '), and fixed charge (NGN ' . number_format($fixedCharge, 2) .
-                    '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
-                    '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
+            if ($values['vendingAmount'] < $min_pur) {
+                return back()->with("error", "Amount after charges can't be less than " . $min_pur);
             }
 
-            // [4] VAT Calculation on remaining amount
-            $calculator = new VatCalculator();
-            $params = [
-                'amountText' => $afterFixedCharge,
-                'tariffAmount' => $tariffAmount,
-                'utilitiesAmount' => $utilityOwed,
-                'vat' => $vat,
-            ];
-
-            $vatAmount = $calculator->calculateVatAmount($params);
-            $costOfUnit = $calculator->calculateCostOfUnit($params);
-            $tariffPerKWatt = $calculator->calculateTariffAmountPerKWatt($params);
-
-            if ($tariffPerKWatt < 0.1) {
-                return back()->with('error', 'Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.' . $tariffPerKWatt . '  ' . $afterFixedCharge);
-            }
-
-
-            $data['vatAmount'] = $vatAmount;
-            $data['costOfUnit'] = $costOfUnit;
-            $data['tariffPerKWatt'] = $tariffPerKWatt;
+            $data['vatAmount'] = $values['vatAmount'];
+            $data['costOfUnit'] = $values['vendingAmount'];
+            $data['tariffPerKWatt'] = $values['unit'];
             $data['user'] = $user;
             $data['meter'] = $meter;
             $data['estate'] = $est;
             $data['preview'] = "on";
             $data['amount'] = $request->amount;
-            $data['vat'] = $vat;
+            $data['vat'] = $values['vat'];
             $data['estate_id'] = $estate_id;
-            $data['estate_name'] = $estate_id; // Estate Admin uses their assigned estate ID
-            $data['tarrif_amount'] = $tariffAmount;
-            $data['utility_owed'] = $utilityOwed;
-            $data['arrears_owed'] = $arrearsAmount;
+            $data['estate_name'] = $estate_id;
+            $data['tarrif_amount'] = $values['tariffAmount'];
+            $data['utility_owed'] = $values['utilityOwed'];
+            $data['arrears_owed'] = $values['arrearsOwed'];
+            $data['serviceFee'] = $values['serviceFee'];
+            $data['estateFee'] = $values['estateFee'];
+            $data['fixedCharge'] = $values['fixedCharge'];
 
             // Get tariff_index from Tariff model
             $tariff = Tariff::find($request->tariff_id);
@@ -1047,9 +942,6 @@ class TokenController extends Controller
             }
 
             $data['credit_tokens'] = CreditToken::latest()->paginate('50');
-            $data['estateFee'] = $estateFee;
-            $data['fixedCharge'] = $fixedCharge;
-            $data['serviceFee'] = $percn;
 
             // Log all data before returning the view
             Logger::info('Credit token preview data', $data);

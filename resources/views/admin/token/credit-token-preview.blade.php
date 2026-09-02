@@ -195,6 +195,36 @@
                                                                                  <h6>{{number_format($costOfUnit, 2)}}</h6>
                                                                              </div>
 
+                                                                             @if(($serviceFee ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Transaction Fee</label>
+                                                                                 <input required name="serviceFee"
+                                                                                        value="{{$serviceFee}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($serviceFee, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             @if(($estateFee ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Estate Service Charge</label>
+                                                                                 <input required name="estateFee"
+                                                                                        value="{{$estateFee}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($estateFee, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             @if(($fixedCharge ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Fixed Charge</label>
+                                                                                 <input required name="fixedCharge"
+                                                                                        value="{{$fixedCharge}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($fixedCharge, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
                                                                              @if(($utility_owed ?? 0) > 0)
                                                                              <div class="col-xl-4 my-2 col-sm-12">
                                                                                  <label class="my-2">Utility Owed</label>
@@ -581,6 +611,36 @@
                                                                                         hidden="">
                                                                                  <h6>{{number_format($costOfUnit, 2)}}</h6>
                                                                              </div>
+
+                                                                             @if(($serviceFee ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Transaction Fee</label>
+                                                                                 <input required name="serviceFee"
+                                                                                        value="{{$serviceFee}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($serviceFee, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             @if(($estateFee ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Estate Service Charge</label>
+                                                                                 <input required name="estateFee"
+                                                                                        value="{{$estateFee}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($estateFee, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
+
+                                                                             @if(($fixedCharge ?? 0) > 0)
+                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                 <label class="my-2">Fixed Charge</label>
+                                                                                 <input required name="fixedCharge"
+                                                                                        value="{{$fixedCharge}}"
+                                                                                        hidden="">
+                                                                                 <h6 class="text-danger">- {{number_format($fixedCharge, 2)}}</h6>
+                                                                             </div>
+                                                                             @endif
 
                                                                              @if(($utility_owed ?? 0) > 0)
                                                                              <div class="col-xl-4 my-2 col-sm-12">
