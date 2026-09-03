@@ -919,7 +919,7 @@ class MeterController extends Controller
 
             if ($trx->status === 0) {
                 $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
-                $verifier->verifyTransaction($trx->trx_id);
+                $verifier = $verifier->verifyTransaction($trx->trx_id);
 
                 if (! $verifier['is_successful']) {
                     $trx->status = 1;
