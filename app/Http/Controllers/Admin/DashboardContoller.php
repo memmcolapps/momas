@@ -460,8 +460,10 @@ class DashboardContoller extends Controller
             return redirect('admin/customers')->with('message', "Customer created successfully");
         } else {
 
+            $clashing_attribute = $existing_user->email == $request->email ? 'email' : 'phone';
+            $message = "A Customer with {$clashing_attribute} {$request->get($clashing_attribute, '')} already exists";
 
-            return redirect('admin/customers')->with('error', "Customer already  exist");
+            return redirect('admin/customers')->with('error', $message);
         }
     }
 
@@ -477,7 +479,7 @@ class DashboardContoller extends Controller
 
 
         $usr_email = User::where('email', $request->email)->first()->email ?? null;
-        $usr_phone = User::where('email', $request->email)->first()->phone ?? null;
+        $usr_phone = User::where('phone', $request->phone)->first()->phone ?? null;
 
         if ($usr_email == null && $usr_phone == null) {
 
@@ -514,8 +516,11 @@ class DashboardContoller extends Controller
             return redirect('admin/users-list')->with('message', "User created successfully");
         } else {
 
+        $message = $usr_email ?
+            "A User with email {$request->email} already exists":
+            "A User with phone {$request->phone} already exists";
 
-            return redirect('admin/users-list')->with('error', "User already  exist");
+            return redirect('admin/users-list')->with('error', $message);
         }
     }
 
