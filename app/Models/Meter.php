@@ -139,6 +139,9 @@ class Meter extends Model
             $transactionCharge = (2.5/100) * $amount;
         }
 
+        $momas_max = config('constants.momas_max_transaction_fee');
+        $transactionCharge = $transactionCharge > $momas_max ? $momas_max : $transactionCharge;
+
         $afterServiceFee = $amount - $transactionCharge;
 
         // [2] Estate Service Charge
@@ -250,6 +253,9 @@ class Meter extends Model
         } else if (((1.5 / 100) * $amount) < 2000 &&  ((1 / 100) * $amount) < 2000) {
             $transactionCharge = (2.5/100) * $amount;
         }
+
+        $momas_max = config('constants.momas_max_transaction_fee');
+        $transactionCharge = $transactionCharge > $momas_max ? $momas_max : $transactionCharge;
 
         $afterServiceFee = $amount - $transactionCharge;
 

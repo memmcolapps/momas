@@ -954,7 +954,7 @@ class DashboardContoller extends Controller
 
             backfill_utility_payments($data['user']->id, $data['user']->estate_id);
 
-            $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
+            $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10)->withQueryString();
 
             $recQuery = UtilityPaymentRecord::where('user_id', $request->id)->with('utility');
 
@@ -974,7 +974,7 @@ class DashboardContoller extends Controller
                 $recQuery->where('status', $status);
             }
 
-            $data['utility_payment_records'] = $recQuery->latest()->paginate(10);
+            $data['utility_payment_records'] = $recQuery->latest()->paginate(10)->withQueryString();
             $utilityQuery = function ($type) use ($data) {
                 return \DB::table('utilities')
                     ->select(
