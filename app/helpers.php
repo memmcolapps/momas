@@ -728,17 +728,18 @@ if (! function_exists('backfill_utility_payments')) {
         };
 
         DB::transaction(function () use ($userId, $estateId, $adminFeeAmount, $duration, $createPayment) {
+            $userCreationDate   = User::where('id', $userId)->value('created_at');
+            $estateCreationDate = Estate::where('id', $estateId)->value('created_at');
+
             // ── Utility backfill ──────────────────────────────────────────────
             $lastUtilityDate = UtilitiesPayment::where('user_id', $userId)
                 ->where('type', 'utilities')
                 ->orderByDesc('created_at')
                 ->value('created_at');
 
-            $createdAt = User::where('id', $userId)->value('created_at');
-
             $backfillFrom = $lastUtilityDate
                 ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
-                : Carbon::parse($createdAt)->startOfMonth();
+                : Carbon::parse($estateCreationDate)->startOfMonth();
 
             $originalBackfillFrom = (clone $backfillFrom);
 
@@ -779,11 +780,9 @@ if (! function_exists('backfill_utility_payments')) {
                     ->orderByDesc('created_at')
                     ->value('created_at');
 
-                $createdAt = User::where('id', $userId)->value('created_at');
-
                 $backfillFrom = $lastAdminFeeDate
                     ? Carbon::parse($lastAdminFeeDate)->addMonth()->startOfMonth()
-                    : Carbon::parse($createdAt)->startOfMonth();
+                    : Carbon::parse($userCreationDate)->startOfMonth();
 
                 $now = Carbon::now()->startOfMonth();
 
@@ -919,5 +918,24 @@ if (! function_exists('generate_otp')) {
             '0',
             STR_PAD_LEFT
         );
+    }
+}
+
+if (! function_exists('calculate_transaction_charge')) {
+
+    function calculate_transaction_charge(float|int $amount): float
+    {
+        $transactionCharge = 0;
+
+        if (((1 / 100) * $amount) >= 2000) {
+            $transactionCharge = (1/100) * $amount;
+        } else if (((1.5 / 100) * $amount) > 2000 && ((1 / 100) * $amount) < 2000) {
+            $transactionCharge = 2000 + ((1/100) * $amount);
+        } else if (((1.5 / 100) * $amount) < 2000 && ((1 / 100) * $amount) < 2000) {
+            $transactionCharge = (2.5/100) * $amount;
+        }
+
+        $momas_max = config('constants.momas_max_transaction_fee');
+        return min($transactionCharge, $momas_max);
     }
 }

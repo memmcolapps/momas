@@ -73,7 +73,7 @@ class PaystackPaymentService implements PaymentServiceInterface
      * @return array Payment initialization response
      * @throws InvalidArgumentException
      */
-    public function makePayment(array $data, $ignoreSubaccount = false): array
+    public function makePayment(array $data, $ignoreSubaccount = false, mixed $transactionCharge = null): array
     {
         $requiredParameters = ['amount', 'email', 'metadata'];
         ! $ignoreSubaccount && $requiredParameters[] = 'sub_account';
@@ -112,6 +112,7 @@ class PaystackPaymentService implements PaymentServiceInterface
             "reference" => $transactionRef,
             "callback_url" => $data['callback_url'] ?? (url('') . "/paystack-check"),
             "metadata" => $metadata,
+            "transaction_charge" => $transactionCharge,
         ];
 
         if ($this->paystack_env === 'live' && ! $ignoreSubaccount) {
