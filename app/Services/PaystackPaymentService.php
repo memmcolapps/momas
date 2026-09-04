@@ -106,6 +106,11 @@ class PaystackPaymentService implements PaymentServiceInterface
         ];
         // dd($transactionRef);
 
+        $momas_max = config('constants.momas_max_transaction_fee');
+        if ($transactionCharge == null || $transactionCharge > $momas_max) {
+            $transactionCharge = calculate_transaction_charge(round(($data['amount'] / 100), 2)); // convert from kobo back to naira and round to 2 dp
+        }
+
         $dataBody = [
             "amount" => (int) ($data['amount']), // Paystack expects amount in kobo
             "email" => $data['email'],
