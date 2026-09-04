@@ -114,7 +114,7 @@ class RemitaPaymentService implements PaymentServiceInterface
      * @return array Payment initialization response (includes RRR + hosted checkout url)
      * @throws InvalidArgumentException
      */
-    public function makePayment(array $data): array
+    public function makePayment(array $data,  $transactionCharge = null): array
     {
         $requiredParameters = ['amount', 'email', 'name', 'phone'];
 
