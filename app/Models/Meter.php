@@ -621,6 +621,10 @@ class Meter extends Model
         $user = User::where('id', $payerUserId)->firstOrFail();
         $estate = Estate::where('id', $this->estate_id)->firstOrFail();
 
+        if (!LedgerService::estateSupportsPostpaid($estate)) {
+            throw new Exception('This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
+        }
+
         if (!LedgerService::estateCanVendPostpaid($estate)) {
             throw new Exception('Estate cannot vend postpaid — unpaid fees have exceeded the accumulation period');
         }

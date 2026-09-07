@@ -374,46 +374,49 @@
                             </li>
                         @endif
 
-                        {{-- Meter Token: always shown regardless of feature status --}}
-                        <li>
-                            <a href="charts-mixed.html#sidebar1" data-bs-toggle="collapse">
-                                <i data-feather="zap"></i>
-                                <span> Meter Token </span>
-                                <span class="menu-arrow"></span>
-                            </a>
+                        {{-- Meter Token / Postpaid Token: gated by estate meter vending type --}}
+                        @php
+                            $ptype = \App\Models\Estate::where('id', Auth::user()->estate_id)->first()->ptype;
+                            $vending_type = \App\Models\Estate::where('id', Auth::user()->estate_id)->first()->estate_meter_vending_type ?? 1;
+                        @endphp
 
-                            @php
-                                $ptype = \App\Models\Estate::where('id', Auth::user()->estate_id)->first()->ptype;
-                            @endphp
+                        @if($vending_type == 1)
+                            <li>
+                                <a href="charts-mixed.html#sidebar1" data-bs-toggle="collapse">
+                                    <i data-feather="zap"></i>
+                                    <span> Meter Token </span>
+                                    <span class="menu-arrow"></span>
+                                </a>
 
-                            @if($ptype == 2 || $ptype == 3)
-                                <div class="collapse" id="sidebar1">
-                                    <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='/admin/credit-token'>Credit Token</a></li>
-                                    </ul>
-                                </div>
+                                @if($ptype == 2 || $ptype == 3)
+                                    <div class="collapse" id="sidebar1">
+                                        <ul class="nav-second-level">
+                                            <li><a class='tp-link' href='/admin/credit-token'>Credit Token</a></li>
+                                        </ul>
+                                    </div>
 
-                                <div class="collapse" id="sidebar1">
-                                    <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='/admin/kct-token'>Key Change Token</a></li>
-                                    </ul>
-                                </div>
+                                    <div class="collapse" id="sidebar1">
+                                        <ul class="nav-second-level">
+                                            <li><a class='tp-link' href='/admin/kct-token'>Key Change Token</a></li>
+                                        </ul>
+                                    </div>
 
-                                <div class="collapse" id="sidebar1">
-                                    <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='/admin/tamper-token'>Clear Tamper Token</a></li>
-                                    </ul>
-                                </div>
+                                    <div class="collapse" id="sidebar1">
+                                        <ul class="nav-second-level">
+                                            <li><a class='tp-link' href='/admin/tamper-token'>Clear Tamper Token</a></li>
+                                        </ul>
+                                    </div>
 
-                                <div class="collapse" id="sidebar1">
-                                    <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='/admin/clear-credit-token'>Clear Credit Token</a></li>
-                                    </ul>
-                                </div>
-                            @endif
-                        </li>
+                                    <div class="collapse" id="sidebar1">
+                                        <ul class="nav-second-level">
+                                            <li><a class='tp-link' href='/admin/clear-credit-token'>Clear Credit Token</a></li>
+                                        </ul>
+                                    </div>
+                                @endif
+                            </li>
+                        @endif
 
-                        @if($ptype == 2 || $ptype == 3)
+                        @if($vending_type == 0 && ($ptype == 2 || $ptype == 3))
                             <li>
                                 <a href="charts-mixed.html#sidebarPostpaid" data-bs-toggle="collapse">
                                     <i data-feather="zap"></i>

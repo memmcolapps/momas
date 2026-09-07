@@ -6418,6 +6418,10 @@ class TokenController extends Controller
         } elseif (Auth::user()->role == 3) {
             $estate = Estate::where('id', Auth::user()->estate_id)->first();
 
+            if (!LedgerService::estateSupportsPostpaid($estate)) {
+                return back()->with('error', 'This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
+            }
+
             if (!LedgerService::estateCanVendPostpaid($estate)) {
                 return redirect()->route('postpaid.accumulation-due', $estate->id);
             }
@@ -6501,6 +6505,9 @@ class TokenController extends Controller
             }
 
             $estate = Estate::where('id', $estate_id)->first();
+            if (!LedgerService::estateSupportsPostpaid($estate)) {
+                return back()->with('error', 'This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
+            }
             if (!LedgerService::estateCanVendPostpaid($estate)) {
                 return redirect("/admin/postpaid-accumulation-due/{$estate->id}");
             }
@@ -6570,6 +6577,9 @@ class TokenController extends Controller
             backfill_utility_payments($user->id, $estate_id);
 
             $estate = Estate::where('id', $estate_id)->first();
+            if (!LedgerService::estateSupportsPostpaid($estate)) {
+                return back()->with('error', 'This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
+            }
             if (!LedgerService::estateCanVendPostpaid($estate)) {
                 return redirect()->route('postpaid.accumulation-due', $estate->id);
             }
