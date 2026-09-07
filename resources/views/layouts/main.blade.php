@@ -224,7 +224,34 @@
                             <div class="collapse" id="sidebarPostpaid">
                                 <ul class="nav-second-level">
                                     <li>
-<a class='tp-link' href='/admin/postpaid-token'>Vend Token</a>
+                                        <a class='tp-link' href='/admin/postpaid-token'>Vend Token</a>
+                                    </li>
+                                    <li>
+                                        <a class='tp-link' href='retry-token-transactions'>Retry Token</a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="collapse" id="sidebarPostpaid">
+                                <ul class="nav-second-level">
+                                    <li>
+                                        <a class='tp-link' href='kct-token'>Key Change Token</a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="collapse" id="sidebarPostpaid">
+                                <ul class="nav-second-level">
+                                    <li>
+                                        <a class='tp-link' href='tamper-token'>Clear Tamper Token</a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="collapse" id="sidebarPostpaid">
+                                <ul class="nav-second-level">
+                                    <li>
+                                        <a class='tp-link' href='clear-credit-token'>Clear Credit Token</a>
                                     </li>
                                 </ul>
                             </div>
