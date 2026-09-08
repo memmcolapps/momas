@@ -111,10 +111,25 @@ class RemitaPaymentService implements PaymentServiceInterface
      * Generate a payment RRR using Remita's standard invoice flow
      *
      * @param array $data Payment data containing 'amount', 'email', 'name', 'phone', 'metadata'
+     * @param mixed $transactionCharge
+     * @param array|null $subaccounts Optional split-payment beneficiaries. Each entry:
+     *        [
+     *          'account_number'  => string,
+     *          'bank_code'       => string,
+     *          'amount'          => string|float,
+     *          'name'            => string (optional, beneficiary name),
+     *          'id'              => string (optional, line item id),
+     *          'deduct_fee_from' => bool|int (optional, default false),
+     *        ]
+     *        When non-null and non-empty, these are mapped to Remita's
+     *        "lineItems" split-payment format and attached to the request.
+     *        Per Remita's docs, any amount not allocated across lineItems
+     *        settles to your main merchant account automatically — you do
+     *        NOT need to add your own account as a line item.
      * @return array Payment initialization response (includes RRR + hosted checkout url)
      * @throws InvalidArgumentException
      */
-    public function makePayment(array $data,  $transactionCharge = null): array
+    public function makePayment(array $data, $transactionCharge = null, ?array $subaccounts = null): array
     {
         $requiredParameters = ['amount', 'email', 'name', 'phone'];
 
@@ -143,6 +158,12 @@ class RemitaPaymentService implements PaymentServiceInterface
             "payerPhone" => $data['phone'],
             "description" => $data['description'] ?? 'Payment',
         ];
+
+        // Optional split payment: only attach lineItems when a non-null,
+        // non-empty subaccount array was passed in.
+        if ($subaccounts !== null && !empty($subaccounts)) {
+            $dataBody['lineItems'] = $this->buildSplitLineItems($subaccounts, $amount);
+        }
 
         try {
             $response = Http::withHeaders([
@@ -216,6 +237,62 @@ class RemitaPaymentService implements PaymentServiceInterface
                 'data' => null,
             ];
         }
+    }
+
+    /**
+     * Map a generic subaccount array into Remita's split-payment "lineItems"
+     * format (beneficiary name/account/bank/amount + fee-deduction flag).
+     *
+     * Per Remita's own "Generate Invoice - Split Payment" example, lineItems
+     * do NOT need to sum to the total amount — any unallocated remainder
+     * settles to the merchant's own main account by default. So this only
+     * guards against the line items exceeding the total, which Remita would
+     * otherwise reject (or worse, misbehave on) as an over-allocation.
+     *
+     * @param array $subaccounts
+     * @param string $totalAmount
+     * @return array
+     * @throws InvalidArgumentException
+     */
+    protected function buildSplitLineItems(array $subaccounts, string $totalAmount): array
+    {
+        $lineItems = [];
+        $sum = 0.0;
+
+        foreach ($subaccounts as $index => $subaccount) {
+            $missing = array_diff(['account_number', 'bank_code', 'amount'], array_keys($subaccount));
+
+            if (!empty($missing)) {
+                throw new InvalidArgumentException(
+                    "Subaccount at index {$index} is missing: " . implode(', ', $missing)
+                );
+            }
+
+            $sum += (float) $subaccount['amount'];
+
+            $lineItems[] = [
+                'lineItemsId' => $subaccount['id'] ?? (string) ($index + 1),
+                'beneficiaryName' => $subaccount['name'] ?? '',
+                'beneficiaryAccount' => (string) $subaccount['account_number'],
+                'bankCode' => (string) $subaccount['bank_code'],
+                'beneficiaryAmount' => (string) $subaccount['amount'],
+                'deductFeeFrom' => !empty($subaccount['deduct_fee_from']) ? '1' : '0',
+            ];
+        }
+
+        if (round($sum, 2) > round((float) $totalAmount, 2)) {
+            Logger::warning('Remita split payment line items exceed total amount', [
+                'total_amount' => $totalAmount,
+                'line_items_sum' => $sum,
+                'subaccounts' => $subaccounts,
+            ]);
+
+            throw new InvalidArgumentException(
+                "Subaccount amounts ({$sum}) exceed the total payment amount ({$totalAmount})"
+            );
+        }
+
+        return $lineItems;
     }
 
     /**

@@ -70,9 +70,17 @@
                                                         <label class="my-2">Bank</label>
                                                         <select name="bank" id="bank-select" class="form-control">
                                                             @foreach($paystackbank['data'] as $bank)
-                                                                <option value="{{ $bank['code'] }}">{{ $bank['name'] }}</option>
+                                                                <option value="{{ $bank['code'] }}"
+                                                                        data-name="{{ $bank['name'] ?? '' }}"
+                                                                        data-slug="{{ $bank['slug'] ?? '' }}"
+                                                                        data-paystack-code="{{ $bank['longcode'] ?? $bank['code'] ?? '' }}">
+                                                                    {{ $bank['name'] }}
+                                                                </option>
                                                             @endforeach
                                                         </select>
+                                                        <input type="hidden" name="bank_name" id="bank_name" value="">
+                                                        <input type="hidden" name="bank_slug" id="bank_slug" value="">
+                                                        <input type="hidden" name="bank_paystack_code" id="bank_paystack_code" value="">
                                                     </div>
 
                                                     <div class="col-xl-6 col-sm-12">
@@ -97,6 +105,16 @@
                                             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
                                             <script>
                                                 $(document).ready(function(){
+                                                    function syncBankHiddenFields() {
+                                                        var selected = $('#bank-select option:selected');
+                                                        $('#bank_name').val(selected.data('name') || '');
+                                                        $('#bank_slug').val(selected.data('slug') || '');
+                                                        $('#bank_paystack_code').val(selected.data('paystack-code') || '');
+                                                    }
+
+                                                    $('#bank-select').on('change', syncBankHiddenFields);
+                                                    syncBankHiddenFields();
+
                                                     // When the account number input loses focus
                                                     $('#account_no').on('blur', function(){
                                                         var accountNo = $(this).val().trim();
