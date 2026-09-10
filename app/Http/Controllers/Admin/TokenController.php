@@ -1725,6 +1725,22 @@ class TokenController extends Controller
                 $phone = Auth::user()->phone ?? "012345678";
                 $userName = Auth::user()->first_name . " " . Auth::user()->last_name;
 
+                $bank = $est->bank;
+                if (!$est->account_no || !$bank || !$bank->remita_code) {
+                    return redirect('/admin/credit-token')->with(
+                        'error',
+                        "Estate {$est->title} does not have complete Remita subaccount details (account_no / bank remita_code). Please contact support."
+                    );
+                }
+
+                $subaccounts = [
+                    [
+                        'account_number' => $est->account_no,
+                        'bank_code'      => $bank->remita_code,
+                        'amount'         => $request->amount,
+                    ]
+                ];
+
                 $remitaService = new RemitaPaymentService();
                 $payment_init = $remitaService->makePayment([
                     'amount' => $request->amount,
@@ -1732,7 +1748,7 @@ class TokenController extends Controller
                     'name' => $userName,
                     'phone' => $phone,
                     'description' => 'Payment for credit token',
-                ]);
+                ], null, $subaccounts);
 
                 if (!isset($payment_init['status']) || !$payment_init['status']) {
                     Logger::warning("Remita payment init failed", ['response' => $payment_init]);

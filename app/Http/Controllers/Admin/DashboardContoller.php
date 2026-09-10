@@ -1256,6 +1256,7 @@ class DashboardContoller extends Controller
             try {
 
                 $client = new Client();
+                dd('hee');
 
                 $response = $client->post('https://api.paystack.co/subaccount', [
                     'headers' => [
