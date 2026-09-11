@@ -129,18 +129,7 @@ class Meter extends Model
         $amount = (int)($trx->vending_amount ?? $trx->amount);
         // [1] 2.5% Service Fee
 
-        // If  1% of Amount Tendered >= paystack cap 2000 percentage = 1%
-        $transactionCharge = 0;
-        if (((1 / 100) * $amount) >= 2000) {
-            $transactionCharge = (1/100) * $amount;
-        } else if (((1.5 / 100) * $amount) > 2000 &&  ((1 / 100) * $amount) < 2000) {
-            $transactionCharge = 2000 + ((1/100) * $amount);
-        } else if (((1.5 / 100) * $amount) < 2000 &&  ((1 / 100) * $amount) < 2000) {
-            $transactionCharge = (2.5/100) * $amount;
-        }
-
-        $momas_max = config('constants.momas_max_transaction_fee');
-        $transactionCharge = $transactionCharge > $momas_max ? $momas_max : $transactionCharge;
+        $transactionCharge = calculate_transaction_charge($amount);
 
         $afterServiceFee = $amount - $transactionCharge;
 
@@ -244,18 +233,7 @@ class Meter extends Model
 
         // [1] 2.5% Service Fee
 
-        // If  1% of Amount Tendered >= paystack cap 2000 percentage = 1%
-        $transactionCharge = 0;
-        if (((1 / 100) * $amount) >= 2000) {
-            $transactionCharge = (1/100) * $amount;
-        } else if (((1.5 / 100) * $amount) > 2000 &&  ((1 / 100) * $amount) < 2000) {
-            $transactionCharge = 2000 + ((1/100) * $amount);
-        } else if (((1.5 / 100) * $amount) < 2000 &&  ((1 / 100) * $amount) < 2000) {
-            $transactionCharge = (2.5/100) * $amount;
-        }
-
-        $momas_max = config('constants.momas_max_transaction_fee');
-        $transactionCharge = $transactionCharge > $momas_max ? $momas_max : $transactionCharge;
+        $transactionCharge = calculate_transaction_charge($amount);
 
         $afterServiceFee = $amount - $transactionCharge;
 

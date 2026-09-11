@@ -44,22 +44,47 @@
                             <hr>
 
                             <p class="text-muted">
-                                Click the button below to proceed to Remita's secure payment page.
+                                Click the button below to complete your payment.
                             </p>
 
-                            <form
-                                action="https://demo.remita.net/remita/onepage/api/v1/so.spa"
-                                method="POST"
-                                target="_blank"
-                            >
-                                <input type="hidden" name="rrr" value="{{ $rrr }}">
+                            <script src="https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js"></script>
+                            <input type="hidden" id="rrr" value="{{ $rrr }}">
 
-                                <button type="submit">
+                            <script>
+                                function makePayment() {
+                                    var paymentEngine = RmPaymentEngine.init({
+                                        key: "QzAwMDAyNzEyNTl8MTEwNjE4NjF8OWZjOWYwNmMyZDk3MDRhYWM3YThiOThlNTNjZTE3ZjYxOTY5NDdmZWE1YzU3NDc0ZjE2ZDZjNTg1YWYxNWY3NWM4ZjMzNzZhNjNhZWZlOWQwNmJhNTFkMjIxYTRiMjYzZDkzNGQ3NTUxNDIxYWNlOGY4ZWEyODY3ZjlhNGUwYTY=",
+                                        processRrr: true,
+                                        transactionId: Math.floor(Math.random()*1101233),
+                                        channel: ["CARD", "BRANCH", "PAYWITHREMITA", "TRANSFER"],
+                                        extendedData: {
+                                            customFields: [
+                                                {
+                                                    name: "rrr",
+                                                    value: document.getElementById('rrr').value
+                                                }
+                                            ]
+                                        },
+                                        onSuccess: function (response) {
+                                            window.location.href = '/admin/recepit?trx_id={{ $trx_id }}&type=credit_token';
+                                        },
+                                        onError: function (response) {
+                                            alert('Payment failed. Please try again.');
+                                        },
+                                        onClose: function () {
+                                            console.log("Payment widget closed");
+                                        }
+                                    });
+                                    paymentEngine.showPaymentWidget();
+                                }
+                            </script>
+
+                            <div class="d-flex gap-2 mt-3">
+                                <button type="button" class="btn btn-primary" onclick="makePayment()">
                                     Pay with Remita
                                 </button>
-                            </form>
-
-                            <a href="/admin/credit-token" class="btn btn-secondary mt-3">Cancel</a>
+                                <a href="/admin/credit-token" class="btn btn-secondary">Cancel</a>
+                            </div>
                         </div>
                     </div>
                 </div>
