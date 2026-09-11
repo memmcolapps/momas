@@ -739,7 +739,7 @@ if (! function_exists('backfill_utility_payments')) {
 
             $backfillFrom = $lastUtilityDate
                 ? Carbon::parse($lastUtilityDate)->addMonth()->startOfMonth()
-                : Carbon::parse($estateCreationDate)->startOfMonth();
+                : Carbon::parse($userCreationDate)->startOfMonth();
 
             $originalBackfillFrom = (clone $backfillFrom);
 
