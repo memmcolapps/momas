@@ -108,7 +108,7 @@ class PaystackPaymentService implements PaymentServiceInterface
 
         $momas_max = config('constants.momas_max_transaction_fee');
         if ($transactionCharge == null || $transactionCharge > $momas_max) {
-            $transactionCharge = calculate_transaction_charge(round(($data['amount'] / 100), 2)); // convert from kobo back to naira and round to 2 dp
+            $transactionCharge = round((calculate_transaction_charge(($data['amount'] / 100)) * 100), 2); // convert from kobo back to naira and round to 2 dp
         }
 
         $dataBody = [
