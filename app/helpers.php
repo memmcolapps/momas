@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Support\RequestContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -937,7 +938,13 @@ if (! function_exists('calculate_transaction_charge')) {
             $transactionCharge = (2.5/100) * $amount;
         }
 
-        $momas_max = config('constants.momas_max_transaction_fee');
+        $payment_purpose = app(RequestContext::class)->get('payment_purpose');
+
+        $momas_max = match ($payment_purpose) {
+            'utilities' => config('constants.momas_max_utilities_transaction_fee'),
+            'default' => config('constants.momas_max_transaction_fee'),
+        };
+
         return min($transactionCharge, $momas_max);
     }
 }

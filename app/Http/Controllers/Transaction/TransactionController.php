@@ -22,6 +22,7 @@ use App\Services\FlutterwavePaymentService;
 use App\Services\PaystackPaymentService;
 use App\Services\RequestActionHandler;
 use App\Services\StandardResponse;
+use App\Support\RequestContext;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -224,6 +225,10 @@ class TransactionController extends Controller
             $phone = Auth::user()->phone ?? "012345678";
             $request_meta = $request->metadata ?? [];
             $auth_user = Auth::user();
+
+            if ($request->service_type == 'utilities') {
+                app(RequestContext::class)->put('payment_purpose', 'utilities');
+            }
 
             // if ($request->pay_type == 'flutterwave') {
             //     $trx_id = "TRXFLW" . random_int(0000000, 9999999);
