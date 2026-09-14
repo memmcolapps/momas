@@ -745,6 +745,8 @@ if (! function_exists('backfill_utility_payments')) {
 
             $now = Carbon::now()->startOfMonth();
 
+            $utilityAmountStart = Carbon::parse($createdAt)->startOfMonth();
+
             while ($backfillFrom->lte($now)) {
                 $exists = UtilitiesPayment::where('user_id', $userId)
                     ->where('type', 'utilities')
@@ -762,7 +764,7 @@ if (! function_exists('backfill_utility_payments')) {
                             $q->whereNull('user_id')
                                 ->orWhere('user_id', $userId);
                         })
-                        ->whereBetween('created_at', [$originalBackfillFrom, $prevMonthEnd])
+                        ->whereBetween('created_at', [$utilityAmountStart, $now->endOfMonth()])
                         ->sum('amount');
 
                     if ($monthUtilityAmount > 0) {
