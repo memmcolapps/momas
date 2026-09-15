@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class Meter extends Model
 {
@@ -779,6 +780,135 @@ class Meter extends Model
         });
 
         return $postpaid_token;
+    }
+
+    /**
+     * Generate an emergency token for the meter without a transaction or ledger.
+     *
+     * Calculates the token values, generates the meter token via the vending
+     * server, stores it in the credit_tokens and meter_tokens tables, and
+     * audits the action with the creator and owner details.
+     *
+     * @param int $tariff_id The ID of the tariff to use
+     * @param int $amount The amount in Naira to convert to units
+     * @return array The generated token details
+     * @throws \Exception When the meter has no owner, the tariff is missing,
+     *                    the amount is too small, or token generation fails
+     */
+    public function getEmergencyToken(int $tariff_id, int $amount): array
+    {
+        $owner = User::find($this->user_id);
+
+        if (! $owner) {
+            throw new Exception('Meter is not attached to any customer');
+        }
+
+        $tariff = Tariff::find($tariff_id);
+
+        if (! $tariff) {
+            throw new Exception('Tariff not found');
+        }
+
+        $calculated = $this->calculateTokenValuesByAmount($tariff_id, $amount);
+
+        $unit = $calculated['unit'];
+        $vat = $calculated['vat'];
+        $vatAmount = $calculated['vatAmount'];
+        $vendingAmount = $calculated['vendingAmount'];
+
+        $token_gen = TokenGenerationService::generateMeterToken(
+            $this,
+            $tariff->tariff_index,
+            $unit,
+            $this->NeedKCT
+        );
+
+        if (! $token_gen['success']) {
+            Logger::error('Emergency token generation failed', [
+                'meterNo' => $this->meterNo,
+                'tariff_id' => $tariff_id,
+                'amount' => $amount,
+                'unit' => $unit,
+                'owner_id' => $this->user_id,
+            ]);
+
+            throw new Exception('Emergency token generation failed, please try again');
+        }
+
+        $token = $token_gen['data']['token'];
+        $kct_tokens = $token_gen['data']['kct_token'] ?? null;
+        $kct_string = $kct_tokens ? implode(',', $kct_tokens) : null;
+
+        $emergency_ref = 'emg_ref' . Str::upper(Str::random(7));
+
+        CreditToken::create([
+            'trx_id' => $emergency_ref,
+            'user_id' => $this->user_id,
+            'meterNo' => $this->meterNo,
+            'amount' => $vendingAmount,
+            'amount_charged' => $amount,
+            'customer_email' => $owner->email,
+            'unitkwh' => $unit,
+            'vat' => $vat,
+            'estate_id' => $this->estate_id,
+            'estate_name' => $owner->estate_name,
+            'token' => $token,
+            'status' => 2,
+            'vatAmount' => $vatAmount,
+            'tariff_amount' => $calculated['tariffAmount'],
+            'tariff_id' => $tariff_id,
+            'kct_tokens' => $kct_string,
+        ]);
+
+        $meterToken = new MeterToken();
+        $meterToken->user_id = $this->user_id;
+        $meterToken->trx_id = $emergency_ref;
+        $meterToken->meterNo = $this->meterNo;
+        $meterToken->token = $token;
+        $meterToken->amount = $amount;
+        $meterToken->unit = $unit;
+        $meterToken->vat = $vat;
+        $meterToken->kct_tokens = $kct_string;
+        $meterToken->estate_id = $this->estate_id;
+        $meterToken->status = 2;
+        $meterToken->save();
+
+        $creator = auth()->user();
+
+        Logger::critical('Emergency token generated', [
+            'emergency_ref' => $emergency_ref,
+            'token' => $token,
+            'meter' => [
+                'id' => $this->id,
+                'meterNo' => $this->meterNo,
+                'estate_id' => $this->estate_id,
+            ],
+            'tariff_id' => $tariff_id,
+            'amount' => $amount,
+            'unit' => $unit,
+            'kct_tokens' => $kct_tokens,
+            'creator' => [
+                'id' => $creator->id ?? null,
+                'name' => ($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''),
+                'email' => $creator->email ?? null,
+                'role' => $creator->role ?? null,
+            ],
+            'owner' => [
+                'id' => $owner->id,
+                'name' => ($owner->first_name ?? '') . ' ' . ($owner->last_name ?? ''),
+                'email' => $owner->email,
+            ],
+        ]);
+
+        return [
+            'emergency_ref' => $emergency_ref,
+            'token' => $token,
+            'kct_tokens' => $kct_tokens,
+            'meterNo' => $this->meterNo,
+            'amount' => $amount,
+            'unit' => $unit,
+            'tariff_id' => $tariff_id,
+        ];
     }
 
     /**

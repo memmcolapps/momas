@@ -370,6 +370,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('generate-tamper-meter-token', [TokenController::class, 'generate_tamper_meter_token']);
     Route::post('generate-kctclear-token', [TokenController::class, 'generate_kctclear_token']);
     Route::post('generate-clear-credit-meter-token', [TokenController::class, 'generate_clear_credit_meter_token']);
+    Route::post('emergency-meter-token', [MeterController::class, 'getEmergencyToken']);
 
     //postpaid token
     Route::get('postpaid-token', [TokenController::class, 'postpaid_token_index']);

@@ -596,6 +596,44 @@ class MeterController extends Controller
     }
 
 
+    public function getEmergencyToken(Request $request)
+    {
+        $auth_user = Auth::user();
+
+        if ($auth_user->role != 0) {
+            return StandardResponse::error(403, 'Unauthorized: Only super admins can generate emergency tokens');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'meter_id' => ['required', 'integer', Rule::exists('meters', 'id')],
+            'tariff_id' => ['required', 'integer', Rule::exists('tariffs', 'id')],
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        $meter = Meter::find($request->meter_id);
+
+        if (! $meter) {
+            return StandardResponse::error(404, 'Meter not found');
+        }
+
+        try {
+            $result = $meter->getEmergencyToken(
+                (int) $request->tariff_id,
+                (int) $request->amount
+            );
+        } catch (Exception $e) {
+            return StandardResponse::error(422, $e->getMessage());
+        }
+
+        return StandardResponse::success(200, 'Emergency token generated successfully', $result);
+    }
+
     public function retry_meter_token(request $request)
     {
 
