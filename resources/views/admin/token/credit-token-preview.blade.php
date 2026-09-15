@@ -271,14 +271,10 @@
                                                                                      name="pay_type">
                                                                                  <option value=" ">--Choose Payment Gateway---
                                                                                  </option>
-                                                                                 <option value="paystack">Pay with Paystack
-                                                                                 </option>
-                                                                                 <option value="remita">Pay with Remita
-                                                                                 </option>
-                                                                                 {{-- <option value="flutterwave">Pay with Flutterwave
-                                                                                 </option> --}}
-                                                                                 {{-- <option value="enkpay">Pay with Enkpay</option> --}}
-                                                                                 <!-- <option value="test_bypass">Payment Bypass (Testing Only)</option> -->
+                                                                                 @foreach(available_payment_gateways(['paystack', 'remita'], $estate_id ?? null) as $gateway)
+                                                                                     <option value="{{ $gateway['value'] }}">Pay with {{ $gateway['label'] }}</option>
+                                                                                 @endforeach
+                                                                                 {{-- <option value="test_bypass">Payment Bypass (Testing Only)</option> --}}
                                                                                  @if (app()->environment('staging'))
                                                                                      <option value="test_bypass">Payment Bypass (Testing Only)</option>
                                                                                  @endif
@@ -688,10 +684,9 @@
                                                                                      name="pay_type">
                                                                                  <option value=" ">--Choose Payment Gateway---
                                                                                  </option>
-                                                                                 <option value="paystack">Pay with Paystack
-                                                                                 </option>
-                                                                                 <option value="remita">Pay with Remita
-                                                                                 </option>
+                                                                                 @foreach(available_payment_gateways(['paystack', 'remita'], $estate_id ?? null) as $gateway)
+                                                                                     <option value="{{ $gateway['value'] }}">Pay with {{ $gateway['label'] }}</option>
+                                                                                 @endforeach
                                                                              </select>
                                                                          </div>
 

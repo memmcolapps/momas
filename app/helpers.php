@@ -625,6 +625,34 @@ if (! function_exists('generate_unique_string')) {
     }
 }
 
+if (! function_exists('available_payment_gateways')) {
+
+    function available_payment_gateways(array $allowed, ?int $estate_id = null): array
+    {
+        $configured = app(\App\Services\ConfigManagementService::class)
+            ->getConfig('payment_gateways', $estate_id) ?? [];
+
+        if (! is_array($configured)) {
+            $configured = (array) $configured;
+        }
+
+        $configured = array_map('strtolower', $configured);
+        $gateways = array_values(array_intersect($allowed, $configured));
+
+        $labels = [
+            'paystack'    => 'Paystack',
+            'flutterwave' => 'Flutterwave',
+            'remita'      => 'Remita',
+            'enkpay'      => 'Enkpay',
+        ];
+
+        return array_map(fn ($g) => [
+            'value' => $g,
+            'label' => $labels[$g] ?? ucfirst(str_replace('_', ' ', $g)),
+        ], $gateways);
+    }
+}
+
 if (! function_exists('handle_pay_arrears')) {
 
     function handle_pay_arrears($trx_id, $user_id, $type, $return_amount=false) {
