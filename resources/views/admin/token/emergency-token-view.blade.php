@@ -327,7 +327,7 @@
 
                                 setTimeout(function () {
                                     window.location.reload();
-                                }, 3000);
+                                }, 120000);
                             } else {
                                 $('#emergency-result').removeClass('alert-success d-none').addClass('alert-danger');
                                 $('#emergency-result-message').text(response.message || 'An error occurred');

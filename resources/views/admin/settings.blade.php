@@ -341,6 +341,10 @@
                                 <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
                                     Update
                                 </button>
+
+                                <a href="/admin/emergency-token" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-warning">
+                                    Manage Emergency Tokens
+                                </a>
                             </form>
 
                             <hr class="my-4">
