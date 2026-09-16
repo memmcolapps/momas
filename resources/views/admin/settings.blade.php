@@ -282,13 +282,16 @@
                 </div>
 
                 <div class="row">
-                    <div class="card">
+                    <div class="card" style="background: #f3ffff">
                         <div class="card-body">
+
+                            <h6 class="d-flex justify-content-start my-2" style="font-weight: 600;">System Configuration</h6>
+
                             <form action="config-values-update" method="post">
                                 @csrf
-                                <div class="row">
-                                    <h6 class="d-flex justify-content-start my-4">System Configuration</h6>
+                                <h6 class="d-flex justify-content-start my-4">Transaction Fees</h6>
 
+                                <div class="row">
                                     <div class="col-xl-4 col-sm-12">
                                         <label class="my-2">Max Vending Transaction Fee</label>
                                         <input type="number" step="0.01" name="MOMAS_MAX_VENDING_TRANSACTION_FEE" class="form-control"
@@ -306,7 +309,20 @@
                                         <input type="number" step="0.01" name="MOMAS_MINIMUM_VEND" class="form-control"
                                                value="{{ $configValues['MOMAS_MINIMUM_VEND'] }}">
                                     </div>
+                                </div>
 
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="config-values-update" method="post">
+                                @csrf
+                                <h6 class="d-flex justify-content-start my-4">Token Settings</h6>
+
+                                <div class="row">
                                     <div class="col-xl-4 col-sm-12">
                                         <label class="my-2">Simulate Failed Token</label>
                                         <select name="SIMULATE_FAILED_TOKEN" class="form-control">
@@ -320,7 +336,20 @@
                                         <input type="date" name="TOKEN_RETRY_DEPLOYMENT_DATE" class="form-control"
                                                value="{{ $configValues['TOKEN_RETRY_DEPLOYMENT_DATE'] }}">
                                     </div>
+                                </div>
 
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="config-values-update" method="post">
+                                @csrf
+                                <h6 class="d-flex justify-content-start my-4">Remita Settings</h6>
+
+                                <div class="row">
                                     <div class="col-xl-4 col-sm-12">
                                         <label class="my-2">Remita Merchant ID</label>
                                         <input type="text" name="REMITA_MERCHANT_ID" class="form-control"
@@ -338,7 +367,20 @@
                                         <input type="text" name="REMITA_SERVICE_TYPE_ID" class="form-control"
                                                value="{{ $configValues['REMITA_SERVICE_TYPE_ID'] }}">
                                     </div>
+                                </div>
 
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="config-values-update" method="post">
+                                @csrf
+                                <h6 class="d-flex justify-content-start my-4">App Update</h6>
+
+                                <div class="row">
                                     <div class="col-xl-3 col-sm-12">
                                         <label class="my-2">App Minimum Version</label>
                                         <input type="text" name="APP_MINIMUM_VERSION" class="form-control"
@@ -381,10 +423,8 @@
                                     </div>
                                 </div>
 
-                                <hr class="my-4">
-
-                                <button type="submit" class="col-2 d-flex btn btn-primary">
-                                    Update Config
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
                                 </button>
                             </form>
                         </div>

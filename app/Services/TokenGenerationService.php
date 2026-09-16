@@ -10,7 +10,9 @@ use App\Models\Logger;
 class TokenGenerationService {
     public static function generateMeterToken($meter, $tariff_index, $unit, $need_kct = false) {
         // throw new Exception('Test Failure');
-        if (config('constants.simulate_failed_token_gen', false)) {
+        $configService = new ConfigManagementService();
+
+        if ($configService->getConfig('simulate-failed-token-gen')) {
             return ['success' => false];
         }
 
