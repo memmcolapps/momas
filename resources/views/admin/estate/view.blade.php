@@ -448,6 +448,9 @@
 
                     <div class="card " style="background: #f3ffff">
                         <div class="card-body">
+
+                            <h6 class="d-flex justify-content-start my-2" style="font-weight: 600;">Estate Settings</h6>
+
                             <form action="estate-update-vat" method="post">
                                 @csrf
 
@@ -554,6 +557,45 @@
 
                                         <input type="text" name="estate_id" value="{{$org->id}}" hidden>
                                     </div>
+                                </div>
+
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="estate-update-payment-gateways" method="post">
+                                @csrf
+                                <input type="hidden" name="estate_id" value="{{ $org->id }}">
+
+                                <h6 class="d-flex justify-content-start my-4">Payment Gateways</h6>
+
+                                @php
+                                    $all_gateways = [
+                                        'paystack' => 'Paystack',
+                                        'remita' => 'Remita',
+                                    ];
+                                    $active_values = array_column(
+                                        available_payment_gateways(array_keys($all_gateways), $org->id),
+                                        'value'
+                                    );
+                                @endphp
+
+                                <div class="row">
+                                    @foreach($all_gateways as $value => $label)
+                                        <div class="col-xl-3 col-sm-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="payment_gateways[]"
+                                                       value="{{ $value }}"
+                                                       id="gateway_{{ $value }}"
+                                                       {{ in_array($value, $active_values) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="gateway_{{ $value }}">{{ $label }}</label>
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
 
                                 <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">

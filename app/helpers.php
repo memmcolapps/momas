@@ -774,7 +774,7 @@ if (! function_exists('backfill_utility_payments')) {
 
             $now = Carbon::now()->startOfMonth();
 
-            $utilityAmountStart = Carbon::parse($createdAt)->startOfMonth();
+            $utilityAmountStart = Carbon::parse($userCreationDate)->startOfMonth();
 
             while ($backfillFrom->lte($now)) {
                 $exists = UtilitiesPayment::where('user_id', $userId)
@@ -970,7 +970,7 @@ if (! function_exists('calculate_transaction_charge')) {
 
         $momas_max = match ($payment_purpose) {
             'utilities' => config('constants.momas_max_utilities_transaction_fee'),
-            'default' => config('constants.momas_max_transaction_fee'),
+            default => config('constants.momas_max_transaction_fee'),
         };
 
         return min($transactionCharge, $momas_max);

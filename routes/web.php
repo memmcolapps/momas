@@ -194,6 +194,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-vat', [EstateServiceController::class, 'estate_update_vat']);
     Route::post('estate-update-minpur', [EstateServiceController::class, 'estate_update_minpur']);
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
+    Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
 
 
 
