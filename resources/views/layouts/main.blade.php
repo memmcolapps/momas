@@ -187,6 +187,9 @@
                                     <li>
                                         <a class='tp-link' href='/admin/retry-token-transactions'>Retry Token</a>
                                     </li>
+                                    <li>
+                                        <a class='tp-link' href='/admin/emergency-token'>Emergency Token</a>
+                                    </li>
                                 </ul>
                             </div>
 

@@ -634,6 +634,27 @@ class MeterController extends Controller
         return StandardResponse::success(200, 'Emergency token generated successfully', $result);
     }
 
+    public function emergency_token_index(Request $request)
+    {
+        $auth_user = Auth::user();
+
+        if ($auth_user->role != 0) {
+            return redirect()->back()->with('error', 'Unauthorized: Only super admins can access emergency tokens');
+        }
+
+        $data['estate'] = Estate::all();
+        $data['emergency_credit_tokens'] = CreditToken::where('trx_id', 'like', 'emg_ref%')
+            ->latest()
+            ->paginate(20);
+
+        $data['emergency_logs'] = Logger::where('level', 'critical')
+            ->where('message', 'Emergency token generated')
+            ->latest()
+            ->paginate(20);
+
+        return view('admin.token.emergency-token-view', $data);
+    }
+
     public function retry_meter_token(request $request)
     {
 

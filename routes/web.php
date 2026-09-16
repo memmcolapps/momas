@@ -354,6 +354,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
 
     //token
     Route::get('credit-token', [TokenController::class, 'credit_token_index']);
+    Route::get('emergency-token', [MeterController::class, 'emergency_token_index']);
     Route::get('search-credit-token', [TokenController::class, 'search_credit_token']);
     Route::get('compensation-token', [TokenController::class, 'compensation_index']);
     Route::get('tamper-token', [TokenController::class, 'tamper_index']);
