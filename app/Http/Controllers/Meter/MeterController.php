@@ -605,7 +605,7 @@ class MeterController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'meter_id' => ['required', 'integer', Rule::exists('meters', 'id')],
+            'meterNo' => ['required', 'integer', Rule::exists('meters', 'meterNo')],
             'tariff_id' => ['required', 'integer', Rule::exists('tariffs', 'id')],
             'amount' => 'required|numeric|min:1',
         ]);
@@ -616,7 +616,7 @@ class MeterController extends Controller
             ]);
         }
 
-        $meter = Meter::find($request->meter_id);
+        $meter = Meter::where('meterNo', $request->meterNo)->first();
 
         if (! $meter) {
             return StandardResponse::error(404, 'Meter not found');

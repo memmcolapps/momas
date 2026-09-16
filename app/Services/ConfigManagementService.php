@@ -121,6 +121,7 @@ class ConfigManagementService {
      * @return mixed
      */
     private function resolveFromConfig(string $key, ?int $estateId = null) {
+        $key = underscore_to_hyphen($key, $reverse);
         return config('constants.' . $key);
     }
 

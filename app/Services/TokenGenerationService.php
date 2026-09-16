@@ -12,7 +12,7 @@ class TokenGenerationService {
         // throw new Exception('Test Failure');
         $configService = new ConfigManagementService();
 
-        if ($configService->getConfig('simulate-failed-token-gen')) {
+        if ($configService->getConfig('simulate-failed-token')) {
             return ['success' => false];
         }
 
