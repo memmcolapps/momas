@@ -281,6 +281,116 @@
 
                 </div>
 
+                <div class="row">
+                    <div class="card">
+                        <div class="card-body">
+                            <form action="config-values-update" method="post">
+                                @csrf
+                                <div class="row">
+                                    <h6 class="d-flex justify-content-start my-4">System Configuration</h6>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Max Vending Transaction Fee</label>
+                                        <input type="number" step="0.01" name="MOMAS_MAX_VENDING_TRANSACTION_FEE" class="form-control"
+                                               value="{{ $configValues['MOMAS_MAX_VENDING_TRANSACTION_FEE'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Max Utilities Transaction Fee</label>
+                                        <input type="number" step="0.01" name="MOMAS_MAX_UTILITIES_TRANSACTION_FEE" class="form-control"
+                                               value="{{ $configValues['MOMAS_MAX_UTILITIES_TRANSACTION_FEE'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Minimum Vend</label>
+                                        <input type="number" step="0.01" name="MOMAS_MINIMUM_VEND" class="form-control"
+                                               value="{{ $configValues['MOMAS_MINIMUM_VEND'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Simulate Failed Token</label>
+                                        <select name="SIMULATE_FAILED_TOKEN" class="form-control">
+                                            <option value="0" {{ empty($configValues['SIMULATE_FAILED_TOKEN']) ? 'selected' : '' }}>Off</option>
+                                            <option value="1" {{ !empty($configValues['SIMULATE_FAILED_TOKEN']) ? 'selected' : '' }}>On</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Token Retry Deployment Date</label>
+                                        <input type="date" name="TOKEN_RETRY_DEPLOYMENT_DATE" class="form-control"
+                                               value="{{ $configValues['TOKEN_RETRY_DEPLOYMENT_DATE'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Remita Merchant ID</label>
+                                        <input type="text" name="REMITA_MERCHANT_ID" class="form-control"
+                                               value="{{ $configValues['REMITA_MERCHANT_ID'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Remita API Key</label>
+                                        <input type="text" name="REMITA_API_KEY" class="form-control"
+                                               value="{{ $configValues['REMITA_API_KEY'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Remita Service Type ID</label>
+                                        <input type="text" name="REMITA_SERVICE_TYPE_ID" class="form-control"
+                                               value="{{ $configValues['REMITA_SERVICE_TYPE_ID'] }}">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12">
+                                        <label class="my-2">App Minimum Version</label>
+                                        <input type="text" name="APP_MINIMUM_VERSION" class="form-control"
+                                               value="{{ $configValues['APP_MINIMUM_VERSION'] }}">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12">
+                                        <label class="my-2">App Latest Version</label>
+                                        <input type="text" name="APP_LATEST_VERSION" class="form-control"
+                                               value="{{ $configValues['APP_LATEST_VERSION'] }}">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12">
+                                        <label class="my-2">Last Update Date</label>
+                                        <input type="date" name="APP_LAST_UPDATE_DATE" class="form-control"
+                                               value="{{ $configValues['APP_LAST_UPDATE_DATE'] }}">
+                                    </div>
+
+                                    <div class="col-xl-3 col-sm-12">
+                                        <label class="my-2">App Size</label>
+                                        <input type="text" name="APP_SIZE" class="form-control"
+                                               value="{{ $configValues['APP_SIZE'] }}">
+                                    </div>
+
+                                    <div class="col-xl-6 col-sm-12">
+                                        <label class="my-2">Play Store URL</label>
+                                        <input type="url" name="APP_PLAYSTORE_URL" class="form-control"
+                                               value="{{ $configValues['APP_PLAYSTORE_URL'] }}">
+                                    </div>
+
+                                    <div class="col-xl-6 col-sm-12">
+                                        <label class="my-2">App Store URL</label>
+                                        <input type="url" name="APP_APPSTORE_URL" class="form-control"
+                                               value="{{ $configValues['APP_APPSTORE_URL'] }}">
+                                    </div>
+
+                                    <div class="col-xl-12 col-sm-12">
+                                        <label class="my-2">Update Description</label>
+                                        <textarea name="APP_UPDATE_DESCRIPTION" class="form-control" rows="3">{{ $configValues['APP_UPDATE_DESCRIPTION'] }}</textarea>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <button type="submit" class="col-2 d-flex btn btn-primary">
+                                    Update Config
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Utilities Payment Management Section -->
                 <div class="row" id="utilities-section">
                     <div class="card" style="background: #d1fff1">

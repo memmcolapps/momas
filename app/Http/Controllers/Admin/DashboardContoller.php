@@ -557,6 +557,32 @@ class DashboardContoller extends Controller
                 'slug',
             ])
             ->get();
+
+        $configService = app(\App\Services\ConfigManagementService::class);
+        $configKeys = [
+            'MOMAS_MAX_VENDING_TRANSACTION_FEE',
+            'MOMAS_MAX_UTILITIES_TRANSACTION_FEE',
+            'SIMULATE_FAILED_TOKEN',
+            'MOMAS_MINIMUM_VEND',
+            'TOKEN_RETRY_DEPLOYMENT_DATE',
+            'REMITA_MERCHANT_ID',
+            'REMITA_API_KEY',
+            'REMITA_SERVICE_TYPE_ID',
+            'APP_MINIMUM_VERSION',
+            'APP_LATEST_VERSION',
+            'APP_LAST_UPDATE_DATE',
+            'APP_SIZE',
+            'APP_PLAYSTORE_URL',
+            'APP_APPSTORE_URL',
+            'APP_UPDATE_DESCRIPTION',
+        ];
+        $configValues = [];
+        foreach ($configKeys as $key) {
+            $appSettingKey = strtolower(str_replace('_', '-', $key));
+            $configValues[$key] = $configService->getConfig($appSettingKey);
+        }
+        $data['configValues'] = $configValues;
+
         if (Auth::user()->isSuperAdmin()) {
 
             $data['fea'] = Feature::where('id', 1)->first();
@@ -821,6 +847,39 @@ class DashboardContoller extends Controller
         ]);
 
         return redirect('admin/settings')->with('message', 'Support data updated successfully');
+    }
+
+    public function update_config_values(Request $request)
+    {
+        $configService = app(\App\Services\ConfigManagementService::class);
+
+        $allowedKeys = [
+            'MOMAS_MAX_VENDING_TRANSACTION_FEE',
+            'MOMAS_MAX_UTILITIES_TRANSACTION_FEE',
+            'SIMULATE_FAILED_TOKEN',
+            'MOMAS_MINIMUM_VEND',
+            'TOKEN_RETRY_DEPLOYMENT_DATE',
+            'REMITA_MERCHANT_ID',
+            'REMITA_API_KEY',
+            'REMITA_SERVICE_TYPE_ID',
+            'APP_MINIMUM_VERSION',
+            'APP_LATEST_VERSION',
+            'APP_LAST_UPDATE_DATE',
+            'APP_SIZE',
+            'APP_PLAYSTORE_URL',
+            'APP_APPSTORE_URL',
+            'APP_UPDATE_DESCRIPTION',
+        ];
+
+        foreach ($allowedKeys as $key) {
+            $value = $request->input($key);
+            if ($value !== null) {
+                $appSettingKey = strtolower(str_replace('_', '-', $key));
+                $configService->put($appSettingKey, $value, true, null, $key, null, 'system');
+            }
+        }
+
+        return redirect('admin/settings')->with('message', 'System configuration updated successfully');
     }
 
     public function update_feat(request $request)

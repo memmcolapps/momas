@@ -975,4 +975,14 @@ if (! function_exists('calculate_transaction_charge')) {
 
         return min($transactionCharge, $momas_max);
     }
+
+    if (!function_exists('underscore_to_hyphen')) {
+        function underscore_to_hyphen(string $string, bool $reverse=false) {
+            if ($reverse) {
+                return str_replace('-', '_', $string);
+            }
+
+            return str_replace('_', '-', $string);
+        }
+    }
 }
