@@ -23,6 +23,7 @@ use App\Services\PaystackPaymentService;
 use App\Services\RemitaPaymentService;
 use App\Services\RequestActionHandler;
 use App\Services\StandardResponse;
+use App\Services\UtilityManagementService;
 use App\Support\RequestContext;
 use Carbon\Carbon;
 use Exception;
@@ -51,6 +52,49 @@ class TransactionController extends Controller
                 'data' => $other_trx,
                 'all_history' => $arrearsData['all_history'],
             ]);
+        } catch (Exception $e) {
+            return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
+    }
+
+
+    public function utilitiesBreakdown(Request $request)
+    {
+        try {
+            $auth_user = Auth::user();
+
+            $validator = Validator::make($request->all(), [
+                'amount' => 'nullable|numeric|min:1',
+                'type' => 'required|string|in:utilities,admin_fee',
+                'estate_id' => 'nullable|integer|exists:estates,id',
+            ]);
+
+            if ($validator->fails()) {
+                return StandardResponse::error(code: 422, message: 'Validation error', data: [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
+
+            $estate_id = $request->input('estate_id', $auth_user->estate_id);
+
+            $amount = $request->input('amount');
+
+            $breakdown = (new UtilityManagementService())->calculateUtilitiesBreakdownByAmount(
+                $auth_user->id,
+                (int) $estate_id,
+                $amount !== null ? (float) $amount : null,
+                (string) $request->type,
+            );
+
+            $arrearsAmount = round(array_sum(array_column($breakdown['arrears'], 'Amount')), 2);
+            $breakdown['amount'] = round($breakdown['remaining'] + $arrearsAmount, 2);
+            $breakdown['total_charge'] = round($arrearsAmount + $breakdown['paystack_transaction_fee'], 2);
+
+            return StandardResponse::success(code: 200, message: 'Utilities breakdown calculated', data: $breakdown);
         } catch (Exception $e) {
             return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
                 'message' => $e->getMessage(),
@@ -483,7 +527,7 @@ class TransactionController extends Controller
 
                 return StandardResponse::success(200, 'Payment initiation successful', [
                     'status' => true,
-                    'rrr' => $rrr,
+                    'ref' => $rrr,
                     'public_key' => 'QzAwMDAyNzEyNTl8MTEwNjE4NjF8OWZjOWYwNmMyZDk3MDRhYWM3YThiOThlNTNjZTE3ZjYxOTY5NDdmZWE1YzU3NDc0ZjE2ZDZjNTg1YWYxNWY3NWM4ZjMzNzZhNjNhZWZlOWQwNmJhNTFkMjIxYTRiMjYzZDkzNGQ3NTUxNDIxYWNlOGY4ZWEyODY3ZjlhNGUwYTY',
                     'transaction_status' => $trx->status,
                 ]);

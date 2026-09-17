@@ -130,6 +130,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     Route::post('pay', [TransactionController::class, 'make_payment']);
     Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
     Route::get('arrears', [TransactionController::class, 'arrears']);
+    Route::get('arrears/breakdown', [TransactionController::class, 'utilitiesBreakdown']);
     Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
     Route::get('get-trx', [TransactionController::class, 'get_trx']);
     Route::get('failed-credit-token-transactions', [TransactionController::class, 'failed_credit_token_transactions']);
