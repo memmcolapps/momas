@@ -568,6 +568,11 @@ class DashboardContoller extends Controller
             'REMITA_MERCHANT_ID',
             'REMITA_API_KEY',
             'REMITA_SERVICE_TYPE_ID',
+            'REMITA_MEMCOL_LINE_ITEMS_ID',
+            'REMITA_MEMCOL_BENEFICIARY_NAME',
+            'REMITA_MEMCOL_BENEFICIARY_ACCOUNT',
+            'REMITA_MEMCOL_BANK_CODE',
+            'REMITA_MEMCOL_DEDUCT_FEE_FROM',
             'APP_MINIMUM_VERSION',
             'APP_LATEST_VERSION',
             'APP_LAST_UPDATE_DATE',
@@ -862,6 +867,11 @@ class DashboardContoller extends Controller
             'REMITA_MERCHANT_ID',
             'REMITA_API_KEY',
             'REMITA_SERVICE_TYPE_ID',
+            'REMITA_MEMCOL_LINE_ITEMS_ID',
+            'REMITA_MEMCOL_BENEFICIARY_NAME',
+            'REMITA_MEMCOL_BENEFICIARY_ACCOUNT',
+            'REMITA_MEMCOL_BANK_CODE',
+            'REMITA_MEMCOL_DEDUCT_FEE_FROM',
             'APP_MINIMUM_VERSION',
             'APP_LATEST_VERSION',
             'APP_LAST_UPDATE_DATE',
@@ -871,11 +881,19 @@ class DashboardContoller extends Controller
             'APP_UPDATE_DESCRIPTION',
         ];
 
+        $memcolKeys = [
+            'REMITA_MEMCOL_LINE_ITEMS_ID',
+            'REMITA_MEMCOL_BENEFICIARY_NAME',
+            'REMITA_MEMCOL_BENEFICIARY_ACCOUNT',
+            'REMITA_MEMCOL_BANK_CODE',
+            'REMITA_MEMCOL_DEDUCT_FEE_FROM',
+        ];
+
         foreach ($allowedKeys as $key) {
             $value = $request->input($key);
             if ($value !== null) {
                 $appSettingKey = strtolower(str_replace('_', '-', $key));
-                $configService->put($appSettingKey, $value, true, null, $key, null, 'system');
+                $configService->put($appSettingKey, $value, true, null, $key, null, in_array($key, $memcolKeys) ? 'Remita Memcol Beneficiary' : 'system');
             }
         }
 

@@ -382,6 +382,51 @@
 
                             <form action="config-values-update" method="post">
                                 @csrf
+                                <h6 class="d-flex justify-content-start my-4">Remita Memcol Beneficiary</h6>
+
+                                <div class="row">
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Line Items ID</label>
+                                        <input type="text" name="REMITA_MEMCOL_LINE_ITEMS_ID" class="form-control"
+                                               value="{{ $configValues['REMITA_MEMCOL_LINE_ITEMS_ID'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Beneficiary Name</label>
+                                        <input type="text" name="REMITA_MEMCOL_BENEFICIARY_NAME" class="form-control"
+                                               value="{{ $configValues['REMITA_MEMCOL_BENEFICIARY_NAME'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Beneficiary Account</label>
+                                        <input type="text" name="REMITA_MEMCOL_BENEFICIARY_ACCOUNT" class="form-control"
+                                               value="{{ $configValues['REMITA_MEMCOL_BENEFICIARY_ACCOUNT'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Bank Code</label>
+                                        <input type="text" name="REMITA_MEMCOL_BANK_CODE" class="form-control"
+                                               value="{{ $configValues['REMITA_MEMCOL_BANK_CODE'] }}">
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Deduct Fee From Beneficiary</label>
+                                        <select name="REMITA_MEMCOL_DEDUCT_FEE_FROM" class="form-control">
+                                            <option value="0" {{ empty($configValues['REMITA_MEMCOL_DEDUCT_FEE_FROM']) ? 'selected' : '' }}>Off</option>
+                                            <option value="1" {{ !empty($configValues['REMITA_MEMCOL_DEDUCT_FEE_FROM']) ? 'selected' : '' }}>On</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="config-values-update" method="post">
+                                @csrf
                                 <h6 class="d-flex justify-content-start my-4">App Update</h6>
 
                                 <div class="row">

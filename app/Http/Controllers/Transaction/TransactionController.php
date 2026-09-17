@@ -421,22 +421,22 @@ class TransactionController extends Controller
                 $estate_id = Auth::user()->estate_id;
                 $est = Estate::where('id', $estate_id)->first();
 
-                if (! $est || ! $est->account_no || ! $est->bank || ! $est->bank->remita_code) {
-                    Logger::warning("User with email: {$auth_user->email} estate is missing Remita subaccount details estate_id: {$estate_id}");
+                // if (! $est || ! $est->account_no || ! $est->bank || ! $est->bank->remita_code) {
+                //     Logger::warning("User with email: {$auth_user->email} estate is missing Remita subaccount details estate_id: {$estate_id}");
 
-                    return StandardResponse::error(
-                        422,
-                        'Estate does not have complete Remita subaccount details, reach out to your estate admin'
-                    );
-                }
+                //     return StandardResponse::error(
+                //         422,
+                //         'Estate does not have complete Remita subaccount details, reach out to your estate admin'
+                //     );
+                // }
 
-                $subaccounts = [
-                    [
-                        'account_number' => $est->account_no,
-                        'bank_code'      => $est->bank->remita_code,
-                        'amount'         => $request->amount,
-                    ]
-                ];
+                // $subaccounts = [
+                //     [
+                //         'account_number' => $est->account_no,
+                //         'bank_code'      => $est->bank->remita_code,
+                //         'amount'         => $request->amount,
+                //     ]
+                // ];
 
                 $remitaService = new RemitaPaymentService();
                 $payment_init = $remitaService->makePayment([
@@ -445,7 +445,7 @@ class TransactionController extends Controller
                     'name' => $auth_user->first_name . ' ' . $auth_user->last_name,
                     'phone' => $phone,
                     'description' => 'Payment for ' . ($request->service_type ?? 'services'),
-                ], null, $subaccounts);
+                ], null, $est->id);
 
                 if (! $payment_init['status']) {
                     Logger::warning("Remita payment init by {$auth_user->email} failed", ['response' => $payment_init]);

@@ -7,6 +7,7 @@ use App\Exports\UtilitiesPaymentsExport;;
 use App\Http\Controllers\AccessToken\AccessTokenConroller;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BeneficiaryController;
 use App\Http\Controllers\Admin\CustomerImportController;
 use App\Http\Controllers\Admin\DashboardContoller;
 use App\Http\Controllers\Admin\EstateController;
@@ -195,6 +196,19 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-minpur', [EstateServiceController::class, 'estate_update_minpur']);
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
     Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
+
+
+
+
+    //Beneficiaries
+    Route::get('beneficiary', [BeneficiaryController::class, 'beneficiary_index']);
+    Route::get('new-beneficiary', [BeneficiaryController::class, 'beneficiary_new']);
+    Route::post('beneficiary-store', [BeneficiaryController::class, 'beneficiary_store']);
+    Route::get('view-beneficiary', [BeneficiaryController::class, 'beneficiary_view']);
+    Route::post('beneficiary-update', [BeneficiaryController::class, 'beneficiary_update']);
+    Route::get('beneficiary-delete', [BeneficiaryController::class, 'beneficiary_delete']);
+    Route::get('beneficiary-activate', [BeneficiaryController::class, 'beneficiary_activate']);
+    Route::get('beneficiary-deactivate', [BeneficiaryController::class, 'beneficiary_deactivate']);
 
 
 

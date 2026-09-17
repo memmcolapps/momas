@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Contracts\PaymentServiceInterface;
 use App\Jobs\ProcessRemitaWebhook;
+use App\Models\Beneficiary;
 use App\Models\Logger;
 use App\Models\Transaction;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,15 +35,11 @@ class RemitaPaymentService implements PaymentServiceInterface
     {
         $isTest = in_array(env('APP_ENV'), ['local', 'staging', 'stg', 'lcl']);
 
-        if ($isTest) {
-            $this->remita_merchant_id = config('services.remita.test_merchant_id');
-            $this->remita_api_key = config('services.remita.test_api_key');
-            $this->remita_service_type_id = config('services.remita.test_service_type_id');
-        } else {
-            $this->remita_merchant_id = config('services.remita.merchant_id');
-            $this->remita_api_key = config('services.remita.api_key');
-            $this->remita_service_type_id = config('services.remita.service_type_id');
-        }
+        $configService = new ConfigManagementService();
+
+        $this->remita_merchant_id = $configService->getConfig('remita-merchant-id');
+        $this->remita_api_key = $configService->getConfig('remita-api-key');
+        $this->remita_service_type_id = $configService->getConfig('remita-service-type-id');
 
         if (empty($this->remita_merchant_id) || empty($this->remita_api_key) || empty($this->remita_service_type_id)) {
             throw new Exception('Remita API keys are not configured');
@@ -112,24 +108,17 @@ class RemitaPaymentService implements PaymentServiceInterface
      *
      * @param array $data Payment data containing 'amount', 'email', 'name', 'phone', 'metadata'
      * @param mixed $transactionCharge
-     * @param array|null $subaccounts Optional split-payment beneficiaries. Each entry:
-     *        [
-     *          'account_number'  => string,
-     *          'bank_code'       => string,
-     *          'amount'          => string|float,
-     *          'name'            => string (optional, beneficiary name),
-     *          'id'              => string (optional, line item id),
-     *          'deduct_fee_from' => bool|int (optional, default false),
-     *        ]
-     *        When non-null and non-empty, these are mapped to Remita's
-     *        "lineItems" split-payment format and attached to the request.
+     * @param string|null $estateId Optional estate id; when given, the payment is
+     *        split into Remita "lineItems" — the MOMAS ("Memcol") share sourced from
+     *        the system configuration group "Remita Memcol Beneficiary" and the
+     *        estate's own share sourced from the beneficiaries record.
      *        Per Remita's docs, any amount not allocated across lineItems
      *        settles to your main merchant account automatically — you do
      *        NOT need to add your own account as a line item.
      * @return array Payment initialization response (includes RRR + hosted checkout url)
      * @throws InvalidArgumentException
      */
-    public function makePayment(array $data, $transactionCharge = null, ?array $subaccounts = null): array
+    public function makePayment(array $data, $transactionCharge = null, ?string $estateId = null): array
     {
         $requiredParameters = ['amount', 'email', 'name', 'phone'];
 
@@ -159,10 +148,9 @@ class RemitaPaymentService implements PaymentServiceInterface
             "description" => $data['description'] ?? 'Payment',
         ];
 
-        // Optional split payment: only attach lineItems when a non-null,
-        // non-empty subaccount array was passed in.
-        if ($subaccounts !== null && !empty($subaccounts)) {
-            $dataBody['lineItems'] = $this->buildSplitLineItems($subaccounts, $amount);
+        // Optional split payment: only attach lineItems when an estate was passed in.
+        if ($estateId !== null) {
+            $dataBody['lineItems'] = $this->buildSplitLineItems($estateId, $amount);
         }
 
         try {
@@ -240,57 +228,56 @@ class RemitaPaymentService implements PaymentServiceInterface
     }
 
     /**
-     * Map a generic subaccount array into Remita's split-payment "lineItems"
-     * format (beneficiary name/account/bank/amount + fee-deduction flag).
+     * Build the Remita split-payment "lineItems" for a payment.
+     *
+     * Two line items are produced:
+     *
+     * 1. The MOMAS ("Memcol") share — 1% of the amount, configured through the
+     *    "Remita Memcol Beneficiary" group in system configuration.
+     * 2. The estate's share — 99% of the amount, sourced from the estate's
+     *    beneficiary record (when one exists).
      *
      * Per Remita's own "Generate Invoice - Split Payment" example, lineItems
      * do NOT need to sum to the total amount — any unallocated remainder
-     * settles to the merchant's own main account by default. So this only
-     * guards against the line items exceeding the total, which Remita would
-     * otherwise reject (or worse, misbehave on) as an over-allocation.
+     * settles to the merchant's own main account by default.
      *
-     * @param array $subaccounts
+     * @param string $estateId
      * @param string $totalAmount
      * @return array
-     * @throws InvalidArgumentException
      */
-    protected function buildSplitLineItems(array $subaccounts, string $totalAmount): array
+    protected function buildSplitLineItems(string $estateId, string $totalAmount): array
     {
-        $lineItems = [];
-        $sum = 0.0;
+        $configService = new ConfigManagementService();
 
-        foreach ($subaccounts as $index => $subaccount) {
-            $missing = array_diff(['account_number', 'bank_code', 'amount'], array_keys($subaccount));
+        $lineItems = [
+            [
+                'lineItemsId' => (string) ($configService->getConfig('remita-memcol-line-items-id') ?? 'momas-01'),
+                'beneficiaryName' => (string) ($configService->getConfig('remita-memcol-beneficiary-name') ?? 'Memcol Account'),
+                'beneficiaryAccount' => (string) $configService->getConfig('remita-memcol-beneficiary-account'),
+                'bankCode' => (string) $configService->getConfig('remita-memcol-bank-code'),
+                'beneficiaryAmount' => (string) calculate_momas_vend_share((float) $totalAmount),
+                'deductFeeFrom' => $configService->getConfig('remita-memcol-deduct-fee-from') ? '1' : '0',
+            ],
+        ];
 
-            if (!empty($missing)) {
-                throw new InvalidArgumentException(
-                    "Subaccount at index {$index} is missing: " . implode(', ', $missing)
-                );
-            }
+        $subaccount = Beneficiary::where('estate_id', $estateId)->first();
 
-            $sum += (float) $subaccount['amount'];
-
+        if ($subaccount) {
             $lineItems[] = [
-                'lineItemsId' => $subaccount['id'] ?? (string) ($index + 1),
-                'beneficiaryName' => $subaccount['name'] ?? '',
-                'beneficiaryAccount' => (string) $subaccount['account_number'],
-                'bankCode' => (string) $subaccount['bank_code'],
-                'beneficiaryAmount' => (string) $subaccount['amount'],
-                'deductFeeFrom' => !empty($subaccount['deduct_fee_from']) ? '1' : '0',
+                'lineItemsId' => (string) ($subaccount->line_items_id ?? $subaccount->id),
+                'beneficiaryName' => (string) ($subaccount->beneficiary_name ?? ''),
+                'beneficiaryAccount' => (string) $subaccount->beneficiary_account,
+                'bankCode' => (string) $subaccount->bank_code,
+                'beneficiaryAmount' => (string) calculate_estate_vend_share((float) $totalAmount),
+                'deductFeeFrom' => $subaccount->deduct_fee_from ? '1' : '0',
             ];
-        }
-
-        if (round($sum, 2) > round((float) $totalAmount, 2)) {
-            Logger::warning('Remita split payment line items exceed total amount', [
-                'total_amount' => $totalAmount,
-                'line_items_sum' => $sum,
-                'subaccounts' => $subaccounts,
+        } else {
+            Logger::warning('Remita split payment: no Beneficiary found for estate', [
+                'estate_id' => $estateId,
             ]);
-
-            throw new InvalidArgumentException(
-                "Subaccount amounts ({$sum}) exceed the total payment amount ({$totalAmount})"
-            );
         }
+
+        // dd($lineItems);
 
         return $lineItems;
     }

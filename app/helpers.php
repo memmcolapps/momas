@@ -985,4 +985,16 @@ if (! function_exists('calculate_transaction_charge')) {
             return str_replace('_', '-', $string);
         }
     }
+
+    if (! function_exists('calculate_estate_vend_share')) {
+        function calculate_estate_vend_share(float $amount): float {
+            return round((0.99 * $amount), 2);
+        }
+    }
+
+    if (! function_exists('calculate_momas_vend_share')) {
+        function calculate_momas_vend_share(float $amount): float {
+            return round((0.01 * $amount), 2);
+        }
+    }
 }

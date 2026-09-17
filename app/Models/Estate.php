@@ -130,4 +130,8 @@ class Estate extends Model
 
         return $min_pur;
     }
+
+    public function getBank() {
+        return Bank::firstWhere('id', $this->bank_id);
+    }
 }
