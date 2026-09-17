@@ -28,6 +28,8 @@ class RemitaPaymentService implements PaymentServiceInterface
         $this->initializeRemitaSettings();
     }
 
+    public const providerName = 'remita';
+
     /**
      * Initialize Remita settings from the database
      */

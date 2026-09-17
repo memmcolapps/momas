@@ -502,7 +502,8 @@ class MeterController extends Controller
 
             if ($trx->status === 0) {
                 $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
-                $verifier = $verifier->verifyTransaction($trx->trx_id);
+                // Payment ref is same as trx_id for paystack transaction so the switch is harmless whereas remita needs payment ref
+                $verifier = $verifier->verifyTransaction($trx->payment_ref);
 
                 if (! $verifier['is_successful']) {
 

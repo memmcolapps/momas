@@ -445,7 +445,7 @@ class TransactionController extends Controller
                     'name' => $auth_user->first_name . ' ' . $auth_user->last_name,
                     'phone' => $phone,
                     'description' => 'Payment for ' . ($request->service_type ?? 'services'),
-                ], null, $est->id);
+                ], null);
 
                 if (! $payment_init['status']) {
                     Logger::warning("Remita payment init by {$auth_user->email} failed", ['response' => $payment_init]);
@@ -484,8 +484,8 @@ class TransactionController extends Controller
                 return StandardResponse::success(200, 'Payment initiation successful', [
                     'status' => true,
                     'rrr' => $rrr,
+                    'public_key' => 'QzAwMDAyNzEyNTl8MTEwNjE4NjF8OWZjOWYwNmMyZDk3MDRhYWM3YThiOThlNTNjZTE3ZjYxOTY5NDdmZWE1YzU3NDc0ZjE2ZDZjNTg1YWYxNWY3NWM4ZjMzNzZhNjNhZWZlOWQwNmJhNTFkMjIxYTRiMjYzZDkzNGQ3NTUxNDIxYWNlOGY4ZWEyODY3ZjlhNGUwYTY',
                     'transaction_status' => $trx->status,
-                    'ref' => $trx->trx_id,
                 ]);
             }
 
