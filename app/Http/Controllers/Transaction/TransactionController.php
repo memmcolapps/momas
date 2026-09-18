@@ -92,7 +92,6 @@ class TransactionController extends Controller
 
             $arrearsAmount = round(array_sum(array_column($breakdown['arrears'], 'Amount')), 2);
             $breakdown['amount'] = round($breakdown['remaining'] + $arrearsAmount, 2);
-            $breakdown['total_charge'] = round($arrearsAmount + $breakdown['paystack_transaction_fee'], 2);
 
             return StandardResponse::success(code: 200, message: 'Utilities breakdown calculated', data: $breakdown);
         } catch (Exception $e) {
