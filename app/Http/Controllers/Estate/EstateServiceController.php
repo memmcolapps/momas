@@ -202,6 +202,15 @@ class EstateServiceController extends Controller
 
     }
 
+    public function estate_update_fee_accumulation(request $request)
+    {
+        Estate::where('id', $request->estate_id)->update([
+            'fee_accumulation_period' => $request->fee_accumulation_period
+        ]);
+
+        return back()->with('message', "Estate Fee Accumulation Period updated successfully");
+    }
+
     public function create_service(request $request) {
         $estates = Estate::get(['title', 'id']);
         $services = Service::get(['service_title', 'id']);

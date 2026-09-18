@@ -8,7 +8,7 @@ interface PaymentServiceInterface
 
     public function getSecretKey(): ?string;
 
-    public function makePayment(array $data): array;
+    public function makePayment(array $data, mixed $transactionCharge = null): array;
 
     public function verifyTransaction(string|int $transactionId): array;
 

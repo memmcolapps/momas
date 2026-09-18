@@ -3,6 +3,23 @@
 return [
     'paystack_payment_endpoint' => 'https://api.paystack.co/transaction/initialize',
     'flutterwave_payment_endpoint' => 'https://api.flutterwave.com/v3/payments',
+    'remita_payment_endpoint' => env(
+        'REMITA_PAYMENT_ENDPOINT',
+        // 'https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit'
+        'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit',
+    ),
+
+    'remita_status_endpoint' => env(
+        'REMITA_STATUS_ENDPOINT',
+        'https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc'
+    ),
+
+    'remita_payment_page_url' => env(
+        'REMITA_PAYMENT_PAGE_URL',
+        'https://demo.remita.net/remita/onepage/api/v1/so.spa'
+    ),
+
+    'remita_rrr_generate_endpoint' => 'https://standardpay.remita.net/api/rrr/GenerateRRR',
 
     'status' => [  //Uninversal status and status code for uniformity and easy refactoring in case of future change
         'scs' => 'success',
@@ -36,4 +53,5 @@ return [
     'momas_minimum_vend' => env('MOMAS_MINIMUM_VEND', 100),
     'simulate_failed_token_gen' => env('SIMULATE_FAILED_TOKEN', false),
     'token_retry_deployment_date' => env('TOKEN_RETRY_DEPLOYMENT_DATE', '2026-08-11'),
+    'momas_max_transaction_fee' => env('MOMAS_MAX_TRANSACTION_FEE', 4000)
 ];

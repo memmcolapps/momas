@@ -18,6 +18,7 @@ class TokenLedger extends Model
         'expected_fee',
         'paid_at',
         'receiver_id',
+        'estate_id'
     ];
 
     protected $casts = [
@@ -25,4 +26,14 @@ class TokenLedger extends Model
         'expected_fee' => 'decimal:2',
         'paid_at' => 'datetime',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function estate()
+    {
+        return $this->belongsTo(Estate::class);
+    }
 }

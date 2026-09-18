@@ -124,49 +124,49 @@
                         <li class="menu-title">Menu</li>
 
                         <li>
-                            <a class='tp-link' href="admin-dashboard">
+                            <a class='tp-link' href="/admin/admin-dashboard">
                                 <i data-feather="menu"></i>
                                 <span> Dashboard </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="estate">
+                            <a class='tp-link' href="/admin/estate">
                                 <i data-feather="home"></i>
                                 <span> Estate </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="transformer-list">
+                            <a class='tp-link' href="/admin/transformer-list">
                                 <i data-feather="box"></i>
                                 <span> Transformer </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="tariff-list">
+                            <a class='tp-link' href="/admin/tariff-list">
                                 <i data-feather="divide-square"></i>
                                 <span> Tariff </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="meter-list">
+                            <a class='tp-link' href="/admin/meter-list">
                                 <i data-feather="cpu"></i>
                                 <span> Meter </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="customers">
+                            <a class='tp-link' href="/admin/customers">
                                 <i data-feather="users"></i>
                                 <span> Customers </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="estate-service">
+                            <a class='tp-link' href="/admin/estate-service">
                                 <i data-feather="layers"></i>
                                 <span> Estate Service </span>
                             </a>
@@ -182,18 +182,10 @@
                             <div class="collapse" id="sidebar1">
                                 <ul class="nav-second-level">
                                     <li>
-                                        <a class='tp-link' href='credit-token'>Credit Token</a>
+                                        <a class='tp-link' href='/admin/credit-token'>Credit Token</a>
                                     </li>
                                     <li>
-                                        <a class='tp-link' href='retry-token-transactions'>Retry Token</a>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <div class="collapse" id="sidebar1">
-                                <ul class="nav-second-level">
-                                    <li>
-                                        <a class='tp-link' href='kct-token'>Key Change Token</a>
+                                        <a class='tp-link' href='/admin/retry-token-transactions'>Retry Token</a>
                                     </li>
                                 </ul>
                             </div>
@@ -201,7 +193,7 @@
                             <div class="collapse" id="sidebar1">
                                 <ul class="nav-second-level">
                                     <li>
-                                        <a class='tp-link' href='tamper-token'>Clear Tamper Token</a>
+                                        <a class='tp-link' href='/admin/kct-token'>Key Change Token</a>
                                     </li>
                                 </ul>
                             </div>
@@ -209,28 +201,51 @@
                             <div class="collapse" id="sidebar1">
                                 <ul class="nav-second-level">
                                     <li>
-                                        <a class='tp-link' href='clear-credit-token'>Clear Credit Token</a>
+                                        <a class='tp-link' href='/admin/tamper-token'>Clear Tamper Token</a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="collapse" id="sidebar1">
+                                <ul class="nav-second-level">
+                                    <li>
+                                        <a class='tp-link' href='/admin/clear-credit-token'>Clear Credit Token</a>
                                     </li>
                                 </ul>
                             </div>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="pos-index">
+                            <a href="charts-mixed.html#sidebarPostpaid" data-bs-toggle="collapse">
+                                <i data-feather="zap"></i>
+                                <span> Postpaid Token </span>
+                                <span class="menu-arrow"></span>
+                            </a>
+                            <div class="collapse" id="sidebarPostpaid">
+                                <ul class="nav-second-level">
+                                    <li>
+<a class='tp-link' href='/admin/postpaid-token'>Vend Token</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li>
+                            <a class='tp-link' href="/admin/pos-index">
                                 <i data-feather="credit-card"></i>
                                 <span> POS Merchant </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="access-token">
+                            <a class='tp-link' href="/admin/access-token">
                                 <i data-feather="lock"></i>
                                 <span> Access Token </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="users-list">
+                            <a class='tp-link' href="/admin/users-list">
                                 <i data-feather="users"></i>
                                 <span> Users </span>
                             </a>
@@ -244,10 +259,10 @@
                             </a>
                             <div class="collapse" id="sidebarBaseui">
                                 <ul class="nav-second-level">
-                                    <li><a class='tp-link' href='report-transaction'>Transactions</a></li>
-                                    <li><a class='tp-link' href='meter-transaction-report'>Meter Transactions</a></li>
-                                    <li><a class='tp-link' href='utility-payment'>Utility Payments</a></li>
-                                    <li><a class='tp-link' href='enkpay-payment'>Enkpay Payments</a></li>
+                                    <li><a class='tp-link' href='/admin/report-transaction'>Transactions</a></li>
+                                    <li><a class='tp-link' href='/admin/meter-transaction-report'>Meter Transactions</a></li>
+                                    <li><a class='tp-link' href='/admin/utility-payment'>Utility Payments</a></li>
+                                    <li><a class='tp-link' href='/admin/enkpay-payment'>Enkpay Payments</a></li>
                                 </ul>
                             </div>
                         </li>
@@ -260,14 +275,14 @@
                             </a>
                             <div class="collapse" id="sidebarBaseui2">
                                 <ul class="nav-second-level">
-                                    <li><a class='tp-link' href='tariff_audit'>Tariff</a></li>
-                                    <li><a class='tp-link' href='utility_pay_audit'>Utility Payment</a></li>
+                                    <li><a class='tp-link' href='/admin/tariff_audit'>Tariff</a></li>
+                                    <li><a class='tp-link' href='/admin/utility_pay_audit'>Utility Payment</a></li>
                                 </ul>
                             </div>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="settings">
+                            <a class='tp-link' href="/admin/settings">
                                 <i data-feather="settings"></i>
                                 <span> Settings </span>
                             </a>
@@ -288,35 +303,35 @@
                         <li class="menu-title">Menu</li>
 
                         <li>
-                            <a class='tp-link' href="admin-dashboard">
+                            <a class='tp-link' href="/admin/admin-dashboard">
                                 <i data-feather="menu"></i>
                                 <span> Dashboard </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="transformer-list">
+                            <a class='tp-link' href="/admin/transformer-list">
                                 <i data-feather="box"></i>
                                 <span> Transformer </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="meter-list">
+                            <a class='tp-link' href="/admin/meter-list">
                                 <i data-feather="cpu"></i>
                                 <span> Meter </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="tariff-list">
+                            <a class='tp-link' href="/admin/tariff-list">
                                 <i data-feather="divide-square"></i>
                                 <span> Tariff </span>
                             </a>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="customers">
+                            <a class='tp-link' href="/admin/customers">
                                 <i data-feather="users"></i>
                                 <span> Customers </span>
                             </a>
@@ -325,7 +340,7 @@
                         {{-- Estate Service: only shown when status is available (1) --}}
                         @if(($mod_features['services'] ?? 0) == 1)
                             <li>
-                                <a class='tp-link' href="estate-service">
+                                <a class='tp-link' href="/admin/estate-service">
                                     <i data-feather="layers"></i>
                                     <span> Estate Service </span>
                                 </a>
@@ -347,34 +362,49 @@
                             @if($ptype == 2 || $ptype == 3)
                                 <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='credit-token'>Credit Token</a></li>
+                                        <li><a class='tp-link' href='/admin/credit-token'>Credit Token</a></li>
                                     </ul>
                                 </div>
 
                                 <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='kct-token'>Key Change Token</a></li>
+                                        <li><a class='tp-link' href='/admin/kct-token'>Key Change Token</a></li>
                                     </ul>
                                 </div>
 
                                 <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='tamper-token'>Clear Tamper Token</a></li>
+                                        <li><a class='tp-link' href='/admin/tamper-token'>Clear Tamper Token</a></li>
                                     </ul>
                                 </div>
 
                                 <div class="collapse" id="sidebar1">
                                     <ul class="nav-second-level">
-                                        <li><a class='tp-link' href='clear-credit-token'>Clear Credit Token</a></li>
+                                        <li><a class='tp-link' href='/admin/clear-credit-token'>Clear Credit Token</a></li>
                                     </ul>
                                 </div>
                             @endif
                         </li>
 
+                        @if($ptype == 2 || $ptype == 3)
+                            <li>
+                                <a href="charts-mixed.html#sidebarPostpaid" data-bs-toggle="collapse">
+                                    <i data-feather="zap"></i>
+                                    <span> Postpaid Token </span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <div class="collapse" id="sidebarPostpaid">
+                                    <ul class="nav-second-level">
+                                        <li><a class='tp-link' href='/admin/postpaid-token'>Vend Token</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                        @endif
+
                         {{-- Access Token: only shown when status is available (1) --}}
                         @if(($mod_features['access_token'] ?? 0) == 1)
                             <li>
-                                <a class='tp-link' href="access-token">
+                                <a class='tp-link' href="/admin/access-token">
                                     <i data-feather="lock"></i>
                                     <span> Access Token </span>
                                 </a>
@@ -382,7 +412,7 @@
                         @endif
 
                         <li>
-                            <a class='tp-link' href="users-list">
+                            <a class='tp-link' href="/admin/users-list">
                                 <i data-feather="users"></i>
                                 <span> Users </span>
                             </a>
@@ -396,14 +426,14 @@
                             </a>
                             <div class="collapse" id="sidebarBaseui">
                                 <ul class="nav-second-level">
-                                    <li><a class='tp-link' href='report-transaction'>Transactions</a></li>
-                                    <li><a class='tp-link' href='meter-transaction-report'>Meter Transactions</a></li>
+                                    <li><a class='tp-link' href='/admin/report-transaction'>Transactions</a></li>
+                                    <li><a class='tp-link' href='/admin/meter-transaction-report'>Meter Transactions</a></li>
                                 </ul>
                             </div>
                         </li>
 
                         <li>
-                            <a class='tp-link' href="settings">
+                            <a class='tp-link' href="/admin/settings">
                                 <i data-feather="settings"></i>
                                 <span> Settings </span>
                             </a>
@@ -411,8 +441,20 @@
 
                     </ul>
 
-                {{-- ===================== ROLE 4 ===================== --}}
+                {{-- ===================== ROLE 4: Estate Staff ===================== --}}
                 @elseif(Auth::user()->role == 4)
+                    <ul id="side-menu">
+
+                        <li class="menu-title">Menu</li>
+
+                        <li>
+                            <a class='tp-link' href="/admin/access-token">
+                                <i data-feather="lock"></i>
+                                <span> Access Token </span>
+                            </a>
+                        </li>
+
+                    </ul>
 
                 {{-- ===================== ROLE 5 ===================== --}}
                 @elseif(Auth::user()->role == 5)
