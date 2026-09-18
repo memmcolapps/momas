@@ -77,12 +77,12 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         // Route::post('retry-meter', [TokenController::class, 'retry_generate_credit_token']);
         Route::post('retry-credit-token', [TransactionController::class, 'retry_credit_token']);
         Route::get('vending-properties', [MeterController::class, 'vending_properties']);
+        Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
     });
 
     // ── Feature::OTHER_METER ──────────────────
     Route::group(['defaults' => ['feature' => \App\Constants\Feature::OTHER_METER]], function () {
         Route::post('buy-meter-others', [MeterController::class, 'pay_for_others_meter_token']);
-        Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
     });
 
     // ── Feature::PRINT_TOKEN ──────────────────
@@ -130,6 +130,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     Route::post('pay', [TransactionController::class, 'make_payment']);
     Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
     Route::get('arrears', [TransactionController::class, 'arrears']);
+    Route::get('arrears/breakdown', [TransactionController::class, 'utilitiesBreakdown']);
     Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
     Route::get('get-trx', [TransactionController::class, 'get_trx']);
     Route::get('failed-credit-token-transactions', [TransactionController::class, 'failed_credit_token_transactions']);

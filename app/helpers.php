@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Support\RequestContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -624,6 +625,34 @@ if (! function_exists('generate_unique_string')) {
     }
 }
 
+if (! function_exists('available_payment_gateways')) {
+
+    function available_payment_gateways(array $allowed, ?int $estate_id = null): array
+    {
+        $configured = app(\App\Services\ConfigManagementService::class)
+            ->getConfig('payment_gateways', $estate_id) ?? [];
+
+        if (! is_array($configured)) {
+            $configured = (array) $configured;
+        }
+
+        $configured = array_map('strtolower', $configured);
+        $gateways = array_values(array_intersect($allowed, $configured));
+
+        $labels = [
+            'paystack'    => 'Paystack',
+            'flutterwave' => 'Flutterwave',
+            'remita'      => 'Remita',
+            'enkpay'      => 'Enkpay',
+        ];
+
+        return array_map(fn ($g) => [
+            'value' => $g,
+            'label' => $labels[$g] ?? ucfirst(str_replace('_', ' ', $g)),
+        ], $gateways);
+    }
+}
+
 if (! function_exists('handle_pay_arrears')) {
 
     function handle_pay_arrears($trx_id, $user_id, $type, $return_amount=false) {
@@ -745,6 +774,8 @@ if (! function_exists('backfill_utility_payments')) {
 
             $now = Carbon::now()->startOfMonth();
 
+            $utilityAmountStart = Carbon::parse($userCreationDate)->startOfMonth();
+
             while ($backfillFrom->lte($now)) {
                 $exists = UtilitiesPayment::where('user_id', $userId)
                     ->where('type', 'utilities')
@@ -762,7 +793,7 @@ if (! function_exists('backfill_utility_payments')) {
                             $q->whereNull('user_id')
                                 ->orWhere('user_id', $userId);
                         })
-                        ->whereBetween('created_at', [$originalBackfillFrom, $prevMonthEnd])
+                        ->whereBetween('created_at', [$utilityAmountStart, $now->endOfMonth()])
                         ->sum('amount');
 
                     if ($monthUtilityAmount > 0) {
@@ -935,7 +966,35 @@ if (! function_exists('calculate_transaction_charge')) {
             $transactionCharge = (2.5/100) * $amount;
         }
 
-        $momas_max = config('constants.momas_max_transaction_fee');
+        $payment_purpose = app(RequestContext::class)->get('payment_purpose');
+
+        $momas_max = match ($payment_purpose) {
+            'utilities' => config('constants.momas_max_utilities_transaction_fee'),
+            default => config('constants.momas_max_transaction_fee'),
+        };
+
         return min($transactionCharge, $momas_max);
+    }
+
+    if (!function_exists('underscore_to_hyphen')) {
+        function underscore_to_hyphen(string $string, bool $reverse=false) {
+            if ($reverse) {
+                return str_replace('-', '_', $string);
+            }
+
+            return str_replace('_', '-', $string);
+        }
+    }
+
+    if (! function_exists('calculate_estate_vend_share')) {
+        function calculate_estate_vend_share(float $amount): float {
+            return round((0.99 * $amount), 2);
+        }
+    }
+
+    if (! function_exists('calculate_momas_vend_share')) {
+        function calculate_momas_vend_share(float $amount): float {
+            return round((0.01 * $amount), 2);
+        }
     }
 }

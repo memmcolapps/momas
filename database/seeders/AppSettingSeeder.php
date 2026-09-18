@@ -45,6 +45,11 @@ class AppSettingSeeder extends Seeder
                 'key'   => 'app_update_description',
                 'value' => config('constants.app_update_data.app_update_description'),
             ],
+            [
+                'title' => 'Payment Gateways',
+                'key'   => 'payment_gateways',
+                'value' => ['paystack'],
+            ],
         ];
 
         foreach ($settings as $setting) {

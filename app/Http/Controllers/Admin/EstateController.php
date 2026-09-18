@@ -26,35 +26,31 @@ class EstateController extends Controller
         if ($request->has('search') && $request->search != '') {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('title', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('state', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('city', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('lga', 'like', '%' . $searchTerm . '%');
+                $q->where('title', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('state', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('city', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('lga', 'like', '%'.$searchTerm.'%');
             });
         }
 
         $data['estate_list'] = $query->paginate(20)->withQueryString();
         $data['estate'] = Estate::count();
 
-
-
         return view('admin/estate/index', $data);
 
     }
 
-
     public function estate_new(request $request)
     {
         $data['estate_features'] = ModFeature::select([
-                'title',
-                'slug',
-                'status'
-            ])
+            'title',
+            'slug',
+            'status',
+        ])
             ->get();
 
         return view('admin/estate/create', $data);
     }
-
 
     public function estate_store(request $request)
     {
@@ -63,12 +59,10 @@ class EstateController extends Controller
             return back()->with('error', 'Enter only one charge fee');
         }
 
-
-        if($request->account_number != null){
+        if ($request->account_number != null) {
 
             $fl = Setting::where('id', 1)->first();
             $pksecret = $fl->paystack_secret;
-
 
             $data = [
                 'business_name' => $request->title,
@@ -85,13 +79,14 @@ class EstateController extends Controller
 
                 $response = $client->post('https://api.paystack.co/subaccount', [
                     'headers' => [
-                        'Authorization' => 'Bearer ' . $pksecret,
+                        'Authorization' => 'Bearer '.$pksecret,
                         'Content-Type' => 'application/json',
                     ],
                     'json' => $data,
                 ]);
 
                 $body = json_decode($response->getBody(), true);
+
                 return response()->json($body);
             } catch (\Exception $e) {
 
@@ -100,9 +95,6 @@ class EstateController extends Controller
             }
 
         }
-
-
-
 
         $org = new estate();
         $org->title = $request->title;
@@ -133,19 +125,15 @@ class EstateController extends Controller
                 EstateModFeature::updateOrCreate(
                     [
                         'estate_id' => $estateId,
-                        'mod_feature_id' => $feature->id
+                        'mod_feature_id' => $feature->id,
                     ],
                     ['status' => $status]
                 );
             }
         }
 
-
-
-
         return redirect('admin/estate')->with('message', 'Estate created successfully');
     }
-
 
     public function estate_view(request $request)
     {
@@ -156,7 +144,7 @@ class EstateController extends Controller
 
                 $response = $client->get('https://api.paystack.co/bank', [
                     'headers' => [
-                        'Authorization' => 'Bearer ' . env('PAYSTACK_SECRET_KEY'),
+                        'Authorization' => 'Bearer '.env('PAYSTACK_SECRET_KEY'),
                         'Accept' => 'application/json',
                     ],
                 ]);
@@ -169,7 +157,6 @@ class EstateController extends Controller
 
             }
 
-
             $data['org'] = Estate::where('id', $request->id)->first();
 
             if (! isset($data['org'])) {
@@ -177,7 +164,6 @@ class EstateController extends Controller
             }
 
             $data['paystackbank'] = $banks;
-
 
             $data['tar'] = Tariff::where('estate_id', $request->id)->first();
             // $data['utl'] = Utility::where('estate_id', $request->id)->first() ?? null;
@@ -199,14 +185,11 @@ class EstateController extends Controller
                 ])
                 ->get();
 
-
         } elseif (Auth::user()->role == 1) {
-
 
         } elseif (Auth::user()->role == 2) {
 
         } elseif (Auth::user()->role == 3) {
-
 
             $data['org'] = Estate::where('id', Auth::user()->estate_id)->first();
             $data['tar'] = Tariff::where('estate_id', Auth::user()->estate_id)->first();
@@ -216,7 +199,6 @@ class EstateController extends Controller
             $data['utility'] = Utility::where('estate_id', Auth::user()->estate_id)->with('user')->get() ?? null;
             $data['service_charges'] = Utility::where('estate_id', Auth::user()->estate_id)->serviceCharge()->get();
             $data['debt_utilities'] = Utility::where('estate_id', Auth::user()->estate_id)->debt()->whereNull('user_id')->get();
-
 
         } elseif (Auth::user()->role == 4) {
 
@@ -229,7 +211,6 @@ class EstateController extends Controller
         return view('admin/estate/view', $data);
     }
 
-
     public function estate_update(request $request)
     {
 
@@ -237,12 +218,20 @@ class EstateController extends Controller
             return back()->with('error', 'Enter only one charge fee');
         }
 
-
         $auth_user = Auth::user();
         $old_data = Estate::firstWhere('id', $request->id);
 
         if (! $old_data) {
             return back()->with('error', 'Error: Invalid estate_id');
+        }
+
+        $bank_id = $old_data->bank_id;
+        if ($request->filled('bank')) {
+            $bank = (new \App\Services\BankService())->findOrCreateFromCode(
+                $request->bank,
+                $request->only(['bank_name', 'bank_slug']) + ['paystack_code' => $request->bank_paystack_code ?? $request->bank]
+            );
+            $bank_id = $bank->id ?? null;
         }
 
         Estate::where('id', $request->id)->update([
@@ -257,25 +246,27 @@ class EstateController extends Controller
             'account_no' => $request->account_no,
             'bank' => $request->bank,
             'account_name' => $request->account_name,
+            'bank_id' => $bank_id,
             'charge_fee_flat' => $request->charge_fee_flat,
             'charge_fee_precent' => $request->charge_fee_precent,
             'pos_tariff_id' => $request->pos_tariff_id,
             'serial_no' => $request->serial_no,
             'admin_fee' => $request->estate_admin_fee,
+            'estate_meter_vending_type' => $request->estate_meter_vending_type ?? 1,
         ]);
 
         Logger::info("User {$auth_user->id}  updates estate info", [
             'old_data' => $old_data,
-            'new_data' => Estate::firstWhere('id', $request->id)
+            'new_data' => Estate::firstWhere('id', $request->id),
         ]);
 
         return redirect('admin/estate')->with('message', 'Estate updated successfully');
     }
 
-
     public function estate_delete(request $request)
     {
         Estate::where('id', $request->id)->delete();
+
         return redirect('admin/estate')->with('message', 'Estate deleted successfully');
     }
 
@@ -289,7 +280,6 @@ class EstateController extends Controller
 
         ]);
 
-
         return back()->with('message', 'Tariff updated successfully');
     }
 
@@ -297,7 +287,7 @@ class EstateController extends Controller
     {
         try {
             $utilitiesData = json_decode($request->input('utilities_data'), true);
-            if (!is_array($utilitiesData) || empty($utilitiesData)) {
+            if (! is_array($utilitiesData) || empty($utilitiesData)) {
                 return back()->with('error', 'No utility data provided');
             }
 
@@ -333,7 +323,7 @@ class EstateController extends Controller
                 }
 
                 $monthlyEndDate = null;
-                if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && !empty($utility['start_date']) && !empty($utility['payment_months'])) {
+                if (($utility['mode_of_payment'] ?? null) === 'monthly_payment' && ! empty($utility['start_date']) && ! empty($utility['payment_months'])) {
                     $monthlyEndDate = \Carbon\Carbon::parse($utility['start_date'])->addMonths((int) $utility['payment_months'])->toDateString();
                 }
 
@@ -348,7 +338,7 @@ class EstateController extends Controller
                     'type' => $type,
                     'start_date' => $utility['start_date'] ?? null,
                     'mode_of_payment' => $utility['mode_of_payment'] ?? null,
-                    'activated' => !$startDate->isFuture(),
+                    'activated' => ! $startDate->isFuture(),
                     'operator_id' => auth()->id(),
                     // 'percent_payment' => $utility['percent_payment'] ?? null,
                     // 'payment_months' => $utility['payment_months'] ?? null,
@@ -365,41 +355,32 @@ class EstateController extends Controller
         }
     }
 
-
     public function update_duration(request $request)
     {
-
-
 
         Estate::where('id', $request->id)->update([
             'duration' => $request->duration,
         ]);
 
-
         return redirect()->back()->with('success', 'Duration updated successfully');
 
-
     }
-
 
     public function estate_deactivate(request $request)
     {
 
         Estate::where('id', $request->id)->update(['status' => 0]);
 
-        return back()->with('message', "Estate Deactivated successfully");
-
+        return back()->with('message', 'Estate Deactivated successfully');
 
     }
-
 
     public function estate_activate(request $request)
     {
 
         Estate::where('id', $request->id)->update(['status' => 2]);
 
-        return back()->with('message', "Estate Activated successfully");
-
+        return back()->with('message', 'Estate Activated successfully');
 
     }
 
@@ -415,7 +396,7 @@ class EstateController extends Controller
                 EstateModFeature::updateOrCreate(
                     [
                         'estate_id' => $estateId,
-                        'mod_feature_id' => $feature->id
+                        'mod_feature_id' => $feature->id,
                     ],
                     ['status' => $status]
                 );
@@ -487,7 +468,7 @@ class EstateController extends Controller
                 'duration' => $type === 'service_charge' ? $request->duration : null,
                 'start_date' => $type === 'debt' ? $request->start_date : null,
                 'mode_of_payment' => $type === 'debt' ? $request->mode_of_payment : null,
-                'activated' => !$startDate->isFuture(),
+                'activated' => ! $startDate->isFuture(),
                 'operator_id' => auth()->id(),
                 'percent_payment' => $request->percent_payment,
                 'payment_months' => $request->payment_months,
@@ -499,5 +480,4 @@ class EstateController extends Controller
             return back()->with('error', $e->getMessage());
         }
     }
-
 }

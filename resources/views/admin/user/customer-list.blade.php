@@ -173,12 +173,14 @@
                                                   $rowClass = $isDisabled ? 'table-secondary' : '';
                                               @endphp
                                               <tr class="{{ $rowClass }}">
-                                                  <td><a href="view-user?id={{ $data->id }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{ $data->first_name }}</a>
+                                                   <td><a href="view-user?id={{ $data->id }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{ $data->first_name }}</a>
                                                   </td>
                                                   <td><a href="view-user?id={{ $data->id }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{ $data->last_name }}</a>
                                                   </td>
-                                                  <td>{{ $data->phone }}</td>
-                                                  <td>{{ $data->email }}</td>
+                                                  <td><a href="view-user?id={{ $data->id }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{ $data->phone }}</a>
+                                                  </td>
+                                                  <td><a href="view-user?id={{ $data->id }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{ $data->email }}</a>
+                                                  </td>
                                                   <td>{{ $data->estate_name }}</td>
 
                                                   <td>
@@ -357,8 +359,8 @@
                                                 </td>
                                                 <td><a href="view-user?id={{ $data->id }}">{{ $data->last_name }}</a>
                                                 </td>
-                                                <td>{{ $data->phone }}</td>
-                                                <td>{{ $data->email }}</td>
+                                                <td><a href="view-user?id={{ $data->id }}">{{ $data->phone }}</a></td>
+                                                <td><a href="view-user?id={{ $data->id }}">{{ $data->email }}</a></td>
 
                                                 <td>
                                                     @if ($data->status == 2)

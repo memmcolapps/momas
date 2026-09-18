@@ -502,7 +502,8 @@ class MeterController extends Controller
 
             if ($trx->status === 0) {
                 $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
-                $verifier = $verifier->verifyTransaction($trx->trx_id);
+                // Payment ref is same as trx_id for paystack transaction so the switch is harmless whereas remita needs payment ref
+                $verifier = $verifier->verifyTransaction($trx->payment_ref);
 
                 if (! $verifier['is_successful']) {
 
@@ -595,6 +596,65 @@ class MeterController extends Controller
         }
     }
 
+
+    public function getEmergencyToken(Request $request)
+    {
+        $auth_user = Auth::user();
+
+        if ($auth_user->role != 0) {
+            return StandardResponse::error(403, 'Unauthorized: Only super admins can generate emergency tokens');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'meterNo' => ['required', 'integer', Rule::exists('meters', 'meterNo')],
+            'tariff_id' => ['required', 'integer', Rule::exists('tariffs', 'id')],
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        $meter = Meter::where('meterNo', $request->meterNo)->first();
+
+        if (! $meter) {
+            return StandardResponse::error(404, 'Meter not found');
+        }
+
+        try {
+            $result = $meter->getEmergencyToken(
+                (int) $request->tariff_id,
+                (int) $request->amount
+            );
+        } catch (Exception $e) {
+            return StandardResponse::error(422, $e->getMessage());
+        }
+
+        return StandardResponse::success(200, 'Emergency token generated successfully', $result);
+    }
+
+    public function emergency_token_index(Request $request)
+    {
+        $auth_user = Auth::user();
+
+        if ($auth_user->role != 0) {
+            return redirect()->back()->with('error', 'Unauthorized: Only super admins can access emergency tokens');
+        }
+
+        $data['estate'] = Estate::all();
+        $data['emergency_credit_tokens'] = CreditToken::where('trx_id', 'like', 'emg_ref%')
+            ->latest()
+            ->paginate(20);
+
+        $data['emergency_logs'] = Logger::where('level', 'critical')
+            ->where('message', 'Emergency token generated')
+            ->latest()
+            ->paginate(20);
+
+        return view('admin.token.emergency-token-view', $data);
+    }
 
     public function retry_meter_token(request $request)
     {

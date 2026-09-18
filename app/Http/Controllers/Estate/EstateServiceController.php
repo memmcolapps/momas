@@ -211,6 +211,39 @@ class EstateServiceController extends Controller
         return back()->with('message', "Estate Fee Accumulation Period updated successfully");
     }
 
+    public function estate_update_payment_gateways(Request $request)
+    {
+        $request->validate([
+            'estate_id' => 'required|exists:estates,id',
+            'payment_gateways' => 'nullable|array',
+            'payment_gateways.*' => 'string|in:paystack,flutterwave,remita,enkpay',
+        ]);
+
+        $estate_id = $request->estate_id;
+        $new_gateways = array_values(array_unique(array_map('strtolower', $request->input('payment_gateways', []))));
+
+        $current = app(\App\Services\ConfigManagementService::class)->getConfig('payment_gateways', $estate_id) ?? [];
+        $current = array_map('strtolower', (array) $current);
+        sort($current);
+        sort($new_gateways);
+
+        if ($current === $new_gateways) {
+            return back()->with('message', 'No changes to payment gateways.');
+        }
+
+        app(\App\Services\ConfigManagementService::class)->put(
+            'payment_gateways',
+            $new_gateways,
+            false,
+            $estate_id,
+            'Payment Gateways',
+            null,
+            'system'
+        );
+
+        return back()->with('message', 'Estate payment gateways updated successfully');
+    }
+
     public function create_service(request $request) {
         $estates = Estate::get(['title', 'id']);
         $services = Service::get(['service_title', 'id']);

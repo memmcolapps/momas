@@ -7,6 +7,7 @@ use App\Models\EstateModFeature;
 use App\Models\ModFeature;
 use App\Services\FlutterwavePaymentService;
 use App\Services\PaystackPaymentService;
+use App\Services\RemitaPaymentService;
 use App\Services\WalletPaymentService;
 use App\Support\RequestContext;
 use Illuminate\Pagination\Paginator;
@@ -39,7 +40,8 @@ class AppServiceProvider extends ServiceProvider
                 'paystack' => new PaystackPaymentService(),
                 'flutterwave' => new FlutterwavePaymentService(),
                 'wallet' => new WalletPaymentService(),
-                default => dd($provider) //throw new \Exception('Unsupported payment provider'),
+                'remita' => new RemitaPaymentService(),
+                default => throw new \Exception('Unsupported payment provider'),
             };
         });
 

@@ -33,6 +33,8 @@ class AppSetting extends Model implements AuditableContract
         'type',
         'group',
         'is_active',
+        'is_global',
+        'estate_id',
     ];
 
     /**
@@ -42,8 +44,20 @@ class AppSetting extends Model implements AuditableContract
      */
     protected $casts = [
         'is_active' => 'boolean',
+        'is_global' => 'boolean',
+        'estate_id' => 'integer',
         'value' => 'array',
     ];
+
+    /**
+     * The estate this setting belongs to (null when the setting is global).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function estate()
+    {
+        return $this->belongsTo(Estate::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -85,18 +99,20 @@ class AppSetting extends Model implements AuditableContract
     const CACHE_TAG = 'app_settings';
 
     /**
-     * Get a setting by key (with caching).
+     * Get a setting by key (with caching). When an estate id is given the
+     * estate scoped value is preferred, falling back to the global setting.
      *
      * @param string $key
      * @param mixed $default
+     * @param int|null $estateId
      * @return mixed
      */
-    public static function get(string $key, $default = null)
+    public static function get(string $key, $default = null, ?int $estateId = null)
     {
-        $cacheKey = self::CACHE_PREFIX . $key;
+        $cacheKey = self::CACHE_PREFIX . ($estateId !== null ? "estate_{$estateId}_" : '') . $key;
 
-        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($key, $default) {
-            $setting = static::where('key', $key)->first();
+        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($key, $default, $estateId) {
+            $setting = static::forKey($key, $estateId)->first();
 
             if (!$setting) {
                 return $default;
@@ -111,15 +127,22 @@ class AppSetting extends Model implements AuditableContract
      *
      * @param string $key
      * @param mixed $value
+     * @param string|null $title
      * @param string|null $description
      * @param string|null $group
+     * @param bool $isGlobal
+     * @param int|null $estateId
      * @return self
      */
-    public static function set(string $key, $value, ?string $title = null, ?string $description = null, ?string $group = null): self
+    public static function set(string $key, $value, ?string $title = null, ?string $description = null, ?string $group = null, bool $isGlobal = true, ?int $estateId = null): self
     {
         $value = json_encode($value);
 
-        $data = ['value' => $value];
+        $data = [
+            'value' => $value,
+            'is_global' => $isGlobal,
+            'estate_id' => $isGlobal ? null : $estateId,
+        ];
 
         if ($title !== null) {
             $data['title'] = $title;
@@ -133,11 +156,10 @@ class AppSetting extends Model implements AuditableContract
             $data['group'] = $group;
         }
 
-        // dd($data);
-        $setting = static::updateOrCreate(['key' => $key], $data);
+        $setting = static::updateOrCreate(['key' => $key, 'estate_id' => $data['estate_id']], $data);
 
         // Clear cache after update
-        self::clearCache($key);
+        self::clearCache($key, $estateId);
 
         return $setting;
     }
@@ -146,46 +168,60 @@ class AppSetting extends Model implements AuditableContract
      * Delete a setting by key (clears cache after deletion).
      *
      * @param string $key
+     * @param int|null $estateId
      * @return bool
      */
-    public static function remove(string $key): bool
+    public static function remove(string $key, ?int $estateId = null): bool
     {
         // Clear cache before deletion
-        self::clearCache($key);
+        self::clearCache($key, $estateId);
 
-        return static::where('key', $key)->delete() > 0;
+        return static::where('key', $key)->where('estate_id', $estateId)->delete() > 0;
     }
 
     /**
      * Check if a setting exists (with caching).
      *
      * @param string $key
+     * @param int|null $estateId
      * @return bool
      */
-    public static function has(string $key): bool
+    public static function has(string $key, ?int $estateId = null): bool
     {
-        $cacheKey = self::CACHE_PREFIX . $key . '_exists';
+        $cacheKey = self::CACHE_PREFIX . ($estateId !== null ? "estate_{$estateId}_" : '') . $key . '_exists';
 
-        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($key) {
-            return static::where('key', $key)->exists();
+        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($key, $estateId) {
+            return static::forKey($key, $estateId)->exists();
         });
     }
 
     /**
-     * Get all settings as key-value array (with caching).
+     * Get all settings as key-value array (with caching). When an estate id is
+     * given both estate scoped and global settings are returned.
      *
      * @param string|null $group
+     * @param int|null $estateId
      * @return array<string, mixed>
      */
-    public static function allAsArray(?string $group = null): array
+    public static function allAsArray(?string $group = null, ?int $estateId = null): array
     {
-        $cacheKey = self::CACHE_PREFIX . 'all' . ($group ? '_' . $group : '');
+        $cacheKey = self::CACHE_PREFIX . 'all'
+            . ($group ? '_' . $group : '')
+            . ($estateId !== null ? "_estate_{$estateId}" : '');
 
-        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($group) {
+        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($group, $estateId) {
             $query = static::where('is_active', true);
 
             if ($group !== null) {
                 $query->where('group', $group);
+            }
+
+            if ($estateId !== null) {
+                $query->where(function ($q) use ($estateId) {
+                    $q->where('estate_id', $estateId)->orWhereNull('estate_id');
+                });
+            } else {
+                $query->whereNull('estate_id');
             }
 
             return $query->pluck('value', 'key')->toArray();
@@ -195,14 +231,17 @@ class AppSetting extends Model implements AuditableContract
     /**
      * Clear cache for a specific key.
      *
-     * @param string $key
+     * @param string|null $key
+     * @param int|null $estateId
      * @return void
      */
-    public static function clearCache(string $key = null): void
+    public static function clearCache(string $key = null, ?int $estateId = null): void
     {
+        $prefix = $estateId !== null ? "estate_{$estateId}_" : '';
+
         if ($key !== null) {
-            Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $key);
-            Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $key . '_exists');
+            Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $prefix . $key);
+            Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $prefix . $key . '_exists');
         } else {
             // Clear all settings cache
             Cache::tags(self::CACHE_TAG)->flush();
@@ -210,6 +249,30 @@ class AppSetting extends Model implements AuditableContract
 
         // Also clear the allAsArray cache
         Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . 'all');
+    }
+
+    /**
+     * Scope a query to a key with optional estate scoping. When an estate id is
+     * given estate scoped rows are preferred over global ones.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $key
+     * @param int|null $estateId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeForKey($query, string $key, ?int $estateId = null)
+    {
+        $query->where('key', $key);
+
+        if ($estateId !== null) {
+            return $query
+                ->where(function ($q) use ($estateId) {
+                    $q->where('estate_id', $estateId)->orWhereNull('estate_id');
+                })
+                ->orderByRaw('estate_id IS NULL');
+        }
+
+        return $query->whereNull('estate_id');
     }
 
     /**
@@ -222,11 +285,11 @@ class AppSetting extends Model implements AuditableContract
         parent::boot();
 
         static::saved(function (self $model) {
-            self::clearCache($model->key);
+            self::clearCache($model->key, $model->estate_id);
         });
 
         static::deleted(function (self $model) {
-            self::clearCache($model->key);
+            self::clearCache($model->key, $model->estate_id);
         });
     }
 

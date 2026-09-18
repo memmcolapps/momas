@@ -20,8 +20,8 @@ use App\Models\TarrifState;
 use App\Models\Token;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\UtilitiesPayment;
 use App\Models\UserUtility;
+use App\Models\UtilitiesPayment;
 use App\Models\Utility;
 use App\Models\UtilityPaymentRecord;
 use Exception;
@@ -31,7 +31,6 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardContoller extends Controller
 {
-
     public function pay_utility(request $request)
     {
         $payment = UtilitiesPayment::find($request->id);
@@ -59,7 +58,6 @@ class DashboardContoller extends Controller
         ]);
 
         return back()->with('message', 'Utility has been updated -> unpaid');
-
 
     }
 
@@ -120,14 +118,14 @@ class DashboardContoller extends Controller
                 $remaining = max(0, (float) $utility->amount - (float) $userUtility->amount_paid);
 
                 if ($amount > $remaining) {
-                    throw new Exception('Amount exceeds remaining balance of NGN ' . number_format($remaining, 2));
+                    throw new Exception('Amount exceeds remaining balance of NGN '.number_format($remaining, 2));
                 }
 
                 $newAmountPaid = (float) $userUtility->amount_paid + $amount;
                 $fullyPaid = $newAmountPaid >= (float) $utility->amount;
 
                 $userUtility->amount_paid = $newAmountPaid;
-                $userUtility->activated = !$fullyPaid;
+                $userUtility->activated = ! $fullyPaid;
                 $userUtility->status = $fullyPaid ? UserUtilityStatus::PAID : UserUtilityStatus::ACTIVE;
                 $userUtility->save();
 
@@ -138,7 +136,7 @@ class DashboardContoller extends Controller
                     'estate_id' => $user->estate_id,
                     'utility_amount' => $utility->amount,
                     'amount_paid' => $amount,
-                    'trx_id' => $request->trx_id ?: ('MANUAL-' . strtoupper(uniqid())),
+                    'trx_id' => $request->trx_id ?: ('MANUAL-'.strtoupper(uniqid())),
                     'status' => $fullyPaid ? 2 : 1,
                     'created_at' => $request->payment_date,
                 ]);
@@ -161,15 +159,14 @@ class DashboardContoller extends Controller
         }
     }
 
-
     public function index()
     {
 
         Logger::info('Upadate of 2026-01-16 16:41:00');
-        Logger::info('Dashboard accessed by user ID: ' . Auth::id() . ' with role: ' . Auth::user()->role);
+        Logger::info('Dashboard accessed by user ID: '.Auth::id().' with role: '.Auth::user()->role);
 
         if (Auth::user()->isSuperAdmin()) {
-        Logger::info('main-branch dummy Update of 2026-01-16 15:27:00');
+            Logger::info('main-branch dummy Update of 2026-01-16 15:27:00');
 
             $data['users'] = User::where('status', 2)->count();
             $data['meter'] = Meter::count();
@@ -184,9 +181,9 @@ class DashboardContoller extends Controller
             $type = request('transaction_type');
 
             $baseQuery = Transaction::query()
-                ->when($from && $to, fn($q) => $q->whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
-                ->when($status !== null && $status !== '', fn($q) => $q->where('status', $status))
-                ->when($type, fn($q) => $q->where('service_type', $type));
+                ->when($from && $to, fn ($q) => $q->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59']))
+                ->when($status !== null && $status !== '', fn ($q) => $q->where('status', $status))
+                ->when($type, fn ($q) => $q->where('service_type', $type));
 
             $estateCounts = (clone $baseQuery)
                 ->select('estate_id', \DB::raw('count(*) as total'))
@@ -196,7 +193,7 @@ class DashboardContoller extends Controller
                 ->get();
 
             $data['chart_labels'] = $estateCounts
-                ->map(fn($row) => optional($row->estate)->title ?? "Estate #" . $row->estate_id)
+                ->map(fn ($row) => optional($row->estate)->title ?? 'Estate #'.$row->estate_id)
                 ->values()
                 ->toArray();
             $data['chart_values'] = $estateCounts->pluck('total')->toArray();
@@ -206,7 +203,7 @@ class DashboardContoller extends Controller
                 ->pluck('service_type');
             $data['transaction'] = (clone $baseQuery)->latest()->paginate(20)->withQueryString();
 
-            $data['title'] = "Admin Dashboard";
+            $data['title'] = 'Admin Dashboard';
 
             return view('admin.dashboard', $data);
         } elseif (Auth::user()->role == 1) {
@@ -219,7 +216,6 @@ class DashboardContoller extends Controller
                 'role' => 3,
             ])->count();
 
-
             $data['customers'] = User::where([
                 'status' => 2,
                 'estate_id' => Auth::user()->estate_id,
@@ -230,9 +226,7 @@ class DashboardContoller extends Controller
 
             $data['token'] = Token::where('estate_id', Auth::user()->estate_id)->count();
 
-
-            $estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title ?? "Estate";
-
+            $estate_name = Estate::where('id', Auth::user()->estate_id)->first()->title ?? 'Estate';
 
             $data['title'] = "Dashboard | $estate_name ";
 
@@ -244,7 +238,6 @@ class DashboardContoller extends Controller
         }
     }
 
-
     public function list_users(request $request)
     {
 
@@ -255,15 +248,16 @@ class DashboardContoller extends Controller
             if ($request->has('search') && $request->search != '') {
                 $searchTerm = $request->search;
                 $query->where(function ($q) use ($searchTerm) {
-                    $q->where('first_name', 'like', '%' . $searchTerm . '%')
-                        ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
-                        ->orWhere('phone', 'like', '%' . $searchTerm . '%')
-                        ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                    $q->where('first_name', 'like', '%'.$searchTerm.'%')
+                        ->orWhere('last_name', 'like', '%'.$searchTerm.'%')
+                        ->orWhere('phone', 'like', '%'.$searchTerm.'%')
+                        ->orWhere('email', 'like', '%'.$searchTerm.'%');
                 });
             }
 
             $data['users'] = User::latest()->where('status', 2)->count();
             $data['users_lists'] = $query->paginate(20)->withQueryString();
+
             return view('admin/user/user-list', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
@@ -277,10 +271,10 @@ class DashboardContoller extends Controller
             if ($request->has('search') && $request->search != '') {
                 $searchTerm = $request->search;
                 $query->where(function ($q) use ($searchTerm) {
-                    $q->where('first_name', 'like', '%' . $searchTerm . '%')
-                        ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
-                        ->orWhere('phone', 'like', '%' . $searchTerm . '%')
-                        ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                    $q->where('first_name', 'like', '%'.$searchTerm.'%')
+                        ->orWhere('last_name', 'like', '%'.$searchTerm.'%')
+                        ->orWhere('phone', 'like', '%'.$searchTerm.'%')
+                        ->orWhere('email', 'like', '%'.$searchTerm.'%');
                 });
             }
 
@@ -289,6 +283,7 @@ class DashboardContoller extends Controller
                 'estate_id' => Auth::user()->estate_id,
             ])->orWhere('role', 4)->count();
             $data['users_lists'] = $query->paginate(20)->withQueryString();
+
             return view('admin/user/user-list', $data);
         } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
@@ -296,10 +291,8 @@ class DashboardContoller extends Controller
         }
     }
 
-
     public function list_customers()
     {
-
 
         if (Auth::user()->isSuperAdmin()) {
 
@@ -323,15 +316,14 @@ class DashboardContoller extends Controller
         }
     }
 
-
     public function new_user()
     {
-
 
         if (Auth::user()->isSuperAdmin()) {
 
             $data['estate'] = Estate::all();
             $data['meters'] = Meter::all();
+
             return view('admin/user/new-user', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
@@ -347,16 +339,15 @@ class DashboardContoller extends Controller
         }
     }
 
-
     public function new_customer()
     {
-
 
         if (Auth::user()->isSuperAdmin()) {
 
             $data['estate'] = Estate::all();
             // $data['meters'] = Meter::all();
             $data['meters'] = Meter::whereNull('user_id')->get(); // Only unassigned meters
+
             return view('admin/user/new-customer', $data);
         } elseif (Auth::user()->role == 1) {
         } elseif (Auth::user()->role == 2) {
@@ -364,8 +355,9 @@ class DashboardContoller extends Controller
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->first();
             // $data['meters'] = Meter::where('id', Auth::user()->estate_id)->get();
             $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)
-                               ->whereNull('user_id')
-                               ->get(); // Only unassigned meters for this estate
+                ->whereNull('user_id')
+                ->get(); // Only unassigned meters for this estate
+
             return view('admin/user/new-customer', $data);
         } elseif (Auth::user()->isEstateStaff()) {
         } elseif (Auth::user()->role == 5) {
@@ -377,38 +369,34 @@ class DashboardContoller extends Controller
     {
         $estateId = $request->estate_id;
 
-        if (!$estateId) {
+        if (! $estateId) {
             return response()->json(['meters' => []]);
         }
 
         $meters = Meter::where('estate_id', $estateId)
-                       ->whereNull('user_id')
-                       ->select('id', 'meterNo')
-                       ->get();
+            ->whereNull('user_id')
+            ->select('id', 'meterNo')
+            ->get();
 
         return response()->json(['meters' => $meters]);
     }
 
-
     public function add_new_customer(request $request)
     {
 
-
         if ($request->password != $request->password_confirmation) {
 
-            return redirect('admin/customers')->with('error', "Password  does not match ");
+            return redirect('admin/customers')->with('error', 'Password  does not match ');
         }
-
 
         // $usr_email = User::where('email', $request->email)->first()->email ?? null;
         // $usr_phone = User::where('email', $request->email)->first()->phone ?? null;
         // Check if user already exists (email OR phone)
         $existing_user = User::where('email', $request->email)
-                        ->orWhere('phone', $request->phone)
-                        ->first();
+            ->orWhere('phone', $request->phone)
+            ->first();
 
-        if (!$existing_user) {
-
+        if (! $existing_user) {
 
             $estate_name = Estate::where('id', $request->estate_id)->first()->title;
             $usr = new User();
@@ -435,7 +423,7 @@ class DashboardContoller extends Controller
             // Handle meter assignment BEFORE creating user
             if ($request->meterid && $request->meterid !== '') {
                 $meter = Meter::find($request->meterid);
-                if ($meter && !$meter->user_id) { // Ensure meter is unassigned
+                if ($meter && ! $meter->user_id) { // Ensure meter is unassigned
                     $usr->meterNo = $meter->meterNo;
                     $usr->meterid = $meter->id;
                 }
@@ -449,15 +437,13 @@ class DashboardContoller extends Controller
                 $meter->save();
             }
 
-
-
             // if ($request->meterNo !== null) {
             //     $m_id = Meter::where('meterNo', $request->meterNo)->first()->id;
             //     User::where('id', $usr->id)->update(['meterNo' => $request->meterNo, 'meterid' => $m_id]);
             //     Meter::where('meterNo', $request->meterNo)->update(['user_id' => $usr->id]);
             // }
 
-            return redirect('admin/customers')->with('message', "Customer created successfully");
+            return redirect('admin/customers')->with('message', 'Customer created successfully');
         } else {
 
             $clashing_attribute = $existing_user->email == $request->email ? 'email' : 'phone';
@@ -467,22 +453,18 @@ class DashboardContoller extends Controller
         }
     }
 
-
     public function add_new_user(request $request)
     {
 
-
         if ($request->password != $request->password_confirmation) {
 
-            return redirect('admin/customers')->with('error', "Password  does not match ");
+            return redirect('admin/customers')->with('error', 'Password  does not match ');
         }
-
 
         $usr_email = User::where('email', $request->email)->first()->email ?? null;
         $usr_phone = User::where('phone', $request->phone)->first()->phone ?? null;
 
         if ($usr_email == null && $usr_phone == null) {
-
 
             $estate_name = Estate::where('id', $request->estate_id)->first()->title;
             $usr = new User();
@@ -504,7 +486,6 @@ class DashboardContoller extends Controller
             $usr->password = bcrypt($request->password);
             $usr->save();
 
-
             if ($request->meterNo !== null) {
                 $m_id = Meter::where('meterNo', $request->meterNo)->first()->id;
                 User::where('id', $usr->id)->update(['meterNo' => $request->meterNo, 'meterid' => $m_id]);
@@ -512,34 +493,32 @@ class DashboardContoller extends Controller
                 Meter::where('meterNo', $request->meterNo)->update(['user_id' => $usr->id]);
             }
 
-
-            return redirect('admin/users-list')->with('message', "User created successfully");
+            return redirect('admin/users-list')->with('message', 'User created successfully');
         } else {
 
-        $message = $usr_email ?
-            "A User with email {$request->email} already exists":
-            "A User with phone {$request->phone} already exists";
+            $message = $usr_email ?
+                "A User with email {$request->email} already exists" :
+                "A User with phone {$request->phone} already exists";
 
             return redirect('admin/users-list')->with('error', $message);
         }
     }
-
 
     public function delete_user(request $request)
     {
 
         $user = User::where('id', $request->id)->first();
 
-        if (!$user) {
-            return back()->with('error', "User not found");
+        if (! $user) {
+            return back()->with('error', 'User not found');
         }
 
         if ($user->id == Auth::user()->id) {
-            return back()->with('error', "You cannot delete your own account");
+            return back()->with('error', 'You cannot delete your own account');
         }
 
         if ($user->role == 0) {
-            return back()->with('error', "You cannot delete a super admin");
+            return back()->with('error', 'You cannot delete a super admin');
         }
 
         // Estate admins can only delete customers in their estate
@@ -561,25 +540,54 @@ class DashboardContoller extends Controller
         });
 
         if ($user->role == 2) {
-            return redirect('admin/customers')->with('message', "Customer deleted successfully");
+            return redirect('admin/customers')->with('message', 'Customer deleted successfully');
         }
 
-        return redirect('admin/users-list')->with('message', "User deleted successfully");
+        return redirect('admin/users-list')->with('message', 'User deleted successfully');
     }
-
 
     public function settings(request $request)
     {
-
 
         $auth_user = Auth::user();
         $data['features'] = ModFeature::visibleToUser($auth_user)
             ->select([
                 'status',
                 'title',
-                'slug'
+                'slug',
             ])
             ->get();
+
+        $configService = app(\App\Services\ConfigManagementService::class);
+        $configKeys = [
+            'MOMAS_MAX_VENDING_TRANSACTION_FEE',
+            'MOMAS_MAX_UTILITIES_TRANSACTION_FEE',
+            'SIMULATE_FAILED_TOKEN',
+            'MOMAS_MINIMUM_VEND',
+            'TOKEN_RETRY_DEPLOYMENT_DATE',
+            'REMITA_MERCHANT_ID',
+            'REMITA_API_KEY',
+            'REMITA_SERVICE_TYPE_ID',
+            'REMITA_MEMCOL_LINE_ITEMS_ID',
+            'REMITA_MEMCOL_BENEFICIARY_NAME',
+            'REMITA_MEMCOL_BENEFICIARY_ACCOUNT',
+            'REMITA_MEMCOL_BANK_CODE',
+            'REMITA_MEMCOL_DEDUCT_FEE_FROM',
+            'APP_MINIMUM_VERSION',
+            'APP_LATEST_VERSION',
+            'APP_LAST_UPDATE_DATE',
+            'APP_SIZE',
+            'APP_PLAYSTORE_URL',
+            'APP_APPSTORE_URL',
+            'APP_UPDATE_DESCRIPTION',
+        ];
+        $configValues = [];
+        foreach ($configKeys as $key) {
+            $appSettingKey = strtolower(str_replace('_', '-', $key));
+            $configValues[$key] = $configService->getConfig($appSettingKey);
+        }
+        $data['configValues'] = $configValues;
+
         if (Auth::user()->isSuperAdmin()) {
 
             $data['fea'] = Feature::where('id', 1)->first();
@@ -598,6 +606,7 @@ class DashboardContoller extends Controller
 
             $data['fea'] = Feature::where('id', 1)->first();
             $data['set'] = Setting::where('id', 1)->first();
+
             return view('admin/settings', $data);
         } elseif (Auth::user()->role == 2) {
         } elseif (Auth::user()->isEstateAdmin()) {
@@ -626,7 +635,7 @@ class DashboardContoller extends Controller
 
         try {
             $request->validate([
-                'estate_id' => 'required|exists:estates,id'
+                'estate_id' => 'required|exists:estates,id',
             ]);
 
             // Get all outstanding utilities payments for this estate
@@ -649,21 +658,21 @@ class DashboardContoller extends Controller
                 $payment->update([
                     'amount' => 0,
                     'total_amount' => 0,
-                    'status' => 2
+                    'status' => 2,
                 ]);
             }
 
             return redirect('admin/settings#utilities-section')
-                ->with('message', "Cleared {$count} outstanding utilities payments for {$estateName}. Total zeroed: NGN " . number_format($totalAmount, 2));
+                ->with('message', "Cleared {$count} outstanding utilities payments for {$estateName}. Total zeroed: NGN ".number_format($totalAmount, 2));
         } catch (\Exception $e) {
-            return redirect('admin/settings')->with('error', 'Failed to clear: ' . $e->getMessage());
+            return redirect('admin/settings')->with('error', 'Failed to clear: '.$e->getMessage());
         }
     }
 
     public function clearSingleUtilityPayment(Request $request)
     {
         // Super admin only check
-        if (!Auth::user()->isSuperAdmin()) {
+        if (! Auth::user()->isSuperAdmin()) {
             return redirect('admin/settings')->with('error', 'Unauthorized access');
         }
 
@@ -684,20 +693,20 @@ class DashboardContoller extends Controller
             $payment->update([
                 'amount' => 0,
                 'total_amount' => 0,
-                'status' => 2
+                'status' => 2,
             ]);
 
             return redirect('admin/settings#utilities-section')
-                ->with('message', "Utilities payment cleared for {$estateName}. Amount zeroed: NGN " . number_format($oldAmount, 2));
+                ->with('message', "Utilities payment cleared for {$estateName}. Amount zeroed: NGN ".number_format($oldAmount, 2));
         } catch (\Exception $e) {
-            return redirect('admin/settings')->with('error', 'Failed to clear payment: ' . $e->getMessage());
+            return redirect('admin/settings')->with('error', 'Failed to clear payment: '.$e->getMessage());
         }
     }
 
     public function editUtilityPayment(Request $request)
     {
         // Super admin only check
-        if (!Auth::user()->isSuperAdmin()) {
+        if (! Auth::user()->isSuperAdmin()) {
             return redirect('admin/settings')->with('error', 'Unauthorized access');
         }
 
@@ -708,7 +717,7 @@ class DashboardContoller extends Controller
                 'amount' => 'required|numeric|min:0',
                 'total_amount' => 'required|numeric|min:0',
                 'status' => 'required|in:0,1,2',
-                'next_due_date' => 'required|date'
+                'next_due_date' => 'required|date',
             ]);
 
             $payment = UtilitiesPayment::findOrFail($request->payment_id);
@@ -724,21 +733,22 @@ class DashboardContoller extends Controller
                 'amount' => $validated['amount'],
                 'total_amount' => $validated['total_amount'],
                 'status' => $validated['status'],
-                'next_due_date' => $validated['next_due_date']
+                'next_due_date' => $validated['next_due_date'],
             ]);
 
             $statusLabels = [0 => 'Unpaid', 1 => 'Partial', 2 => 'Paid'];
             $newStatusLabel = $statusLabels[$validated['status']] ?? 'Unknown';
 
             return redirect('admin/settings#utilities-section')
-                ->with('message', "Utilities payment updated successfully for {$estateName}. New Amount: NGN " . number_format($validated['amount'], 2) . ", Status: {$newStatusLabel}");
+                ->with('message', "Utilities payment updated successfully for {$estateName}. New Amount: NGN ".number_format($validated['amount'], 2).", Status: {$newStatusLabel}");
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect('admin/settings#utilities-section')
-                ->with('error', 'Validation failed: ' . implode(', ', $e->validator->errors()->all()));
+                ->with('error', 'Validation failed: '.implode(', ', $e->validator->errors()->all()));
         } catch (\Exception $e) {
-            return redirect('admin/settings')->with('error', 'Failed to update payment: ' . $e->getMessage());
+            return redirect('admin/settings')->with('error', 'Failed to update payment: '.$e->getMessage());
         }
     }
+
     public function update_utility(request $request)
     {
         $monthlyEndDate = null;
@@ -765,13 +775,14 @@ class DashboardContoller extends Controller
     public function delete_utility(request $request)
     {
         Utility::where('id', $request->id)->delete();
+
         return back()->with('message', 'Utility deleted Successfully');
     }
 
     public function detach_customer_utility(request $request)
     {
         $customer = User::where('id', $request->customer_id)->first();
-        if (!$customer) {
+        if (! $customer) {
             return back()->with('error', 'Customer not found');
         }
 
@@ -780,12 +791,13 @@ class DashboardContoller extends Controller
         }
 
         $utility = Utility::where('id', $request->utility_id)->where('estate_id', $customer->estate_id)->first();
-        if (!$utility) {
+        if (! $utility) {
             return back()->with('error', 'Utility not found');
         }
 
         if ((int) $utility->user_id === (int) $customer->id) {
             $utility->delete();
+
             return back()->with('message', 'Utility detached from customer successfully');
         }
 
@@ -805,7 +817,6 @@ class DashboardContoller extends Controller
         return back()->with('message', 'Utility detached from customer successfully');
     }
 
-
     public function update_pay(request $request)
     {
         Setting::where('id', 1)->update([
@@ -815,9 +826,9 @@ class DashboardContoller extends Controller
             'paystack_public' => $request->paystack_public,
 
         ]);
-        return redirect('admin/settings')->with('message', "Payment Keys updated successfully");
-    }
 
+        return redirect('admin/settings')->with('message', 'Payment Keys updated successfully');
+    }
 
     public function admin_fee_update(request $request)
     {
@@ -828,11 +839,8 @@ class DashboardContoller extends Controller
             'clear_credit_fee' => $request->clear_credit_fee ?? 0,
         ]);
 
-        return redirect('admin/settings')->with('message', "Fee has been updated");
+        return redirect('admin/settings')->with('message', 'Fee has been updated');
     }
-
-
-
 
     public function support_set(request $request)
     {
@@ -842,9 +850,55 @@ class DashboardContoller extends Controller
             'general_support' => $request->general_support,
 
         ]);
-        return redirect('admin/settings')->with('message', "Support data updated successfully");
+
+        return redirect('admin/settings')->with('message', 'Support data updated successfully');
     }
 
+    public function update_config_values(Request $request)
+    {
+        $configService = app(\App\Services\ConfigManagementService::class);
+
+        $allowedKeys = [
+            'MOMAS_MAX_VENDING_TRANSACTION_FEE',
+            'MOMAS_MAX_UTILITIES_TRANSACTION_FEE',
+            'SIMULATE_FAILED_TOKEN',
+            'MOMAS_MINIMUM_VEND',
+            'TOKEN_RETRY_DEPLOYMENT_DATE',
+            'REMITA_MERCHANT_ID',
+            'REMITA_API_KEY',
+            'REMITA_SERVICE_TYPE_ID',
+            'REMITA_MEMCOL_LINE_ITEMS_ID',
+            'REMITA_MEMCOL_BENEFICIARY_NAME',
+            'REMITA_MEMCOL_BENEFICIARY_ACCOUNT',
+            'REMITA_MEMCOL_BANK_CODE',
+            'REMITA_MEMCOL_DEDUCT_FEE_FROM',
+            'APP_MINIMUM_VERSION',
+            'APP_LATEST_VERSION',
+            'APP_LAST_UPDATE_DATE',
+            'APP_SIZE',
+            'APP_PLAYSTORE_URL',
+            'APP_APPSTORE_URL',
+            'APP_UPDATE_DESCRIPTION',
+        ];
+
+        $memcolKeys = [
+            'REMITA_MEMCOL_LINE_ITEMS_ID',
+            'REMITA_MEMCOL_BENEFICIARY_NAME',
+            'REMITA_MEMCOL_BENEFICIARY_ACCOUNT',
+            'REMITA_MEMCOL_BANK_CODE',
+            'REMITA_MEMCOL_DEDUCT_FEE_FROM',
+        ];
+
+        foreach ($allowedKeys as $key) {
+            $value = $request->input($key);
+            if ($value !== null) {
+                $appSettingKey = strtolower(str_replace('_', '-', $key));
+                $configService->put($appSettingKey, $value, true, null, $key, null, in_array($key, $memcolKeys) ? 'Remita Memcol Beneficiary' : 'system');
+            }
+        }
+
+        return redirect('admin/settings')->with('message', 'System configuration updated successfully');
+    }
 
     public function update_feat(request $request)
     {
@@ -866,33 +920,28 @@ class DashboardContoller extends Controller
 
         $aud = new Auditlog();
         $aud->user_id = Auth::id();
-        $aud->name = Auth::user()->first_name . " " . Auth::user()->_name;
+        $aud->name = Auth::user()->first_name.' '.Auth::user()->_name;
         $aud->user_id = Auth::id();
         $aud->old_values = json_encode($old_values);
         $aud->new_values = json_encode($new_values);
-        $aud->action = "Feature Update";
+        $aud->action = 'Feature Update';
         $aud->save();
 
-
-        return redirect('admin/settings')->with('message', "Features updated successfully");
+        return redirect('admin/settings')->with('message', 'Features updated successfully');
     }
-
 
     public function organization_index(request $request)
     {
         $data['organization_list'] = Organization::paginate(20);
         $data['organization'] = Organization::where('status', 2)->count();
 
-
-        return view('admin/organization/index', $data)->with('message', "Features updated successfully");
+        return view('admin/organization/index', $data)->with('message', 'Features updated successfully');
     }
-
 
     public function organization_new(request $request)
     {
         return view('admin/organization/create');
     }
-
 
     public function organization_store(request $request)
     {
@@ -905,26 +954,27 @@ class DashboardContoller extends Controller
         return redirect('admin/organization')->with('Organization created successfully');
     }
 
-
     public function organization_view(request $request)
     {
 
         $data['org'] = Organization::where('id', $request->id)->first();
+
         return view('admin/organization/view', $data);
     }
 
     public function organization_update(request $request)
     {
         Organization::where('id', $request->id)->update(['title' => $request->title]);
+
         return redirect('admin/organization')->with('Organization updated successfully');
     }
 
     public function organization_delete(request $request)
     {
         Organization::where('id', $request->id)->delete();
+
         return redirect('admin/organization')->with('Organization deleted successfully');
     }
-
 
     public function set_percentage(request $request)
     {
@@ -943,10 +993,10 @@ class DashboardContoller extends Controller
         } else {
 
             SpreadPayment::where('user_id', $request->user_id)->update(['percentage' => $request->percent]);
+
             return back()->with('message', 'Percentage Updated');
         }
     }
-
 
     public function view_user(request $request)
     {
@@ -964,7 +1014,7 @@ class DashboardContoller extends Controller
             $recQuery = UtilityPaymentRecord::where('user_id', $request->id)->with('utility');
 
             if ($search = $request->get('utility_title')) {
-                $recQuery->whereHas('utility', fn($q) => $q->where('title', 'like', "%{$search}%"));
+                $recQuery->whereHas('utility', fn ($q) => $q->where('title', 'like', "%{$search}%"));
             }
             if ($from = $request->get('payment_date_from')) {
                 $recQuery->whereDate('created_at', '>=', $from);
@@ -1004,20 +1054,20 @@ class DashboardContoller extends Controller
                     )
                     ->leftJoin('user_utilities', function ($join) use ($data) {
                         $join->on('utilities.id', '=', 'user_utilities.utility_id')
-                             ->where('user_utilities.user_id', '=', $data['user']->id);
+                            ->where('user_utilities.user_id', '=', $data['user']->id);
                     })
                     ->where('utilities.estate_id', $data['user']->estate_id)
                     ->where('utilities.type', $type)
                     ->where(function ($q) use ($data) {
                         $q->whereNull('utilities.user_id')
-                          ->orWhere('utilities.user_id', $data['user']->id);
+                            ->orWhere('utilities.user_id', $data['user']->id);
                     })
                     ->whereNotExists(function ($q) use ($data) {
                         $q->select(\DB::raw(1))
-                          ->from('user_utilities')
-                          ->whereColumn('user_utilities.utility_id', 'utilities.id')
-                          ->where('user_utilities.user_id', $data['user']->id)
-                          ->where('user_utilities.status', UserUtilityStatus::DEACTIVATED);
+                            ->from('user_utilities')
+                            ->whereColumn('user_utilities.utility_id', 'utilities.id')
+                            ->where('user_utilities.user_id', $data['user']->id)
+                            ->where('user_utilities.status', UserUtilityStatus::DEACTIVATED);
                     })
                     ->get();
             };
@@ -1035,14 +1085,14 @@ class DashboardContoller extends Controller
             $data['estate_title'] = Estate::where('id', $data['user']->estate_id)->first()->title ?? null;
             $data['ptype'] = Estate::where('id', $data['user']->estate_id)->first()->ptype ?? null;
             $data['tariff'] = Tariff::where('estate_id', $data['user']->estate_id)->where('user_id', null)->get();
-            $data['nepa_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->title ?? null;
-            $data['gen_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->title ?? null;
-            $data['tariff_index_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->tariff_index ?? null;
-            $data['tariff_index_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->tariff_index ?? null;
-            $data['tariff_count_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->count() ?? null;
-            $data['tariff_count_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->count() ?? null;
-            $data['tariff_id_nepa'] = Tariff::where('user_id', $request->id)->where('type', "nepa")->first()->id ?? null;
-            $data['tariff_id_gen'] = Tariff::where('user_id', $request->id)->where('type', "gen")->first()->id ?? null;
+            $data['nepa_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', 'nepa')->first()->title ?? null;
+            $data['gen_tariff_title'] = Tariff::where('user_id', $request->id)->where('type', 'gen')->first()->title ?? null;
+            $data['tariff_index_nepa'] = Tariff::where('user_id', $request->id)->where('type', 'nepa')->first()->tariff_index ?? null;
+            $data['tariff_index_gen'] = Tariff::where('user_id', $request->id)->where('type', 'gen')->first()->tariff_index ?? null;
+            $data['tariff_count_nepa'] = Tariff::where('user_id', $request->id)->where('type', 'nepa')->count() ?? null;
+            $data['tariff_count_gen'] = Tariff::where('user_id', $request->id)->where('type', 'gen')->count() ?? null;
+            $data['tariff_id_nepa'] = Tariff::where('user_id', $request->id)->where('type', 'nepa')->first()->id ?? null;
+            $data['tariff_id_gen'] = Tariff::where('user_id', $request->id)->where('type', 'gen')->first()->id ?? null;
             $data['percentage'] = SpreadPayment::where('user_id', $request->id)->first()->percentage ?? null;
             $ck_meter = Meter::where('MeterNo', $data['user']->meterNo)->first() ?? null;
             $ck_user_id = Meter::where('MeterNo', $data['user']->meterNo)->first()->user_id ?? null;
@@ -1064,7 +1114,7 @@ class DashboardContoller extends Controller
                 $t_id = Tariff::where('estate_id', $user_info->estate_id)
                     ->where([
                         'tariff_index' => $user_info->tariffidnepa,
-                        'type' => "nepa",
+                        'type' => 'nepa',
                     ])->first()->id ?? null;
                 if ($t_id == null) {
                     return back()->with('error', "Tariff ID - $user_info->tariffidnepa | does not exist ");
@@ -1076,7 +1126,7 @@ class DashboardContoller extends Controller
                 $t_id = Tariff::where('estate_id', $user_info->estate_id)
                     ->where([
                         'tariff_index' => $user_info->tariffidgen,
-                        'type' => "gen",
+                        'type' => 'gen',
                     ])->first()->id ?? null;
                 if ($t_id == null) {
                     return back()->with('error', "Tariff ID - $user_info->tariffidgen | does not exist ");
@@ -1084,6 +1134,7 @@ class DashboardContoller extends Controller
                 $t_amount = TarrifState::where('tariff_id', $t_id)->first()->amount;
                 User::where('id', $user_info->id)->update(['gen_source_amount' => $t_amount]);
             }
+
             // dump('Finn');
             return view('admin/user/view', $data);
         } catch (Exception $e) {
@@ -1093,7 +1144,6 @@ class DashboardContoller extends Controller
             // dump('Kasha');
         }
     }
-
 
     public function send_token_email(request $request)
     {
@@ -1105,7 +1155,6 @@ class DashboardContoller extends Controller
 
         return back()->with('message', 'Email sent successfully');
     }
-
 
     public function update_user(request $request)
     {
@@ -1123,43 +1172,39 @@ class DashboardContoller extends Controller
             'desgination' => $request->desgination,
         ]);
 
-
-        return back()->with('message', "User updated successfully");
+        return back()->with('message', 'User updated successfully');
     }
+
     public function update_user_email(request $request)
     {
         // dd($request->all());
 
-        if ($request->email  != $request->confirm_email) {
-            return back()->with('error', "Email Incorrect");
+        if ($request->email != $request->confirm_email) {
+            return back()->with('error', 'Email Incorrect');
         }
-
 
         User::where('id', $request->user_id)->update([
             'email' => $request->email,
         ]);
 
-        return back()->with('message', "User Email Updated successfully");
+        return back()->with('message', 'User Email Updated successfully');
     }
-
 
     public function user_deactivate(request $request)
     {
 
         User::where('id', $request->id)->update(['status' => 0]);
 
-        return back()->with('message', "User Deactivated successfully");
+        return back()->with('message', 'User Deactivated successfully');
     }
-
 
     public function user_activate(request $request)
     {
 
         User::where('id', $request->id)->update(['status' => 2]);
 
-        return back()->with('message', "User Activated successfully");
+        return back()->with('message', 'User Activated successfully');
     }
-
 
     public function onboarding_estate(request $request)
     {
@@ -1174,12 +1219,10 @@ class DashboardContoller extends Controller
         $status = User::where('email', $request->email)->first()->status ?? null;
 
         if ($status == 2) {
-            return back()->with('error', "Email has already been taken");
+            return back()->with('error', 'Email has already been taken');
         }
 
-
         if ($status == null && $usr == null) {
-
 
             $sms_code = random_int(0000, 9999);
             $email = $request->email;
@@ -1190,22 +1233,23 @@ class DashboardContoller extends Controller
             $usrr->save();
 
             $data['email'] = $request->email;
+
             return redirect('admin/onboarding-pending');
         } else {
 
             $data['email'] = $request->email;
+
             return redirect('onboarding-pending');
         }
     }
-
 
     public function onboarding_email(request $request)
     {
         return view('admin.estate.onboarding-email');
     }
 
-
-    public function update_password_now(request $request) {
+    public function update_password_now(request $request)
+    {
         if (Auth::user()->role != 3) {
             return redirect('admin/admin-dashboard')->with('error', 'Unauthorized access');
         }
@@ -1213,12 +1257,12 @@ class DashboardContoller extends Controller
         $request->validate([
             'current_password' => 'required',
             'new_password' => 'required|min:6',
-            'confirm_password' => 'required|same:new_password'
+            'confirm_password' => 'required|same:new_password',
         ]);
 
         $user = Auth::user();
 
-        if (!password_verify($request->current_password, $user->password)) {
+        if (! password_verify($request->current_password, $user->password)) {
             return back()->with('error', 'Current password is incorrect');
         }
 
@@ -1227,69 +1271,64 @@ class DashboardContoller extends Controller
         }
 
         User::where('id', $user->id)->update([
-            'password' => bcrypt($request->new_password)
+            'password' => bcrypt($request->new_password),
         ]);
 
         return back()->with('message', 'Password updated successfully');
     }
 
-
-
     public function resolve_account(request $request)
     {
-
 
         $fl = Setting::where('id', 1)->first();
         $pksecret = $fl->paystack_secret;
 
         $request->validate([
             'account_number' => 'required|digits:10',
-            'bank_code'      => 'required'
+            'bank_code' => 'required',
         ]);
 
         try {
             $client = new Client();
             $response = $client->get('https://api.paystack.co/bank/resolve', [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $pksecret,
-                    'Accept'        => 'application/json',
+                    'Authorization' => 'Bearer '.$pksecret,
+                    'Accept' => 'application/json',
                 ],
                 'query' => [
                     'account_number' => $request->account_number,
-                    'bank_code'      => $request->bank_code,
+                    'bank_code' => $request->bank_code,
                 ],
             ]);
 
             $result = json_decode($response->getBody(), true);
+
             return response()->json($result);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Unable to resolve account details.',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
-
 
     public function setup_paystack(request $request)
     {
 
         $estate = Estate::where('id', $request->id)->first() ?? null;
 
-
         if ($estate->paystack_subaccount == null) {
             $fl = Setting::where('id', 1)->first();
             $pksecret = $fl->paystack_secret;
 
             $data = [
-                'business_name'         => $request->account_name,
-                'settlement_bank'       => $request->bank,
-                'account_number'        => $request->account_no,
-                'percentage_charge'     => 1,
-                'description'           => $request->description ?? '',
+                'business_name' => $request->account_name,
+                'settlement_bank' => $request->bank,
+                'account_number' => $request->account_no,
+                'percentage_charge' => 1,
+                'description' => $request->description ?? '',
             ];
-
 
             try {
 
@@ -1297,25 +1336,36 @@ class DashboardContoller extends Controller
 
                 $response = $client->post('https://api.paystack.co/subaccount', [
                     'headers' => [
-                        'Authorization' => 'Bearer ' . $pksecret,
-                        'Content-Type'  => 'application/json',
+                        'Authorization' => 'Bearer '.$pksecret,
+                        'Content-Type' => 'application/json',
                     ],
                     'json' => $data,
                 ]);
 
                 $body = json_decode($response->getBody(), true);
                 if ($body['status'] ?? false) {
+                    $bank = (new \App\Services\BankService())->findOrCreateFromCode(
+                        $request->bank,
+                        $request->only(['bank_name', 'bank_slug']) + ['paystack_code' => $request->bank_paystack_code ?? $request->bank]
+                    );
+
                     Estate::where('id', $request->id)->update([
                         'paystack_subaccount' => $body['data']['subaccount_code'],
+                        'account_no' => $request->account_no,
+                        'account_name' => $request->account_name,
+                        'bank' => $request->bank,
+                        'bank_id' => $bank->id ?? null,
                     ]);
+
                     return back()->with('message', 'Paystack Subaccount has been successfully created');
                 }
-                return back()->with('error', 'Failed to create subaccount: ' . ($body['message'] ?? 'Unknown error'));
+
+                return back()->with('error', 'Failed to create subaccount: '.($body['message'] ?? 'Unknown error'));
             } catch (\Exception $e) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Subaccount creation failed',
-                    'error'   => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ], 500);
             }
         } else {
@@ -1327,17 +1377,16 @@ class DashboardContoller extends Controller
             $paystackSecret = env('PAYSTACK_SECRET_KEY');
 
             $data = [
-                'settlement_bank'       => $request->bank,
-                'account_number'        => $request->account_no,
-                'percentage_charge'     => 1,
+                'settlement_bank' => $request->bank,
+                'account_number' => $request->account_no,
+                'percentage_charge' => 1,
             ];
-
 
             try {
                 $response = $client->put("https://api.paystack.co/subaccount/{$estate->paystack_subaccount}", [
                     'headers' => [
-                        'Authorization' => 'Bearer ' . $pksecret,
-                        'Content-Type'  => 'application/json',
+                        'Authorization' => 'Bearer '.$pksecret,
+                        'Content-Type' => 'application/json',
                     ],
                     'json' => $data,
                 ]);
@@ -1345,20 +1394,31 @@ class DashboardContoller extends Controller
                 $body = json_decode($response->getBody(), true);
 
                 if ($body['status'] ?? false) {
+                    $bank = (new \App\Services\BankService())->findOrCreateFromCode(
+                        $request->bank,
+                        $request->only(['bank_name', 'bank_slug']) + ['paystack_code' => $request->bank_paystack_code ?? $request->bank]
+                    );
+
+                    Estate::where('id', $request->id)->update([
+                        'account_no' => $request->account_no,
+                        'account_name' => $request->account_name,
+                        'bank' => $request->bank,
+                        'bank_id' => $bank->id ?? null,
+                    ]);
+
                     return back()->with('message', 'Account details has been successfully updated');
                 }
 
                 return back()->with('error', 'Error updating account details');
             } catch (\Exception $e) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Request failed',
-                    'error'   => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ], 500);
             }
         }
     }
-
 
     public function filter_customers(Request $request)
     {
@@ -1371,10 +1431,10 @@ class DashboardContoller extends Controller
         if ($request->has('search') && $request->search != '') {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('first_name', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('email', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('meterNo', 'like', '%' . $searchTerm . '%');
+                $q->where('first_name', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('last_name', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('email', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('meterNo', 'like', '%'.$searchTerm.'%');
             });
         }
 
@@ -1401,18 +1461,17 @@ class DashboardContoller extends Controller
         }
 
         $meters = Meter::where('estate_id', $estateId)
-                       ->where('user_id', null) // Unassigned only
-                       ->where(function($q) use ($query) {
-                           $q->where('meterNo', 'LIKE', '%' . $query . '%')
-                             ->orWhere('AccountNo', 'LIKE', '%' . $query . '%');
-                       })
-                       ->select('id', 'meterNo', 'AccountNo')
-                       ->limit(10) // Limit results for performance
-                       ->get();
+            ->where('user_id', null) // Unassigned only
+            ->where(function ($q) use ($query) {
+                $q->where('meterNo', 'LIKE', '%'.$query.'%')
+                    ->orWhere('AccountNo', 'LIKE', '%'.$query.'%');
+            })
+            ->select('id', 'meterNo', 'AccountNo')
+            ->limit(10) // Limit results for performance
+            ->get();
 
         return response()->json([
-            'meters' => $meters
+            'meters' => $meters,
         ]);
     }
-
 }
