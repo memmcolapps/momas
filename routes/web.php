@@ -139,6 +139,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('import-meters', [MeterImportController::class, 'import'])->name('meters.import');
 
 
+    Route::get('logged-issues', function() { return view('admin.logged-issues.index'); });
+    Route::get('logged-issues/detail', function() { return view('admin.logged-issues.show'); });
+
     Route::get('admin-dashboard', [DashboardContoller::class, 'index']);
     Route::get('users-list', [DashboardContoller::class, 'list_users']);
     Route::get('customers', [DashboardContoller::class, 'list_customers']);

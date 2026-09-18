@@ -166,6 +166,13 @@
                         </li>
 
                         <li>
+                            <a class='tp-link' href="logged-issues">
+                                <i data-feather="alert-circle"></i>
+                                <span> Logged Issues </span>
+                            </a>
+                        </li>
+
+                        <li>
                             <a class='tp-link' href="estate-service">
                                 <i data-feather="layers"></i>
                                 <span> Estate Service </span>
@@ -319,6 +326,13 @@
                             <a class='tp-link' href="customers">
                                 <i data-feather="users"></i>
                                 <span> Customers </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class='tp-link' href="logged-issues">
+                                <i data-feather="alert-circle"></i>
+                                <span> Logged Issues </span>
                             </a>
                         </li>
 
