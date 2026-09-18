@@ -745,7 +745,7 @@ if (! function_exists('backfill_utility_payments')) {
 
             $now = Carbon::now()->startOfMonth();
 
-            $utilityAmountStart = Carbon::parse($createdAt)->startOfMonth();
+            $utilityAmountStart = Carbon::parse($userCreationDate)->startOfMonth();
 
             while ($backfillFrom->lte($now)) {
                 $exists = UtilitiesPayment::where('user_id', $userId)
