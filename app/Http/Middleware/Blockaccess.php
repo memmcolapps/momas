@@ -19,7 +19,7 @@ class Blockaccess
     {
 
 
-        if(Auth::user()->can_login == 0){
+        if (Auth::check() && Auth::user()->can_login == 0) {
             Auth::logout();
             return redirect('/');
         }

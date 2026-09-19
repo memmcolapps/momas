@@ -124,6 +124,9 @@ Route::get('auth-code', [AuthController::class, 'auth_code']);
 
 
 
+Route::get('admin/logged-issues', function() { return view('admin.logged-issues.index'); });
+Route::get('admin/logged-issues/detail', function() { return view('admin.logged-issues.show'); });
+
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], function () {
 
     Route::get('onboarding-email', [DashboardContoller::class, 'onboarding_email']);
@@ -137,10 +140,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
 
     Route::post('import-users', [CustomerImportController::class, 'import'])->name('customers.import');
     Route::post('import-meters', [MeterImportController::class, 'import'])->name('meters.import');
-
-
-    Route::get('logged-issues', function() { return view('admin.logged-issues.index'); });
-    Route::get('logged-issues/detail', function() { return view('admin.logged-issues.show'); });
 
     Route::get('admin-dashboard', [DashboardContoller::class, 'index']);
     Route::get('users-list', [DashboardContoller::class, 'list_users']);
