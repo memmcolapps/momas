@@ -48,6 +48,15 @@ $app = require '../bootstrap/app.php';
 
 $kernel = $app->make(Kernel::class);
 
+if (isset($_SERVER['SCRIPT_NAME']) && strpos($_SERVER['SCRIPT_NAME'], '/public/index.php') !== false) {
+    if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/public/') === false) {
+        $_SERVER['SCRIPT_NAME'] = str_replace('/public/index.php', '/index.php', $_SERVER['SCRIPT_NAME']);
+        if (isset($_SERVER['PHP_SELF'])) {
+            $_SERVER['PHP_SELF'] = str_replace('/public/index.php', '/index.php', $_SERVER['PHP_SELF']);
+        }
+    }
+}
+
 $response = $kernel->handle(
     $request = Request::capture()
 )->send();
