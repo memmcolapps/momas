@@ -33,7 +33,7 @@ class MigrationMap extends Model
     /**
      * Upsert a single mapping entry.
      */
-    public static function setMapping(string $mapName, string $legacyKey, string $mappedValue): static
+    public static function setMapping(string $mapName, string $legacyKey, string $mappedValue)
     {
         return static::updateOrCreate(
             ['map_name' => $mapName, 'legacy_key' => $legacyKey],

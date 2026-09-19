@@ -58,7 +58,11 @@ class Handler extends ExceptionHandler
                 Mail::to($adminEmail)->send(new ExceptionOccured($exception));
             }
         } catch (Throwable $mailException) {
-            Logger::error('Error sending exception email: ' . $mailException->getMessage());
+            try {
+                Logger::error('Error sending exception email: ' . $mailException->getMessage());
+            } catch (Throwable $logException) {
+                // Ignore log errors during exception reporting
+            }
         }
     }
 

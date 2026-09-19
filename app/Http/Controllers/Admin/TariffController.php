@@ -531,7 +531,7 @@ class TariffController extends Controller
           // Validate the request
           $request->validate([
               'tariff_id' => 'required|exists:tariffs,id',
-              'tariff_index' => 'required|integer|min:1|max:99'
+              'tariff_index' => 'required|integer|min:99'
           ]);
 
           $tariff = Tariff::find($request->tariff_id);

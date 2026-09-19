@@ -88,7 +88,7 @@ class AppSetting extends Model implements AuditableContract
      * Get a setting by key (with caching).
      *
      * @param string $key
-     * @param mixed $default
+     * @param $default
      * @return mixed
      */
     public static function get(string $key, $default = null)
@@ -110,7 +110,7 @@ class AppSetting extends Model implements AuditableContract
      * Set a setting value by key (clears cache after update).
      *
      * @param string $key
-     * @param mixed $value
+     * @param $value
      * @param string|null $description
      * @param string|null $group
      * @return self
@@ -282,7 +282,7 @@ class AppSetting extends Model implements AuditableContract
     /**
      * Set the value attribute.
      *
-     * @param mixed $value
+     * @param $value
      * @return void
      */
     public function setValueAttribute($value)
@@ -317,7 +317,7 @@ class AppSetting extends Model implements AuditableContract
     /**
      * Determine the type of value automatically.
      *
-     * @param mixed $value
+     * @param $value
      * @return string
      */
     public static function determineType($value): string

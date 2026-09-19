@@ -26,16 +26,16 @@ class FeatureControlMiddleware
         }
 
         $feature = ModFeature::where('slug', $featureSlug)->first();
-        $estateFeature = EstateModFeature::where('mod_feature_id', $feature?->id)
-            ->where('estate_id', Auth::user()->estate_id)
+        $featureId = $feature ? $feature->id : null;
+        $estateFeature = EstateModFeature::where('mod_feature_id', $featureId)
+            ->where('estate_id', Auth::user() ? Auth::user()->estate_id : null)
             ->first();
 
         if (!$feature || !$feature->isAvailable()) {
             return StandardResponse::error(403, 'Feature not available', []);
         }
 
-        if (!$estateFeature || !$estateFeature?->isAvailable()) {
-
+        if (!$estateFeature || !$estateFeature->isAvailable()) {
             return StandardResponse::error(403, 'Your Estate is not Subscribed To This Feature', []);
         }
 

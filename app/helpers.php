@@ -707,12 +707,20 @@ if (! function_exists('backfill_utility_payments')) {
         $createPayment = function (string $type, float $amount, string $duration, Carbon $startDate) use ($userId, $estateId) {
             $nextDueDate = $startDate->copy();
 
-            match ($duration) {
-                'weekly'  => $nextDueDate->addWeek(),
-                'monthly' => $nextDueDate->addMonth(),
-                'yearly'  => $nextDueDate->addYear(),
-                default   => send_notification("Unknown duration '{$duration}'"),
-            };
+            switch ($duration) {
+                case 'weekly':
+                    $nextDueDate->addWeek();
+                    break;
+                case 'monthly':
+                    $nextDueDate->addMonth();
+                    break;
+                case 'yearly':
+                    $nextDueDate->addYear();
+                    break;
+                default:
+                    send_notification("Unknown duration '{$duration}'");
+                    break;
+            }
 
             return UtilitiesPayment::create([
                 'estate_id'     => $estateId,
@@ -843,18 +851,18 @@ if (! function_exists('get_user_arrears')) {
                     ->sum('amount');
 
             case 'utilities_latest':
-                return (clone $baseQuery)
+                $res1 = (clone $baseQuery)
                     ->where('type', '!=', 'admin_fee')
                     ->latest()
-                    ->first()
-                    ?->toArray() ?? [];
+                    ->first();
+                return $res1 ? $res1->toArray() : [];
 
             case 'admin_fees_latest':
-                return (clone $baseQuery)
+                $res2 = (clone $baseQuery)
                     ->where('type', '=', 'admin_fee')
                     ->latest()
-                    ->first()
-                    ?->toArray() ?? [];
+                    ->first();
+                return $res2 ? $res2->toArray() : [];
 
             case 'all_history':
                 return (clone $baseQuery)

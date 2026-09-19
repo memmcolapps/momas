@@ -101,14 +101,18 @@ class Logger extends Model
      */
     private static function addUserInfo(array $context = []): array
     {
-        if (auth()->check()) {
-            $user = auth()->user();
-            $context['user'] = [
-                'id' => $user->id,
-                'firstname' => $user->first_name ?? 'N/A',
-                'lastname' => $user->last_name ?? 'N/A',
-                'email' => $user->email ?? 'N/A'
-            ];
+        try {
+            if (function_exists('auth') && app()->bound('auth') && auth()->check()) {
+                $user = auth()->user();
+                $context['user'] = [
+                    'id' => $user->id,
+                    'firstname' => $user->first_name ?? 'N/A',
+                    'lastname' => $user->last_name ?? 'N/A',
+                    'email' => $user->email ?? 'N/A'
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Ignore auth lookup errors during early logging
         }
         return $context;
     }

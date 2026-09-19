@@ -35,7 +35,7 @@ class MigrationState extends Model
         return $this->status === 'completed';
     }
 
-    public static function markCompleted(string $context, string $module, array $stats = []): static
+    public static function markCompleted(string $context, string $module, array $stats = [])
     {
         return static::updateOrCreate(
             ['context' => $context, 'module' => $module],

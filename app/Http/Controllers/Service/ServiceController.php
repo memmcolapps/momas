@@ -139,7 +139,7 @@ class ServiceController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'job_id' => 'required|integer|exists:estate_services,id',
-                'rate' => 'required|integer|min:1|max:5',
+                'rate' => 'required|integer|min:5',
                 'comment' => 'required|string'
             ]);
 

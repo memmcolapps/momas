@@ -450,8 +450,8 @@ class MeterController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'tariff_id' => 'required|integer|exists:tariffs,id',
-                'trxref' => 'required_without:ref|string',
-                'ref' => 'required_without:trxref|string',
+                'trxref' => 'required_without',
+                'ref' => 'required_without',
             ]);
 
             if ($validator->fails()) {
@@ -852,8 +852,8 @@ class MeterController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'tariff_id' => 'required|integer|exists:tariffs,id',
-                'trxref' => 'required_without:ref|string',
-                'ref' => 'required_without:trxref|string',
+                'trxref' => 'required_without',
+                'ref' => 'required_without',
                 'receiver_meterNo' => 'required|string',
                 'utility_amount' => 'nullable|numeric|min:0',
             ]);

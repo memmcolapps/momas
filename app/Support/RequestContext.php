@@ -6,12 +6,12 @@ class RequestContext
 {
     protected array $data = [];
 
-    public function put(string $key, mixed $value): void
+    public function put(string $key, $value): void
     {
         $this->data[$key] = $value;
     }
 
-    public function get(string $key, mixed $default = null): mixed
+    public function get(string $key, $default = null)
     {
         return $this->data[$key] ?? $default;
     }

@@ -52,7 +52,7 @@ class WalletPaymentService implements PaymentServiceInterface
      *   - action_payload (array) Additional payload for action handling
      *
      * @param array $data
-     * @return array{status: bool, message: string, data: array|null, reference?: string}
+     * @return array{status: bool, message: string, data, reference?: string}
      *
      * @throws InvalidArgumentException when required parameters are absent
      */
@@ -156,7 +156,7 @@ class WalletPaymentService implements PaymentServiceInterface
      * @param string|int $transactionId The transaction reference to verify
      * @return array Verification result
      */
-    public function verifyTransaction(string|int $transactionId): array
+    public function verifyTransaction( $transactionId): array
     {
         try {
             // Find the transaction by reference

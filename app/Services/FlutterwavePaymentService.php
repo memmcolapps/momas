@@ -106,7 +106,7 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      *   - customizations       (array)  title, description, logo
      *
      * @param  array $data
-     * @return array{status: bool, message: string, data: array|null, reference?: string}
+     * @return array{status: bool, message: string, data, reference?: string}
      *
      * @throws InvalidArgumentException when required parameters are absent
      */
@@ -221,7 +221,7 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      * Validate that a Flutterwave sub-account ID exists and is active.
      *
      * @param  string $subaccountId
-     * @return array{valid: bool, message: string, data: array|null}
+     * @return array{valid: bool, message: string, data}
      */
     public static function validateSubaccount(string $subaccountId): array
     {
@@ -289,7 +289,7 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      * you pass as account_bank in createSubaccount.
      *
      * @param  string $country  Country code e.g. "NG", "GH", "US", "KE", "UG", "RW", "TZ"
-     * @return array{status: bool, message: string, data?: array|null}
+     * @return array{status: bool, message: string, data?}
      *
      * @throws RuntimeException when the API call fails
      */
@@ -345,7 +345,7 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      *   - account_name   (string) Expected account holder name (for comparison)
      *
      * @param  array $data
-     * @return array{status: bool, message: string, data?: array|null, verified?: bool}
+     * @return array{status: bool, message: string, data?, verified?: bool}
      *
      * @throws InvalidArgumentException when required parameters are absent
      */
@@ -440,7 +440,7 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      *                                     (use merchant ID as account_number)
      *
      * @param  array $data
-     * @return array{status: bool, message: string, subaccount_id?: string, data?: array|null}
+     * @return array{status: bool, message: string, subaccount_id?: string, data?}
      *
      * @throws InvalidArgumentException when required parameters are absent
      */
@@ -551,9 +551,9 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      * For tx_ref-based verification use {@see verifyTransactionByReference}.
      *
      * @param  string|int $transactionId  Flutterwave numeric transaction ID
-     * @return array{status: bool, message: string, payment_status: string|null, is_successful?: bool, data?: array}
+     * @return array{status: bool, message: string, payment_status, is_successful?: bool, data?: array}
      */
-    public function verifyTransaction(string|int $transactionId): array
+    public function verifyTransaction( $transactionId): array
     {
         try {
             $response = Http::withHeaders([
@@ -604,7 +604,7 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      * Handy when you only stored the reference and not the numeric Flutterwave ID.
      *
      * @param  string $txRef  The tx_ref you generated when initialising payment
-     * @return array{status: bool, message: string, payment_status: string|null, is_successful?: bool, data?: array}
+     * @return array{status: bool, message: string, payment_status, is_successful?: bool, data?: array}
      */
     public function verifyTransactionByReference(string $txRef): array
     {
@@ -660,7 +660,7 @@ class FlutterwavePaymentService implements PaymentServiceInterface
      * @param  string $transactionReference  The tx_ref used when creating the payment
      * @param  int    $maxAttempts           Maximum number of polling iterations
      * @param  int    $intervalSeconds       Seconds to wait between attempts
-     * @return array{status: bool, message: string, payment_status: string|null, is_successful: bool, data: array|null}
+     * @return array{status: bool, message: string, payment_status, is_successful: bool, data}
      */
     public function pollTransactionStatus(
         string $transactionReference,

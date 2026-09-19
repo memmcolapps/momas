@@ -10,7 +10,7 @@ interface PaymentServiceInterface
 
     public function makePayment(array $data): array;
 
-    public function verifyTransaction(string|int $transactionId): array;
+    public function verifyTransaction( $transactionId): array;
 
     public function pollTransactionStatus(
         string $reference,

@@ -67,7 +67,7 @@ class LogController extends Controller
                 'message' => 'nullable|string',
                 'start_date' => 'nullable|date',
                 'end_date' => 'nullable|date|after_or_equal:start_date',
-                'per_page' => 'nullable|integer|min:1|max:100',
+                'per_page' => 'nullable|integer|min:100',
                 'page' => 'nullable|integer|min:1',
                 'sort_by' => 'nullable|string|in:created_at,level,message',
                 'sort_order' => 'nullable|string|in:asc,desc',
