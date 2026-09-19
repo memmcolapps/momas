@@ -1,4 +1,7 @@
-@php use Illuminate\Support\Facades\Auth; @endphp
+@php
+    use Illuminate\Support\Facades\Auth;
+    $userRole = Auth::check() ? Auth::user()->role : 3;
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,7 +121,7 @@
                 </div>
 
                 {{-- ===================== ROLE 0: Super Admin ===================== --}}
-                @if(Auth::user()->role == 0)
+                @if($userRole == 0)
                     <ul id="side-menu">
 
                         <li class="menu-title">Menu</li>
@@ -283,13 +286,13 @@
                     </ul>
 
                 {{-- ===================== ROLE 1 ===================== --}}
-                @elseif(Auth::user()->role == 1)
+                @elseif($userRole == 1)
 
                 {{-- ===================== ROLE 2 ===================== --}}
-                @elseif(Auth::user()->role == 2)
+                @elseif($userRole == 2)
 
                 {{-- ===================== ROLE 3: Estate Admin (feature-gated) ===================== --}}
-                @elseif(Auth::user()->role == 3)
+                @elseif($userRole == 3)
                     <ul id="side-menu">
 
                         <li class="menu-title">Menu</li>
@@ -355,7 +358,9 @@
                             </a>
 
                             @php
-                                $ptype = \App\Models\Estate::where('id', Auth::user()->estate_id)->first()->ptype;
+                                $estateId = Auth::check() ? Auth::user()->estate_id : null;
+                                $estateObj = $estateId ? \App\Models\Estate::where('id', $estateId)->first() : null;
+                                $ptype = $estateObj ? $estateObj->ptype : 2;
                             @endphp
 
                             @if($ptype == 2 || $ptype == 3)
@@ -426,10 +431,10 @@
                     </ul>
 
                 {{-- ===================== ROLE 4 ===================== --}}
-                @elseif(Auth::user()->role == 4)
+                @elseif($userRole == 4)
 
                 {{-- ===================== ROLE 5 ===================== --}}
-                @elseif(Auth::user()->role == 5)
+                @elseif($userRole == 5)
 
                 @else
                 @endif
