@@ -1,5 +1,66 @@
 <?php
 
+if (!function_exists('array_is_list')) {
+    function array_is_list(array $array): bool
+    {
+        if ($array === []) {
+            return true;
+        }
+        return array_keys($array) === range(0, count($array) - 1);
+    }
+}
+
+if (!function_exists('str_contains')) {
+    function str_contains(string $haystack, string $needle): bool
+    {
+        return '' === $needle || false !== strpos($haystack, $needle);
+    }
+}
+
+if (!function_exists('str_starts_with')) {
+    function str_starts_with(string $haystack, string $needle): bool
+    {
+        return 0 === strncmp($haystack, $needle, strlen($needle));
+    }
+}
+
+if (!function_exists('str_ends_with')) {
+    function str_ends_with(string $haystack, string $needle): bool
+    {
+        if ('' === $needle) {
+            return true;
+        }
+        return substr($haystack, -strlen($needle)) === $needle;
+    }
+}
+
+if (!function_exists('get_debug_type')) {
+    function get_debug_type($value): string
+    {
+        if (null === $value) {
+            return 'null';
+        }
+        if (\is_bool($value)) {
+            return 'bool';
+        }
+        if (\is_string($value)) {
+            return 'string';
+        }
+        if (\is_array($value)) {
+            return 'array';
+        }
+        if (\is_int($value)) {
+            return 'int';
+        }
+        if (\is_float($value)) {
+            return 'float';
+        }
+        if (\is_object($value)) {
+            return \get_class($value);
+        }
+        return \gettype($value);
+    }
+}
 
 use App\Models\Estate;
 use App\Models\Logger;
