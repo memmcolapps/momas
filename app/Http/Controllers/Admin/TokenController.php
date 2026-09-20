@@ -1740,7 +1740,7 @@ class TokenController extends Controller
                     'name' => $userName,
                     'phone' => $phone,
                     'description' => 'Payment for credit token',
-                ], null, $est->id);
+                ], null);//, $est->id);
 
                 if (!isset($payment_init['status']) || !$payment_init['status']) {
                     Logger::warning("Remita payment init failed", ['response' => $payment_init]);

@@ -90,8 +90,9 @@ class TransactionController extends Controller
                 (string) $request->type,
             );
 
-            $arrearsAmount = round(array_sum(array_column($breakdown['arrears'], 'Amount')), 2);
+            $arrearsAmount = round(array_sum(array_column($breakdown['arrears'], 'amount')), 2);
             $breakdown['amount'] = round($breakdown['remaining'] + $arrearsAmount, 2);
+            $breakdown['arrears_type'] = $request->type;
 
             return StandardResponse::success(code: 200, message: 'Utilities breakdown calculated', data: $breakdown);
         } catch (Exception $e) {
