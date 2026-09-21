@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Constants\EstateMeterVendingType;
 use App\Models\Estate;
 use App\Models\PostpaidAccumulationPayment;
 use App\Models\TokenLedger;
@@ -58,6 +59,11 @@ class LedgerService
             ->whereNull('paid_at')
             ->where('created_at', '<=', $cutoff)
             ->exists();
+    }
+
+    public static function estateSupportsPostpaid(Estate $estate): bool
+    {
+        return (int) ($estate->estate_meter_vending_type ?? EstateMeterVendingType::PREPAID) === EstateMeterVendingType::POSTPAID;
     }
 
     public static function markEstatePostpaidLedgersAsPaid(Estate|int $estate, string $trxRef): int
