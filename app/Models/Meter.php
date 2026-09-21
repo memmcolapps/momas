@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Constants\ServiceTypeConstants;
+use App\Contracts\PaymentServiceInterface;
 use App\Events\MeterTokenGenerated;
-use App\Services\PaystackPaymentService;
-use App\Services\LedgerService;
-use App\Services\TokenGenerationService;
 use App\Models\UtilitiesPayment;
+use App\Services\LedgerService;
+use App\Services\PaystackPaymentService;
+use App\Services\TokenGenerationService;
 use App\Services\VatCalculator;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -426,11 +427,12 @@ class Meter extends Model
                     throw new Exception ("Transaction already completed please restart a new transaction to generate token");
                 }
 
-                $paystack_engine = new PaystackPaymentService();
+                $provider = $trx->pay_type;
+                $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
 
                 $verifier_engine = match ($verify) {
-                    "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
-                    "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
+                    "verify" => fn($arg) => $paymentService->verifyTransaction($arg),
+                    "poll" => fn($arg) => $paymentService->pollTransactionStatus($arg),
                     "null" => fn($arg) => [
                         'is_successful' => true,
                         'status' => true,
@@ -440,7 +442,7 @@ class Meter extends Model
 
 
                 if ($trx->status === 0) {
-                    $verify = $verifier_engine($trx_id);
+                    $verify = $verifier_engine($trx->payment_ref);
 
                     if (! $verify['is_successful']) {
                         Logger::error('verify_transaction failed', [
