@@ -21,7 +21,9 @@ class Estate extends Model
         'status',
         'min_pur',
         'max_pur',
+        'fee_accumulation_period',
         'minimum_vend_per_transaction',
+        'estate_meter_vending_type',
         'created_at',
         'updated_at',
     ];
@@ -102,8 +104,9 @@ class Estate extends Model
     }
 
     protected $casts = [
-    'status' => 'integer',
-    'minimum_vend_per_transaction' => 'boolean',
+        'status' => 'integer',
+        'minimum_vend_per_transaction' => 'boolean',
+        'estate_meter_vending_type' => 'integer',
     ];
 
     public function getUserMinPur($user_id) {

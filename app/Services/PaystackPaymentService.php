@@ -73,11 +73,17 @@ class PaystackPaymentService implements PaymentServiceInterface
      * @return array Payment initialization response
      * @throws InvalidArgumentException
      */
-    public function makePayment(array $data): array
+    public function makePayment(array $data, $ignoreSubaccount = false, mixed $transactionCharge = null): array
     {
-        $requiredParameters = ['amount', 'email', 'sub_account', 'metadata'];
-        if ($this->paystack_env === 'test') {
-            unset($requiredParameters[array_search('sub_account', $requiredParameters)], $data['sub_account']);
+        $requiredParameters = ['amount', 'email', 'metadata'];
+        ! $ignoreSubaccount && $requiredParameters[] = 'sub_account';
+
+        if ($this->paystack_env === 'test' && ! $ignoreSubaccount) {
+            unset($requiredParameters[array_search('sub_account', $requiredParameters)]);
+
+            if ($data['sub_account']) {
+                unset($data['sub_account']);
+            }
         }
 
         // dd()
@@ -100,15 +106,21 @@ class PaystackPaymentService implements PaymentServiceInterface
         ];
         // dd($transactionRef);
 
+        $momas_max = config('constants.momas_max_transaction_fee');
+        if ($transactionCharge == null || $transactionCharge > $momas_max) {
+            $transactionCharge = round((calculate_transaction_charge(($data['amount'] / 100)) * 100), 2); // convert from kobo back to naira and round to 2 dp
+        }
+
         $dataBody = [
             "amount" => (int) ($data['amount']), // Paystack expects amount in kobo
             "email" => $data['email'],
             "reference" => $transactionRef,
-            "callback_url" => url('') . "/paystack-check",
+            "callback_url" => $data['callback_url'] ?? (url('') . "/paystack-check"),
             "metadata" => $metadata,
+            "transaction_charge" => $transactionCharge,
         ];
 
-        if ($this->paystack_env === 'live') {
+        if ($this->paystack_env === 'live' && ! $ignoreSubaccount) {
             $dataBody["subaccount"] = $data['sub_account'];
 
             $validate_subaccount = self::validateSubaccount($data['sub_account']);

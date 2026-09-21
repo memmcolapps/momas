@@ -517,6 +517,11 @@ class TransactionController extends Controller
                 $trx->wallet_creditted = $trx->vending_amount ?? $trx->amount;
                 $trx->save();
 
+                Logger::info('Wallet Creditted on retry', [
+                    'trx_id' => $trx->trx_id,
+                    'amount' => $trx->vending_amount ?? $trx->amount,
+                ]);
+
                 return $this->processRetryTokenGeneration($trx, $user);
             }
 
@@ -568,7 +573,18 @@ class TransactionController extends Controller
         $tariff_id = $trx->tariff_id ?? ($action_payload['tariff_id'] ?? null);
         $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
 
-        if (!$tariff_id) {
+        if (! $tariff_id) {
+            $isDualTariff = ($meter->isDualTariff === 'on'
+                || $meter->isDualTariff === true
+                || $meter->isDualTariff === 1
+                || $meter->isDualTariff === '1');
+
+            if (! $isDualTariff) {
+                $tariff_id = $meter->NewTariffID ?? $meter->OldTariffID;
+            }
+        }
+
+        if (! $tariff_id) {
             return StandardResponse::error(422, 'Unable to determine tariff for this transaction', []);
         }
 
@@ -579,6 +595,13 @@ class TransactionController extends Controller
                 try {
                     $user->debitWallet($trx->vending_amount ?? $trx->amount);
                 } catch (Exception $e) {
+                    Logger::error('Debit wallet failed', [
+                        'error' => $e->getMessage(),
+                        'line' => $e->getLine(),
+                        'file' => $e->getFile(),
+                        'trace' => $e->getTrace(),
+                    ]);
+
                     return StandardResponse::error(403, 'Insufficient wallet balance, kindly fund your wallet', []);
                 }
 

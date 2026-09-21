@@ -23,6 +23,8 @@ class ExportControler extends Controller
         // For estate admin, only export their estate's transactions
         if (Auth::user()->role == 3) {
             $estate_id = Auth::user()->estate_id;
+        } elseif (Auth::user()->role == 0) {
+            $estate_id = $request->estate_id ?? null;
         }
 
         $excelFile = Excel::raw(new MeterTransactionExport($meterNo, $estate_id, $from_date, $to_date), \Maatwebsite\Excel\Excel::XLSX);

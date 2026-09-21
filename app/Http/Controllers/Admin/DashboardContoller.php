@@ -174,10 +174,37 @@ class DashboardContoller extends Controller
             $data['users'] = User::where('status', 2)->count();
             $data['meter'] = Meter::count();
             $data['total_in'] = Transaction::where('status', 2)->sum('amount');
-            $data['estate'] = Estate::where('status', 1)->count();
+            $data['estate'] = Estate::where('status', 2)->count();
             $data['token'] = Token::count();
             $data['meter_token'] = MeterToken::where('status', 2)->count();
-            $data['transaction'] = Transaction::paginate('20');
+
+            $from = request('from');
+            $to = request('to');
+            $status = request('status');
+            $type = request('transaction_type');
+
+            $baseQuery = Transaction::query()
+                ->when($from && $to, fn($q) => $q->whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59']))
+                ->when($status !== null && $status !== '', fn($q) => $q->where('status', $status))
+                ->when($type, fn($q) => $q->where('service_type', $type));
+
+            $estateCounts = (clone $baseQuery)
+                ->select('estate_id', \DB::raw('count(*) as total'))
+                ->whereNotNull('estate_id')
+                ->groupBy('estate_id')
+                ->orderByDesc('total')
+                ->get();
+
+            $data['chart_labels'] = $estateCounts
+                ->map(fn($row) => optional($row->estate)->title ?? "Estate #" . $row->estate_id)
+                ->values()
+                ->toArray();
+            $data['chart_values'] = $estateCounts->pluck('total')->toArray();
+            $data['service_types'] = Transaction::whereNotNull('service_type')
+                ->distinct()
+                ->orderBy('service_type')
+                ->pluck('service_type');
+            $data['transaction'] = (clone $baseQuery)->latest()->paginate(20)->withQueryString();
 
             $data['title'] = "Admin Dashboard";
 
@@ -211,6 +238,7 @@ class DashboardContoller extends Controller
 
             return view('admin.dashboard', $data);
         } elseif (Auth::user()->isEstateStaff()) {
+            return redirect('admin/access-token');
         } elseif (Auth::user()->role == 5) {
         } else {
         }
@@ -432,8 +460,10 @@ class DashboardContoller extends Controller
             return redirect('admin/customers')->with('message', "Customer created successfully");
         } else {
 
+            $clashing_attribute = $existing_user->email == $request->email ? 'email' : 'phone';
+            $message = "A Customer with {$clashing_attribute} {$request->get($clashing_attribute, '')} already exists";
 
-            return redirect('admin/customers')->with('error', "Customer already  exist");
+            return redirect('admin/customers')->with('error', $message);
         }
     }
 
@@ -449,7 +479,7 @@ class DashboardContoller extends Controller
 
 
         $usr_email = User::where('email', $request->email)->first()->email ?? null;
-        $usr_phone = User::where('email', $request->email)->first()->phone ?? null;
+        $usr_phone = User::where('phone', $request->phone)->first()->phone ?? null;
 
         if ($usr_email == null && $usr_phone == null) {
 
@@ -486,8 +516,11 @@ class DashboardContoller extends Controller
             return redirect('admin/users-list')->with('message', "User created successfully");
         } else {
 
+        $message = $usr_email ?
+            "A User with email {$request->email} already exists":
+            "A User with phone {$request->phone} already exists";
 
-            return redirect('admin/users-list')->with('error', "User already  exist");
+            return redirect('admin/users-list')->with('error', $message);
         }
     }
 
@@ -926,7 +959,7 @@ class DashboardContoller extends Controller
 
             backfill_utility_payments($data['user']->id, $data['user']->estate_id);
 
-            $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10);
+            $data['upayment'] = UtilitiesPayment::where('user_id', $request->id)->paginate(10)->withQueryString();
 
             $recQuery = UtilityPaymentRecord::where('user_id', $request->id)->with('utility');
 
@@ -946,7 +979,7 @@ class DashboardContoller extends Controller
                 $recQuery->where('status', $status);
             }
 
-            $data['utility_payment_records'] = $recQuery->latest()->paginate(10);
+            $data['utility_payment_records'] = $recQuery->latest()->paginate(10)->withQueryString();
             $utilityQuery = function ($type) use ($data) {
                 return \DB::table('utilities')
                     ->select(

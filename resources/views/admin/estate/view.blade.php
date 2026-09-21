@@ -315,6 +315,14 @@
 
                                     </div>
 
+                                    <div class="col-3">
+                                        <label class="my-2">Meter Vending Type</label>
+                                        <select name="estate_meter_vending_type" class="form-control" required>
+                                            <option value="1" @if(($org->estate_meter_vending_type ?? 1) == 1) selected @endif>Prepaid</option>
+                                            <option value="0" @if(($org->estate_meter_vending_type ?? 1) == 0) selected @endif>Postpaid</option>
+                                        </select>
+                                    </div>
+
                                 </div>
 
                                 <hr class="my-4">
@@ -508,6 +516,31 @@
                                 </button>
 
 
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="estate-update-fee-accumulation" method="post">
+                                @csrf
+
+                                <h6 class="d-flex justify-content-start my-4">Fee Accumulation Period</h6>
+
+                                <div class="row">
+                                    <div class="col-xl-3 col-sm-12">
+                                        <label class="my-2">Period (Months)</label>
+                                        <select name="fee_accumulation_period" class="form-select" required>
+                                            @for($i = 1; $i <= 10; $i++)
+                                                <option value="{{ $i }}" {{ ($org->fee_accumulation_period ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                            @endfor
+                                        </select>
+
+                                        <input type="text" name="estate_id" value="{{$org->id}}" hidden>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
                             </form>
                         </div>
                     </div>

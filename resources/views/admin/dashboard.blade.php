@@ -16,151 +16,156 @@
                 </div>
 
                 <!-- start row -->
-                <div class="row">
-                    <div class="col-md-12 col-xl-4">
-                        <div class="row g-3">
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Total Users</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$users}}</div>
-                                            <div class="me-auto">
-                                            </div>
-                                        </div>
-
-                                        {{--                                    <div id="website-traffic" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Total Meter</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$meter}}</div>
-                                        </div>
-                                        {{--                                    <div id="conversion-visitors" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Total Estate</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$estate}}</div>
-                                            <div class="me-auto">
-                                            </div>
-                                        </div>
-
-                                        {{--                                    <div id="website-traffic" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Estate Token</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$token}}</div>
-                                        </div>
-                                        {{--                                    <div id="conversion-visitors" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Meter Token</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$meter_token}}</div>
-                                        </div>
-                                        {{--                                    <div id="conversion-visitors" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Estate Token</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$token}}</div>
-                                        </div>
-                                        {{--                                    <div id="conversion-visitors" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            {{--                        <div class="col-md-12 col-xl-12">--}}
-                            {{--                            <div class="card">--}}
-                            {{--                                <div class="card-body">--}}
-                            {{--                                    <div class="d-flex align-items-center">--}}
-                            {{--                                        <div class="fs-16 mb-1">Total Transaction</div>--}}
-                            {{--                                    </div>--}}
-
-                            {{--                                    <div class="d-flex align-items-baseline mb-2">--}}
-                            {{--                                        <div class="fs-22 mb-0 me-2 fw-semibold text-black">NGN{{number_format($total_in, 2)}}</div>--}}
-                            {{--                                    </div>--}}
-
-                            {{--                                    <div id="average-daily-sales" class="apex-charts"></div>--}}
-                            {{--                                </div>--}}
-                            {{--                            </div>--}}
-                            {{--                        </div>--}}
-
-
-                        </div>
-                    </div> <!-- end sales -->
-
-                    <!-- Start Earning Reports -->
-                    <div class="col-md-12 col-xl-8">
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="d-flex align-items-center">
-                                    <h5 class="card-title text-black mb-0">Earning Reports</h5>
-                                </div>
-                            </div>
-
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card mb-0">
                             <div class="card-body">
-                                <!-- Earning reports Chart -->
-                                <div id="monthly-sales" class="apex-charts"></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Total Users</div>
+                                </div>
 
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$users}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Total Meter</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$meter}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Total Estate</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$estate}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Total Revenue</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">NGN{{number_format($total_in, 2)}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Estate Token</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$token}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Meter Token</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$meter_token}}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div> <!-- end row -->
 
+                <!-- Estate transactions chart -->
+                <div class="row mb-4">
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="d-flex align-items-center">
+                                    <h5 class="card-title text-black mb-0">Estates by Transaction Count</h5>
+                                </div>
+                            </div>
+
+                            <div class="card-body">
+                                <form action="{{ url('admin/admin-dashboard') }}" method="GET" id="estate-chart-filter">
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="fs-13">Date From</label>
+                                            <input type="date" class="form-control" name="from" value="{{ request('from') }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="fs-13">Date To</label>
+                                            <input type="date" class="form-control" name="to" value="{{ request('to') }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="fs-13">Transaction Status</label>
+                                            <select class="form-select" name="status">
+                                                <option value="">All Status</option>
+                                                @foreach ([
+                                                    0 => 'Pending',
+                                                    2 => 'Completed',
+                                                    1 => 'Payment Failed',
+                                                    3 => 'Service Pending',
+                                                    4 => 'Pending Review',
+                                                ] as $value => $label)
+                                                    <option value="{{ $value }}" @selected(request('status') !== null && request('status') == $value)>{{ $label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="fs-13">Transaction Type</label>
+                                            <select class="form-select" name="transaction_type">
+                                                <option value="">All Types</option>
+                                                @foreach($service_types as $type)
+                                                    <option value="{{ $type }}" @selected(request('transaction_type') == $type)>{{ str_replace('_', ' ', ucwords(str_replace('_', ' ', $type))) }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-auto">
+                                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a href="{{ url('admin/admin-dashboard') }}" class="btn btn-light btn-sm">Reset</a>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <div class="mt-3">
+                                    <div id="estate-trx-chart" class="apex-charts"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- end Estate transactions chart -->
 
                 <div class="row">
                     <div class="col-xl-12">
@@ -247,6 +252,62 @@
 
             </div>
         </div>
+
+        <script src="{{url('')}}/public/asset/ass/libs/apexcharts/apexcharts.min.js"></script>
+        <script>
+            (function () {
+                var labels = @json($chart_labels);
+                var values = @json($chart_values);
+
+                var el = document.querySelector('#estate-trx-chart');
+                if (!el || typeof ApexCharts === 'undefined') {
+                    return;
+                }
+
+                if (values.length === 0) {
+                    el.innerHTML = '<p class="text-muted text-center my-5">No transactions found for the selected filters</p>';
+                    return;
+                }
+
+                var options = {
+                    chart: {
+                        type: 'bar',
+                        height: Math.max(150, labels.length * 50),
+                        toolbar: {show: false}
+                    },
+                    series: [{name: 'Transactions', data: values}],
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            barHeight: '20px',
+                            borderRadius: 3
+                        }
+                    },
+                    dataLabels: {enabled: false},
+                    colors: ['#287F71'],
+                    grid: {
+                        strokeDashArray: 4,
+                        xaxis: {lines: {show: true}},
+                        yaxis: {lines: {show: false}}
+                    },
+                    xaxis: {
+                        categories: labels,
+                        labels: {style: {colors: '#001b2f', fontWeight: 500}},
+                        title: {text: 'Transactions'}
+                    },
+                    yaxis: {
+                        labels: {style: {colors: '#001b2f', fontWeight: 500}}
+                    },
+                    tooltip: {
+                        theme: 'light',
+                        y: {formatter: function (val) { return val + ' transaction' + (val === 1 ? '' : 's'); }}
+                    }
+                };
+
+                var chart = new ApexCharts(el, options);
+                chart.render();
+            })();
+        </script>
     @elseif(Auth::user()->role == 1)
     @elseif(Auth::user()->role == 2)
     @elseif(Auth::user()->role == 3)
@@ -262,83 +323,62 @@
                 </div>
 
                 <!-- start row -->
-                <div class="row">
-                    <div class="col-md-12 col-xl-12">
-                        <div class="row g-3">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Total Users</div>
+                                </div>
 
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Total Users</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$users}}</div>
-                                            <div class="me-auto">
-                                            </div>
-                                        </div>
-
-                                        {{--                                    <div id="website-traffic" class="apex-charts"></div>--}}
-                                    </div>
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$users}}</div>
                                 </div>
                             </div>
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Total Customer</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$customers}}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Estate Meter</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$meter}}</div>
-                                        </div>
-                                        {{--                                    <div id="conversion-visitors" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            <div class="col-md-6 col-xl-6">
-                                <div class="card mb-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <div class="fs-16 mb-1">Estate Token</div>
-                                        </div>
-
-                                        <div class="d-flex align-items-baseline mb-2">
-                                            <div
-                                                class="fs-22 mb-0 me-2 fw-semibold text-black">{{$token}}</div>
-                                        </div>
-                                        {{--                                    <div id="conversion-visitors" class="apex-charts"></div>--}}
-                                    </div>
-                                </div>
-                            </div>
-
-
                         </div>
-                    </div> <!-- end sales -->
+                    </div>
 
-                    <!-- Start Earning Reports -->
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Total Customer</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$customers}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Estate Meter</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$meter}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-16 mb-1">Estate Token</div>
+                                </div>
+
+                                <div class="d-flex align-items-baseline mb-2">
+                                    <div class="fs-22 mb-0 me-2 fw-semibold text-black">{{$token}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div> <!-- end row -->
 
 
