@@ -994,7 +994,7 @@ if (! function_exists('generate_otp')) {
 
 if (! function_exists('calculate_transaction_charge')) {
 
-    function calculate_transaction_charge(float|int $amount): float
+    function calculate_transaction_charge($amount): float
     {
         $transactionCharge = 0;
 
