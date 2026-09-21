@@ -262,6 +262,7 @@ class EstateController extends Controller
             'pos_tariff_id' => $request->pos_tariff_id,
             'serial_no' => $request->serial_no,
             'admin_fee' => $request->estate_admin_fee,
+            'estate_meter_vending_type' => $request->estate_meter_vending_type ?? 1,
         ]);
 
         Logger::info("User {$auth_user->id}  updates estate info", [

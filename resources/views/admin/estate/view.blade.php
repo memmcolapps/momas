@@ -315,6 +315,14 @@
 
                                     </div>
 
+                                    <div class="col-3">
+                                        <label class="my-2">Meter Vending Type</label>
+                                        <select name="estate_meter_vending_type" class="form-control" required>
+                                            <option value="1" @if(($org->estate_meter_vending_type ?? 1) == 1) selected @endif>Prepaid</option>
+                                            <option value="0" @if(($org->estate_meter_vending_type ?? 1) == 0) selected @endif>Postpaid</option>
+                                        </select>
+                                    </div>
+
                                 </div>
 
                                 <hr class="my-4">
