@@ -477,6 +477,7 @@ class Meter extends Model
                     'service_type' => $service_type,
                     'tariff_id' => $tariff_id,
                     'unit_amount' => $vending_amount,
+                    'breakdown' => $calculatedValues,
                     // 'vat' => $vatAmount,
                 ]);
 
@@ -679,6 +680,7 @@ class Meter extends Model
                 'service_type'     => $service_type,
                 'tariff_id'        => $tariff_id,
                 'status'           => 2,
+                'breakdown'        => $calculatedValues,
             ]);
 
             $tariff = Tariff::where('id', $tariff_id)->first();
