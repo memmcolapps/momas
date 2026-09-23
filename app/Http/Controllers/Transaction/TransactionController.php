@@ -1129,7 +1129,7 @@ class TransactionController extends Controller
         // send_notification($message);
 
         // dd($request->all());
-            $transactionId = $request->reference;
+            $transactionId = $request->reference ?? $request->trx_id;
             $trx = Transaction::where('trx_id', $transactionId)->first();
             $provider = $trx?->pay_type;
 
@@ -1137,7 +1137,7 @@ class TransactionController extends Controller
 
             // Use PaystackPaymentService to verify transaction
             $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
-            $verificationResult = $paymentService->verifyTransaction($transactionId);
+            $verificationResult = $paymentService->verifyTransaction($trx->payment_ref);
 
             if (! $verificationResult['status']) {
                 // if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
@@ -1163,7 +1163,7 @@ class TransactionController extends Controller
                 $ref = $transactionData['reference'];
                 $trx = Transaction::where('trx_id', $ref)->first();
 
-                if ($trx) {
+                if ($trx && $access_point == 'web') {
                     $action_payload = json_decode($trx->action_payload);
 
                     $action = $action_payload?->action;
