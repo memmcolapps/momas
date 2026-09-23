@@ -19,6 +19,7 @@ use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Services\EmergencyTokenService;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
@@ -624,7 +625,8 @@ class MeterController extends Controller
         }
 
         try {
-            $result = $meter->getEmergencyToken(
+            $result = EmergencyTokenService::generate(
+                $meter,
                 (int) $request->tariff_id,
                 (int) $request->amount
             );

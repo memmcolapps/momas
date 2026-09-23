@@ -14,6 +14,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -625,7 +626,7 @@ class Meter extends Model
         $user = User::where('id', $payerUserId)->firstOrFail();
         $estate = Estate::where('id', $this->estate_id)->firstOrFail();
 
-        if (!LedgerService::estateSupportsPostpaid($estate)) {
+        if (!LedgerService::estateSupportsPostpaid($estate) && !Auth::user()->isSuperAdmin()) {
             throw new Exception('This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
         }
 

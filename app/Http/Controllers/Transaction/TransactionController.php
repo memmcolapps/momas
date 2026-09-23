@@ -989,6 +989,8 @@ class TransactionController extends Controller
             ($receipt['first_name'] ?? '') . ' ' . ($receipt['last_name'] ?? '')
         );
 
+        $receipt['breakdown'] = $transaction->breakdown;
+
         unset($receipt['first_name'], $receipt['last_name'], $receipt['kct_tokens']);
 
         return $receipt;
