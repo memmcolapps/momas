@@ -3,16 +3,18 @@
 namespace App\Models;
 
 use App\Constants\ServiceTypeConstants;
+use App\Contracts\PaymentServiceInterface;
 use App\Events\MeterTokenGenerated;
-use App\Services\PaystackPaymentService;
-use App\Services\LedgerService;
-use App\Services\TokenGenerationService;
 use App\Models\UtilitiesPayment;
+use App\Services\LedgerService;
+use App\Services\PaystackPaymentService;
+use App\Services\TokenGenerationService;
 use App\Services\VatCalculator;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -426,11 +428,12 @@ class Meter extends Model
                     throw new Exception ("Transaction already completed please restart a new transaction to generate token");
                 }
 
-                $paystack_engine = new PaystackPaymentService();
+                $provider = $trx->pay_type;
+                $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
 
                 $verifier_engine = match ($verify) {
-                    "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
-                    "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
+                    "verify" => fn($arg) => $paymentService->verifyTransaction($arg),
+                    "poll" => fn($arg) => $paymentService->pollTransactionStatus($arg),
                     "null" => fn($arg) => [
                         'is_successful' => true,
                         'status' => true,
@@ -440,7 +443,7 @@ class Meter extends Model
 
 
                 if ($trx->status === 0) {
-                    $verify = $verifier_engine($trx_id);
+                    $verify = $verifier_engine($trx->payment_ref);
 
                     if (! $verify['is_successful']) {
                         Logger::error('verify_transaction failed', [
@@ -475,6 +478,7 @@ class Meter extends Model
                     'service_type' => $service_type,
                     'tariff_id' => $tariff_id,
                     'unit_amount' => $vending_amount,
+                    'breakdown' => $calculatedValues,
                     // 'vat' => $vatAmount,
                 ]);
 
@@ -622,7 +626,7 @@ class Meter extends Model
         $user = User::where('id', $payerUserId)->firstOrFail();
         $estate = Estate::where('id', $this->estate_id)->firstOrFail();
 
-        if (!LedgerService::estateSupportsPostpaid($estate)) {
+        if (!LedgerService::estateSupportsPostpaid($estate) && !Auth::user()->isSuperAdmin()) {
             throw new Exception('This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
         }
 
@@ -677,6 +681,7 @@ class Meter extends Model
                 'service_type'     => $service_type,
                 'tariff_id'        => $tariff_id,
                 'status'           => 2,
+                'breakdown'        => $calculatedValues,
             ]);
 
             $tariff = Tariff::where('id', $tariff_id)->first();

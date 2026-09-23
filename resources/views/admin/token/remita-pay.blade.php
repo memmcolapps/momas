@@ -66,7 +66,7 @@
                                             ]
                                         },
                                         onSuccess: function (response) {
-                                            window.location.href = '/admin/recepit?trx_id={{ $trx_id }}&type=credit_token';
+                                            window.location.href = '/payment-check?trx_id={{ $trx_id }}';
                                         },
                                         onError: function (response) {
                                             alert('Payment failed. Please try again.');

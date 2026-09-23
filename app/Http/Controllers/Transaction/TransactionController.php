@@ -90,8 +90,9 @@ class TransactionController extends Controller
                 (string) $request->type,
             );
 
-            $arrearsAmount = round(array_sum(array_column($breakdown['arrears'], 'Amount')), 2);
+            $arrearsAmount = round(array_sum(array_column($breakdown['arrears'], 'amount')), 2);
             $breakdown['amount'] = round($breakdown['remaining'] + $arrearsAmount, 2);
+            $breakdown['arrears_type'] = $request->type;
 
             return StandardResponse::success(code: 200, message: 'Utilities breakdown calculated', data: $breakdown);
         } catch (Exception $e) {
@@ -988,6 +989,8 @@ class TransactionController extends Controller
             ($receipt['first_name'] ?? '') . ' ' . ($receipt['last_name'] ?? '')
         );
 
+        $receipt['breakdown'] = $transaction->breakdown;
+
         unset($receipt['first_name'], $receipt['last_name'], $receipt['kct_tokens']);
 
         return $receipt;
@@ -1126,7 +1129,7 @@ class TransactionController extends Controller
         // send_notification($message);
 
         // dd($request->all());
-            $transactionId = $request->reference;
+            $transactionId = $request->reference ?? $request->trx_id;
             $trx = Transaction::where('trx_id', $transactionId)->first();
             $provider = $trx?->pay_type;
 
@@ -1134,7 +1137,7 @@ class TransactionController extends Controller
 
             // Use PaystackPaymentService to verify transaction
             $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
-            $verificationResult = $paymentService->verifyTransaction($transactionId);
+            $verificationResult = $paymentService->verifyTransaction($trx->payment_ref);
 
             if (! $verificationResult['status']) {
                 // if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
@@ -1160,7 +1163,7 @@ class TransactionController extends Controller
                 $ref = $transactionData['reference'];
                 $trx = Transaction::where('trx_id', $ref)->first();
 
-                if ($trx) {
+                if ($trx && $access_point == 'web') {
                     $action_payload = json_decode($trx->action_payload);
 
                     $action = $action_payload?->action;

@@ -19,6 +19,7 @@ use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Services\EmergencyTokenService;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
@@ -627,7 +628,8 @@ class MeterController extends Controller
         }
 
         try {
-            $result = $meter->getEmergencyToken(
+            $result = EmergencyTokenService::generate(
+                $meter,
                 (int) $request->tariff_id,
                 (int) $request->amount
             );
@@ -1284,7 +1286,10 @@ class MeterController extends Controller
             // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
             if(!$newTariff || $newTariff->estate_id != $meter->estate_id) {
                 $newTariff = Tariff::where('estate_id', $meter->estate_id)
-                    ->where('tariff_index', $meter->NewTariffID)
+                    ->where(function ($q) use ($meter) {
+                        $q->where('id', $meter->NewTariffID)
+                            ->orWhere('tariff_index', $meter->NewTariffID);
+                    })
                     ->whereIn('type', ['nepa', 'Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
@@ -1301,7 +1306,10 @@ class MeterController extends Controller
             // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
             if(!$oldTariff || $oldTariff->estate_id != $meter->estate_id) {
                 $oldTariff = Tariff::where('estate_id', $meter->estate_id)
-                    ->where('tariff_index', $meter->OldTariffID)
+                    ->where(function ($q) use ($meter) {
+                        $q->where('id', $meter->OldTariffID)
+                            ->orWhere('tariff_index', $meter->OldTariffID);
+                    })
                     ->whereIn('type', ['nepa', 'Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
@@ -1319,7 +1327,10 @@ class MeterController extends Controller
             // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
             if(!$newGenTariff || $newGenTariff->estate_id != $meter->estate_id) {
                 $newGenTariff = Tariff::where('estate_id', $meter->estate_id)
-                    ->where('tariff_index', $meter->NewTariffDualID)
+                    ->where(function ($q) use ($meter) {
+                        $q->where('id',  $meter->NewTariffDualID)
+                            ->orWhere('tariff_index',  $meter->NewTariffDualID);
+                    })
                     ->whereIn('type', ['gen', 'Off Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
@@ -1340,7 +1351,10 @@ class MeterController extends Controller
             // If not found or doesn't belong to meter's estate, try finding by index (for legacy data)
             if(!$oldGenTariff || $oldGenTariff->estate_id != $meter->estate_id) {
                 $oldGenTariff = Tariff::where('estate_id', $meter->estate_id)
-                    ->where('tariff_index', $meter->OldTariffDualID)
+                    ->where(function ($q) use ($meter) {
+                        $q->where('id', $meter->OldTariffDualID)
+                            ->orWhere('tariff_index', $meter->OldTariffDualID);
+                    })
                     ->whereIn('type', ['gen', 'Off Grid'])
                     ->first(); // Get first match if multiple tariffs have same index
             }
