@@ -56,7 +56,7 @@ class WalletPaymentService implements PaymentServiceInterface
      *
      * @throws InvalidArgumentException when required parameters are absent
      */
-    public function makePayment(array $data): array
+    public function makePayment(array $data, mixed $transactionCharge = null): array
     {
         $requiredParameters = ['amount', 'email'];
         $missingParameters = array_diff($requiredParameters, array_keys($data));
