@@ -211,6 +211,15 @@
                                           @if(($cost_of_unit ?? 0) > 0)
                                               <div class="receipt-row"><span>Cost of Unit</span><b>₦ {{number_format($cost_of_unit, 2)}}</b></div>
                                           @endif
+                                          @if(($debt_charged ?? 0) > 0)
+                                              <div class="receipt-row"><span>Debt Charged</span><b>₦ {{number_format($debt_charged, 2)}}</b></div>
+                                          @endif
+                                          @if(($utility_charged ?? 0) > 0)
+                                              <div class="receipt-row"><span>Utility Charged</span><b>₦ {{number_format($utility_charged, 2)}}</b></div>
+                                          @endif
+                                          @if(($transaction_fee ?? 0) > 0)
+                                              <div class="receipt-row"><span>Transaction Fee</span><b>₦ {{number_format($transaction_fee, 2)}}</b></div>
+                                          @endif
                                           <div class="receipt-row"><span>Tariff Amt</span><b>₦ {{number_format($tariff_amount, 2) }}</b></div>
                                          <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
                                          <div class="receipt-row"><span>Vat</span><b>{{$vat_amount ?? "0.00"}}</b></div>
@@ -450,10 +459,19 @@
                                           @if(($service_charge_owed ?? 0) > 0)
                                               <div class="receipt-row"><span>Service Charge Owed</span><b>₦ {{number_format($service_charge_owed, 2)}}</b></div>
                                           @endif
-                                          @if(($cost_of_unit ?? 0) > 0)
-                                              <div class="receipt-row"><span>Cost of Unit</span><b>₦ {{number_format($cost_of_unit, 2)}}</b></div>
-                                          @endif
-                                          <div class="receipt-row"><span>Tariff Amt</span><b>₦ {{number_format($tariff_amount, 2) }}</b></div>
+@if(($cost_of_unit ?? 0) > 0)
+                                               <div class="receipt-row"><span>Cost of Unit</span><b>₦ {{number_format($cost_of_unit, 2)}}</b></div>
+                                           @endif
+                                           @if(($debt_charged ?? 0) > 0)
+                                               <div class="receipt-row"><span>Debt Charged</span><b>₦ {{number_format($debt_charged, 2)}}</b></div>
+                                           @endif
+                                           @if(($utility_charged ?? 0) > 0)
+                                               <div class="receipt-row"><span>Utility Charged</span><b>₦ {{number_format($utility_charged, 2)}}</b></div>
+                                           @endif
+                                           @if(($transaction_fee ?? 0) > 0)
+                                               <div class="receipt-row"><span>Transaction Fee</span><b>₦ {{number_format($transaction_fee, 2)}}</b></div>
+                                           @endif
+                                           <div class="receipt-row"><span>Tariff Amt</span><b>₦ {{number_format($tariff_amount, 2) }}</b></div>
                                          <div class="receipt-row"><span>Meter NO</span><b>{{$meter_no}}</b></div>
                                          <div class="receipt-row"><span>Vat</span><b>{{$vat_amount ?? "0.00"}}</b></div>
                                          <div class="receipt-row"><span>Unit</span><b>{{round($unit) ?? "0.00"}}KWH</b></div>

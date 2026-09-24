@@ -6261,6 +6261,13 @@ class TokenController extends Controller
                         $data['service_charge_owed'] = round($debt_breakdown['service_charge_owed'], 2);
                     }
 
+                    $breakdown = $trx->breakdown ?? null;
+                    if ($breakdown) {
+                        $data['debt_charged'] = round($breakdown['arrearsOwed'] ?? 0, 2);
+                        $data['utility_charged'] = round($breakdown['utilityOwed'] ?? 0, 2);
+                        $data['transaction_fee'] = round($breakdown['serviceFee'] ?? 0, 2);
+                    }
+
                     return view('admin/recepit.recepit', $data);
                 }
             }
