@@ -336,6 +336,12 @@
                                         <input type="date" name="TOKEN_RETRY_DEPLOYMENT_DATE" class="form-control"
                                                value="{{ $configValues['TOKEN_RETRY_DEPLOYMENT_DATE'] }}">
                                     </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Max Emergency Token Amount</label>
+                                        <input type="number" step="0.01" name="MOMAS_MAX_EMERGENCY_TOKEN" class="form-control"
+                                               value="{{ $configValues['MOMAS_MAX_EMERGENCY_TOKEN'] }}">
+                                    </div>
                                 </div>
 
                                 <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
