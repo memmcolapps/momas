@@ -748,6 +748,7 @@ class TransactionController extends Controller
                     ? ($transaction->creditToken->receiver_meterNo ?: $transaction->creditToken->meterNo)
                     : null;
                 unset($data['credit_token']);
+                $data['fee'] = (string) $transaction->fee;
                 return $data;
             });
 
