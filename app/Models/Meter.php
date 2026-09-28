@@ -308,21 +308,21 @@ class Meter extends Model
         }
 
         return [
-            'tariffAmount' => $tariffAmount,
-            'vat' => round($vat, 2),
-            'fixedCharge' => round($fixedCharge, 2),
-            'serviceFee' => round($transactionCharge, 2),
-            'afterServiceFee' => round($afterServiceFee, 2),
-            'estateFee' => round($estateFee, 2),
-            'afterEstateFee' => round($afterEstateFee, 2),
-            'arrearsOwed' => round($arrearsAmount, 2),
-            'afterArrears' => round($afterArrears, 2),
-            'utilityOwed' => round($utilityOwed, 2),
-            'afterUtility' => round($afterUtility, 2),
-            'afterFixedCharge' => round($afterFixedCharge, 2),
-            'vatAmount' => round($vatAmount, 2),
-            'vendingAmount' => round($vending_amount, 2),
-            'unit' => round($unit, 2),
+            'tariffAmount' => (string) $tariffAmount,
+            'vat' => (string) round($vat, 2),
+            'fixedCharge' => (string) round($fixedCharge, 2),
+            'serviceFee' => (string) round($transactionCharge, 2),
+            'afterServiceFee' => (string) round($afterServiceFee, 2),
+            'estateFee' => (string) round($estateFee, 2),
+            'afterEstateFee' => (string) round($afterEstateFee, 2),
+            'arrearsOwed' => (string) round($arrearsAmount, 2),
+            'afterArrears' => (string) round($afterArrears, 2),
+            'utilityOwed' => (string) round($utilityOwed, 2),
+            'afterUtility' => (string) round($afterUtility, 2),
+            'afterFixedCharge' => (string) round($afterFixedCharge, 2),
+            'vatAmount' => (string) round($vatAmount, 2),
+            'vendingAmount' => (string) round($vending_amount, 2),
+            'unit' => (string) round($unit, 2),
         ];
     }
 

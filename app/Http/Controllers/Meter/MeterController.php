@@ -443,7 +443,10 @@ class MeterController extends Controller
                 $request->receiver_meterNo
             );
 
+            $paymentOptions = payment_option_detail($auth_user->estate_id, $request->amount, 'vending');
+
             $values['utilityAmount'] = $values['arrearsOwed'];
+            $values['paymentOptions'] = $paymentOptions;
             return StandardResponse::success(200, 'Token values calculated successfully', $values);
         } catch (Exception $e) {
             return StandardResponse::error(422, $e->getMessage());

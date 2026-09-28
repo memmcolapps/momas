@@ -90,8 +90,8 @@ class TransactionController extends Controller
                 (string) $request->type,
             );
 
-            $arrearsAmount = round(array_sum(array_column($breakdown['arrears'], 'amount')), 2);
-            $breakdown['amount'] = round($breakdown['remaining'] + $arrearsAmount, 2);
+            $arrearsAmount = (string) round(array_sum(array_column($breakdown['arrears'], 'amount')), 2);
+            $breakdown['amount'] = (string) round($breakdown['remaining'] + $arrearsAmount, 2);
             $breakdown['arrears_type'] = $request->type;
 
             return StandardResponse::success(code: 200, message: 'Utilities breakdown calculated', data: $breakdown);
@@ -990,7 +990,16 @@ class TransactionController extends Controller
             ($receipt['first_name'] ?? '') . ' ' . ($receipt['last_name'] ?? '')
         );
 
-        $receipt['breakdown'] = $transaction->breakdown;
+        $receipt['breakdown'] = $transaction->breakdown ?? [];
+
+        array_walk_recursive($receipt['breakdown'], function (&$value, $key) {
+            if (is_int($value) || is_float($value)) {
+                if ($key === 'unitkwh') {
+                    $value = round((float) $value, 2);
+                }
+                $value = (string) $value;
+            }
+        });
 
         unset($receipt['first_name'], $receipt['last_name'], $receipt['kct_tokens']);
 
