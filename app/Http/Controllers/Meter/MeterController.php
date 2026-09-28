@@ -443,7 +443,10 @@ class MeterController extends Controller
                 $request->receiver_meterNo
             );
 
+            $paymentOptions = payment_option_detail($auth_user->estate_id, $request->amount, 'vending');
+
             $values['utilityAmount'] = $values['arrearsOwed'];
+            $values['paymentOptions'] = $paymentOptions;
             return StandardResponse::success(200, 'Token values calculated successfully', $values);
         } catch (Exception $e) {
             return StandardResponse::error(422, $e->getMessage());
@@ -609,16 +612,23 @@ class MeterController extends Controller
             return StandardResponse::error(403, 'Unauthorized: Only super admins can generate emergency tokens');
         }
 
+        $maxAmount = (int) (app(\App\Services\ConfigManagementService::class)
+            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+
         $validator = Validator::make($request->all(), [
             'meterNo' => ['required', 'integer', Rule::exists('meters', 'meterNo')],
             'tariff_id' => ['required', 'integer', Rule::exists('tariffs', 'id')],
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:1|max:' . $maxAmount,
         ]);
 
         if ($validator->fails()) {
             return StandardResponse::error(422, 'Validation Error', [
                 'validation_error' => $validator->errors(),
             ]);
+        }
+
+        if ((float) $request->amount > $maxAmount) {
+            return StandardResponse::error(422, 'Amount cannot exceed NGN ' . number_format($maxAmount, 2));
         }
 
         $meter = Meter::where('meterNo', $request->meterNo)->first();
@@ -649,6 +659,8 @@ class MeterController extends Controller
         }
 
         $data['estate'] = Estate::all();
+        $data['max_emergency_token'] = (int) (app(\App\Services\ConfigManagementService::class)
+            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
         $data['emergency_credit_tokens'] = CreditToken::where('trx_id', 'like', 'emg_ref%')
             ->latest()
             ->paginate(20);

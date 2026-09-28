@@ -83,7 +83,9 @@
                                                         <div class="col-xl-6 my-2 col-sm-12">
                                                             <label class="my-2">Amount</label>
                                                             <input type="number" class="form-control mb-3" name="amount"
+                                                                   min="1" max="{{ $max_emergency_token }}"
                                                                    required>
+                                                            <small class="text-muted">Maximum: NGN {{ number_format($max_emergency_token) }}</small>
                                                         </div>
                                                     </div>
 

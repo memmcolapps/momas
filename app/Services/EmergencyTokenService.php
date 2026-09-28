@@ -43,6 +43,13 @@ class EmergencyTokenService
             $debtCheck = (new UtilityManagementService())
                 ->calculateUserOwedUtility($meter->user_id, $meter->estate_id);
 
+            $maxAmount = (int) (app(ConfigManagementService::class)
+                ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+
+            if ($amount > $maxAmount) {
+                throw new Exception('Amount cannot exceed NGN ' . number_format($maxAmount, 2));
+            }
+
             $result = DB::transaction(function () use ($meter, $tariff_id, $amount) {
                 $owner = User::find($meter->user_id);
 
@@ -221,6 +228,8 @@ class EmergencyTokenService
 
         if (str_contains($message, 'has outstanding debt')) {
             $context = 'unpaid_debt_blocked';
+        } elseif (str_contains($message, 'Amount cannot exceed')) {
+            $context = 'amount_above_cap';
         } elseif (str_contains($message, 'Amount too small')) {
             $context = 'amount_too_small';
         } elseif (str_contains($message, 'Kwh purchase cannot be less')) {

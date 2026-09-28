@@ -57,9 +57,15 @@ class TransactionExport implements FromCollection, WithHeadings
                 ->where('created_at', '<=', $this->to_date->endOfDay());
         }
 
-        return $query->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($transaction) {
+        $transactions = $query->orderBy('created_at', 'desc')->get();
+
+        $totalAmount = 0;
+        $totalTariffAmount = 0;
+        $totalServiceFee = 0;
+        $totalVatAmount = 0;
+        $totalVendingAmount = 0;
+
+        $rows = $transactions->map(function ($transaction) use (&$totalAmount, &$totalTariffAmount, &$totalServiceFee, &$totalVatAmount, &$totalVendingAmount) {
                 $statusText = 'Unknown';
                 if ($transaction->status == 2) {
                     $statusText = 'Approved';
@@ -90,6 +96,32 @@ class TransactionExport implements FromCollection, WithHeadings
                     $transactionType = 'VAS';
                 }
 
+                $breakdown = $transaction->breakdown ?? [];
+
+                $tariffAmount = isset($breakdown['tariffAmount']) ? (float) $breakdown['tariffAmount'] : null;
+                $serviceFee = isset($breakdown['serviceFee']) ? (float) $breakdown['serviceFee'] : null;
+                $vatAmount = isset($breakdown['vatAmount']) ? (float) $breakdown['vatAmount'] : null;
+                $vendingAmount = isset($breakdown['vending_amount'])
+                    ? (float) $breakdown['vending_amount']
+                    : (isset($breakdown['vendingAmount']) ? (float) $breakdown['vendingAmount'] : null);
+                $unit = $breakdown['unit'] ?? null;
+
+                $amount = (float) $transaction->amount;
+
+                if ($tariffAmount !== null) {
+                    $totalTariffAmount += $tariffAmount;
+                }
+                if ($serviceFee !== null) {
+                    $totalServiceFee += $serviceFee;
+                }
+                if ($vatAmount !== null) {
+                    $totalVatAmount += $vatAmount;
+                }
+                if ($vendingAmount !== null) {
+                    $totalVendingAmount += $vendingAmount;
+                }
+                $totalAmount += $amount;
+
                 return [
                     'trx_id' => $transaction->trx_id,
                     'transaction_type' => $transactionType,
@@ -99,10 +131,35 @@ class TransactionExport implements FromCollection, WithHeadings
                     'phone' => $transaction->user->phone ?? 'N/A',
                     'estate' => $transaction->estate->title ?? 'N/A',
                     'amount' => $transaction->amount,
+                    'tariff_amount' => $tariffAmount !== null ? round($tariffAmount, 2) : '',
+                    'service_fee' => $serviceFee !== null ? round($serviceFee, 2) : '',
+                    'vat_amount' => $vatAmount !== null ? round($vatAmount, 2) : '',
+                    'vending_amount' => $vendingAmount !== null ? round($vendingAmount, 2) : '',
+                    'unit' => $unit !== null ? round((float) $unit, 2) : '',
                     'status' => $statusText,
                     'date' => $transaction->created_at->format('d/m/Y H:i'),
                 ];
             });
+
+        $rows->push([
+            'trx_id' => 'TOTAL',
+            'transaction_type' => '',
+            'meter_no' => '',
+            'customer' => '',
+            'email' => '',
+            'phone' => '',
+            'estate' => '',
+            'amount' => round($totalAmount, 2),
+            'tariff_amount' => round($totalTariffAmount, 2),
+            'service_fee' => round($totalServiceFee, 2),
+            'vat_amount' => round($totalVatAmount, 2),
+            'vending_amount' => round($totalVendingAmount, 2),
+            'unit' => '',
+            'status' => '',
+            'date' => '',
+        ]);
+
+        return $rows;
     }
 
     /**
@@ -121,6 +178,11 @@ class TransactionExport implements FromCollection, WithHeadings
             'Phone',
             'Estate',
             'Amount (NGN)',
+            'Tariff Amount (NGN)',
+            'Service Fee (NGN)',
+            'VAT Amount (NGN)',
+            'Vending Amount (NGN)',
+            'Unit (kWh)',
             'Status',
             'Transaction Date',
         ];

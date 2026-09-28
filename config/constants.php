@@ -51,6 +51,7 @@ return [
     ],
 
     'momas_minimum_vend' => env('MOMAS_MINIMUM_VEND', 100),
+    'momas_max_emergency_token' => env('MOMAS_MAX_EMERGENCY_TOKEN', 10000),
     'simulate_failed_token' => env('SIMULATE_FAILED_TOKEN', false),
     'token_retry_deployment_date' => env('TOKEN_RETRY_DEPLOYMENT_DATE', '2026-08-11'),
     'momas_max_transaction_fee' => env('MOMAS_MAX_VENDING_TRANSACTION_FEE', 4000),

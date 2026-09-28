@@ -50,6 +50,11 @@ class AppSettingSeeder extends Seeder
                 'key'   => 'payment_gateways',
                 'value' => ['paystack'],
             ],
+            [
+                'title' => 'Max Emergency Token Amount',
+                'key'   => 'momas_max_emergency_token',
+                'value' => 10000,
+            ],
         ];
 
         foreach ($settings as $setting) {

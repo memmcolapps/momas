@@ -354,14 +354,14 @@ class UtilityManagementService
                 $arrears[] = [
                     'id' => $payment->id,
                     'date' => $payment->created_at->format('F Y'),
-                    'amount' => round((float) $payment->amount, 2),
+                    'amount' => (string) round((float) $payment->amount, 2),
                 ];
                 $remaining -= (float) $payment->amount;
             } else {
                 $arrears[] = [
                     'id' => $payment->id,
                     'date' => $payment->created_at->format('F Y'),
-                    'amount' => round($remaining, 2),
+                    'amount' => (string) round($remaining, 2),
                 ];
                 $remaining = 0;
             }
@@ -381,8 +381,8 @@ class UtilityManagementService
                 'code' => 'PAYSTACK',
                 'name' => 'Paystack',
                 'enabled' => true,
-                'transaction_fee' => round($gatewayFee, 2),
-                'total_amount' => round($totalCharge, 2),
+                'transaction_fee' => (string) round($gatewayFee, 2),
+                'total_amount' => (string) round($totalCharge, 2),
             ],
         ];
 
@@ -391,18 +391,18 @@ class UtilityManagementService
                 'code' => 'REMITA',
                 'name' => 'Remita',
                 'enabled' => true,
-                'transaction_fee' => round($gatewayFee, 2),
-                'total_amount' => round($totalCharge, 2),
+                'transaction_fee' => (string) round($gatewayFee, 2),
+                'total_amount' => (string) round($totalCharge, 2),
             ];
         }
 
         return [
             'arrears' => $arrears,
             'charges' => [
-                'momas_fee' => round($momasFee, 2),
+                'momas_fee' => (string) round($momasFee, 2),
             ],
             'payment_options' => $paymentOptions,
-            'remaining' => round($remaining, 2),
+            'remaining' => (string) round($remaining, 2),
         ];
     }
 }
