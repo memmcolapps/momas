@@ -82,9 +82,9 @@
                                             <div class="row">
                                                 <div class="col-3">
                                                     <label>Choose Estate</label>
-                                                    <select  class="form-control" required name="estate_id">
+                                                    <select  class="form-control" name="estate_id">
 
-                                                        <option value="" {{ request('estate_id') == '' || request('estate_id') === null ? 'selected' : '' }}>All</option>
+                                                        <option value="" {{ request('estate_id') == '' || request('estate_id') === null ? 'selected' : '' }}>All Estate</option>
                                                         @foreach($estate as $data)
                                                             <option value="{{$data->id}}" {{ request('estate_id') == $data->id ? 'selected' : '' }}>{{$data->title}}</option>
                                                         @endforeach
@@ -96,6 +96,11 @@
                                                 <div class="col-3">
                                                     <label>Enter Meter No</label>
                                                     <input type="number" class="form-control" name="meterNo" value="{{ request('meterNo') }}">
+                                                </div>
+
+                                                <div class="col-3">
+                                                    <label>Search</label>
+                                                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Search by meter, estate, customer, email or phone">
                                                 </div>
 
                                                 <div class="col-2 mt-3">
@@ -391,22 +396,16 @@
                                         <form action="filter-meter" method="get">
 
                                             <div class="row">
-                                                <div class="col-3">
-                                                    <label>Choose Estate</label>
-                                                    <select  class="form-control" required name="estate_id">
-
-                                                        <option value="" {{ request('estate_id') == '' || request('estate_id') === null ? 'selected' : '' }}>All</option>
-                                                        @foreach($estate as $data)
-                                                            <option value="{{$data->id}}" {{ request('estate_id') == $data->id ? 'selected' : '' }}>{{$data->title}}</option>
-                                                        @endforeach
-
-                                                    </select>
-                                                </div>
 
 
-                                                <div class="col-3">
+                                                <div class="col-4">
                                                     <label>Enter Meter No</label>
                                                     <input type="number" class="form-control" name="meterNo" value="{{ request('meterNo') }}">
+                                                </div>
+
+                                                <div class="col-5">
+                                                    <label>Search</label>
+                                                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Search by meter, estate, customer, email or phone">
                                                 </div>
 
                                                 <div class="col-2 mt-3">
