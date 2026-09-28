@@ -100,7 +100,7 @@
 
                                                 <div class="col-3">
                                                     <label>Search</label>
-                                                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Search by meter no or estate name">
+                                                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Search by meter, estate, customer, email or phone">
                                                 </div>
 
                                                 <div class="col-2 mt-3">
@@ -405,7 +405,7 @@
 
                                                 <div class="col-5">
                                                     <label>Search</label>
-                                                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Search by meter no or estate name">
+                                                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Search by meter, estate, customer, email or phone">
                                                 </div>
 
                                                 <div class="col-2 mt-3">

@@ -1124,7 +1124,13 @@ class MeterController extends Controller
 
             $q->where(function ($q) use ($term) {
                 $q->where('meterNo', 'like', '%'.$term.'%')
-                    ->orWhereHas('estate', fn($eq) => $eq->where('title', 'like', '%'.$term.'%'));
+                    ->orWhereHas('estate', fn($eq) => $eq->where('title', 'like', '%'.$term.'%'))
+                    ->orWhereHas('user', function ($uq) use ($term) {
+                        $uq->where('first_name', 'like', '%'.$term.'%')
+                            ->orWhere('last_name', 'like', '%'.$term.'%')
+                            ->orWhere('email', 'like', '%'.$term.'%')
+                            ->orWhere('phone', 'like', '%'.$term.'%');
+                    });
             });
         });
     }
