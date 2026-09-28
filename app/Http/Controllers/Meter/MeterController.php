@@ -1073,9 +1073,13 @@ class MeterController extends Controller
         if (Auth::user()->role == 0) {
 
             $data['meters'] = Meter::count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')
-                ->when(trim($request->estate_id ?? '') !== '', fn($q) => $q->where('estate_id', $request->estate_id))
-                ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo))
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])
+                    ->orderBy('created_at', 'desc')
+                    ->when(trim($request->estate_id ?? '') !== '', fn($q) => $q->where('estate_id', $request->estate_id))
+                    ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo)),
+                $request
+            )
                 ->paginate('20')
                 ->withQueryString();
             $data['estate'] = Estate::where('status', 2)->get();
@@ -1089,10 +1093,14 @@ class MeterController extends Controller
         } elseif (Auth::user()->role == 3) {
 
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
-            $data['meters'] = Meter::count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')
-                ->where('estate_id', Auth::user()->estate_id)
-                ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo))
+            $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)->count();
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])
+                    ->orderBy('created_at', 'desc')
+                    ->where('estate_id', Auth::user()->estate_id)
+                    ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo)),
+                $request
+            )
                 ->paginate('20')
                 ->withQueryString();
             return view('admin/meter/meter-lists', $data);
@@ -1109,13 +1117,30 @@ class MeterController extends Controller
 
     }
 
+    private function applyMeterSearch($query, $request)
+    {
+        return $query->when($request->filled('search'), function ($q) use ($request) {
+            $term = $request->search;
+
+            $q->where(function ($q) use ($term) {
+                $q->where('meterNo', 'like', '%'.$term.'%')
+                    ->orWhereHas('estate', fn($eq) => $eq->where('title', 'like', '%'.$term.'%'));
+            });
+        });
+    }
+
     public function list_meter(request $request)
     {
 
         if (Auth::user()->role == 0) {
 
             $data['meters'] = Meter::count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')->paginate('20');
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])->orderBy('created_at', 'desc'),
+                $request
+            )
+                ->paginate('20')
+                ->withQueryString();
             $data['estate'] = Estate::where('status', 2)->get();
             return view('admin/meter/meter-lists', $data);
 
@@ -1127,7 +1152,14 @@ class MeterController extends Controller
         } elseif (Auth::user()->role == 3) {
 
             $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)->count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')->where('estate_id', Auth::user()->estate_id)->paginate('20');
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])
+                    ->orderBy('created_at', 'desc')
+                    ->where('estate_id', Auth::user()->estate_id),
+                $request
+            )
+                ->paginate('20')
+                ->withQueryString();
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
 
             return view('admin/meter/meter-lists', $data);
