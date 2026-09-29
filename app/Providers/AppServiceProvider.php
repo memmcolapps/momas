@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
                 'flutterwave' => new FlutterwavePaymentService(),
                 'wallet' => new WalletPaymentService(),
                 'remita' => new RemitaPaymentService(),
-                default => throw new \Exception('Unsupported payment provider'),
+                default => throw new \Exception('Unsupported payment provider ' . $provider),
             };
         });
 
