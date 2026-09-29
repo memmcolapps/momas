@@ -1140,7 +1140,7 @@ class TransactionController extends Controller
 
         // dd($request->all());
             $transactionId = $request->reference ?? $request->trx_id;
-            $trx = Transaction::where('trx_id', $transactionId)->first();
+            $trx = Transaction::where('payment_ref', $transactionId)->first();
             $provider = $trx?->pay_type;
 
             // dd($trx->toArray());
