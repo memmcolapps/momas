@@ -345,6 +345,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('meter-transaction-report', [MeterController::class, 'meter_transaction_report']);
     Route::get('export-metertransactions', [ExportControler::class, 'exportmetertransactions']);
     Route::get('export-transactions', [ExportControler::class, 'exporttransactions']);
+    Route::get('export-meters', [ExportControler::class, 'exportmeters'])->name('export.meters');
     Route::get('bulk-upload-preview', [MeterImportController::class, 'bulk_upload_preview']);
     Route::post('bulk-save-meters', [MeterImportController::class, 'bulk_save_meters']);
 
