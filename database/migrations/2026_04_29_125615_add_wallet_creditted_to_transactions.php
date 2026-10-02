@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('transactions', function (Blueprint $table) {
-            $table->decimal('wallet_creditted', 12, 2)->default(0);
-        });
+        if (! Schema::hasColumn('transactions', 'wallet_creditted')) {
+            Schema::table('transactions', function (Blueprint $table) {
+                $table->decimal('wallet_creditted', 12, 2)->default(0);
+            });
+        }
     }
 
     /**

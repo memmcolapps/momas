@@ -372,6 +372,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::get('utility-payment', [TransactionController::class, 'utility_payment']);
     Route::get('uncomplete-payment', [TransactionController::class, 'uncomplete_payment']);
     Route::get('complete-payment', [TransactionController::class, 'complete_payment']);
+    Route::match(['get', 'post'], 'enkpay-payment', [TransactionController::class, 'enkpay_payment']);
+    Route::post('enkpay-payment-trx', [TransactionController::class, 'search_enkpay_trx']);
 
 
 
@@ -424,7 +426,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::any('remita-clear-credit', [TokenController::class, 'remita_clear_credit']);
     Route::get('pay-remita', [TokenController::class, 'remita_pay'])->name('remita.pay');
     Route::any('remita-payment-result', [TokenController::class, 'remita_payment_result'])->name('remita.result');
-    Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
+    Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment']);
 
     Route::any('recepit', [TokenController::class, 'recepit']);
     Route::any('retry-generate-tamper-token', [TokenController::class, 'retry_generate_tamper_token']);

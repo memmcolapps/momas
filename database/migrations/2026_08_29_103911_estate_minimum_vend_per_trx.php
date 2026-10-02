@@ -8,9 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('estates', function (Blueprint $table) {
-            $table->boolean('minimum_vend_per_transaction')->default(true);
-        });
+        if (! Schema::hasColumn('estates', 'minimum_vend_per_transaction')) {
+            Schema::table('estates', function (Blueprint $table) {
+                $table->boolean('minimum_vend_per_transaction')->default(true);
+            });
+        }
     }
 
     public function down(): void

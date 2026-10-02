@@ -9,9 +9,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('utilities', function (Blueprint $table) {
-            $table->foreignId('user_id')->nullable()->after('estate_id');
-            $table->date('monthly_end_date')->nullable()->after('start_date');
-            $table->integer('payment_months')->nullable()->after('monthly_end_date');
+            if (! Schema::hasColumn('utilities', 'user_id')) {
+                $table->foreignId('user_id')->nullable()->after('estate_id');
+            }
+            if (! Schema::hasColumn('utilities', 'monthly_end_date')) {
+                $table->date('monthly_end_date')->nullable()->after('start_date');
+            }
+            if (! Schema::hasColumn('utilities', 'payment_months')) {
+                $table->integer('payment_months')->nullable()->after('monthly_end_date');
+            }
         });
     }
 

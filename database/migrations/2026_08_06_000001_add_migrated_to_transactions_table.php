@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('transactions', function (Blueprint $table) {
-            $table->boolean('migrated')->default(false);
-        });
+        if (! Schema::hasColumn('transactions', 'migrated')) {
+            Schema::table('transactions', function (Blueprint $table) {
+                $table->boolean('migrated')->default(false);
+            });
+        }
     }
 
     /**

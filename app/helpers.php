@@ -111,17 +111,16 @@ if (!function_exists('get_balance')) {
         $var = curl_exec($curl);
         curl_close($curl);
         $var = json_decode($var);
-        $status = $var->status ?? null;
 
-
-        if ($status == false) {
-            return $var->data->main_wallet;
-        } else {
-
-            $message = $var;
-            send_notification($message);
-            return false;
+        if (isset($var->data->main_wallet)) {
+            return (float) $var->data->main_wallet;
         }
+
+        if (isset($var->main_wallet)) {
+            return (float) $var->main_wallet;
+        }
+
+        return 0;
     }
 
 

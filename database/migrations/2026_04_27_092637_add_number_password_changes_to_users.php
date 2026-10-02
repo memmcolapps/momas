@@ -17,9 +17,11 @@ return new class extends Migration
         ");
 
         // Now safely add the new column
-        Schema::table('users', function (Blueprint $table) {
-            $table->unsignedBigInteger('password_update_count')->default(0);
-        });
+        if (! Schema::hasColumn('users', 'password_update_count')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->unsignedBigInteger('password_update_count')->default(0);
+            });
+        }
     }
 
     public function down(): void

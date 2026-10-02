@@ -1065,14 +1065,105 @@ class TransactionController extends Controller
 
     }
 
-    public function enkpay_payment_verify(request $request)
+    public function enkpay_payment_verify(Request $request)
     {
-        if ($request->status === 'success') {
+        if ($request->status === 'success' && $request->filled('trans_id')) {
             Transaction::where('trx_id', $request->trans_id)->update(['status' => 4]);
             $ref = $request->trans_id;
             $url = url('') . "/payment?ref=$ref&status=success";
             return redirect($url);
         }
+
+        if (Auth::check()) {
+            return redirect('/admin/enkpay-payment');
+        }
+
+        return redirect('/');
+    }
+
+    public function enkpay_payment(Request $request)
+    {
+        if ($request->filled('trans_id') && $request->status === 'success') {
+            return $this->enkpay_payment_verify($request);
+        }
+
+        return $this->enkpay_payment_report($request);
+    }
+
+    public function enkpay_payment_report(Request $request)
+    {
+        $role = Auth::user()->role;
+
+        if ($role == 0) {
+            try {
+                $balance = get_balance();
+            } catch (\Throwable $e) {
+                $balance = 0;
+            }
+
+            $data['balance'] = is_numeric($balance) ? $balance : 0;
+            $data['customer'] = User::where('status', 2)->get();
+            $data['estate'] = Estate::all();
+            $data['transaction'] = VirtualAccountTransaction::with('user')->latest()->paginate(20);
+
+            return view('admin.report.enkpay-payment', $data);
+        } else {
+            $estateId = Auth::user()->estate_id;
+
+            $transactionsQuery = Transaction::latest()
+                ->where('estate_id', $estateId);
+
+            $data['transactions'] = $transactionsQuery->paginate(20);
+            $data['total'] = Transaction::where('estate_id', $estateId)->where('status', 2)->sum('amount');
+            $data['estate'] = Estate::all();
+            $data['balance'] = 0;
+            $data['customer'] = User::where('estate_id', $estateId)->get();
+            $data['transaction'] = VirtualAccountTransaction::with('user')->latest()->paginate(20);
+
+            return view('admin.report.enkpay-payment', $data);
+        }
+    }
+
+    public function search_enkpay_trx(Request $request)
+    {
+        $role = Auth::user()->role;
+        try {
+            $balance = get_balance();
+        } catch (\Throwable $e) {
+            $balance = 0;
+        }
+        $data['balance'] = is_numeric($balance) ? $balance : 0;
+        $data['customer'] = User::where('status', 2)->get();
+        $data['estate'] = Estate::all();
+
+        $query = VirtualAccountTransaction::with('user')->latest();
+
+        if ($request->filled('from') && $request->filled('to')) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($request->from)->startOfDay(),
+                Carbon::parse($request->to)->endOfDay()
+            ]);
+        } elseif ($request->filled('from')) {
+            $query->where('created_at', '>=', Carbon::parse($request->from)->startOfDay());
+        } elseif ($request->filled('to')) {
+            $query->where('created_at', '<=', Carbon::parse($request->to)->endOfDay());
+        }
+
+        if ($request->filled('user_id') && $request->user_id !== 'all') {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $data['transaction'] = $query->paginate(50)->withQueryString();
+
+        return view('admin.report.enkpay-payment', $data);
     }
 
 

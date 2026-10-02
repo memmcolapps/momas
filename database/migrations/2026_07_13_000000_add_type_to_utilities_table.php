@@ -8,10 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('utilities', function (Blueprint $table) {
-            $table->string('type', 20)->default('service_charge')->after('estate_id');
-            $table->index('type');
-        });
+        if (! Schema::hasColumn('utilities', 'type')) {
+            Schema::table('utilities', function (Blueprint $table) {
+                $table->string('type', 20)->default('service_charge')->after('estate_id');
+                $table->index('type');
+            });
+        }
     }
 
     public function down(): void

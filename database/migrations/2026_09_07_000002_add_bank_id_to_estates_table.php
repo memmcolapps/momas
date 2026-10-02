@@ -8,10 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('estates', function (Blueprint $table) {
-            $table->integer('bank_id')->nullable()->after('bank');
-            $table->foreign('bank_id')->references('id')->on('banks')->nullOnDelete();
-        });
+        if (! Schema::hasColumn('estates', 'bank_id')) {
+            Schema::table('estates', function (Blueprint $table) {
+                $table->integer('bank_id')->nullable()->after('bank');
+            });
+        }
     }
 
     public function down(): void

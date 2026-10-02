@@ -9,19 +9,38 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Drop existing FK constraints first
+        // Drop existing FK constraints first if they exist
+        try {
+            Schema::table('utility_payment_records', function (Blueprint $table) {
+                $table->dropForeign(['utility_id']);
+            });
+        } catch (\Throwable $e) {}
+
+        try {
+            Schema::table('utility_payment_records', function (Blueprint $table) {
+                $table->dropForeign(['user_id']);
+            });
+        } catch (\Throwable $e) {}
+
+        try {
+            Schema::table('utility_payment_records', function (Blueprint $table) {
+                $table->dropForeign(['estate_id']);
+            });
+        } catch (\Throwable $e) {}
+
+        // Add ledger columns
         Schema::table('utility_payment_records', function (Blueprint $table) {
-            $table->dropForeign(['utility_id']);
-            $table->dropForeign(['user_id']);
-            $table->dropForeign(['estate_id']);
+            if (! Schema::hasColumn('utility_payment_records', 'user_utility_id')) {
+                $table->unsignedBigInteger('user_utility_id')->nullable()->after('id');
+            }
+            if (! Schema::hasColumn('utility_payment_records', 'trx_id')) {
+                $table->string('trx_id')->nullable()->after('status');
+            }
         });
 
-        // Add ledger columns, rename amount to utility_amount
-        Schema::table('utility_payment_records', function (Blueprint $table) {
-            $table->unsignedBigInteger('user_utility_id')->nullable()->after('id');
-            $table->string('trx_id')->nullable()->after('status');
-            $table->renameColumn('amount', 'utility_amount');
-        });
+        if (Schema::hasColumn('utility_payment_records', 'amount') && ! Schema::hasColumn('utility_payment_records', 'utility_amount')) {
+            DB::statement('ALTER TABLE utility_payment_records CHANGE amount utility_amount DECIMAL(14, 2) NOT NULL');
+        }
 
         // Data migration: copy existing records into UserUtility, backfill user_utility_id
         DB::transaction(function () {
