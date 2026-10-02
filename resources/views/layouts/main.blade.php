@@ -583,6 +583,16 @@
         setTimeout(function () {
             window.location.href = '/login';
         }, sessionLifetime);
+
+        // Prevent browser back button from showing cached authenticated pages after logout
+        window.addEventListener('pageshow', function (event) {
+            var perfEntries = (window.performance && window.performance.getEntriesByType) ? window.performance.getEntriesByType('navigation') : null;
+            var isBackForward = (perfEntries && perfEntries.length > 0 && perfEntries[0].type === 'back_forward') ||
+                                (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
+            if (event.persisted || isBackForward) {
+                window.location.reload();
+            }
+        });
     </script>
 
 </div>

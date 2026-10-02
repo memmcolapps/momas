@@ -126,7 +126,7 @@ Route::get('auth-code', [AuthController::class, 'auth_code']);
 
 
 
-Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], function () {
+Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prevent-back-history']], function () {
 
     Route::get('onboarding-email', [DashboardContoller::class, 'onboarding_email']);
     Route::post('setup_paystack', [DashboardContoller::class, 'setup_paystack']);
