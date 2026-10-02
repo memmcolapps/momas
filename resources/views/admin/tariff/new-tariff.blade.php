@@ -21,7 +21,7 @@
             <div class="container-fluid">
 
 
-                @if ($errors->any())
+                @if (isset($errors) && $errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -57,7 +57,7 @@
 
                         <div class="card-body">
 
-                            <form action="add-new-Tariff" method="post">
+                            <form action="{{ url('admin/add-new-Tariff') }}" method="post">
                                 @csrf
 
                                 <div class="row">
@@ -165,7 +165,7 @@
             <div class="container-fluid">
 
 
-                @if ($errors->any())
+                @if (isset($errors) && $errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -201,7 +201,7 @@
 
                         <div class="card-body">
 
-                            <form action="add-new-Tariff" method="post">
+                            <form action="{{ url('admin/add-new-Tariff') }}" method="post">
                                 @csrf
 
                                 <div class="row">
