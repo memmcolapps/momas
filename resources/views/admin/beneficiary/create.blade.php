@@ -10,9 +10,12 @@
                 <div class="flex-grow-1">
                     <h4 class="fs-18 fw-semibold m-0">Add New Beneficiary</h4>
                 </div>
+                <div class="flex-shrink-0">
+                    <a href="{{ url('admin/beneficiary') }}" class="btn btn-secondary">Back</a>
+                </div>
             </div>
 
-            @if ($errors->any())
+            @if (isset($errors) && $errors->any())
                 <div class="alert alert-danger">
                     <ul>
                         @foreach ($errors->all() as $error)
@@ -28,7 +31,7 @@
 
                     <div class="card-body">
 
-                        <form action="beneficiary-store" method="post">
+                        <form action="{{ url('admin/beneficiary-store') }}" method="post">
                             @csrf
 
                             <div class="row">
