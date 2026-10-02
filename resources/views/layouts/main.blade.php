@@ -180,6 +180,13 @@
                         </li>
 
                         <li>
+                            <a class='tp-link' href="/admin/logged-issues">
+                                <i data-feather="alert-circle"></i>
+                                <span> Logged Issues </span>
+                            </a>
+                        </li>
+
+                        <li>
                             <a href="charts-mixed.html#sidebar1" data-bs-toggle="collapse">
                                 <i data-feather="zap"></i>
                                 <span> Meter Token </span>
@@ -375,6 +382,13 @@
                             <a class='tp-link' href="/admin/customers">
                                 <i data-feather="users"></i>
                                 <span> Customers </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class='tp-link' href="/admin/logged-issues">
+                                <i data-feather="alert-circle"></i>
+                                <span> Logged Issues </span>
                             </a>
                         </li>
 

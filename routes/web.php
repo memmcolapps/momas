@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\TokenController;
 use App\Http\Controllers\AuditlogController;
 use App\Http\Controllers\Estate\CustomerImportController as EstateCustomerImportController;
 use App\Http\Controllers\Estate\EstateServiceController;
+use App\Http\Controllers\Estate\LoggedIssueController;
 use App\Http\Controllers\Meter\MeterController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\Transaction\TransactionController;
@@ -196,6 +197,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-minpur', [EstateServiceController::class, 'estate_update_minpur']);
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
     Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
+
+    // Logged Issues for Estate Admin
+    Route::get('logged-issues', [LoggedIssueController::class, 'index'])->name('issues.index');
+    Route::post('store-issue', [LoggedIssueController::class, 'store'])->name('issues.store');
+    Route::get('view-issue', [LoggedIssueController::class, 'show'])->name('issues.show');
+    Route::post('update-issue-status', [LoggedIssueController::class, 'updateStatus'])->name('issues.updateStatus');
+    Route::get('delete-issue', [LoggedIssueController::class, 'destroy'])->name('issues.destroy');
 
 
 
