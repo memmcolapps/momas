@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('estates', function (Blueprint $table) {
-            $table->tinyInteger('estate_meter_vending_type')->default(1);
+            if (! Schema::hasColumn('estates', 'estate_meter_vending_type')) {
+                $table->tinyInteger('estate_meter_vending_type')->default(1);
+            }
         });
     }
 
