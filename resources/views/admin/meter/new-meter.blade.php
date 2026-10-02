@@ -5,7 +5,7 @@
     @if(Auth::user()->role == 0)
         <div class="content">
 
-            @if ($errors->any())
+            @if (isset($errors) && $errors->any())
                 <div class="alert alert-danger">
                     <ul>
                         @foreach ($errors->all() as $error)
@@ -41,7 +41,7 @@
 
                         <div class="card-body">
 
-                            <form action="add-new-meter" method="post">
+                            <form action="{{ url('admin/add-new-meter') }}" method="post">
                                 @csrf
 
                                 <div class="row">
@@ -377,7 +377,7 @@
     @elseif(Auth::user()->role == 3)
         <div class="content">
 
-            @if ($errors->any())
+            @if (isset($errors) && $errors->any())
                 <div class="alert alert-danger">
                     <ul>
                         @foreach ($errors->all() as $error)
@@ -413,7 +413,7 @@
 
                         <div class="card-body">
 
-                            <form action="add-new-meter" method="post">
+                            <form action="{{ url('admin/add-new-meter') }}" method="post">
                                 @csrf
 
                                 <div class="row">
