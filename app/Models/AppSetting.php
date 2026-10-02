@@ -99,6 +99,16 @@ class AppSetting extends Model implements AuditableContract
     const CACHE_TAG = 'app_settings';
 
     /**
+     * Get the cache store (tagged if supported by cache driver, standard otherwise).
+     *
+     * @return \Illuminate\Contracts\Cache\Repository
+     */
+    protected static function cacheStore()
+    {
+        return Cache::supportsTags() ? Cache::tags(self::CACHE_TAG) : Cache::store();
+    }
+
+    /**
      * Get a setting by key (with caching). When an estate id is given the
      * estate scoped value is preferred, falling back to the global setting.
      *
@@ -111,7 +121,7 @@ class AppSetting extends Model implements AuditableContract
     {
         $cacheKey = self::CACHE_PREFIX . ($estateId !== null ? "estate_{$estateId}_" : '') . $key;
 
-        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($key, $default, $estateId) {
+        return self::cacheStore()->remember($cacheKey, self::CACHE_TTL, function () use ($key, $default, $estateId) {
             $setting = static::forKey($key, $estateId)->first();
 
             if (!$setting) {
@@ -190,7 +200,7 @@ class AppSetting extends Model implements AuditableContract
     {
         $cacheKey = self::CACHE_PREFIX . ($estateId !== null ? "estate_{$estateId}_" : '') . $key . '_exists';
 
-        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($key, $estateId) {
+        return self::cacheStore()->remember($cacheKey, self::CACHE_TTL, function () use ($key, $estateId) {
             return static::forKey($key, $estateId)->exists();
         });
     }
@@ -209,7 +219,7 @@ class AppSetting extends Model implements AuditableContract
             . ($group ? '_' . $group : '')
             . ($estateId !== null ? "_estate_{$estateId}" : '');
 
-        return Cache::tags(self::CACHE_TAG)->remember($cacheKey, self::CACHE_TTL, function () use ($group, $estateId) {
+        return self::cacheStore()->remember($cacheKey, self::CACHE_TTL, function () use ($group, $estateId) {
             $query = static::where('is_active', true);
 
             if ($group !== null) {
@@ -235,20 +245,39 @@ class AppSetting extends Model implements AuditableContract
      * @param int|null $estateId
      * @return void
      */
-    public static function clearCache(string $key = null, ?int $estateId = null): void
+    public static function clearCache(?string $key = null, ?int $estateId = null): void
     {
         $prefix = $estateId !== null ? "estate_{$estateId}_" : '';
 
-        if ($key !== null) {
-            Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $prefix . $key);
-            Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $prefix . $key . '_exists');
-        } else {
-            // Clear all settings cache
-            Cache::tags(self::CACHE_TAG)->flush();
-        }
+        if (Cache::supportsTags()) {
+            if ($key !== null) {
+                Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $prefix . $key);
+                Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . $prefix . $key . '_exists');
+            } else {
+                // Clear all settings cache
+                Cache::tags(self::CACHE_TAG)->flush();
+            }
 
-        // Also clear the allAsArray cache
-        Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . 'all');
+            // Also clear the allAsArray cache
+            Cache::tags(self::CACHE_TAG)->forget(self::CACHE_PREFIX . 'all');
+        } else {
+            if ($key !== null) {
+                Cache::forget(self::CACHE_PREFIX . $prefix . $key);
+                Cache::forget(self::CACHE_PREFIX . $prefix . $key . '_exists');
+            } else {
+                try {
+                    $keys = static::pluck('key')->unique();
+                    foreach ($keys as $k) {
+                        Cache::forget(self::CACHE_PREFIX . $k);
+                        Cache::forget(self::CACHE_PREFIX . $k . '_exists');
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore if database/table not ready
+                }
+            }
+
+            Cache::forget(self::CACHE_PREFIX . 'all');
+        }
     }
 
     /**
