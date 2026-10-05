@@ -279,8 +279,6 @@ class RemitaPaymentService implements PaymentServiceInterface
             ]);
         }
 
-        // dd($lineItems);
-
         return $lineItems;
     }
 

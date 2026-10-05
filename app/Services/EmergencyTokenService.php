@@ -97,7 +97,7 @@ class EmergencyTokenService
 
                 $emergency_ref = 'emg_ref' . Str::upper(Str::random(7));
 
-                CreditToken::create([
+                $credit_token = CreditToken::create([
                     'trx_id' => $emergency_ref,
                     'user_id' => $meter->user_id,
                     'meterNo' => $meter->meterNo,
@@ -149,6 +149,7 @@ class EmergencyTokenService
                     'calc' => $calculated,
                     'owner' => $owner,
                     'tariff' => $tariff,
+                    'date' => $credit_token->created_at
                 ];
             });
         } catch (Throwable $e) {

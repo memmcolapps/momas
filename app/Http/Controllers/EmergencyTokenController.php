@@ -60,6 +60,7 @@ class EmergencyTokenController extends Controller
             'can_get_emergency_token' => $total_debt <= 0,
             'total_debt' => $total_debt,
             'max_amount' => $this->maxAmount(),
+            'message' => $total_debt > 0 ? : 'You have an unresolved debt and thus can\'t get emergency_token',
             'meter' => [
                 'meterNo' => $meter->meterNo,
                 'estate_id' => $meter->estate_id,
