@@ -23,9 +23,11 @@ class EmergencyTokenService
      * debt on the customer.
      *
      * The generation is blocked when the customer already has any unpaid
-     * debt-type utility owed. On success, a critical audit log is written. On
-     * any failure, the error is logged with the reason so the outcome is always
-     * recorded.
+     * debt-type utility owed. Only the transaction fee is deducted from the
+     * requested amount before VAT is applied; arrears, estate charges and the
+     * tariff fixed charge are not deducted. On success, a critical audit log
+     * is written. On any failure, the error is logged with the reason so the
+     * outcome is always recorded.
      *
      * @param \App\Models\Meter $meter The meter (and owner) to tokenize
      * @param int $tariff_id The ID of the tariff to use
@@ -73,7 +75,7 @@ class EmergencyTokenService
                     );
                 }
 
-                $calculated = $meter->calculateTokenValuesByAmount($tariff_id, $amount);
+                $calculated = $meter->calculateEmergencyTokenValuesByAmount($tariff_id, $amount);
 
                 $unit = $calculated['unit'];
                 $vat = $calculated['vat'];

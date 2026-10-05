@@ -443,7 +443,7 @@ class MeterController extends Controller
                 $request->receiver_meterNo
             );
 
-            $paymentOptions = payment_option_detail($auth_user->estate_id, $request->amount, 'vending');
+            $paymentOptions = payment_option_detail($auth_user->estate_id, $request->amount, 'vending', true);
 
             $values['utilityAmount'] = $values['arrearsOwed'];
             $values['paymentOptions'] = $paymentOptions;

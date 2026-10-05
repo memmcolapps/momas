@@ -60,7 +60,7 @@ class EmergencyTokenController extends Controller
             'can_get_emergency_token' => $total_debt <= 0,
             'total_debt' => $total_debt,
             'max_amount' => $this->maxAmount(),
-            'message' => $total_debt > 0 ? : 'You have an unresolved debt and thus can\'t get emergency_token',
+            'message' => $total_debt <= 0 ? '' : 'You have an unresolved debt and thus can\'t get emergency_token',
             'meter' => [
                 'meterNo' => $meter->meterNo,
                 'estate_id' => $meter->estate_id,
@@ -133,7 +133,9 @@ class EmergencyTokenController extends Controller
 
     /**
      * List the tariffs assigned to the meter, each with the token values it
-     * yields at the maximum emergency amount.
+     * yields at the maximum emergency amount. The breakdown uses the
+     * emergency (transaction fee only) calculation so it matches what
+     * generation actually deducts.
      *
      * A tariff whose values cannot be calculated at that amount (misconfigured
      * tariff state, units below the 0.1kWh floor) is still listed, just without
@@ -162,7 +164,7 @@ class EmergencyTokenController extends Controller
             ->get()
             ->map(function (Tariff $tariff) use ($meter, $maxAmount) {
                 try {
-                    $breakdown = $meter->calculateTokenValuesByAmount($tariff->id, $maxAmount);
+                    $breakdown = $meter->calculateEmergencyTokenValuesByAmount($tariff->id, $maxAmount);
                 } catch (Throwable $e) {
                     Logger::warning('Emergency token breakdown unavailable for tariff', [
                         'meterNo' => $meter->meterNo,

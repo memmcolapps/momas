@@ -1021,7 +1021,7 @@ if (! function_exists('calculate_momas_vend_share')) {
 }
 
 if (! function_exists('payment_option_detail')) {
-    function payment_option_detail($estateId, $amount, $payment_purpose) {
+    function payment_option_detail($estateId, $amount, $payment_purpose, $trx_fee_inclusive=false) {
 
         $configured = app(ConfigManagementService::class)->getConfig('payment_gateways', $estateId) ?? [];
         $gateways = array_map('strtolower', is_array($configured) ? $configured : (array) $configured);
@@ -1036,9 +1036,19 @@ if (! function_exists('payment_option_detail')) {
         $momasFee = $transactionCharges['momasFee'] ?? 0;
 
         $gatewayFee = round($transactionFee - $momasFee, 2);
-        $totalCharge = round($amount + $transactionFee, 2);
+        $totalCharge = $trx_fee_inclusive ? round($amount, 2) : round($amount + $transactionFee, 2);
+        $walletTotalCharge = round ($amount, 2);
 
-        $paymentOptions = [];
+        $paymentOptions = [
+            [
+                'code' => 'WALLET',
+                'name' => 'Wallet',
+                'enabled' => true,
+                'transaction_fee' =>(string) round(0, 2),
+                'total_amount' => (string) $walletTotalCharge, // wallet payment does not incur trans fees
+                'momas_fee' => (string) $momasFee,
+            ]
+        ];
 
         if ($supportsPaystack) {
             $paymentOptions[] = [
