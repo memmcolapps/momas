@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
 use App\Services\ConfigManagementService;
+use App\Services\StandardResponse;
 use App\Support\RequestContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -1073,6 +1074,26 @@ if (! function_exists('payment_option_detail')) {
         }
 
         return $paymentOptions;
+    }
+}
+
+if (! function_exists('handle_block_meter')) {
+    function handle_block_meter(string $meterNo, bool $web_platform, $log_data=[]) {
+        $meter = Meter::where('meterNo', $meterNo)->first();
+        $response = $web_platform === true ?
+            back()->with('error', 'Meter has been blocked please unblock to proceed') :
+            StandardResponse::error(403, 'Meter has been blocked reach out to estate facility managers for resolution');
+
+        if (!$meter->isActive()) {
+            Logger::info('validate_meter called on inactive meter', [
+                'meter' => $meter,
+                'context' => $log_data
+            ]);
+
+            return $response;
+        }
+
+        return null;
     }
 }
 
