@@ -172,12 +172,13 @@ class EmergencyTokenService
 
         return [
             'emergency_ref' => $result['emergency_ref'],
-            'token' => $result['token'],
+            'token' => (string) $result['token'],
             'kct_tokens' => $result['kct_tokens'],
-            'meterNo' => $meter->meterNo,
-            'amount' => $amount,
-            'unit' => $result['unit'],
-            'tariff_id' => $tariff_id,
+            'meterNo' => (string) $meter->meterNo,
+            'amount' => (string) round($amount, 2),
+            'unit' => (string) round($result['unit'], 2),
+            'tariff' => $result['tariff']?->title,
+            'date' => $result['date'] ?? null
         ];
     }
 
