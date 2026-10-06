@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Services\StandardResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -939,5 +940,25 @@ if (! function_exists('calculate_transaction_charge')) {
 
         $momas_max = config('constants.momas_max_transaction_fee');
         return min($transactionCharge, $momas_max);
+    }
+}
+
+if (! function_exists('handle_block_meter')) {
+    function handle_block_meter(string $meterNo, bool $web_platform, $log_data=[]) {
+        $meter = Meter::where('meterNo', $meterNo)->first();
+        $response = $web_platform === true ?
+            back()->with('error', 'Meter has been blocked please unblock to proceed') :
+            StandardResponse::error(403, 'Meter has been blocked reach out to estate facility managers for resolution');
+
+        if (!$meter->isActive()) {
+            Logger::info('validate_meter called on inactive meter', [
+                'meter' => $meter,
+                'context' => $log_data
+            ]);
+
+            return $response;
+        }
+
+        return null;
     }
 }

@@ -775,6 +775,10 @@ class TokenController extends Controller
             $user = User::where('meterNo', $request->meterNo)->first() ?? null;
 
             $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
+
+            $meter_handler = handle_block_meter($meter->meterNo, true, log_data: $request->all());
+            if ($meter_handler) return $meter_handler;
+
             $ck_user_id = Meter::where('MeterNo', $request->meterNo)->first()->user_id ?? null;
 
             if ($user == null && $ck_meter == null) {
