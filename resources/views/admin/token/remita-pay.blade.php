@@ -53,7 +53,8 @@
                             <script>
                                 function makePayment() {
                                     var paymentEngine = RmPaymentEngine.init({
-                                        key: "QzAwMDAyNzEyNTl8MTEwNjE4NjF8OWZjOWYwNmMyZDk3MDRhYWM3YThiOThlNTNjZTE3ZjYxOTY5NDdmZWE1YzU3NDc0ZjE2ZDZjNTg1YWYxNWY3NWM4ZjMzNzZhNjNhZWZlOWQwNmJhNTFkMjIxYTRiMjYzZDkzNGQ3NTUxNDIxYWNlOGY4ZWEyODY3ZjlhNGUwYTY=",
+                                        // key: "QzAwMDAyNzEyNTl8MTEwNjE4NjF8OWZjOWYwNmMyZDk3MDRhYWM3YThiOThlNTNjZTE3ZjYxOTY5NDdmZWE1YzU3NDc0ZjE2ZDZjNTg1YWYxNWY3NWM4ZjMzNzZhNjNhZWZlOWQwNmJhNTFkMjIxYTRiMjYzZDkzNGQ3NTUxNDIxYWNlOGY4ZWEyODY3ZjlhNGUwYTY=",
+                                        key: "QzAwMDA1MTUxMjN8MTEwMDQ5MjAwOTkwfGMwNjhmMzIzNzJiY2QxMjg4NDYyY mRhOGJjYWE4OWIxOGI2NzhkZjczYTE3MTRjMzZjNDViMzYxZTdhY2I0OWIwMmYzMzBjOTAxNDU5MWM5OTI4ODZiZWVkNGY1YmFiZTQwMGM3MjI5NTNkYzAxZTNlZjFjY2QwMTVmYTEwMGQw",
                                         processRrr: true,
                                         transactionId: Math.floor(Math.random()*1101233),
                                         channel: ["CARD", "BRANCH", "PAYWITHREMITA", "TRANSFER"],
@@ -66,7 +67,7 @@
                                             ]
                                         },
                                         onSuccess: function (response) {
-                                            window.location.href = '/admin/recepit?trx_id={{ $trx_id }}&type=credit_token';
+                                            window.location.href = '/payment-check?trx_id={{ $trx_id }}';
                                         },
                                         onError: function (response) {
                                             alert('Payment failed. Please try again.');

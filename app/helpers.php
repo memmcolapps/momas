@@ -10,6 +10,8 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Services\ConfigManagementService;
+use App\Support\RequestContext;
 use App\Services\StandardResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -625,6 +627,34 @@ if (! function_exists('generate_unique_string')) {
     }
 }
 
+if (! function_exists('available_payment_gateways')) {
+
+    function available_payment_gateways(array $allowed, ?int $estate_id = null): array
+    {
+        $configured = app(\App\Services\ConfigManagementService::class)
+            ->getConfig('payment_gateways', $estate_id) ?? [];
+
+        if (! is_array($configured)) {
+            $configured = (array) $configured;
+        }
+
+        $configured = array_map('strtolower', $configured);
+        $gateways = array_values(array_intersect($allowed, $configured));
+
+        $labels = [
+            'paystack'    => 'Paystack',
+            'flutterwave' => 'Flutterwave',
+            'remita'      => 'Remita',
+            'enkpay'      => 'Enkpay',
+        ];
+
+        return array_map(fn ($g) => [
+            'value' => $g,
+            'label' => $labels[$g] ?? ucfirst(str_replace('_', ' ', $g)),
+        ], $gateways);
+    }
+}
+
 if (! function_exists('handle_pay_arrears')) {
 
     function handle_pay_arrears($trx_id, $user_id, $type, $return_amount=false) {
@@ -926,20 +956,124 @@ if (! function_exists('generate_otp')) {
 
 if (! function_exists('calculate_transaction_charge')) {
 
-    function calculate_transaction_charge(float|int $amount): float
+    function calculate_transaction_charge(float|int $amount, bool $return_momas_fee=false): float | array
     {
         $transactionCharge = 0;
+        $momasFee = 0;
 
         if (((1 / 100) * $amount) >= 2000) {
+
             $transactionCharge = (1/100) * $amount;
-        } else if (((1.5 / 100) * $amount) > 2000 && ((1 / 100) * $amount) < 2000) {
-            $transactionCharge = 2000 + ((1/100) * $amount);
-        } else if (((1.5 / 100) * $amount) < 2000 && ((1 / 100) * $amount) < 2000) {
-            $transactionCharge = (2.5/100) * $amount;
+            $momasFee = $transactionCharge - 2000;
+
+        } else if (((1 / 100) * $amount) < 2000) {
+            $momasFee = ((1/100) * $amount);
+
+            if (((1.5 / 100) * $amount) > 2000) {
+                $transactionCharge = 2000 + $momasFee;
+
+            } else {
+                $transactionCharge = (2.5/100) * $amount;
+
+            }
         }
 
-        $momas_max = config('constants.momas_max_transaction_fee');
+        $payment_purpose = app(RequestContext::class)->get('payment_purpose');
+
+        $momas_max = match ($payment_purpose) {
+            'utilities' => config('constants.momas_max_utilities_transaction_fee'),
+            default => config('constants.momas_max_transaction_fee'),
+        };
+        $momasFee = min($momasFee, $momas_max - 2000);
+
+        if ($return_momas_fee) {
+
+            return [
+                'momasFee' => $momasFee,
+                'transactionCharge' => $transactionCharge // momas_fee included
+            ];
+        }
+
         return min($transactionCharge, $momas_max);
+    }
+
+}
+
+if (!function_exists('underscore_to_hyphen')) {
+    function underscore_to_hyphen(string $string, bool $reverse=false) {
+        if ($reverse) {
+            return str_replace('-', '_', $string);
+        }
+
+        return str_replace('_', '-', $string);
+    }
+}
+
+if (! function_exists('calculate_estate_vend_share')) {
+    function calculate_estate_vend_share(float $amount): float {
+        return round((0.99 * $amount), 2);
+    }
+}
+
+if (! function_exists('calculate_momas_vend_share')) {
+    function calculate_momas_vend_share(float $amount): float {
+        return round((0.01 * $amount), 2);
+    }
+}
+
+if (! function_exists('payment_option_detail')) {
+    function payment_option_detail($estateId, $amount, $payment_purpose, $trx_fee_inclusive=false) {
+
+        $configured = app(ConfigManagementService::class)->getConfig('payment_gateways', $estateId) ?? [];
+        $gateways = array_map('strtolower', is_array($configured) ? $configured : (array) $configured);
+
+        $supportsRemita = in_array('remita', $gateways, true);
+        $supportsPaystack = in_array('paystack', $gateways, true);
+
+        app(RequestContext::class)->put('payment_purpose', $payment_purpose);
+        $transactionCharges = calculate_transaction_charge($amount, true);
+
+        $transactionFee = $transactionCharges['transactionCharge'] ?? 0;
+        $momasFee = $transactionCharges['momasFee'] ?? 0;
+
+        $gatewayFee = round($transactionFee - $momasFee, 2);
+        $totalCharge = $trx_fee_inclusive ? round($amount, 2) : round($amount + $transactionFee, 2);
+        $walletTotalCharge = round ($amount, 2);
+
+        $paymentOptions = [
+            [
+                'code' => 'WALLET',
+                'name' => 'Wallet',
+                'enabled' => true,
+                'transaction_fee' =>(string) round(0, 2),
+                'total_amount' => (string) $walletTotalCharge, // wallet payment does not incur trans fees
+                'momas_fee' => (string) $momasFee,
+            ]
+        ];
+
+        if ($supportsPaystack) {
+            $paymentOptions[] = [
+                'code' => 'PAYSTACK',
+                'name' => 'Paystack',
+                'enabled' => true,
+                'transaction_fee' =>(string) round($gatewayFee, 2),
+                'total_amount' => (string) round($totalCharge, 2),
+                'momas_fee' => (string) $momasFee,
+            ];
+        }
+
+        if ($supportsRemita) {
+            $paymentOptions[] = [
+                'code' => 'REMITA',
+                'name' => 'Remita',
+                'enabled' => true,
+                'transaction_fee' => (string) round($gatewayFee, 2),
+                'total_amount' => (string) round($totalCharge, 2),
+                'momas_fee' => (string) $momasFee,
+            ];
+        }
+
+        return $paymentOptions;
     }
 }
 

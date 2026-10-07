@@ -271,13 +271,12 @@
 
                                                         <div
                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                            <select class="form-control" required name="pay_type">
-                                                                <option value=" ">--Choose Payment Gateway---</option>
-                                                                <option value="paystack">Pay with Paystack</option>
-                                                                <option value="flutterwave">Pay with Flutterwave
-                                                                </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
-                                                            </select>
+<select class="form-control" required name="pay_type">
+                                                                 <option value=" ">--Choose Payment Gateway---</option>
+                                                                 @foreach(available_payment_gateways(['paystack', 'flutterwave', 'enkpay'], $estate_id ?? null) as $gateway)
+                                                                     <option value="{{ $gateway['value'] }}">Pay with {{ $gateway['label'] }}</option>
+                                                                 @endforeach
+                                                             </select>
                                                         </div>
 
 
@@ -380,13 +379,12 @@
 
                                                         <div
                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                            <select class="form-control" required name="pay_type">
-                                                                <option value=" ">--Choose Payment Gateway---</option>
-                                                                <option value="paystack">Pay with Paystack</option>
-                                                                <option value="flutterwave">Pay with Flutterwave
-                                                                </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
-                                                            </select>
+<select class="form-control" required name="pay_type">
+                                                                 <option value=" ">--Choose Payment Gateway---</option>
+                                                                 @foreach(available_payment_gateways(['paystack', 'flutterwave', 'enkpay'], $estate_id ?? null) as $gateway)
+                                                                     <option value="{{ $gateway['value'] }}">Pay with {{ $gateway['label'] }}</option>
+                                                                 @endforeach
+                                                             </select>
                                                         </div>
 
 
@@ -800,13 +798,12 @@
 
                                                         <div
                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                            <select class="form-control" required name="pay_type">
-                                                                <option value=" ">--Choose Payment Gateway---</option>
-                                                                <option value="paystack">Pay with Paystack</option>
-                                                                <option value="flutterwave">Pay with Flutterwave
-                                                                </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
-                                                            </select>
+<select class="form-control" required name="pay_type">
+                                                                 <option value=" ">--Choose Payment Gateway---</option>
+                                                                 @foreach(available_payment_gateways(['paystack', 'flutterwave', 'enkpay'], $estate_id ?? null) as $gateway)
+                                                                     <option value="{{ $gateway['value'] }}">Pay with {{ $gateway['label'] }}</option>
+                                                                 @endforeach
+                                                             </select>
                                                         </div>
 
 
@@ -909,13 +906,12 @@
 
                                                         <div
                                                             class="col-xl-4 my-4 d-flex justify-content-start col-sm-12">
-                                                            <select class="form-control" required name="pay_type">
-                                                                <option value=" ">--Choose Payment Gateway---</option>
-                                                                <option value="paystack">Pay with Paystack</option>
-                                                                <option value="flutterwave">Pay with Flutterwave
-                                                                </option>
-                                                                <option value="enkpay">Pay with Enkpay</option>
-                                                            </select>
+<select class="form-control" required name="pay_type">
+                                                                 <option value=" ">--Choose Payment Gateway---</option>
+                                                                 @foreach(available_payment_gateways(['paystack', 'flutterwave', 'enkpay'], $estate_id ?? null) as $gateway)
+                                                                     <option value="{{ $gateway['value'] }}">Pay with {{ $gateway['label'] }}</option>
+                                                                 @endforeach
+                                                             </select>
                                                         </div>
 
 

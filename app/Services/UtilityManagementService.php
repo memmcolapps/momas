@@ -7,11 +7,14 @@ use App\Exceptions\InsufficientPaymentException;
 use App\Models\Logger;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\UtilitiesPayment;
 use App\Models\Utility;
 use App\Models\UserUtility;
 use App\Models\UtilityPaymentRecord;
+use App\Support\RequestContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Throwable;
 
 class UtilityManagementService
@@ -295,5 +298,120 @@ class UtilityManagementService
             (float) $trx->amount,
             $transactionId
         );
+    }
+
+    /**
+     * Break down an amount into the utility months it settles plus the
+     * transaction fee (calculated under the utilities fee cap).
+     *
+     * The full amount is applied to the owed months oldest-first; any partial
+     * coverage of the earliest not-fully-covered month is included and the walk
+     * stops. The transaction fee is added on top using the utilities-specific
+     * cap (see calculate_transaction_charge in helpers.php).
+     *
+     * @param int $userId
+     * @param int $estateId
+     * @param float|null $amount Amount spent on utilities; null breaks down all owed months
+     * @param string $type 'utilities' or 'admin_fee'
+     * @return array Breakdown, e.g. ['arrears' => [['id' => 1, 'date' => 'August 2026', 'amount' => 1000.0]], 'charges' => ['momas_fee' => 50.0], 'payment_options' => [['code' => 'PAYSTACK', 'name' => 'Paystack', 'enabled' => true, 'transaction_fee' => 75.0, 'total_amount' => 1150.0]], 'remaining' => 0.0]
+     * @throws InvalidArgumentException When an unsupported payment type is passed
+     */
+    public function calculateUtilitiesBreakdownByAmount(
+        int $userId,
+        int $estateId,
+        ?float $amount = null,
+        string $type = 'utilities'
+    ): array {
+        $type = strtolower(trim($type));
+
+        if (!in_array($type, ['utilities', 'admin_fee'], true)) {
+            throw new InvalidArgumentException("Unsupported utilities payment type '{$type}'");
+        }
+
+        $pending = UtilitiesPayment::where('user_id', $userId)
+            ->where('estate_id', $estateId)
+            ->where('type', $type)
+            ->where('status', '!=', 2)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($amount === null) {
+            $amount = round((float) $pending->sum('amount'), 2);
+        }
+
+        app(RequestContext::class)->put('payment_purpose', 'utilities');
+
+        $transactionFee = calculate_transaction_charge($amount);
+        $remaining = (float) $amount;
+        $arrears = [];
+
+        foreach ($pending as $payment) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            if ($remaining >= (float) $payment->amount) {
+                $arrears[] = [
+                    'id' => $payment->id,
+                    'date' => $payment->created_at->format('F Y'),
+                    'amount' => (string) round((float) $payment->amount, 2),
+                ];
+                $remaining -= (float) $payment->amount;
+            } else {
+                $arrears[] = [
+                    'id' => $payment->id,
+                    'date' => $payment->created_at->format('F Y'),
+                    'amount' => (string) round($remaining, 2),
+                ];
+                $remaining = 0;
+            }
+        }
+
+        // $configured = app(ConfigManagementService::class)->getConfig('payment_gateways', $estateId) ?? [];
+        // $gateways = array_map('strtolower', is_array($configured) ? $configured : (array) $configured);
+        // $supportsRemita = in_array('remita', $gateways, true);
+
+        $arrearsAmount = round(array_sum(array_column($arrears, 'amount')), 2);
+        $momasFee = round(min((1 / 100) * $amount, $transactionFee), 2);
+        // $gatewayFee = round($transactionFee - $momasFee, 2);
+        // $totalCharge = round($arrearsAmount + $transactionFee, 2);
+
+        $transactionCharges = calculate_transaction_charge($amount, true);
+        $momasFee = round((float) $transactionCharges['momasFee'], 2);
+        $paymentOptions = payment_option_detail(
+            $estateId,
+            $arrearsAmount,
+            'utilities',
+            trx_fee_inclusive: false
+        );
+
+        // $paymentOptions = [
+        //     [
+        //         'code' => 'PAYSTACK',
+        //         'name' => 'Paystack',
+        //         'enabled' => true,
+        //         'transaction_fee' => (string) round($gatewayFee, 2),
+        //         'total_amount' => (string) round($totalCharge, 2),
+        //     ],
+        // ];
+
+        // if ($supportsRemita) {
+        //     $paymentOptions[] = [
+        //         'code' => 'REMITA',
+        //         'name' => 'Remita',
+        //         'enabled' => true,
+        //         'transaction_fee' => (string) round($gatewayFee, 2),
+        //         'total_amount' => (string) round($totalCharge, 2),
+        //     ];
+        // }
+
+        return [
+            'arrears' => $arrears,
+            'charges' => [
+                'momas_fee' => (string) round($momasFee, 2),
+            ],
+            'payment_options' => $paymentOptions,
+            'remaining' => (string) round($remaining, 2),
+        ];
     }
 }

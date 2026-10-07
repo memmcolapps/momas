@@ -20,8 +20,11 @@ use App\Models\UtilitiesPayment;
 use App\Models\VirtualAccountTransaction;
 use App\Services\FlutterwavePaymentService;
 use App\Services\PaystackPaymentService;
+use App\Services\RemitaPaymentService;
 use App\Services\RequestActionHandler;
 use App\Services\StandardResponse;
+use App\Services\UtilityManagementService;
+use App\Support\RequestContext;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -49,6 +52,49 @@ class TransactionController extends Controller
                 'data' => $other_trx,
                 'all_history' => $arrearsData['all_history'],
             ]);
+        } catch (Exception $e) {
+            return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
+    }
+
+
+    public function utilitiesBreakdown(Request $request)
+    {
+        try {
+            $auth_user = Auth::user();
+
+            $validator = Validator::make($request->all(), [
+                'amount' => 'nullable|numeric|min:1',
+                'type' => 'required|string|in:utilities,admin_fee',
+                'estate_id' => 'nullable|integer|exists:estates,id',
+            ]);
+
+            if ($validator->fails()) {
+                return StandardResponse::error(code: 422, message: 'Validation error', data: [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
+
+            $estate_id = $request->input('estate_id', $auth_user->estate_id);
+
+            $amount = $request->input('amount');
+
+            $breakdown = (new UtilityManagementService())->calculateUtilitiesBreakdownByAmount(
+                $auth_user->id,
+                (int) $estate_id,
+                $amount !== null ? (float) $amount : null,
+                (string) $request->type,
+            );
+
+            $arrearsAmount = (string) round(array_sum(array_column($breakdown['arrears'], 'amount')), 2);
+            $breakdown['amount'] = (string) round($breakdown['remaining'] + $arrearsAmount, 2);
+            $breakdown['arrears_type'] = $request->type;
+
+            return StandardResponse::success(code: 200, message: 'Utilities breakdown calculated', data: $breakdown);
         } catch (Exception $e) {
             return StandardResponse::error(code: 500, message: 'An error occurred', debug: [
                 'message' => $e->getMessage(),
@@ -224,6 +270,10 @@ class TransactionController extends Controller
             $phone = Auth::user()->phone ?? "012345678";
             $request_meta = $request->metadata ?? [];
             $auth_user = Auth::user();
+
+            if ($request->service_type == 'utilities') {
+                app(RequestContext::class)->put('payment_purpose', 'utilities');
+            }
 
             // if ($request->pay_type == 'flutterwave') {
             //     $trx_id = "TRXFLW" . random_int(0000000, 9999999);
@@ -412,20 +462,75 @@ class TransactionController extends Controller
 
 
             if ($request->pay_type === 'remita') {
-                $trx_id = "TRX" . random_int(0000000, 9999999);
-                $email = Auth::user()->email;
+                $estate_id = Auth::user()->estate_id;
+                $est = Estate::where('id', $estate_id)->first();
+
+                // if (! $est || ! $est->account_no || ! $est->bank || ! $est->bank->remita_code) {
+                //     Logger::warning("User with email: {$auth_user->email} estate is missing Remita subaccount details estate_id: {$estate_id}");
+
+                //     return StandardResponse::error(
+                //         422,
+                //         'Estate does not have complete Remita subaccount details, reach out to your estate admin'
+                //     );
+                // }
+
+                // $subaccounts = [
+                //     [
+                //         'account_number' => $est->account_no,
+                //         'bank_code'      => $est->bank->remita_code,
+                //         'amount'         => $request->amount,
+                //     ]
+                // ];
+
+                $remitaService = new RemitaPaymentService();
+                $payment_init = $remitaService->makePayment([
+                    'amount' => $request->amount,
+                    'email' => strtolower(trim($auth_user->email)),
+                    'name' => $auth_user->first_name . ' ' . $auth_user->last_name,
+                    'phone' => $phone,
+                    'description' => 'Payment for ' . ($request->service_type ?? 'services'),
+                ], null);
+
+                if (! $payment_init['status']) {
+                    Logger::warning("Remita payment init by {$auth_user->email} failed", ['response' => $payment_init]);
+
+                    return StandardResponse::error(
+                        422,
+                        $payment_init['message'] ?? 'Payment not available at the moment, kindly select another payment option'
+                    );
+                }
+
+                $trx_id = $payment_init['reference'];
+                $rrr = $payment_init['rrr'];
+
+                $action_payload = $request->action_payload;
+                if ($action_payload) {
+                    $action_payload['user_id'] = Auth::user()->id;
+                    $request->tariff_id && $action_payload['tariff_id'] = $request->tariff_id;
+                } else {
+                    $action_payload = [
+                        'action' => $request->service_type,
+                    ];
+                }
+
                 $trx = new Transaction();
-                $trx->user_id = Auth::id();
+                $trx->user_id = Auth::user()->id;
                 $trx->pay_type = "remita";
-                $trx->service_type = "fund";
+                $trx->estate_id = $estate_id;
                 $trx->amount = $request->amount;
                 $trx->trx_id = $trx_id;
+                $trx->payment_ref = $rrr;
+                $trx->service_type = $request->service_type;
+                $trx->status = TransactionStatus::PAYMENT_PENDING->value;
+                $trx->action_payload = json_encode($action_payload);
                 $trx->save();
 
-                return response()->json([
+                return StandardResponse::success(200, 'Payment initiation successful', [
                     'status' => true,
-                    'url' => url('') . "/pay-remita?amount=$request->amount&trx_id=$trx_id&email=$email"
-                ], 200);
+                    'ref' => $rrr,
+                    'public_key' => 'QzAwMDAyNzEyNTl8MTEwNjE4NjF8OWZjOWYwNmMyZDk3MDRhYWM3YThiOThlNTNjZTE3ZjYxOTY5NDdmZWE1YzU3NDc0ZjE2ZDZjNTg1YWYxNWY3NWM4ZjMzNzZhNjNhZWZlOWQwNmJhNTFkMjIxYTRiMjYzZDkzNGQ3NTUxNDIxYWNlOGY4ZWEyODY3ZjlhNGUwYTY',
+                    'transaction_status' => $trx->status,
+                ]);
             }
 
 
@@ -643,6 +748,7 @@ class TransactionController extends Controller
                     ? ($transaction->creditToken->receiver_meterNo ?: $transaction->creditToken->meterNo)
                     : null;
                 unset($data['credit_token']);
+                $data['fee'] = (string) $transaction->fee;
                 return $data;
             });
 
@@ -884,6 +990,17 @@ class TransactionController extends Controller
             ($receipt['first_name'] ?? '') . ' ' . ($receipt['last_name'] ?? '')
         );
 
+        $receipt['breakdown'] = $transaction->breakdown ?? [];
+
+        array_walk_recursive($receipt['breakdown'], function (&$value, $key) {
+            if (is_int($value) || is_float($value)) {
+                if ($key === 'unitkwh') {
+                    $value = round((float) $value, 2);
+                }
+                $value = (string) $value;
+            }
+        });
+
         unset($receipt['first_name'], $receipt['last_name'], $receipt['kct_tokens']);
 
         return $receipt;
@@ -1022,15 +1139,15 @@ class TransactionController extends Controller
         // send_notification($message);
 
         // dd($request->all());
-            $transactionId = $request->reference;
-            $trx = Transaction::where('trx_id', $transactionId)->first();
+            $transactionId = $request->reference ?? $request->trx_id;
+            $trx = Transaction::where('payment_ref', $transactionId)->first();
             $provider = $trx?->pay_type;
 
             // dd($trx->toArray());
 
             // Use PaystackPaymentService to verify transaction
             $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
-            $verificationResult = $paymentService->verifyTransaction($transactionId);
+            $verificationResult = $paymentService->verifyTransaction($trx->payment_ref);
 
             if (! $verificationResult['status']) {
                 // if (str_contains($verificationResult['message'] ?? '', 'transaction_not_found')) {
@@ -1056,7 +1173,7 @@ class TransactionController extends Controller
                 $ref = $transactionData['reference'];
                 $trx = Transaction::where('trx_id', $ref)->first();
 
-                if ($trx) {
+                if ($trx && $access_point == 'web') {
                     $action_payload = json_decode($trx->action_payload);
 
                     $action = $action_payload?->action;

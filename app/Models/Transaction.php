@@ -28,6 +28,7 @@ class Transaction extends Model
         'note',
         'wallet_creditted',
         'migrated',
+        'breakdown',
     ];
 
 
@@ -45,6 +46,7 @@ class Transaction extends Model
         'charge' => 'integer',
         'resolve' => 'integer',
         'wallet_creditted' => 'decimal:2',
+        'breakdown' => 'json',
     ];
 
     protected $hidden = [

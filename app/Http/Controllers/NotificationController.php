@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppSetting;
+use App\Services\ConfigManagementService;
 use App\Services\StandardResponse;
 use Illuminate\Http\Request;
 
@@ -21,8 +22,9 @@ class NotificationController extends Controller
         ];
 
         $data = [];
+        $configService = new ConfigManagementService();
         foreach ($keys as $responseKey => $settingKey) {
-            $data[$responseKey] = AppSetting::get($settingKey)
+            $data[$responseKey] = $configService->getConfig(underscore_to_hyphen($settingKey))
                 ?? config("constants.app_update_data.{$settingKey}");
         }
 

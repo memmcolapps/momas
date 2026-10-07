@@ -6,6 +6,7 @@ use App\Http\Controllers\AnalyticController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Bills\BillsController;
+use App\Http\Controllers\EmergencyTokenController;
 use App\Http\Controllers\Estate\EstateController;
 use App\Http\Controllers\Feature\FeatureController;
 use App\Http\Controllers\Meter\MeterController;
@@ -78,6 +79,8 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::post('retry-credit-token', [TransactionController::class, 'retry_credit_token']);
         Route::get('vending-properties', [MeterController::class, 'vending_properties']);
         Route::post('calculate-token-fees-amount', [MeterController::class, 'calculate_token_fees_by_amount']);
+        Route::get('emergency-token-eligibility', [EmergencyTokenController::class, 'checkEligibility']);
+        Route::post('generate-emergency-token', [EmergencyTokenController::class, 'generateEmergencyToken']);
     });
 
     // ── Feature::OTHER_METER ──────────────────
@@ -130,6 +133,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     Route::post('pay', [TransactionController::class, 'make_payment']);
     Route::get('get-transactions', [TransactionController::class, 'all_transactions']);
     Route::get('arrears', [TransactionController::class, 'arrears']);
+    Route::post('arrears/breakdown', [TransactionController::class, 'utilitiesBreakdown']);
     Route::post('pay_arrears', [TransactionController::class, 'pay_arrears']);
     Route::get('get-trx', [TransactionController::class, 'get_trx']);
     Route::get('failed-credit-token-transactions', [TransactionController::class, 'failed_credit_token_transactions']);

@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\EstateModFeature;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,6 +13,7 @@ class Estate extends Model
         'account_no',
         'account_name',
         'bank',
+        'bank_id',
         'title',
         'address',
         'state',
@@ -24,6 +23,8 @@ class Estate extends Model
         'fee_accumulation_period',
         'minimum_vend_per_transaction',
         'estate_meter_vending_type',
+        'transaction_fee_type',
+        'transaction_fee',
         'created_at',
         'updated_at',
     ];
@@ -35,11 +36,15 @@ class Estate extends Model
         return $this->belongsTo(Asset::class);
     }
 
+    public function bank()
+    {
+        return $this->belongsTo(Bank::class);
+    }
+
     public function meter()
     {
         return $this->belongsTo(Meter::class);
     }
-
 
     public function transformer()
     {
@@ -61,9 +66,6 @@ class Estate extends Model
         return $this->hasMany(KctMeterToken::class);
     }
 
-
-
-
     public function estate_service()
     {
         return $this->hasMany(EstateService::class);
@@ -73,6 +75,7 @@ class Estate extends Model
     {
         return $this->hasMany(Transaction::class);
     }
+
     public function credit_token()
     {
         return $this->hasMany(CreditToken::class);
@@ -83,7 +86,8 @@ class Estate extends Model
         return $this->hasMany(UtilitiesPayment::class);
     }
 
-    public function scopeByUser($query, $user) {
+    public function scopeByUser($query, $user)
+    {
         if ($user->isSuperAdmin()) {
             return $query;
         }
@@ -91,15 +95,18 @@ class Estate extends Model
         return $query->where('estate_id', $user->estate_id);
     }
 
-    public function estateModFeature() {
+    public function estateModFeature()
+    {
         return $this->hasMany(EstateModFeature::class, 'estate_id');
     }
 
-    public function getAdminFee() {
+    public function getAdminFee()
+    {
         return $this->admin_fee;
     }
 
-    public function isActive() {
+    public function isActive()
+    {
         return true;
     }
 
@@ -107,9 +114,11 @@ class Estate extends Model
         'status' => 'integer',
         'minimum_vend_per_transaction' => 'boolean',
         'estate_meter_vending_type' => 'integer',
+        'transaction_fee' => 'decimal:2',
     ];
 
-    public function getUserMinPur($user_id) {
+    public function getUserMinPur($user_id)
+    {
         $min_pur = $this->min_pur;
 
         if (! $this->minimum_vend_per_transaction) {
@@ -123,5 +132,9 @@ class Estate extends Model
         }
 
         return $min_pur;
+    }
+
+    public function getBank() {
+        return Bank::firstWhere('id', $this->bank_id);
     }
 }

@@ -25,6 +25,8 @@ class PaystackPaymentService implements PaymentServiceInterface
         $this->initializePaystackSettings();
     }
 
+    public const providerName = 'paystack';
+
     /**
      * Initialize Paystack settings from the database
      */

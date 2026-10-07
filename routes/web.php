@@ -7,6 +7,7 @@ use App\Exports\UtilitiesPaymentsExport;;
 use App\Http\Controllers\AccessToken\AccessTokenConroller;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BeneficiaryController;
 use App\Http\Controllers\Admin\CustomerImportController;
 use App\Http\Controllers\Admin\DashboardContoller;
 use App\Http\Controllers\Admin\EstateController;
@@ -194,6 +195,21 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-vat', [EstateServiceController::class, 'estate_update_vat']);
     Route::post('estate-update-minpur', [EstateServiceController::class, 'estate_update_minpur']);
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
+    Route::post('estate-update-transaction-fee', [EstateServiceController::class, 'estate_update_transaction_fee']);
+    Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
+
+
+
+
+    //Beneficiaries
+    Route::get('beneficiary', [BeneficiaryController::class, 'beneficiary_index']);
+    Route::get('new-beneficiary', [BeneficiaryController::class, 'beneficiary_new']);
+    Route::post('beneficiary-store', [BeneficiaryController::class, 'beneficiary_store']);
+    Route::get('view-beneficiary', [BeneficiaryController::class, 'beneficiary_view']);
+    Route::post('beneficiary-update', [BeneficiaryController::class, 'beneficiary_update']);
+    Route::get('beneficiary-delete', [BeneficiaryController::class, 'beneficiary_delete']);
+    Route::get('beneficiary-activate', [BeneficiaryController::class, 'beneficiary_activate']);
+    Route::get('beneficiary-deactivate', [BeneficiaryController::class, 'beneficiary_deactivate']);
 
 
 
@@ -277,6 +293,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('payment-keys', [DashboardContoller::class, 'update_pay']);
     Route::post('admin-fee-update', [DashboardContoller::class, 'admin_fee_update']);
     Route::post('support-set', [DashboardContoller::class, 'support_set']);
+    Route::post('config-values-update', [DashboardContoller::class, 'update_config_values']);
     Route::get('update-utility', [DashboardContoller::class, 'update_utility']);
     Route::get('delete-utility', [DashboardContoller::class, 'delete_utility']);
     Route::get('delete-customer-utility', [DashboardContoller::class, 'detach_customer_utility']);
@@ -329,6 +346,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('meter-transaction-report', [MeterController::class, 'meter_transaction_report']);
     Route::get('export-metertransactions', [ExportControler::class, 'exportmetertransactions']);
     Route::get('export-transactions', [ExportControler::class, 'exporttransactions']);
+    Route::get('export-meters', [ExportControler::class, 'exportmeters'])->name('export.meters');
     Route::get('bulk-upload-preview', [MeterImportController::class, 'bulk_upload_preview']);
     Route::post('bulk-save-meters', [MeterImportController::class, 'bulk_save_meters']);
 
@@ -352,6 +370,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
 
     //token
     Route::get('credit-token', [TokenController::class, 'credit_token_index']);
+    Route::get('emergency-token', [MeterController::class, 'emergency_token_index']);
     Route::get('search-credit-token', [TokenController::class, 'search_credit_token']);
     Route::get('compensation-token', [TokenController::class, 'compensation_index']);
     Route::get('tamper-token', [TokenController::class, 'tamper_index']);
@@ -370,6 +389,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('generate-tamper-meter-token', [TokenController::class, 'generate_tamper_meter_token']);
     Route::post('generate-kctclear-token', [TokenController::class, 'generate_kctclear_token']);
     Route::post('generate-clear-credit-meter-token', [TokenController::class, 'generate_clear_credit_meter_token']);
+    Route::post('emergency-meter-token', [MeterController::class, 'getEmergencyToken']);
 
     //postpaid token
     Route::get('postpaid-token', [TokenController::class, 'postpaid_token_index']);

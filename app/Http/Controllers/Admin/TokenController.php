@@ -772,6 +772,11 @@ class TokenController extends Controller
 
             $estate_id = Estate::where('id', $request->estate_id)->first()->id;
             $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;
+
+            $meter_handler = handle_block_meter($meter->meterNo, true, log_data: $request->all());
+            if ($meter_handler) return $meter_handler;
+
+
             $user = User::where('meterNo', $request->meterNo)->first() ?? null;
 
             $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
@@ -1729,6 +1734,14 @@ class TokenController extends Controller
                 $phone = Auth::user()->phone ?? "012345678";
                 $userName = Auth::user()->first_name . " " . Auth::user()->last_name;
 
+                // $bank = $est->getBank();
+                // if (!$est->account_no || !$bank || !$bank->remita_code) {
+                //     return redirect('/admin/credit-token')->with(
+                //         'error',
+                //         "Estate {$est->title} does not have complete Remita subaccount details (account_no / bank remita_code). Please contact support."
+                //     );
+                // }
+
                 $remitaService = new RemitaPaymentService();
                 $payment_init = $remitaService->makePayment([
                     'amount' => $request->amount,
@@ -1736,7 +1749,7 @@ class TokenController extends Controller
                     'name' => $userName,
                     'phone' => $phone,
                     'description' => 'Payment for credit token',
-                ]);
+                ], estateId: $est->id);
 
                 if (!isset($payment_init['status']) || !$payment_init['status']) {
                     Logger::warning("Remita payment init failed", ['response' => $payment_init]);
@@ -6255,6 +6268,13 @@ class TokenController extends Controller
                     if ($debt_breakdown) {
                         $data['debt_owed'] = round($debt_breakdown['debt_owed'], 2);
                         $data['service_charge_owed'] = round($debt_breakdown['service_charge_owed'], 2);
+                    }
+
+                    $breakdown = $trx->breakdown ?? null;
+                    if ($breakdown) {
+                        $data['debt_charged'] = round($breakdown['arrearsOwed'] ?? 0, 2);
+                        $data['utility_charged'] = round($breakdown['utilityOwed'] ?? 0, 2);
+                        $data['transaction_fee'] = round($breakdown['serviceFee'] ?? 0, 2);
                     }
 
                     return view('admin/recepit.recepit', $data);

@@ -43,9 +43,24 @@ class MeterTransactionExport implements FromCollection, WithHeadings
             $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
         }
 
-        return $query->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($token) {
+        $tokens = $query->orderBy('created_at', 'desc')->get();
+
+        $totalAmount = 0;
+        $totalVat = 0;
+        $totalUnits = 0;
+        $totalFee = 0;
+
+        $rows = $tokens->map(function ($token) use (&$totalAmount, &$totalVat, &$totalUnits, &$totalFee) {
+                $amount = (float) $token->amount;
+                $vatAmount = (float) ($token->vatAmount ?? 0);
+                $unitsKwh = (float) ($token->unitkwh ?? 0);
+                $fee = (float) ($token->fee ?? 0);
+
+                $totalAmount += $amount;
+                $totalVat += $vatAmount;
+                $totalUnits += $unitsKwh;
+                $totalFee += $fee;
+
                 return [
                     'trx_id' => $token->trx_id,
                     'meter_no' => (string) $token->meterNo ?? 'N/A',
@@ -54,14 +69,30 @@ class MeterTransactionExport implements FromCollection, WithHeadings
                     'phone' => $token->user->phone ?? 'N/A',
                     'estate' => $token->estate->title ?? 'N/A',
                     'amount' => $token->amount,
-                    'vat_amount' => $token->vatAmount ?? 0,
-                    'units_kwh' => $token->unitkwh ?? 0,
-                    'fixed_charges' => $token->fee ?? 0,
+                    'vat_amount' => $vatAmount,
+                    'units_kwh' => $unitsKwh,
+                    'fixed_charges' => $fee,
                     'status' => $token->status == 2 ? 'Completed' : ($token->status == 1 ? 'Pending' : 'Failed'),
                     'date' => $token->created_at->format('d/m/Y H:i'), // Format the date if needed
                 ];
             });
 
+        $rows->push([
+            'trx_id' => 'TOTAL',
+            'meter_no' => '',
+            'customer' => '',
+            'email' => '',
+            'phone' => '',
+            'estate' => '',
+            'amount' => round($totalAmount, 2),
+            'vat_amount' => round($totalVat, 2),
+            'units_kwh' => round($totalUnits, 2),
+            'fixed_charges' => round($totalFee, 2),
+            'status' => '',
+            'date' => '',
+        ]);
+
+        return $rows;
     }
 
     /**
