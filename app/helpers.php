@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
 use App\Services\ConfigManagementService;
+use App\Services\StandardResponse;
 use App\Support\RequestContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -1021,7 +1022,7 @@ if (! function_exists('calculate_momas_vend_share')) {
 }
 
 if (! function_exists('payment_option_detail')) {
-    function payment_option_detail($estateId, $amount, $payment_purpose) {
+    function payment_option_detail($estateId, $amount, $payment_purpose, $trx_fee_inclusive=false) {
 
         $configured = app(ConfigManagementService::class)->getConfig('payment_gateways', $estateId) ?? [];
         $gateways = array_map('strtolower', is_array($configured) ? $configured : (array) $configured);
@@ -1036,9 +1037,19 @@ if (! function_exists('payment_option_detail')) {
         $momasFee = $transactionCharges['momasFee'] ?? 0;
 
         $gatewayFee = round($transactionFee - $momasFee, 2);
-        $totalCharge = round($amount + $transactionFee, 2);
+        $totalCharge = $trx_fee_inclusive ? round($amount, 2) : round($amount + $transactionFee, 2);
+        $walletTotalCharge = round ($amount, 2);
 
-        $paymentOptions = [];
+        $paymentOptions = [
+            [
+                'code' => 'WALLET',
+                'name' => 'Wallet',
+                'enabled' => true,
+                'transaction_fee' =>(string) round(0, 2),
+                'total_amount' => (string) $walletTotalCharge, // wallet payment does not incur trans fees
+                'momas_fee' => (string) $momasFee,
+            ]
+        ];
 
         if ($supportsPaystack) {
             $paymentOptions[] = [
@@ -1063,6 +1074,26 @@ if (! function_exists('payment_option_detail')) {
         }
 
         return $paymentOptions;
+    }
+}
+
+if (! function_exists('handle_block_meter')) {
+    function handle_block_meter(string $meterNo, bool $web_platform, $log_data=[]) {
+        $meter = Meter::where('meterNo', $meterNo)->first();
+        $response = $web_platform === true ?
+            back()->with('error', 'Meter has been blocked please unblock to proceed') :
+            StandardResponse::error(403, 'Meter has been blocked reach out to estate facility managers for resolution');
+
+        if (!$meter->isActive()) {
+            Logger::info('validate_meter called on inactive meter', [
+                'meter' => $meter,
+                'context' => $log_data
+            ]);
+
+            return $response;
+        }
+
+        return null;
     }
 }
 

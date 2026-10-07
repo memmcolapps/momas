@@ -367,34 +367,43 @@ class UtilityManagementService
             }
         }
 
-        $configured = app(ConfigManagementService::class)->getConfig('payment_gateways', $estateId) ?? [];
-        $gateways = array_map('strtolower', is_array($configured) ? $configured : (array) $configured);
-        $supportsRemita = in_array('remita', $gateways, true);
+        // $configured = app(ConfigManagementService::class)->getConfig('payment_gateways', $estateId) ?? [];
+        // $gateways = array_map('strtolower', is_array($configured) ? $configured : (array) $configured);
+        // $supportsRemita = in_array('remita', $gateways, true);
 
         $arrearsAmount = round(array_sum(array_column($arrears, 'amount')), 2);
         $momasFee = round(min((1 / 100) * $amount, $transactionFee), 2);
-        $gatewayFee = round($transactionFee - $momasFee, 2);
-        $totalCharge = round($arrearsAmount + $transactionFee, 2);
+        // $gatewayFee = round($transactionFee - $momasFee, 2);
+        // $totalCharge = round($arrearsAmount + $transactionFee, 2);
 
-        $paymentOptions = [
-            [
-                'code' => 'PAYSTACK',
-                'name' => 'Paystack',
-                'enabled' => true,
-                'transaction_fee' => (string) round($gatewayFee, 2),
-                'total_amount' => (string) round($totalCharge, 2),
-            ],
-        ];
+        $transactionCharges = calculate_transaction_charge($amount, true);
+        $momasFee = round((float) $transactionCharges['momasFee'], 2);
+        $paymentOptions = payment_option_detail(
+            $estateId,
+            $arrearsAmount,
+            'utilities',
+            trx_fee_inclusive: false
+        );
 
-        if ($supportsRemita) {
-            $paymentOptions[] = [
-                'code' => 'REMITA',
-                'name' => 'Remita',
-                'enabled' => true,
-                'transaction_fee' => (string) round($gatewayFee, 2),
-                'total_amount' => (string) round($totalCharge, 2),
-            ];
-        }
+        // $paymentOptions = [
+        //     [
+        //         'code' => 'PAYSTACK',
+        //         'name' => 'Paystack',
+        //         'enabled' => true,
+        //         'transaction_fee' => (string) round($gatewayFee, 2),
+        //         'total_amount' => (string) round($totalCharge, 2),
+        //     ],
+        // ];
+
+        // if ($supportsRemita) {
+        //     $paymentOptions[] = [
+        //         'code' => 'REMITA',
+        //         'name' => 'Remita',
+        //         'enabled' => true,
+        //         'transaction_fee' => (string) round($gatewayFee, 2),
+        //         'total_amount' => (string) round($totalCharge, 2),
+        //     ];
+        // }
 
         return [
             'arrears' => $arrears,

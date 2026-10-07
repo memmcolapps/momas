@@ -23,6 +23,8 @@ class Estate extends Model
         'fee_accumulation_period',
         'minimum_vend_per_transaction',
         'estate_meter_vending_type',
+        'transaction_fee_type',
+        'transaction_fee',
         'created_at',
         'updated_at',
     ];
@@ -112,6 +114,7 @@ class Estate extends Model
         'status' => 'integer',
         'minimum_vend_per_transaction' => 'boolean',
         'estate_meter_vending_type' => 'integer',
+        'transaction_fee' => 'decimal:2',
     ];
 
     public function getUserMinPur($user_id)

@@ -566,6 +566,44 @@
 
                             <hr class="my-4">
 
+                            <form action="estate-update-transaction-fee" method="post">
+                                @csrf
+
+                                <h6 class="d-flex justify-content-start my-4">Transaction Fee</h6>
+
+                                <div class="row">
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Transaction Fee Type</label>
+                                        <select name="transaction_fee_type" class="form-select" required>
+                                            <option value="{{ \App\Constants\TransactionFeeType::FLAT }}"
+                                                @selected(($org->transaction_fee_type ?? \App\Constants\TransactionFeeType::FLAT) == \App\Constants\TransactionFeeType::FLAT)>
+                                                Flat
+                                            </option>
+                                            <option value="{{ \App\Constants\TransactionFeeType::PERCENTAGE }}"
+                                                @selected($org->transaction_fee_type == \App\Constants\TransactionFeeType::PERCENTAGE)>
+                                                Percentage
+                                            </option>
+                                        </select>
+
+                                        <input type="text" name="estate_id" value="{{$org->id}}" hidden>
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Transaction Fee</label>
+                                        <input type="number" step="0.01" min="0" name="transaction_fee"
+                                               value="{{$org->transaction_fee ?? 0}}"
+                                               class="form-control"
+                                               required>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
                             <form action="estate-update-payment-gateways" method="post">
                                 @csrf
                                 <input type="hidden" name="estate_id" value="{{ $org->id }}">

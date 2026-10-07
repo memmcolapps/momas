@@ -6,17 +6,25 @@ return [
     'remita_payment_endpoint' => env(
         'REMITA_PAYMENT_ENDPOINT',
         // 'https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit'
-        'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit',
+        // 'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit',
+        'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit'
     ),
 
     'remita_status_endpoint' => env(
         'REMITA_STATUS_ENDPOINT',
-        'https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc'
+        // 'https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc'
+        'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc'
     ),
 
     'remita_payment_page_url' => env(
         'REMITA_PAYMENT_PAGE_URL',
-        'https://demo.remita.net/remita/onepage/api/v1/so.spa'
+        // 'https://demo.remita.net/remita/onepage/api/v1/so.spa'
+        'https://login.remita.net/remita/onepage/api/v1/so.spa'
+    ),
+
+    'remita_inline_checkout_endpoint' => env(
+        'REMITA_INLINE_CHECKOUT_endpoint',
+        'https://login.remita.net/payment/v1/remita-pay-inline.bundle.js'
     ),
 
     'remita_rrr_generate_endpoint' => 'https://standardpay.remita.net/api/rrr/GenerateRRR',

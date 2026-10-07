@@ -195,6 +195,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-vat', [EstateServiceController::class, 'estate_update_vat']);
     Route::post('estate-update-minpur', [EstateServiceController::class, 'estate_update_minpur']);
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
+    Route::post('estate-update-transaction-fee', [EstateServiceController::class, 'estate_update_transaction_fee']);
     Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
 
 
@@ -345,6 +346,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('meter-transaction-report', [MeterController::class, 'meter_transaction_report']);
     Route::get('export-metertransactions', [ExportControler::class, 'exportmetertransactions']);
     Route::get('export-transactions', [ExportControler::class, 'exporttransactions']);
+    Route::get('export-meters', [ExportControler::class, 'exportmeters'])->name('export.meters');
     Route::get('bulk-upload-preview', [MeterImportController::class, 'bulk_upload_preview']);
     Route::post('bulk-save-meters', [MeterImportController::class, 'bulk_save_meters']);
 

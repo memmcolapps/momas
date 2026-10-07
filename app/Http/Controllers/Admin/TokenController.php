@@ -772,6 +772,11 @@ class TokenController extends Controller
 
             $estate_id = Estate::where('id', $request->estate_id)->first()->id;
             $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;
+
+            $meter_handler = handle_block_meter($meter->meterNo, true, log_data: $request->all());
+            if ($meter_handler) return $meter_handler;
+
+
             $user = User::where('meterNo', $request->meterNo)->first() ?? null;
 
             $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
@@ -1740,7 +1745,7 @@ class TokenController extends Controller
                     'name' => $userName,
                     'phone' => $phone,
                     'description' => 'Payment for credit token',
-                ], null);//, $est->id);
+                ], estateId: $est->id);
 
                 if (!isset($payment_init['status']) || !$payment_init['status']) {
                     Logger::warning("Remita payment init failed", ['response' => $payment_init]);

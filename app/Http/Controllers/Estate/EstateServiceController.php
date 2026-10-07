@@ -211,6 +211,25 @@ class EstateServiceController extends Controller
         return back()->with('message', "Estate Fee Accumulation Period updated successfully");
     }
 
+    public function estate_update_transaction_fee(request $request)
+    {
+        $request->validate([
+            'estate_id' => 'required|exists:estates,id',
+            'transaction_fee_type' => 'required|in:' . implode(',', [
+                \App\Constants\TransactionFeeType::FLAT,
+                \App\Constants\TransactionFeeType::PERCENTAGE,
+            ]),
+            'transaction_fee' => 'required|numeric|min:0',
+        ]);
+
+        Estate::where('id', $request->estate_id)->update([
+            'transaction_fee_type' => $request->transaction_fee_type,
+            'transaction_fee' => $request->transaction_fee,
+        ]);
+
+        return back()->with('message', "Estate Transaction Fee updated successfully");
+    }
+
     public function estate_update_payment_gateways(Request $request)
     {
         $request->validate([
