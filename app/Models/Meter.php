@@ -453,13 +453,18 @@ class Meter extends Model
                 }
 
                 if ($trx->status === 1) {
-                    Logger::error('verify_transaction failed', [
-                        'message' => 'Payment failed',
-                        'trx' => $trx,
-                        'trx_id' => $trx->id,
-                    ]);
 
-                    throw new Exception("Transaction Failed");
+                    $verify = $verifier_engine($trx_id);
+
+                    if (! $verify['is_successful']) {
+                        Logger::error('verify_transaction failed', [
+                            'message' => 'Payment failed',
+                            'trx' => $trx,
+                            'trx_id' => $trx->id,
+                        ]);
+
+                        throw new Exception("Transaction Failed");
+                    }
                 }
 
 
