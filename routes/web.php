@@ -82,10 +82,6 @@ Route::get('onboarding-pending', [DashboardContoller::class, 'pending_onboarding
 
 
 Route::get('/', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('route:clear');
-    Artisan::call('view:clear');
     return app(AuthController::class)->admin_login(request());
 });
 
