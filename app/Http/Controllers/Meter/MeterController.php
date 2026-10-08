@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Meter;
 use App\Contracts\PaymentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Transaction\TransactionController;
+use App\Models\Auditlog;
 use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\KctMeterToken;
@@ -1559,6 +1560,132 @@ class MeterController extends Controller
         return redirect('admin/meter-list')->with('message', "Meter updated successfully");
 
 
+    }
+
+
+    public function migrate_meter_estate(request $request)
+    {
+        if (Auth::user()->role != 0) {
+            return back()->with('error', 'Only super admins can migrate meters between estates');
+        }
+
+        $meter = Meter::find($request->meter_id);
+
+        if (!$meter) {
+            return back()->with('error', 'Meter not found');
+        }
+
+        $new_estate = Estate::find($request->estate_id);
+
+        if (!$new_estate) {
+            return back()->with('error', 'Estate not found');
+        }
+
+        if ($meter->estate_id == $new_estate->id) {
+            return back()->with('error', 'Meter already belongs to this estate');
+        }
+
+        $old_estate = Estate::find($meter->estate_id);
+
+        $old_values = [
+            'meter_id' => $meter->id,
+            'meter_no' => $meter->meterNo,
+            'estate_id' => $meter->estate_id,
+            'estate_name' => $old_estate->title ?? null,
+            'TransformerID' => $meter->TransformerID,
+            'OldTariffID' => $meter->OldTariffID,
+            'NewTariffID' => $meter->NewTariffID,
+            'OldTariffDualID' => $meter->OldTariffDualID,
+            'NewTariffDualID' => $meter->NewTariffDualID,
+            'customers' => [],
+        ];
+
+        $map_tariff = function ($tariff_id, $types, $estate_id) {
+            if (!$tariff_id) {
+                return null;
+            }
+
+            $old_tariff = Tariff::find($tariff_id);
+
+            if (!$old_tariff || !$old_tariff->tariff_index) {
+                return null;
+            }
+
+            $match = Tariff::where('estate_id', $estate_id)
+                ->where('tariff_index', $old_tariff->tariff_index)
+                ->whereIn('type', $types)
+                ->where('status', 2)
+                ->first();
+
+            return $match ? $match->id : null;
+        };
+
+        $old_tariff_id = $meter->OldTariffID;
+        $new_tariff_id = $meter->NewTariffID;
+        $old_tariff_dual_id = $meter->OldTariffDualID;
+        $new_tariff_dual_id = $meter->NewTariffDualID;
+
+        $meter->OldTariffID = $map_tariff($old_tariff_id, ['nepa', 'Grid'], $new_estate->id);
+        $meter->NewTariffID = $map_tariff($new_tariff_id, ['nepa', 'Grid'], $new_estate->id);
+        $meter->OldTariffDualID = $map_tariff($old_tariff_dual_id, ['gen', 'Off Grid'], $new_estate->id);
+        $meter->NewTariffDualID = $map_tariff($new_tariff_dual_id, ['gen', 'Off Grid'], $new_estate->id);
+        $meter->OldTariffDual = $meter->OldTariffDualID;
+        $meter->NewTariffDual = $meter->NewTariffDualID;
+        $meter->TransformerID = null;
+        $meter->estate_id = $new_estate->id;
+
+        $customer_ids = User::where('id', $meter->user_id)
+            ->orWhere('meterid', $meter->id)
+            ->orWhere('meterNo', $meter->meterNo)
+            ->pluck('id');
+
+        $customers = User::whereIn('id', $customer_ids)->get();
+
+        foreach ($customers as $customer) {
+            $old_values['customers'][] = [
+                'id' => $customer->id,
+                'name' => $customer->first_name . ' ' . $customer->last_name,
+                'estate_id' => $customer->estate_id,
+                'estate_name' => $customer->estate_name,
+            ];
+        }
+
+        DB::transaction(function () use ($meter, $customers, $new_estate) {
+            $meter->save();
+
+            User::whereIn('id', $customers->pluck('id'))->update([
+                'estate_id' => $new_estate->id,
+                'estate_name' => $new_estate->title,
+            ]);
+        });
+
+        $new_values = [
+            'meter_id' => $meter->id,
+            'meter_no' => $meter->meterNo,
+            'estate_id' => $meter->estate_id,
+            'estate_name' => $new_estate->title,
+            'TransformerID' => $meter->TransformerID,
+            'OldTariffID' => $meter->OldTariffID,
+            'NewTariffID' => $meter->NewTariffID,
+            'OldTariffDualID' => $meter->OldTariffDualID,
+            'NewTariffDualID' => $meter->NewTariffDualID,
+            'customers' => $customers->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->first_name . ' ' . $c->last_name,
+                'estate_id' => $new_estate->id,
+                'estate_name' => $new_estate->title,
+            ])->values()->all(),
+        ];
+
+        $aud = new Auditlog();
+        $aud->user_id = Auth::id();
+        $aud->name = Auth::user()->first_name . ' ' . Auth::user()->last_name;
+        $aud->old_values = json_encode($old_values);
+        $aud->new_values = json_encode($new_values);
+        $aud->action = 'Meter Estate Migration';
+        $aud->save();
+
+        return back()->with('message', "Meter and its customer migrated to " . strtoupper($new_estate->title) . " successfully");
     }
 
 

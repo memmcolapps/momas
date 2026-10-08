@@ -263,6 +263,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('meter-list', [MeterController::class, 'list_meter']);
     Route::match(['get', 'post'],'filter-meter', [MeterController::class, 'filter_by_estate']);
     Route::post('update-meter-info', [MeterController::class, 'update_meter_info']);
+    Route::post('migrate-meter-estate', [MeterController::class, 'migrate_meter_estate']);
     Route::post('update-meter', [MeterController::class, 'update_meter']);
     Route::get('new-meter', [MeterController::class, 'new_meter']);
     Route::post('add-new-meter', [MeterController::class, 'add_new_meter']);
