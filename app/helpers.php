@@ -1080,15 +1080,16 @@ if (! function_exists('payment_option_detail')) {
 if (! function_exists('handle_block_meter')) {
     function handle_block_meter(string $meterNo, bool $web_platform, $log_data=[]) {
         $meter = Meter::where('meterNo', $meterNo)->first();
-        $response = $web_platform === true ?
-            back()->with('error', 'Meter has been blocked please unblock to proceed') :
-            StandardResponse::error(403, 'Meter has been blocked reach out to estate facility managers for resolution');
 
         if (!$meter->isActive()) {
             Logger::info('validate_meter called on inactive meter', [
                 'meter' => $meter,
                 'context' => $log_data
             ]);
+
+            $response = $web_platform === true ?
+                back()->with('error', 'Meter has been blocked please unblock to proceed') :
+                StandardResponse::error(403, 'Meter has been blocked reach out to estate facility managers for resolution');
 
             return $response;
         }
