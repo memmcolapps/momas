@@ -7,6 +7,7 @@ use App\Models\Estate;
 use App\Models\PostpaidAccumulationPayment;
 use App\Models\TokenLedger;
 use Carbon\Carbon;
+use Exception;
 
 class LedgerService
 {
@@ -28,6 +29,10 @@ class LedgerService
 
         if ($fee_type == 'flat') {
             return $fee;
+        }
+
+        if ($fee > 100) {
+            throw new Exception('A Percentage Fee of Greater than 100 is not possible recheck Estate Transaction Fee');
         }
 
         $uncapped_fee = ($fee / 100) * $amount;
@@ -66,10 +71,10 @@ class LedgerService
         $months = $estate->fee_accumulation_period ?? 1;
         $cutoff = Carbon::now()->subMonths($months);
 
-        return !TokenLedger::where('estate_id', $estate->id)
+        return TokenLedger::where('estate_id', $estate->id)
             ->whereNull('paid_at')
             ->where('created_at', '<=', $cutoff)
-            ->exists();
+            ->sum('expected_fee') <= 0;
     }
 
     public static function estateSupportsPostpaid(Estate $estate): bool
