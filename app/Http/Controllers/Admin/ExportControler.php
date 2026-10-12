@@ -57,4 +57,27 @@ class ExportControler extends Controller
             ->header('Content-Disposition', 'attachment; filename="transactions_' . date('Y-m-d_H-i-s') . '.xlsx"');
 
     }
+
+    public function exportmeters(request $request)
+    {
+        $meterNo = $request->meterNo ?? null;
+        $estate_id = null;
+
+        $from_date = $request->from_date ?? null;
+        $to_date = $request->to_date ?? null;
+
+        // For estate admin, only export their estate's transactions
+        if (Auth::user()->role == 3) {
+            $estate_id = Auth::user()->estate_id;
+        } elseif (Auth::user()->role == 0) {
+            $estate_id = $request->estate_id ?? null;
+        }
+
+        $excelFile = Excel::raw(new MeterTransactionExport($meterNo, $estate_id, $from_date, $to_date), \Maatwebsite\Excel\Excel::XLSX);
+
+        return response($excelFile)
+            ->header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->header('Content-Disposition', 'attachment; filename="meters_' . date('Y-m-d_H-i-s') . '.xlsx"');
+
+    }
 }

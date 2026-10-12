@@ -28,6 +28,8 @@ class FlutterwavePaymentService implements PaymentServiceInterface
         $this->initializeFlutterwaveSettings();
     }
 
+    public const providerName = 'flutterwave';
+
     // -------------------------------------------------------------------------
     // Initialisation
     // -------------------------------------------------------------------------

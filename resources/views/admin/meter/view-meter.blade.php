@@ -246,6 +246,57 @@
 
                     <div class="card-body">
 
+                        <h6 class="d-flex justify-content-start my-4">Migrate Meter to Another Estate</h6>
+
+                        @if(session('message'))
+                            <div class="alert alert-success">{{ session('message') }}</div>
+                        @endif
+
+                        @if(session('error'))
+                            <div class="alert alert-danger">{{ session('error') }}</div>
+                        @endif
+
+                        <form action="migrate-meter-estate" method="post"
+                              onsubmit="return confirm('Are you sure you want to migrate this meter and its attached customer to the selected estate? Transactions and credit tokens will not be affected.');">
+                            @csrf
+
+                            <input type="text" name="meter_id" value="{{$meter->id}}" hidden>
+
+                            <div class="row">
+                                <div class="col-4">
+                                    <label class="my-2">Select Estate</label>
+                                    <select name="estate_id" class="form-control" required>
+                                        <option value="">-- Select Estate --</option>
+                                        @foreach($estate as $data)
+                                            @if($data->id != $meter->estate_id)
+                                                <option value="{{$data->id}}">{{$data->title}}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-4 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-warning flex-fill">
+                                        Migrate Meter & Customer
+                                    </button>
+                                </div>
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+            <div class="row">
+
+                <div class="card">
+
+                    <div class="card-body">
+
                         <div class="row">
                             <div class="col-xl-12">
                                 <div class="card overflow-hidden">

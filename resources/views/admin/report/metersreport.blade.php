@@ -540,7 +540,7 @@
                                 </div>
 
                                 <div class="d-flex justify-content-end mb-3">
-                                    <a href="{{ route('export.meters', 'excel') }}" class="btn btn-success me-2">
+                                    <a href="{{ route('export.meters') }}" class="btn btn-success me-2">
                                         Export to Excel
                                     </a>
                                     <a href="{{ route('export.meters', 'pdf') }}" class="btn btn-danger">

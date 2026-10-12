@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Meter;
 use App\Contracts\PaymentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Transaction\TransactionController;
+use App\Models\Auditlog;
 use App\Models\CreditToken;
 use App\Models\Estate;
 use App\Models\KctMeterToken;
@@ -19,6 +20,7 @@ use App\Models\Transformer;
 use App\Models\User;
 use App\Models\UtilitiesPayment;
 use App\Models\Utility;
+use App\Services\EmergencyTokenService;
 use App\Services\StandardResponse;
 use App\Services\TokenGenerationService;
 use Exception;
@@ -442,7 +444,10 @@ class MeterController extends Controller
                 $request->receiver_meterNo
             );
 
+            $paymentOptions = payment_option_detail($auth_user->estate_id, $request->amount, 'vending', true);
+
             $values['utilityAmount'] = $values['arrearsOwed'];
+            $values['paymentOptions'] = $paymentOptions;
             return StandardResponse::success(200, 'Token values calculated successfully', $values);
         } catch (Exception $e) {
             return StandardResponse::error(422, $e->getMessage());
@@ -505,7 +510,8 @@ class MeterController extends Controller
 
             if ($trx->status === 0) {
                 $verifier = app()->makeWith(PaymentServiceInterface::class, ['provider' => $trx->pay_type]);
-                $verifier = $verifier->verifyTransaction($trx->trx_id);
+                // Payment ref is same as trx_id for paystack transaction so the switch is harmless whereas remita needs payment ref
+                $verifier = $verifier->verifyTransaction($trx->payment_ref);
 
                 if (! $verifier['is_successful']) {
 
@@ -598,6 +604,75 @@ class MeterController extends Controller
         }
     }
 
+
+    public function getEmergencyToken(Request $request)
+    {
+        $auth_user = Auth::user();
+
+        if ($auth_user->role != 0) {
+            return StandardResponse::error(403, 'Unauthorized: Only super admins can generate emergency tokens');
+        }
+
+        $maxAmount = (int) (app(\App\Services\ConfigManagementService::class)
+            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+
+        $validator = Validator::make($request->all(), [
+            'meterNo' => ['required', 'integer', Rule::exists('meters', 'meterNo')],
+            'tariff_id' => ['required', 'integer', Rule::exists('tariffs', 'id')],
+            'amount' => 'required|numeric|min:1|max:' . $maxAmount,
+        ]);
+
+        if ($validator->fails()) {
+            return StandardResponse::error(422, 'Validation Error', [
+                'validation_error' => $validator->errors(),
+            ]);
+        }
+
+        if ((float) $request->amount > $maxAmount) {
+            return StandardResponse::error(422, 'Amount cannot exceed NGN ' . number_format($maxAmount, 2));
+        }
+
+        $meter = Meter::where('meterNo', $request->meterNo)->first();
+
+        if (! $meter) {
+            return StandardResponse::error(404, 'Meter not found');
+        }
+
+        try {
+            $result = EmergencyTokenService::generate(
+                $meter,
+                (int) $request->tariff_id,
+                (int) $request->amount
+            );
+        } catch (Exception $e) {
+            return StandardResponse::error(422, $e->getMessage());
+        }
+
+        return StandardResponse::success(200, 'Emergency token generated successfully', $result);
+    }
+
+    public function emergency_token_index(Request $request)
+    {
+        $auth_user = Auth::user();
+
+        if ($auth_user->role != 0) {
+            return redirect()->back()->with('error', 'Unauthorized: Only super admins can access emergency tokens');
+        }
+
+        $data['estate'] = Estate::all();
+        $data['max_emergency_token'] = (int) (app(\App\Services\ConfigManagementService::class)
+            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+        $data['emergency_credit_tokens'] = CreditToken::where('trx_id', 'like', 'emg_ref%')
+            ->latest()
+            ->paginate(20);
+
+        $data['emergency_logs'] = Logger::where('level', 'critical')
+            ->where('message', 'Emergency token generated')
+            ->latest()
+            ->paginate(20);
+
+        return view('admin.token.emergency-token-view', $data);
+    }
 
     public function retry_meter_token(request $request)
     {
@@ -999,9 +1074,13 @@ class MeterController extends Controller
         if (Auth::user()->role == 0) {
 
             $data['meters'] = Meter::count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')
-                ->when(trim($request->estate_id ?? '') !== '', fn($q) => $q->where('estate_id', $request->estate_id))
-                ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo))
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])
+                    ->orderBy('created_at', 'desc')
+                    ->when(trim($request->estate_id ?? '') !== '', fn($q) => $q->where('estate_id', $request->estate_id))
+                    ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo)),
+                $request
+            )
                 ->paginate('20')
                 ->withQueryString();
             $data['estate'] = Estate::where('status', 2)->get();
@@ -1015,10 +1094,14 @@ class MeterController extends Controller
         } elseif (Auth::user()->role == 3) {
 
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
-            $data['meters'] = Meter::count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')
-                ->where('estate_id', Auth::user()->estate_id)
-                ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo))
+            $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)->count();
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])
+                    ->orderBy('created_at', 'desc')
+                    ->where('estate_id', Auth::user()->estate_id)
+                    ->when($request->filled('meterNo'), fn($q) => $q->where('meterNo', $request->meterNo)),
+                $request
+            )
                 ->paginate('20')
                 ->withQueryString();
             return view('admin/meter/meter-lists', $data);
@@ -1035,13 +1118,36 @@ class MeterController extends Controller
 
     }
 
+    private function applyMeterSearch($query, $request)
+    {
+        return $query->when($request->filled('search'), function ($q) use ($request) {
+            $term = $request->search;
+
+            $q->where(function ($q) use ($term) {
+                $q->where('meterNo', 'like', '%'.$term.'%')
+                    ->orWhereHas('estate', fn($eq) => $eq->where('title', 'like', '%'.$term.'%'))
+                    ->orWhereHas('user', function ($uq) use ($term) {
+                        $uq->where('first_name', 'like', '%'.$term.'%')
+                            ->orWhere('last_name', 'like', '%'.$term.'%')
+                            ->orWhere('email', 'like', '%'.$term.'%')
+                            ->orWhere('phone', 'like', '%'.$term.'%');
+                    });
+            });
+        });
+    }
+
     public function list_meter(request $request)
     {
 
         if (Auth::user()->role == 0) {
 
             $data['meters'] = Meter::count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')->paginate('20');
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])->orderBy('created_at', 'desc'),
+                $request
+            )
+                ->paginate('20')
+                ->withQueryString();
             $data['estate'] = Estate::where('status', 2)->get();
             return view('admin/meter/meter-lists', $data);
 
@@ -1053,7 +1159,14 @@ class MeterController extends Controller
         } elseif (Auth::user()->role == 3) {
 
             $data['meters'] = Meter::where('estate_id', Auth::user()->estate_id)->count();
-            $data['meter_lists'] = Meter::orderBy('created_at', 'desc')->where('estate_id', Auth::user()->estate_id)->paginate('20');
+            $data['meter_lists'] = $this->applyMeterSearch(
+                Meter::with(['estate', 'user'])
+                    ->orderBy('created_at', 'desc')
+                    ->where('estate_id', Auth::user()->estate_id),
+                $request
+            )
+                ->paginate('20')
+                ->withQueryString();
             $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
 
             return view('admin/meter/meter-lists', $data);
@@ -1447,6 +1560,132 @@ class MeterController extends Controller
         return redirect('admin/meter-list')->with('message', "Meter updated successfully");
 
 
+    }
+
+
+    public function migrate_meter_estate(request $request)
+    {
+        if (Auth::user()->role != 0) {
+            return back()->with('error', 'Only super admins can migrate meters between estates');
+        }
+
+        $meter = Meter::find($request->meter_id);
+
+        if (!$meter) {
+            return back()->with('error', 'Meter not found');
+        }
+
+        $new_estate = Estate::find($request->estate_id);
+
+        if (!$new_estate) {
+            return back()->with('error', 'Estate not found');
+        }
+
+        if ($meter->estate_id == $new_estate->id) {
+            return back()->with('error', 'Meter already belongs to this estate');
+        }
+
+        $old_estate = Estate::find($meter->estate_id);
+
+        $old_values = [
+            'meter_id' => $meter->id,
+            'meter_no' => $meter->meterNo,
+            'estate_id' => $meter->estate_id,
+            'estate_name' => $old_estate->title ?? null,
+            'TransformerID' => $meter->TransformerID,
+            'OldTariffID' => $meter->OldTariffID,
+            'NewTariffID' => $meter->NewTariffID,
+            'OldTariffDualID' => $meter->OldTariffDualID,
+            'NewTariffDualID' => $meter->NewTariffDualID,
+            'customers' => [],
+        ];
+
+        $map_tariff = function ($tariff_id, $types, $estate_id) {
+            if (!$tariff_id) {
+                return null;
+            }
+
+            $old_tariff = Tariff::find($tariff_id);
+
+            if (!$old_tariff || !$old_tariff->tariff_index) {
+                return null;
+            }
+
+            $match = Tariff::where('estate_id', $estate_id)
+                ->where('tariff_index', $old_tariff->tariff_index)
+                ->whereIn('type', $types)
+                ->where('status', 2)
+                ->first();
+
+            return $match ? $match->id : null;
+        };
+
+        $old_tariff_id = $meter->OldTariffID;
+        $new_tariff_id = $meter->NewTariffID;
+        $old_tariff_dual_id = $meter->OldTariffDualID;
+        $new_tariff_dual_id = $meter->NewTariffDualID;
+
+        $meter->OldTariffID = $map_tariff($old_tariff_id, ['nepa', 'Grid'], $new_estate->id);
+        $meter->NewTariffID = $map_tariff($new_tariff_id, ['nepa', 'Grid'], $new_estate->id);
+        $meter->OldTariffDualID = $map_tariff($old_tariff_dual_id, ['gen', 'Off Grid'], $new_estate->id);
+        $meter->NewTariffDualID = $map_tariff($new_tariff_dual_id, ['gen', 'Off Grid'], $new_estate->id);
+        $meter->OldTariffDual = $meter->OldTariffDualID;
+        $meter->NewTariffDual = $meter->NewTariffDualID;
+        $meter->TransformerID = null;
+        $meter->estate_id = $new_estate->id;
+
+        $customer_ids = User::where('id', $meter->user_id)
+            ->orWhere('meterid', $meter->id)
+            ->orWhere('meterNo', $meter->meterNo)
+            ->pluck('id');
+
+        $customers = User::whereIn('id', $customer_ids)->get();
+
+        foreach ($customers as $customer) {
+            $old_values['customers'][] = [
+                'id' => $customer->id,
+                'name' => $customer->first_name . ' ' . $customer->last_name,
+                'estate_id' => $customer->estate_id,
+                'estate_name' => $customer->estate_name,
+            ];
+        }
+
+        DB::transaction(function () use ($meter, $customers, $new_estate) {
+            $meter->save();
+
+            User::whereIn('id', $customers->pluck('id'))->update([
+                'estate_id' => $new_estate->id,
+                'estate_name' => $new_estate->title,
+            ]);
+        });
+
+        $new_values = [
+            'meter_id' => $meter->id,
+            'meter_no' => $meter->meterNo,
+            'estate_id' => $meter->estate_id,
+            'estate_name' => $new_estate->title,
+            'TransformerID' => $meter->TransformerID,
+            'OldTariffID' => $meter->OldTariffID,
+            'NewTariffID' => $meter->NewTariffID,
+            'OldTariffDualID' => $meter->OldTariffDualID,
+            'NewTariffDualID' => $meter->NewTariffDualID,
+            'customers' => $customers->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->first_name . ' ' . $c->last_name,
+                'estate_id' => $new_estate->id,
+                'estate_name' => $new_estate->title,
+            ])->values()->all(),
+        ];
+
+        $aud = new Auditlog();
+        $aud->user_id = Auth::id();
+        $aud->name = Auth::user()->first_name . ' ' . Auth::user()->last_name;
+        $aud->old_values = json_encode($old_values);
+        $aud->new_values = json_encode($new_values);
+        $aud->action = 'Meter Estate Migration';
+        $aud->save();
+
+        return back()->with('message', "Meter and its customer migrated to " . strtoupper($new_estate->title) . " successfully");
     }
 
 

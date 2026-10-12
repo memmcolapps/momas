@@ -138,6 +138,13 @@
                         </li>
 
                         <li>
+                            <a class='tp-link' href="/admin/beneficiary">
+                                <i data-feather="user-plus"></i>
+                                <span> Beneficiaries </span>
+                            </a>
+                        </li>
+
+                        <li>
                             <a class='tp-link' href="/admin/transformer-list">
                                 <i data-feather="box"></i>
                                 <span> Transformer </span>
@@ -213,6 +220,13 @@
                                     </li>
                                 </ul>
                             </div>
+                        </li>
+
+                        <li>
+                            <a class='tp-link' href="/admin/emergency-token">
+                                <i data-feather="alert-triangle"></i>
+                                <span> Emergency Token </span>
+                            </a>
                         </li>
 
                         <li>

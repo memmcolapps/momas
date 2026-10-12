@@ -70,9 +70,17 @@
                                                         <label class="my-2">Bank</label>
                                                         <select name="bank" id="bank-select" class="form-control">
                                                             @foreach($paystackbank['data'] as $bank)
-                                                                <option value="{{ $bank['code'] }}">{{ $bank['name'] }}</option>
+                                                                <option value="{{ $bank['code'] }}"
+                                                                        data-name="{{ $bank['name'] ?? '' }}"
+                                                                        data-slug="{{ $bank['slug'] ?? '' }}"
+                                                                        data-paystack-code="{{ $bank['longcode'] ?? $bank['code'] ?? '' }}">
+                                                                    {{ $bank['name'] }}
+                                                                </option>
                                                             @endforeach
                                                         </select>
+                                                        <input type="hidden" name="bank_name" id="bank_name" value="">
+                                                        <input type="hidden" name="bank_slug" id="bank_slug" value="">
+                                                        <input type="hidden" name="bank_paystack_code" id="bank_paystack_code" value="">
                                                     </div>
 
                                                     <div class="col-xl-6 col-sm-12">
@@ -97,6 +105,16 @@
                                             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
                                             <script>
                                                 $(document).ready(function(){
+                                                    function syncBankHiddenFields() {
+                                                        var selected = $('#bank-select option:selected');
+                                                        $('#bank_name').val(selected.data('name') || '');
+                                                        $('#bank_slug').val(selected.data('slug') || '');
+                                                        $('#bank_paystack_code').val(selected.data('paystack-code') || '');
+                                                    }
+
+                                                    $('#bank-select').on('change', syncBankHiddenFields);
+                                                    syncBankHiddenFields();
+
                                                     // When the account number input loses focus
                                                     $('#account_no').on('blur', function(){
                                                         var accountNo = $(this).val().trim();
@@ -430,6 +448,9 @@
 
                     <div class="card " style="background: #f3ffff">
                         <div class="card-body">
+
+                            <h6 class="d-flex justify-content-start my-2" style="font-weight: 600;">Estate Settings</h6>
+
                             <form action="estate-update-vat" method="post">
                                 @csrf
 
@@ -536,6 +557,83 @@
 
                                         <input type="text" name="estate_id" value="{{$org->id}}" hidden>
                                     </div>
+                                </div>
+
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="estate-update-transaction-fee" method="post">
+                                @csrf
+
+                                <h6 class="d-flex justify-content-start my-4">Transaction Fee</h6>
+
+                                <div class="row">
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Transaction Fee Type</label>
+                                        <select name="transaction_fee_type" class="form-select" required>
+                                            <option value="{{ \App\Constants\TransactionFeeType::FLAT }}"
+                                                @selected(($org->transaction_fee_type ?? \App\Constants\TransactionFeeType::FLAT) == \App\Constants\TransactionFeeType::FLAT)>
+                                                Flat
+                                            </option>
+                                            <option value="{{ \App\Constants\TransactionFeeType::PERCENTAGE }}"
+                                                @selected($org->transaction_fee_type == \App\Constants\TransactionFeeType::PERCENTAGE)>
+                                                Percentage
+                                            </option>
+                                        </select>
+
+                                        <input type="text" name="estate_id" value="{{$org->id}}" hidden>
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Transaction Fee</label>
+                                        <input type="number" step="0.01" min="0" name="transaction_fee"
+                                               value="{{$org->transaction_fee ?? 0}}"
+                                               class="form-control"
+                                               required>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
+                                    Update
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="estate-update-payment-gateways" method="post">
+                                @csrf
+                                <input type="hidden" name="estate_id" value="{{ $org->id }}">
+
+                                <h6 class="d-flex justify-content-start my-4">Payment Gateways</h6>
+
+                                @php
+                                    $all_gateways = [
+                                        'paystack' => 'Paystack',
+                                        'remita' => 'Remita',
+                                    ];
+                                    $active_values = array_column(
+                                        available_payment_gateways(array_keys($all_gateways), $org->id),
+                                        'value'
+                                    );
+                                @endphp
+
+                                <div class="row">
+                                    @foreach($all_gateways as $value => $label)
+                                        <div class="col-xl-3 col-sm-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="payment_gateways[]"
+                                                       value="{{ $value }}"
+                                                       id="gateway_{{ $value }}"
+                                                       {{ in_array($value, $active_values) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="gateway_{{ $value }}">{{ $label }}</label>
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
 
                                 <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">

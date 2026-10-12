@@ -3,17 +3,20 @@
 namespace App\Models;
 
 use App\Constants\ServiceTypeConstants;
+use App\Contracts\PaymentServiceInterface;
 use App\Events\MeterTokenGenerated;
-use App\Services\PaystackPaymentService;
-use App\Services\LedgerService;
-use App\Services\TokenGenerationService;
 use App\Models\UtilitiesPayment;
+use App\Services\LedgerService;
+use App\Services\PaystackPaymentService;
+use App\Services\TokenGenerationService;
 use App\Services\VatCalculator;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class Meter extends Model
 {
@@ -305,21 +308,98 @@ class Meter extends Model
         }
 
         return [
+            'tariffAmount' => (string) $tariffAmount,
+            'vat' => (string) round($vat, 2),
+            'fixedCharge' => (string) round($fixedCharge, 2),
+            'serviceFee' => (string) round($transactionCharge, 2),
+            'afterServiceFee' => (string) round($afterServiceFee, 2),
+            'estateFee' => (string) round($estateFee, 2),
+            'afterEstateFee' => (string) round($afterEstateFee, 2),
+            'arrearsOwed' => (string) round($arrearsAmount, 2),
+            'afterArrears' => (string) round($afterArrears, 2),
+            'utilityOwed' => (string) round($utilityOwed, 2),
+            'afterUtility' => (string) round($afterUtility, 2),
+            'afterFixedCharge' => (string) round($afterFixedCharge, 2),
+            'vatAmount' => (string) round($vatAmount, 2),
+            'vendingAmount' => (string) round($vending_amount, 2),
+            'unit' => (string) round($unit, 2),
+        ];
+    }
+
+    /**
+     * Calculate emergency token values deducting the transaction fee only.
+     *
+     * Unlike calculateTokenValuesByAmount, no estate fee, arrears, debt-type
+     * utility owed or tariff fixed charge is subtracted: only the transaction
+     * charge reduces the amount before VAT is applied.
+     *
+     * @param int $tariff_id The ID of the tariff to use for calculations
+     * @param int $amount The amount in Naira to calculate token values for
+     * @return array Array of calculated values including fees, charges, and unit details
+     * @throws \Exception When the amount is too small after the fee or unit is less than 0.1KWh
+     */
+    public function calculateEmergencyTokenValuesByAmount(int $tariff_id, int $amount): array
+    {
+        $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+        $tariffAmount = $tariffState->amount ?? 0;
+        $vat = $tariffState->vat ?? 0;
+        $fixedCharge = $tariffState->fixed_charge ?? 0;
+
+        // [1] Transaction charge (the only deduction)
+        $transactionCharge = calculate_transaction_charge($amount);
+
+        $afterServiceFee = $amount - $transactionCharge;
+
+        $estateFee = 0;
+        $afterEstateFee = $afterServiceFee;
+        $arrearsAmount = 0;
+        $afterArrears = $afterServiceFee;
+        $utilityOwed = 0;
+        $afterUtility = $afterServiceFee;
+        $afterFixedCharge = $afterServiceFee;
+
+        // Validate that amount after the fee is not negative or too small
+        if ($afterFixedCharge <= 0) {
+            $minimumRequired = $transactionCharge + 10;
+            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($transactionCharge, 2) .
+                '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
+                '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
+        }
+
+        // [2] VAT Calculation on remaining amount
+        $calculator = new VatCalculator();
+
+        $params = [
+            'amountText' => $afterFixedCharge,
             'tariffAmount' => $tariffAmount,
-            'vat' => round($vat, 2),
-            'fixedCharge' => round($fixedCharge, 2),
-            'serviceFee' => round($transactionCharge, 2),
-            'afterServiceFee' => round($afterServiceFee, 2),
-            'estateFee' => round($estateFee, 2),
-            'afterEstateFee' => round($afterEstateFee, 2),
-            'arrearsOwed' => round($arrearsAmount, 2),
-            'afterArrears' => round($afterArrears, 2),
-            'utilityOwed' => round($utilityOwed, 2),
-            'afterUtility' => round($afterUtility, 2),
-            'afterFixedCharge' => round($afterFixedCharge, 2),
-            'vatAmount' => round($vatAmount, 2),
-            'vendingAmount' => round($vending_amount, 2),
-            'unit' => round($unit, 2),
+            'utilitiesAmount' => $utilityOwed,
+            'vat' => $vat,
+        ];
+
+        $vatAmount = $calculator->calculateVatAmount($params);
+        $vending_amount = $calculator->calculateCostOfUnit($params);
+        $unit = $calculator->calculateTariffAmountPerKWatt($params);
+
+        if ($unit < 0.1) {
+            throw new Exception('Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
+        }
+
+        return [
+            'tariffAmount' => (string) $tariffAmount,
+            'vat' => (string) round($vat, 2),
+            'fixedCharge' => (string) round($fixedCharge, 2),
+            'serviceFee' => (string) round($transactionCharge, 2),
+            'afterServiceFee' => (string) round($afterServiceFee, 2),
+            'estateFee' => (string) round($estateFee, 2),
+            'afterEstateFee' => (string) round($afterEstateFee, 2),
+            'arrearsOwed' => (string) round($arrearsAmount, 2),
+            'afterArrears' => (string) round($afterArrears, 2),
+            'utilityOwed' => (string) round($utilityOwed, 2),
+            'afterUtility' => (string) round($afterUtility, 2),
+            'afterFixedCharge' => (string) round($afterFixedCharge, 2),
+            'vatAmount' => (string) round($vatAmount, 2),
+            'vendingAmount' => (string) round($vending_amount, 2),
+            'unit' => (string) round($unit, 2),
         ];
     }
 
@@ -425,11 +505,12 @@ class Meter extends Model
                     throw new Exception ("Transaction already completed please restart a new transaction to generate token");
                 }
 
-                $paystack_engine = new PaystackPaymentService();
+                $provider = $trx->pay_type;
+                $paymentService = app()->makeWith(PaymentServiceInterface::class, [ 'provider' => $provider]);
 
                 $verifier_engine = match ($verify) {
-                    "verify" => fn($arg) => $paystack_engine->verifyTransaction($arg),
-                    "poll" => fn($arg) => $paystack_engine->pollTransactionStatus($arg),
+                    "verify" => fn($arg) => $paymentService->verifyTransaction($arg),
+                    "poll" => fn($arg) => $paymentService->pollTransactionStatus($arg),
                     "null" => fn($arg) => [
                         'is_successful' => true,
                         'status' => true,
@@ -439,7 +520,7 @@ class Meter extends Model
 
 
                 if ($trx->status === 0) {
-                    $verify = $verifier_engine($trx_id);
+                    $verify = $verifier_engine($trx->payment_ref);
 
                     if (! $verify['is_successful']) {
                         Logger::error('verify_transaction failed', [
@@ -479,6 +560,7 @@ class Meter extends Model
                     'service_type' => $service_type,
                     'tariff_id' => $tariff_id,
                     'unit_amount' => $vending_amount,
+                    'breakdown' => $calculatedValues,
                     // 'vat' => $vatAmount,
                 ]);
 
@@ -626,7 +708,7 @@ class Meter extends Model
         $user = User::where('id', $payerUserId)->firstOrFail();
         $estate = Estate::where('id', $this->estate_id)->firstOrFail();
 
-        if (!LedgerService::estateSupportsPostpaid($estate)) {
+        if (!LedgerService::estateSupportsPostpaid($estate) && !Auth::user()->isSuperAdmin()) {
             throw new Exception('This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
         }
 
@@ -681,6 +763,7 @@ class Meter extends Model
                 'service_type'     => $service_type,
                 'tariff_id'        => $tariff_id,
                 'status'           => 2,
+                'breakdown'        => $calculatedValues,
             ]);
 
             $tariff = Tariff::where('id', $tariff_id)->first();
@@ -784,6 +867,135 @@ class Meter extends Model
         });
 
         return $postpaid_token;
+    }
+
+    /**
+     * Generate an emergency token for the meter without a transaction or ledger.
+     *
+     * Calculates the token values, generates the meter token via the vending
+     * server, stores it in the credit_tokens and meter_tokens tables, and
+     * audits the action with the creator and owner details.
+     *
+     * @param int $tariff_id The ID of the tariff to use
+     * @param int $amount The amount in Naira to convert to units
+     * @return array The generated token details
+     * @throws \Exception When the meter has no owner, the tariff is missing,
+     *                    the amount is too small, or token generation fails
+     */
+    public function getEmergencyToken(int $tariff_id, int $amount): array
+    {
+        $owner = User::find($this->user_id);
+
+        if (! $owner) {
+            throw new Exception('Meter is not attached to any customer');
+        }
+
+        $tariff = Tariff::find($tariff_id);
+
+        if (! $tariff) {
+            throw new Exception('Tariff not found');
+        }
+
+        $calculated = $this->calculateTokenValuesByAmount($tariff_id, $amount);
+
+        $unit = $calculated['unit'];
+        $vat = $calculated['vat'];
+        $vatAmount = $calculated['vatAmount'];
+        $vendingAmount = $calculated['vendingAmount'];
+
+        $token_gen = TokenGenerationService::generateMeterToken(
+            $this,
+            $tariff->tariff_index,
+            $unit,
+            $this->NeedKCT
+        );
+
+        if (! $token_gen['success']) {
+            Logger::error('Emergency token generation failed', [
+                'meterNo' => $this->meterNo,
+                'tariff_id' => $tariff_id,
+                'amount' => $amount,
+                'unit' => $unit,
+                'owner_id' => $this->user_id,
+            ]);
+
+            throw new Exception('Emergency token generation failed, please try again');
+        }
+
+        $token = $token_gen['data']['token'];
+        $kct_tokens = $token_gen['data']['kct_token'] ?? null;
+        $kct_string = $kct_tokens ? implode(',', $kct_tokens) : null;
+
+        $emergency_ref = 'emg_ref' . Str::upper(Str::random(7));
+
+        CreditToken::create([
+            'trx_id' => $emergency_ref,
+            'user_id' => $this->user_id,
+            'meterNo' => $this->meterNo,
+            'amount' => $vendingAmount,
+            'amount_charged' => $amount,
+            'customer_email' => $owner->email,
+            'unitkwh' => $unit,
+            'vat' => $vat,
+            'estate_id' => $this->estate_id,
+            'estate_name' => $owner->estate_name,
+            'token' => $token,
+            'status' => 2,
+            'vatAmount' => $vatAmount,
+            'tariff_amount' => $calculated['tariffAmount'],
+            'tariff_id' => $tariff_id,
+            'kct_tokens' => $kct_string,
+        ]);
+
+        $meterToken = new MeterToken();
+        $meterToken->user_id = $this->user_id;
+        $meterToken->trx_id = $emergency_ref;
+        $meterToken->meterNo = $this->meterNo;
+        $meterToken->token = $token;
+        $meterToken->amount = $amount;
+        $meterToken->unit = $unit;
+        $meterToken->vat = $vat;
+        $meterToken->kct_tokens = $kct_string;
+        $meterToken->estate_id = $this->estate_id;
+        $meterToken->status = 2;
+        $meterToken->save();
+
+        $creator = auth()->user();
+
+        Logger::critical('Emergency token generated', [
+            'emergency_ref' => $emergency_ref,
+            'token' => $token,
+            'meter' => [
+                'id' => $this->id,
+                'meterNo' => $this->meterNo,
+                'estate_id' => $this->estate_id,
+            ],
+            'tariff_id' => $tariff_id,
+            'amount' => $amount,
+            'unit' => $unit,
+            'kct_tokens' => $kct_tokens,
+            'creator' => [
+                'id' => $creator->id ?? null,
+                'name' => ($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''),
+                'email' => $creator->email ?? null,
+                'role' => $creator->role ?? null,
+            ],
+            'owner' => [
+                'id' => $owner->id,
+                'name' => ($owner->first_name ?? '') . ' ' . ($owner->last_name ?? ''),
+                'email' => $owner->email,
+            ],
+        ]);
+
+        return [
+            'emergency_ref' => $emergency_ref,
+            'token' => $token,
+            'kct_tokens' => $kct_tokens,
+            'meterNo' => $this->meterNo,
+            'amount' => $amount,
+            'unit' => $unit,
+            'tariff_id' => $tariff_id,
+        ];
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Contracts;
 
 interface PaymentServiceInterface
 {
+    public const providerName = '';
+
     public function getPublicKey(): ?string;
 
     public function getSecretKey(): ?string;
