@@ -22,8 +22,19 @@ class LedgerService
     public static function computeTransactionFee($transaction): float
     {
         $amount = $transaction->vending_amount ?? $transaction->amount;
+        $estate = $transaction->estate;
+        $fee_type = $estate->transaction_fee_type;
+        $fee = $estate->transaction_fee;
 
-        return round((float) $amount * 0.01, 2);
+        if ($fee_type == 'flat') {
+            return $fee;
+        }
+
+        $uncapped_fee = ($fee / 100) * $amount;
+        $momas_max = config('constants.momas_max_transaction_fee') - 2000; // subtract paystack fee from the cap to get momas only cap
+        $capped_fee = max($uncapped_fee, $momas_max);
+
+        return $capped_fee;
     }
 
     public static function recordTransactionLedger(
