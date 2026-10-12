@@ -559,9 +559,20 @@
                                     </div>
                                 </div>
 
-                                <button type="submit" class="col-xl-2 col-sm-12 my-2 d-flex btn btn-primary">
-                                    Update
-                                </button>
+                                <div class="row">
+                                    <div class="col-xl-5 col-sm-12 my-2">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            Update
+                                        </button>
+                                    </div>
+
+                                    <div class="col-xl-5 col-sm-12 my-2">
+                                        <a href="{{ route('postpaid.accumulation-due', $org->id) }}"
+                                           class="btn btn-secondary text-white w-100">
+                                            Postpaid Accumulation Due
+                                        </a>
+                                    </div>
+                                </div>
                             </form>
 
                             <hr class="my-4">
