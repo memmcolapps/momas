@@ -227,7 +227,7 @@ class Meter extends Model
      * @return array Array of calculated values including service fees, charges, utility owed, and unit details
      * @throws \Exception When the amount is too small after deductions or unit is less than 0.1KWh
      */
-    public function calculateTokenValuesByAmount(int $tariff_id, int $amount, ?string $receiverMeterNo = null): array
+    public function calculateTokenValuesByAmount(int $tariff_id, int $amount, ?string $receiverMeterNo = null, bool $applyTransactionFee = true): array
     {
         $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
         $tariffAmount = $tariffState->amount ?? 0;
@@ -236,7 +236,7 @@ class Meter extends Model
 
         // [1] 2.5% Service Fee
 
-        $transactionCharge = calculate_transaction_charge($amount);
+        $transactionCharge = $applyTransactionFee ? calculate_transaction_charge($amount) : 0;
 
         $afterServiceFee = $amount - $transactionCharge;
 
@@ -734,7 +734,8 @@ class Meter extends Model
             $calculatedValues = $this->calculateTokenValuesByAmount(
                 $tariff_id,
                 (int) $amount,
-                $receiver_meterNo
+                $receiver_meterNo,
+                false
             );
 
             $tariffAmount = $calculatedValues['tariffAmount'];
