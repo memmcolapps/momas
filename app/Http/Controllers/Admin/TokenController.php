@@ -6533,7 +6533,7 @@ class TokenController extends Controller
                 return redirect("/admin/postpaid-accumulation-due/{$estate->id}");
             }
 
-            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount, null, false);
 
             $data['vatAmount'] = $calculatedValues['vatAmount'];
             $data['costOfUnit'] = $calculatedValues['vendingAmount'];
@@ -6605,7 +6605,7 @@ class TokenController extends Controller
                 return redirect()->route('postpaid.accumulation-due', $estate->id);
             }
 
-            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount, null, false);
 
             $data['vatAmount'] = $calculatedValues['vatAmount'];
             $data['costOfUnit'] = $calculatedValues['vendingAmount'];
