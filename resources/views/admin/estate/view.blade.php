@@ -73,7 +73,8 @@
                                                                 <option value="{{ $bank['code'] }}"
                                                                         data-name="{{ $bank['name'] ?? '' }}"
                                                                         data-slug="{{ $bank['slug'] ?? '' }}"
-                                                                        data-paystack-code="{{ $bank['longcode'] ?? $bank['code'] ?? '' }}">
+                                                                        data-paystack-code="{{ $bank['longcode'] ?? $bank['code'] ?? '' }}"
+                                                                        @selected(($org->bank ?? '') == $bank['code'])>
                                                                     {{ $bank['name'] }}
                                                                 </option>
                                                             @endforeach
@@ -85,7 +86,7 @@
 
                                                     <div class="col-xl-6 col-sm-12">
                                                         <label class="my-2">Account No</label>
-                                                        <input type="text" name="account_no" id="account_no" class="form-control" placeholder="Enter account number">
+                                                        <input type="text" name="account_no" id="account_no" class="form-control" value="{{ $org->account_no ?? '' }}" placeholder="Enter account number">
                                                         <input type="text" name="id" value="{{$org->id}}" hidden>
 
 
@@ -94,7 +95,7 @@
 
                                                     <div class="col-xl-12 col-sm-12">
                                                         <label class="my-2">Account Name</label>
-                                                        <input type="text" name="account_name" id="account_name" class="form-control" placeholder="Account name will appear here" readonly>
+                                                        <input type="text" name="account_name" id="account_name" class="form-control" value="{{ $org->account_name ?? '' }}" placeholder="Account name will appear here" readonly>
                                                     </div>
                                                 </div>
                                             </div>
