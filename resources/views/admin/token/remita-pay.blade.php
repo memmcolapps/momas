@@ -47,7 +47,8 @@
                                 Click the button below to complete your payment.
                             </p>
 
-                            <script src="https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js"></script>
+                            <!-- <script src="https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js"></script> -->
+                             <script src="https://login.remita.net/payment/v1/remita-pay-inline.bundle.js"></script>
                             <input type="hidden" id="rrr" value="{{ $rrr }}">
 
                             <script>
