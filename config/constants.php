@@ -27,6 +27,11 @@ return [
         'https://login.remita.net/payment/v1/remita-pay-inline.bundle.js'
     ),
 
+    'remita_base_url' => env(
+        'REMITA_BASE_URL',
+        'https://login.remita.net'
+    ),
+
     'remita_rrr_generate_endpoint' => 'https://standardpay.remita.net/api/rrr/GenerateRRR',
 
     'status' => [  //Uninversal status and status code for uniformity and easy refactoring in case of future change

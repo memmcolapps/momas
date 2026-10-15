@@ -48,7 +48,7 @@
                             </p>
 
                             <!-- <script src="https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js"></script> -->
-                             <script src="https://login.remita.net/payment/v1/remita-pay-inline.bundle.js"></script>
+                             <script src="{{ config('constants.remita_base_url') }}/payment/v1/remita-pay-inline.bundle.js"></script>
                             <input type="hidden" id="rrr" value="{{ $rrr }}">
 
                             <script>
