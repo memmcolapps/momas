@@ -37,7 +37,7 @@ class LedgerService
 
         $uncapped_fee = ($fee / 100) * $amount;
         $momas_max = config('constants.momas_max_transaction_fee') - 2000; // subtract paystack fee from the cap to get momas only cap
-        $capped_fee = max($uncapped_fee, $momas_max);
+        $capped_fee = min($uncapped_fee, $momas_max);
 
         return $capped_fee;
     }

@@ -528,6 +528,14 @@
                                         </div>
                                     </div>
 
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Emergency Token Max</label>
+                                        <input type="number" step="1" min="1" name="emergency_token_max"
+                                               value="{{ $org->emergency_token_max ?? 10000 }}"
+                                               class="form-control"
+                                               required>
+                                    </div>
+
                                 </div>
 
 

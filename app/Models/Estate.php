@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ConfigManagementService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -25,6 +26,7 @@ class Estate extends Model
         'estate_meter_vending_type',
         'transaction_fee_type',
         'transaction_fee',
+        'emergency_token_max',
         'created_at',
         'updated_at',
     ];
@@ -115,6 +117,7 @@ class Estate extends Model
         'minimum_vend_per_transaction' => 'boolean',
         'estate_meter_vending_type' => 'integer',
         'transaction_fee' => 'decimal:2',
+        'emergency_token_max' => 'integer',
     ];
 
     public function getUserMinPur($user_id)
@@ -136,5 +139,23 @@ class Estate extends Model
 
     public function getBank() {
         return Bank::firstWhere('id', $this->bank_id);
+    }
+
+    /**
+     * The maximum amount, in Naira, that an emergency token may be
+     * generated for within this estate.
+     *
+     * The estate level value takes precedence. When it is missing or zero
+     * the global configured maximum is used instead so estates that have
+     * not set a limit keep behaving as before.
+     */
+    public function getEmergencyTokenMax(): int
+    {
+        if ($this->emergency_token_max) {
+            return (int) $this->emergency_token_max;
+        }
+
+        return (int) (app(ConfigManagementService::class)
+            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
     }
 }

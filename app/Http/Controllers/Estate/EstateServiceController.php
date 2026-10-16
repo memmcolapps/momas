@@ -188,9 +188,17 @@ class EstateServiceController extends Controller
 
     public function estate_update_minpur(request $request)
     {
+        $request->validate([
+            'emergency_token_max' => 'required|integer|min:1',
+        ]);
+
         // Estate::where('id', $request->estate_id)->update(['min_pur' => $request->min_pur,  'max_pur' => $request->max_pur, 'vend_duration' => $request->vend_duration]);
         // Note: vend_duration commented out - column doesn't exist in DB and no form input for it
-        $update = ['min_pur' => $request->min_pur,  'max_pur' => $request->max_pur];
+        $update = [
+            'min_pur' => $request->min_pur,
+            'max_pur' => $request->max_pur,
+            'emergency_token_max' => $request->emergency_token_max,
+        ];
 
         if ($request->has('minimum_vend_per_transaction')) {
             $update['minimum_vend_per_transaction'] = (bool)$request->minimum_vend_per_transaction;

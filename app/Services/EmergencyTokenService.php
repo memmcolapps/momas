@@ -33,7 +33,8 @@ class EmergencyTokenService
      * @param int $tariff_id The ID of the tariff to use
      * @param int $amount The amount in Naira to convert to units and place as debt
      * @return array The generated token details
-     * @throws \Exception When the meter has no owner, the tariff is missing,
+     * @throws \Exception When the amount exceeds the estate max, the meter has
+     *                    no owner, the tariff is missing,
      *                    the customer has unpaid debt, the amount is too small,
      *                    or token generation fails
      */
@@ -45,8 +46,7 @@ class EmergencyTokenService
             $debtCheck = (new UtilityManagementService())
                 ->calculateUserOwedUtility($meter->user_id, $meter->estate_id);
 
-            $maxAmount = (int) (app(ConfigManagementService::class)
-                ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+            $maxAmount = $meter->getEmergencyTokenMax();
 
             if ($amount > $maxAmount) {
                 throw new Exception('Amount cannot exceed NGN ' . number_format($maxAmount, 2));
