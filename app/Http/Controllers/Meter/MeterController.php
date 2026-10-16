@@ -613,8 +613,13 @@ class MeterController extends Controller
             return StandardResponse::error(403, 'Unauthorized: Only super admins can generate emergency tokens');
         }
 
-        $maxAmount = (int) (app(\App\Services\ConfigManagementService::class)
-            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+        $meter = Meter::where('meterNo', $request->meterNo)->first();
+
+        if (! $meter) {
+            return StandardResponse::error(404, 'Meter not found');
+        }
+
+        $maxAmount = $meter->getEmergencyTokenMax();
 
         $validator = Validator::make($request->all(), [
             'meterNo' => ['required', 'integer', Rule::exists('meters', 'meterNo')],
@@ -626,16 +631,6 @@ class MeterController extends Controller
             return StandardResponse::error(422, 'Validation Error', [
                 'validation_error' => $validator->errors(),
             ]);
-        }
-
-        if ((float) $request->amount > $maxAmount) {
-            return StandardResponse::error(422, 'Amount cannot exceed NGN ' . number_format($maxAmount, 2));
-        }
-
-        $meter = Meter::where('meterNo', $request->meterNo)->first();
-
-        if (! $meter) {
-            return StandardResponse::error(404, 'Meter not found');
         }
 
         try {

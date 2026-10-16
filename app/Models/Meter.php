@@ -109,6 +109,27 @@ class Meter extends Model
     }
 
     /**
+     * The maximum amount, in Naira, allowed for an emergency token on
+     * this meter, taken from the meter's estate.
+     *
+     * Falls back to the global configured maximum when the estate row is
+     * unavailable.
+     *
+     * @return int
+     */
+    public function getEmergencyTokenMax(): int
+    {
+        $estate = Estate::find($this->estate_id);
+
+        if (! $estate) {
+            return (int) (app(\App\Services\ConfigManagementService::class)
+                ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+        }
+
+        return $estate->getEmergencyTokenMax();
+    }
+
+    /**
      * Calculate token values based on tariff and transaction amount.
      *
      * This method extracts the calculation logic for determining
@@ -227,7 +248,7 @@ class Meter extends Model
      * @return array Array of calculated values including service fees, charges, utility owed, and unit details
      * @throws \Exception When the amount is too small after deductions or unit is less than 0.1KWh
      */
-    public function calculateTokenValuesByAmount(int $tariff_id, int $amount, ?string $receiverMeterNo = null): array
+    public function calculateTokenValuesByAmount(int $tariff_id, int $amount, ?string $receiverMeterNo = null, bool $applyTransactionFee = true): array
     {
         $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
         $tariffAmount = $tariffState->amount ?? 0;
@@ -236,7 +257,7 @@ class Meter extends Model
 
         // [1] 2.5% Service Fee
 
-        $transactionCharge = calculate_transaction_charge($amount);
+        $transactionCharge = $applyTransactionFee ? calculate_transaction_charge($amount) : 0;
 
         $afterServiceFee = $amount - $transactionCharge;
 
@@ -734,7 +755,8 @@ class Meter extends Model
             $calculatedValues = $this->calculateTokenValuesByAmount(
                 $tariff_id,
                 (int) $amount,
-                $receiver_meterNo
+                $receiver_meterNo,
+                false
             );
 
             $tariffAmount = $calculatedValues['tariffAmount'];
@@ -879,11 +901,18 @@ class Meter extends Model
      * @param int $tariff_id The ID of the tariff to use
      * @param int $amount The amount in Naira to convert to units
      * @return array The generated token details
-     * @throws \Exception When the meter has no owner, the tariff is missing,
+     * @throws \Exception When the amount exceeds the estate max, the meter
+     *                    has no owner, the tariff is missing,
      *                    the amount is too small, or token generation fails
      */
     public function getEmergencyToken(int $tariff_id, int $amount): array
     {
+        $maxAmount = $this->getEmergencyTokenMax();
+
+        if ($amount > $maxAmount) {
+            throw new Exception('Amount cannot exceed NGN ' . number_format($maxAmount, 2));
+        }
+
         $owner = User::find($this->user_id);
 
         if (! $owner) {
