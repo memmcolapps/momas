@@ -215,6 +215,90 @@ class LoggedIssueController extends Controller
     }
 
     /**
+     * Display a dedicated page for resolved and closed issues.
+     */
+    public function resolved(Request $request)
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $user->isSuperAdmin();
+        $estateId = $user->estate_id;
+
+        $query = LoggedIssue::query()
+            ->with(['estate', 'user', 'resolver'])
+            ->whereIn('status', [LoggedIssue::STATUS_RESOLVED, LoggedIssue::STATUS_CLOSED]);
+
+        if (!$isSuperAdmin) {
+            $query->where('estate_id', $estateId);
+        } elseif ($request->filled('estate_id')) {
+            $query->where('estate_id', $request->estate_id);
+        }
+
+        // Apply Search
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('ticket_id', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_phone', 'like', "%{$search}%")
+                    ->orWhere('meter_no', 'like', "%{$search}%")
+                    ->orWhere('house_no', 'like', "%{$search}%")
+                    ->orWhere('resolution_notes', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply Category Filter
+        if ($request->filled('category') && $request->category !== 'all') {
+            $query->where('category', $request->category);
+        }
+
+        // Apply Priority Filter
+        if ($request->filled('priority') && $request->priority !== 'all') {
+            $query->where('priority', $request->priority);
+        }
+
+        // Apply Status Filter (2 = Resolved, 3 = Closed)
+        if ($request->filled('status') && in_array((int)$request->status, [LoggedIssue::STATUS_RESOLVED, LoggedIssue::STATUS_CLOSED])) {
+            $query->where('status', (int) $request->status);
+        }
+
+        // Apply Date Range Filter on resolved_at
+        if ($request->filled('from_date')) {
+            $query->whereDate('resolved_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('resolved_at', '<=', $request->to_date);
+        }
+
+        // Resolution Statistics
+        $baseStatsQuery = LoggedIssue::query()
+            ->whereIn('status', [LoggedIssue::STATUS_RESOLVED, LoggedIssue::STATUS_CLOSED]);
+        if (!$isSuperAdmin) {
+            $baseStatsQuery->where('estate_id', $estateId);
+        } elseif ($request->filled('estate_id')) {
+            $baseStatsQuery->where('estate_id', $request->estate_id);
+        }
+
+        $stats = [
+            'total_resolved'      => (clone $baseStatsQuery)->count(),
+            'resolved_only'       => (clone $baseStatsQuery)->where('status', LoggedIssue::STATUS_RESOLVED)->count(),
+            'closed_only'         => (clone $baseStatsQuery)->where('status', LoggedIssue::STATUS_CLOSED)->count(),
+            'resolved_today'      => (clone $baseStatsQuery)->whereDate('resolved_at', today())->count(),
+            'resolved_this_month' => (clone $baseStatsQuery)->where('resolved_at', '>=', now()->startOfMonth())->count(),
+        ];
+
+        $issues = $query->latest('resolved_at')->paginate(20)->withQueryString();
+        $estates = $isSuperAdmin ? Estate::all() : collect([$user->estate]);
+
+        return view('admin.estate.issues.resolved', compact(
+            'issues',
+            'stats',
+            'estates',
+            'isSuperAdmin'
+        ));
+    }
+
+    /**
      * Remove the specified issue.
      */
     public function destroy(Request $request)

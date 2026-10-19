@@ -8,12 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasColumn('estates', 'legacy_buid')) {
-            Schema::table('estates', function (Blueprint $table) {
-                $table->string('legacy_buid', 100)->nullable()->after('id');
-                $table->index('legacy_buid');
-            });
-        }
+        Schema::table('estates', function (Blueprint $table) {
+            $table->string('legacy_buid', 100)->nullable()->after('id');
+            $table->index('legacy_buid');
+        });
     }
 
     public function down(): void

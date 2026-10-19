@@ -194,8 +194,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
     Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
 
-    // Logged Issues for Estate Admin
+    // Logged & Resolved Issues for Estate Admin
     Route::get('logged-issues', [LoggedIssueController::class, 'index'])->name('issues.index');
+    Route::get('resolved-issues', [LoggedIssueController::class, 'resolved'])->name('issues.resolved');
     Route::post('store-issue', [LoggedIssueController::class, 'store'])->name('issues.store');
     Route::get('view-issue', [LoggedIssueController::class, 'show'])->name('issues.show');
     Route::post('update-issue-status', [LoggedIssueController::class, 'updateStatus'])->name('issues.updateStatus');

@@ -9,9 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('estates', function (Blueprint $table) {
-            if (! Schema::hasColumn('estates', 'fee_accumulation_period')) {
-                $table->unsignedInteger('fee_accumulation_period')->default(1);
-            }
+            $table->unsignedInteger('fee_accumulation_period')->default(1);
         });
     }
 

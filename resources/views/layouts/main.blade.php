@@ -180,10 +180,17 @@
                         </li>
 
                         <li>
-                            <a class='tp-link' href="/admin/logged-issues">
+                            <a href="charts-mixed.html#sidebarIssuesSuper" data-bs-toggle="collapse">
                                 <i data-feather="alert-circle"></i>
-                                <span> Logged Issues </span>
+                                <span> Issues Management </span>
+                                <span class="menu-arrow"></span>
                             </a>
+                            <div class="collapse" id="sidebarIssuesSuper">
+                                <ul class="nav-second-level">
+                                    <li><a class='tp-link' href='/admin/logged-issues'>All Logged Issues</a></li>
+                                    <li><a class='tp-link' href='/admin/resolved-issues'>Resolved Issues</a></li>
+                                </ul>
+                            </div>
                         </li>
 
                         <li>
@@ -386,10 +393,17 @@
                         </li>
 
                         <li>
-                            <a class='tp-link' href="/admin/logged-issues">
+                            <a href="charts-mixed.html#sidebarEstateIssues" data-bs-toggle="collapse">
                                 <i data-feather="alert-circle"></i>
-                                <span> Logged Issues </span>
+                                <span> Issues Management </span>
+                                <span class="menu-arrow"></span>
                             </a>
+                            <div class="collapse" id="sidebarEstateIssues">
+                                <ul class="nav-second-level">
+                                    <li><a class='tp-link' href='/admin/logged-issues'>All Logged Issues</a></li>
+                                    <li><a class='tp-link' href='/admin/resolved-issues'>Resolved Issues</a></li>
+                                </ul>
+                            </div>
                         </li>
 
                         {{-- Estate Service: only shown when status is available (1) --}}
