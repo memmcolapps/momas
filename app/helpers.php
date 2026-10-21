@@ -788,14 +788,15 @@ if (! function_exists('backfill_utility_payments')) {
                 if (!$exists) {
                     $prevMonthStart = (clone $backfillFrom)->subMonth()->startOfMonth();
                     $prevMonthEnd   = (clone $backfillFrom)->subMonth()->endOfMonth();
+                    $monthEnd = $backfillFrom->copy()->endOfMonth();
 
                     $monthUtilityAmount = Utility::where('estate_id', $estateId)
                         ->where('type', 'service_charge')
-                        ->where(function($q) use ($userId) {
+                        ->where(function ($q) use ($userId) {
                             $q->whereNull('user_id')
-                                ->orWhere('user_id', $userId);
+                            ->orWhere('user_id', $userId);
                         })
-                        ->whereBetween('created_at', [$utilityAmountStart, $now->endOfMonth()])
+                        ->where('created_at', '<=', $monthEnd)
                         ->sum('amount');
 
                     if ($monthUtilityAmount > 0) {
