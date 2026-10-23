@@ -67,7 +67,7 @@ class EstateController extends Controller
         }
 
         $usr = User::where('id', Auth::id())->first();
-        $data['token'] = (string) $tok;
+        $data['token'] = $tok;
         $data['name'] = $usr->first_name." ".$usr->last_name;
         $data['address'] = $usr->address." ".$usr->city." ".$usr->state;
         $data['service'] = "Access token";
