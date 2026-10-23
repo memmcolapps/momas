@@ -147,7 +147,7 @@ class BillsController extends Controller
 
                 User::where('id', $auth_user->id)->first()->creditWallet($amount);
 
-Transaction::where('trx_id', $request->trx_id)->update([
+                Transaction::where('trx_id', $request->trx_id)->update([
                      'status' => 1,
                  ]);
 
@@ -158,14 +158,14 @@ Transaction::where('trx_id', $request->trx_id)->update([
                 return error($message, $code);
             }
 
-User::where('id', $auth_user->id)->first()->creditWallet($amount);
-             Transaction::where('trx_id', $request->trx_id)->update([
+            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+            Transaction::where('trx_id', $request->trx_id)->update([
                  'status' => 3,
              ]);
 
-             DB::commit();
+            DB::commit();
 
-             Logger::error("An Error Occurred", [
+            Logger::error("An Error Occurred", [
                 'user_id' => $auth_user->id,
                 'error' => $response,
             ]);
@@ -174,12 +174,12 @@ User::where('id', $auth_user->id)->first()->creditWallet($amount);
         } catch (Exception $e) {
             DB::rollBack();
 
-User::where('id', $auth_user->id)->first()->creditWallet($amount);
-             Transaction::where('trx_id', $request->trx_id)->update([
+            User::where('id', $auth_user->id)->first()->creditWallet($amount);
+            Transaction::where('trx_id', $request->trx_id)->update([
                  'status' => 3,
              ]);
 
-             Logger::error("Airtime Purchase Exception", [
+            Logger::error("Airtime Purchase Exception", [
                 'user_id' => $auth_user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTrace(),

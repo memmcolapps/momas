@@ -109,6 +109,27 @@ class Meter extends Model
     }
 
     /**
+     * The maximum amount, in Naira, allowed for an emergency token on
+     * this meter, taken from the meter's estate.
+     *
+     * Falls back to the global configured maximum when the estate row is
+     * unavailable.
+     *
+     * @return int
+     */
+    public function getEmergencyTokenMax(): int
+    {
+        $estate = Estate::find($this->estate_id);
+
+        if (! $estate) {
+            return (int) (app(\App\Services\ConfigManagementService::class)
+                ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+        }
+
+        return $estate->getEmergencyTokenMax();
+    }
+
+    /**
      * Calculate token values based on tariff and transaction amount.
      *
      * This method extracts the calculation logic for determining
@@ -227,7 +248,7 @@ class Meter extends Model
      * @return array Array of calculated values including service fees, charges, utility owed, and unit details
      * @throws \Exception When the amount is too small after deductions or unit is less than 0.1KWh
      */
-    public function calculateTokenValuesByAmount(int $tariff_id, int $amount, ?string $receiverMeterNo = null): array
+    public function calculateTokenValuesByAmount(int $tariff_id, int $amount, ?string $receiverMeterNo = null, bool $applyTransactionFee = true): array
     {
         $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
         $tariffAmount = $tariffState->amount ?? 0;
@@ -236,7 +257,7 @@ class Meter extends Model
 
         // [1] 2.5% Service Fee
 
-        $transactionCharge = calculate_transaction_charge($amount);
+        $transactionCharge = $applyTransactionFee ? calculate_transaction_charge($amount) : 0;
 
         $afterServiceFee = $amount - $transactionCharge;
 
@@ -290,6 +311,83 @@ class Meter extends Model
         }
 
         // [4] VAT Calculation on remaining amount
+        $calculator = new VatCalculator();
+
+        $params = [
+            'amountText' => $afterFixedCharge,
+            'tariffAmount' => $tariffAmount,
+            'utilitiesAmount' => $utilityOwed,
+            'vat' => $vat,
+        ];
+
+        $vatAmount = $calculator->calculateVatAmount($params);
+        $vending_amount = $calculator->calculateCostOfUnit($params);
+        $unit = $calculator->calculateTariffAmountPerKWatt($params);
+
+        if ($unit < 0.1) {
+            throw new Exception('Kwh purchase cannot be less than 0.1KWh. Please increase the amount entered.');
+        }
+
+        return [
+            'tariffAmount' => (string) $tariffAmount,
+            'vat' => (string) round($vat, 2),
+            'fixedCharge' => (string) round($fixedCharge, 2),
+            'serviceFee' => (string) round($transactionCharge, 2),
+            'afterServiceFee' => (string) round($afterServiceFee, 2),
+            'estateFee' => (string) round($estateFee, 2),
+            'afterEstateFee' => (string) round($afterEstateFee, 2),
+            'arrearsOwed' => (string) round($arrearsAmount, 2),
+            'afterArrears' => (string) round($afterArrears, 2),
+            'utilityOwed' => (string) round($utilityOwed, 2),
+            'afterUtility' => (string) round($afterUtility, 2),
+            'afterFixedCharge' => (string) round($afterFixedCharge, 2),
+            'vatAmount' => (string) round($vatAmount, 2),
+            'vendingAmount' => (string) round($vending_amount, 2),
+            'unit' => (string) round($unit, 2),
+        ];
+    }
+
+    /**
+     * Calculate emergency token values deducting the transaction fee only.
+     *
+     * Unlike calculateTokenValuesByAmount, no estate fee, arrears, debt-type
+     * utility owed or tariff fixed charge is subtracted: only the transaction
+     * charge reduces the amount before VAT is applied.
+     *
+     * @param int $tariff_id The ID of the tariff to use for calculations
+     * @param int $amount The amount in Naira to calculate token values for
+     * @return array Array of calculated values including fees, charges, and unit details
+     * @throws \Exception When the amount is too small after the fee or unit is less than 0.1KWh
+     */
+    public function calculateEmergencyTokenValuesByAmount(int $tariff_id, int $amount): array
+    {
+        $tariffState = TarrifState::where('tariff_id', $tariff_id)->where('status', 2)->first();
+        $tariffAmount = $tariffState->amount ?? 0;
+        $vat = $tariffState->vat ?? 0;
+        $fixedCharge = $tariffState->fixed_charge ?? 0;
+
+        // [1] Transaction charge (the only deduction)
+        $transactionCharge = calculate_transaction_charge($amount);
+
+        $afterServiceFee = $amount - $transactionCharge;
+
+        $estateFee = 0;
+        $afterEstateFee = $afterServiceFee;
+        $arrearsAmount = 0;
+        $afterArrears = $afterServiceFee;
+        $utilityOwed = 0;
+        $afterUtility = $afterServiceFee;
+        $afterFixedCharge = $afterServiceFee;
+
+        // Validate that amount after the fee is not negative or too small
+        if ($afterFixedCharge <= 0) {
+            $minimumRequired = $transactionCharge + 10;
+            throw new Exception('Amount too small! After deducting service fee (NGN ' . number_format($transactionCharge, 2) .
+                '), the remaining amount would be NGN ' . number_format($afterFixedCharge, 2) .
+                '. Please enter at least NGN ' . number_format($minimumRequired, 2) . ' to proceed.');
+        }
+
+        // [2] VAT Calculation on remaining amount
         $calculator = new VatCalculator();
 
         $params = [
@@ -457,13 +555,18 @@ class Meter extends Model
                 }
 
                 if ($trx->status === 1) {
-                    Logger::error('verify_transaction failed', [
-                        'message' => 'Payment failed',
-                        'trx' => $trx,
-                        'trx_id' => $trx->id,
-                    ]);
 
-                    throw new Exception("Transaction Failed");
+                    $verify = $verifier_engine($trx_id);
+
+                    if (! $verify['is_successful']) {
+                        Logger::error('verify_transaction failed', [
+                            'message' => 'Payment failed',
+                            'trx' => $trx,
+                            'trx_id' => $trx->id,
+                        ]);
+
+                        throw new Exception("Transaction Failed");
+                    }
                 }
 
 
@@ -652,7 +755,8 @@ class Meter extends Model
             $calculatedValues = $this->calculateTokenValuesByAmount(
                 $tariff_id,
                 (int) $amount,
-                $receiver_meterNo
+                $receiver_meterNo,
+                false
             );
 
             $tariffAmount = $calculatedValues['tariffAmount'];
@@ -797,11 +901,18 @@ class Meter extends Model
      * @param int $tariff_id The ID of the tariff to use
      * @param int $amount The amount in Naira to convert to units
      * @return array The generated token details
-     * @throws \Exception When the meter has no owner, the tariff is missing,
+     * @throws \Exception When the amount exceeds the estate max, the meter
+     *                    has no owner, the tariff is missing,
      *                    the amount is too small, or token generation fails
      */
     public function getEmergencyToken(int $tariff_id, int $amount): array
     {
+        $maxAmount = $this->getEmergencyTokenMax();
+
+        if ($amount > $maxAmount) {
+            throw new Exception('Amount cannot exceed NGN ' . number_format($maxAmount, 2));
+        }
+
         $owner = User::find($this->user_id);
 
         if (! $owner) {

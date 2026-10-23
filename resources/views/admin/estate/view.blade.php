@@ -73,7 +73,8 @@
                                                                 <option value="{{ $bank['code'] }}"
                                                                         data-name="{{ $bank['name'] ?? '' }}"
                                                                         data-slug="{{ $bank['slug'] ?? '' }}"
-                                                                        data-paystack-code="{{ $bank['longcode'] ?? $bank['code'] ?? '' }}">
+                                                                        data-paystack-code="{{ $bank['longcode'] ?? $bank['code'] ?? '' }}"
+                                                                        @selected(($org->bank ?? '') == $bank['code'])>
                                                                     {{ $bank['name'] }}
                                                                 </option>
                                                             @endforeach
@@ -85,7 +86,7 @@
 
                                                     <div class="col-xl-6 col-sm-12">
                                                         <label class="my-2">Account No</label>
-                                                        <input type="text" name="account_no" id="account_no" class="form-control" placeholder="Enter account number">
+                                                        <input type="text" name="account_no" id="account_no" class="form-control" value="{{ $org->account_no ?? '' }}" placeholder="Enter account number">
                                                         <input type="text" name="id" value="{{$org->id}}" hidden>
 
 
@@ -94,7 +95,7 @@
 
                                                     <div class="col-xl-12 col-sm-12">
                                                         <label class="my-2">Account Name</label>
-                                                        <input type="text" name="account_name" id="account_name" class="form-control" placeholder="Account name will appear here" readonly>
+                                                        <input type="text" name="account_name" id="account_name" class="form-control" value="{{ $org->account_name ?? '' }}" placeholder="Account name will appear here" readonly>
                                                     </div>
                                                 </div>
                                             </div>
@@ -527,6 +528,14 @@
                                         </div>
                                     </div>
 
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Emergency Token Max</label>
+                                        <input type="number" step="1" min="1" name="emergency_token_max"
+                                               value="{{ $org->emergency_token_max ?? 10000 }}"
+                                               class="form-control"
+                                               required>
+                                    </div>
+
                                 </div>
 
 
@@ -556,6 +565,55 @@
                                         </select>
 
                                         <input type="text" name="estate_id" value="{{$org->id}}" hidden>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-xl-5 col-sm-12 my-2">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            Update
+                                        </button>
+                                    </div>
+
+                                    <div class="col-xl-5 col-sm-12 my-2">
+                                        <a href="{{ route('postpaid.accumulation-due', $org->id) }}"
+                                           class="btn btn-secondary text-white w-100">
+                                            Postpaid Accumulation Due
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <form action="estate-update-transaction-fee" method="post">
+                                @csrf
+
+                                <h6 class="d-flex justify-content-start my-4">Transaction Fee</h6>
+
+                                <div class="row">
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Transaction Fee Type</label>
+                                        <select name="transaction_fee_type" class="form-select" required>
+                                            <option value="{{ \App\Constants\TransactionFeeType::FLAT }}"
+                                                @selected(($org->transaction_fee_type ?? \App\Constants\TransactionFeeType::FLAT) == \App\Constants\TransactionFeeType::FLAT)>
+                                                Flat
+                                            </option>
+                                            <option value="{{ \App\Constants\TransactionFeeType::PERCENTAGE }}"
+                                                @selected($org->transaction_fee_type == \App\Constants\TransactionFeeType::PERCENTAGE)>
+                                                Percentage
+                                            </option>
+                                        </select>
+
+                                        <input type="text" name="estate_id" value="{{$org->id}}" hidden>
+                                    </div>
+
+                                    <div class="col-xl-4 col-sm-12">
+                                        <label class="my-2">Transaction Fee</label>
+                                        <input type="number" step="0.01" min="0" name="transaction_fee"
+                                               value="{{$org->transaction_fee ?? 0}}"
+                                               class="form-control"
+                                               required>
                                     </div>
                                 </div>
 

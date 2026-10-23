@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Logger;
 use App\Models\Meter;
 use App\Models\Tariff;
-use App\Services\ConfigManagementService;
 use App\Services\EmergencyTokenService;
 use App\Services\StandardResponse;
 use App\Services\UtilityManagementService;
@@ -59,7 +58,8 @@ class EmergencyTokenController extends Controller
         return StandardResponse::success(200, 'Emergency token eligibility retrieved', [
             'can_get_emergency_token' => $total_debt <= 0,
             'total_debt' => $total_debt,
-            'max_amount' => $this->maxAmount(),
+            'max_amount' => $this->maxAmount($meter),
+            'message' => $total_debt <= 0 ? '' : 'You have an unresolved debt and thus can\'t get emergency_token',
             'meter' => [
                 'meterNo' => $meter->meterNo,
                 'estate_id' => $meter->estate_id,
@@ -80,7 +80,17 @@ class EmergencyTokenController extends Controller
             return StandardResponse::error(422, 'User not attached to any estate');
         }
 
-        $maxAmount = $this->maxAmount();
+        $meter = $this->resolveMeter($auth_user);
+
+        if (! $meter) {
+            return StandardResponse::error(404, 'Meter not found');
+        }
+
+        if (! $meter->isActive()) {
+            return StandardResponse::error(403, 'Meter unable to perform this action reach out to your estate admin for support', []);
+        }
+
+        $maxAmount = $this->maxAmount($meter);
 
         $validator = Validator::make($request->all(), [
             'tariff_id' => [
@@ -95,16 +105,6 @@ class EmergencyTokenController extends Controller
             return StandardResponse::error(422, 'Validation Error', [
                 'validation_error' => $validator->errors(),
             ]);
-        }
-
-        $meter = $this->resolveMeter($auth_user);
-
-        if (! $meter) {
-            return StandardResponse::error(404, 'Meter not found');
-        }
-
-        if (! $meter->isActive()) {
-            return StandardResponse::error(403, 'Meter unable to perform this action reach out to your estate admin for support', []);
         }
 
         try {
@@ -132,7 +132,9 @@ class EmergencyTokenController extends Controller
 
     /**
      * List the tariffs assigned to the meter, each with the token values it
-     * yields at the maximum emergency amount.
+     * yields at the maximum emergency amount. The breakdown uses the
+     * emergency (transaction fee only) calculation so it matches what
+     * generation actually deducts.
      *
      * A tariff whose values cannot be calculated at that amount (misconfigured
      * tariff state, units below the 0.1kWh floor) is still listed, just without
@@ -153,7 +155,7 @@ class EmergencyTokenController extends Controller
             return [];
         }
 
-        $maxAmount = $this->maxAmount();
+        $maxAmount = $this->maxAmount($meter);
 
         return Tariff::where('estate_id', $meter->estate_id)
             ->whereIn('id', $assignedIds)
@@ -161,7 +163,7 @@ class EmergencyTokenController extends Controller
             ->get()
             ->map(function (Tariff $tariff) use ($meter, $maxAmount) {
                 try {
-                    $breakdown = $meter->calculateTokenValuesByAmount($tariff->id, $maxAmount);
+                    $breakdown = $meter->calculateEmergencyTokenValuesByAmount($tariff->id, $maxAmount);
                 } catch (Throwable $e) {
                     Logger::warning('Emergency token breakdown unavailable for tariff', [
                         'meterNo' => $meter->meterNo,
@@ -184,9 +186,8 @@ class EmergencyTokenController extends Controller
             ->all();
     }
 
-    private function maxAmount(): int
+    private function maxAmount(Meter $meter): int
     {
-        return (int) (app(ConfigManagementService::class)
-            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+        return $meter->getEmergencyTokenMax();
     }
 }

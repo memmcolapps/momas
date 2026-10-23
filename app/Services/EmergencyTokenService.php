@@ -23,15 +23,18 @@ class EmergencyTokenService
      * debt on the customer.
      *
      * The generation is blocked when the customer already has any unpaid
-     * debt-type utility owed. On success, a critical audit log is written. On
-     * any failure, the error is logged with the reason so the outcome is always
-     * recorded.
+     * debt-type utility owed. Only the transaction fee is deducted from the
+     * requested amount before VAT is applied; arrears, estate charges and the
+     * tariff fixed charge are not deducted. On success, a critical audit log
+     * is written. On any failure, the error is logged with the reason so the
+     * outcome is always recorded.
      *
      * @param \App\Models\Meter $meter The meter (and owner) to tokenize
      * @param int $tariff_id The ID of the tariff to use
      * @param int $amount The amount in Naira to convert to units and place as debt
      * @return array The generated token details
-     * @throws \Exception When the meter has no owner, the tariff is missing,
+     * @throws \Exception When the amount exceeds the estate max, the meter has
+     *                    no owner, the tariff is missing,
      *                    the customer has unpaid debt, the amount is too small,
      *                    or token generation fails
      */
@@ -43,8 +46,7 @@ class EmergencyTokenService
             $debtCheck = (new UtilityManagementService())
                 ->calculateUserOwedUtility($meter->user_id, $meter->estate_id);
 
-            $maxAmount = (int) (app(ConfigManagementService::class)
-                ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+            $maxAmount = $meter->getEmergencyTokenMax();
 
             if ($amount > $maxAmount) {
                 throw new Exception('Amount cannot exceed NGN ' . number_format($maxAmount, 2));
@@ -73,7 +75,7 @@ class EmergencyTokenService
                     );
                 }
 
-                $calculated = $meter->calculateTokenValuesByAmount($tariff_id, $amount);
+                $calculated = $meter->calculateEmergencyTokenValuesByAmount($tariff_id, $amount);
 
                 $unit = $calculated['unit'];
                 $vat = $calculated['vat'];
@@ -97,7 +99,7 @@ class EmergencyTokenService
 
                 $emergency_ref = 'emg_ref' . Str::upper(Str::random(7));
 
-                CreditToken::create([
+                $credit_token = CreditToken::create([
                     'trx_id' => $emergency_ref,
                     'user_id' => $meter->user_id,
                     'meterNo' => $meter->meterNo,
@@ -149,6 +151,7 @@ class EmergencyTokenService
                     'calc' => $calculated,
                     'owner' => $owner,
                     'tariff' => $tariff,
+                    'date' => $credit_token->created_at
                 ];
             });
         } catch (Throwable $e) {
@@ -169,12 +172,13 @@ class EmergencyTokenService
 
         return [
             'emergency_ref' => $result['emergency_ref'],
-            'token' => $result['token'],
+            'token' => (string) $result['token'],
             'kct_tokens' => $result['kct_tokens'],
-            'meterNo' => $meter->meterNo,
-            'amount' => $amount,
-            'unit' => $result['unit'],
-            'tariff_id' => $tariff_id,
+            'meterNo' => (string) $meter->meterNo,
+            'amount' => (string) round($amount, 2),
+            'unit' => (string) round($result['unit'], 2),
+            'tariff' => $result['tariff']?->title,
+            'date' => $result['date'] ?? null
         ];
     }
 

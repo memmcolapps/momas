@@ -772,9 +772,15 @@ class TokenController extends Controller
 
             $estate_id = Estate::where('id', $request->estate_id)->first()->id;
             $meter = Meter::where('meterNo', $request->meterNo)->first() ?? null;
+
+            $meter_handler = handle_block_meter($meter->meterNo, true, log_data: $request->all());
+            if ($meter_handler) return $meter_handler;
+
+
             $user = User::where('meterNo', $request->meterNo)->first() ?? null;
 
             $ck_meter = Meter::where('MeterNo', $request->meterNo)->first() ?? null;
+
             $ck_user_id = Meter::where('MeterNo', $request->meterNo)->first()->user_id ?? null;
 
             if ($user == null && $ck_meter == null) {
@@ -1740,7 +1746,7 @@ class TokenController extends Controller
                     'name' => $userName,
                     'phone' => $phone,
                     'description' => 'Payment for credit token',
-                ], null);//, $est->id);
+                ], estateId: $est->id);
 
                 if (!isset($payment_init['status']) || !$payment_init['status']) {
                     Logger::warning("Remita payment init failed", ['response' => $payment_init]);
@@ -2003,7 +2009,7 @@ class TokenController extends Controller
                     "email" => strtolower(trim($email)),
                     // 'callback_url' => url('') . "/admin/paystack-check-web-tamper",
                     // 'subaccount' => $est->paystack_subaccount,
-                    'subaccount' => 'ACCT_nd2zcvugcv5zfqp',   //Hardcoded MEMMCOL subaccount for tamper payments
+                    'sub_account' => 'ACCT_nd2zcvugcv5zfqp',   //Hardcoded MEMMCOL subaccount for tamper payments
                     'metadata' => [],
                 );
 
@@ -3281,7 +3287,7 @@ class TokenController extends Controller
                 $databody = [
                     "amount" => $request->amount * 100,
                     "email" => strtolower(trim($email)),
-                    "sub_account" => $est->paystack_subaccount ?? 'ACCT_nd2zcvugcv5zfqp',
+                    "sub_account" => 'ACCT_nd2zcvugcv5zfqp',
                     "metadata" => [],
                 ];
 
@@ -6527,7 +6533,7 @@ class TokenController extends Controller
                 return redirect("/admin/postpaid-accumulation-due/{$estate->id}");
             }
 
-            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount, null, false);
 
             $data['vatAmount'] = $calculatedValues['vatAmount'];
             $data['costOfUnit'] = $calculatedValues['vendingAmount'];
@@ -6599,7 +6605,7 @@ class TokenController extends Controller
                 return redirect()->route('postpaid.accumulation-due', $estate->id);
             }
 
-            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount);
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount, null, false);
 
             $data['vatAmount'] = $calculatedValues['vatAmount'];
             $data['costOfUnit'] = $calculatedValues['vendingAmount'];

@@ -12,6 +12,7 @@ use App\Models\UtilitiesPayment;
 use App\Models\Utility;
 use App\Services\ConfigManagementService;
 use App\Support\RequestContext;
+use App\Services\StandardResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -786,14 +787,15 @@ if (! function_exists('backfill_utility_payments')) {
                 if (!$exists) {
                     $prevMonthStart = (clone $backfillFrom)->subMonth()->startOfMonth();
                     $prevMonthEnd   = (clone $backfillFrom)->subMonth()->endOfMonth();
+                    $monthEnd = $backfillFrom->copy()->endOfMonth();
 
                     $monthUtilityAmount = Utility::where('estate_id', $estateId)
                         ->where('type', 'service_charge')
-                        ->where(function($q) use ($userId) {
+                        ->where(function ($q) use ($userId) {
                             $q->whereNull('user_id')
-                                ->orWhere('user_id', $userId);
+                            ->orWhere('user_id', $userId);
                         })
-                        ->whereBetween('created_at', [$utilityAmountStart, $now->endOfMonth()])
+                        ->where('created_at', '<=', $monthEnd)
                         ->sum('amount');
 
                     if ($monthUtilityAmount > 0) {
@@ -997,6 +999,45 @@ if (! function_exists('calculate_transaction_charge')) {
 
 }
 
+if (! function_exists('calculate_transaction_charge_breakdown')) {
+
+    function calculate_transaction_charge_breakdown(float|int $amount, Estate|int|string|null $estate = null): array
+    {
+        if (! $estate instanceof Estate) {
+            $estate_id = $estate ?? (Auth::check() ? Auth::user()->estate_id : null);
+            $estate = $estate_id ? Estate::find($estate_id) : null;
+        }
+
+        $payment_purpose = app(RequestContext::class)->get('payment_purpose');
+
+        $momas_max = match ($payment_purpose) {
+            'utilities' => config('constants.momas_max_utilities_transaction_fee'),
+            default => config('constants.momas_max_transaction_fee'),
+        };
+        $momas_cap = $momas_max - 2000;
+
+        $momasFee = 0;
+
+        if ($estate) {
+            $fee_type = $estate->transaction_fee_type;
+            $fee = (float) $estate->transaction_fee;
+
+            $momasFee = $fee_type === 'flat' ? $fee : ($fee / 100) * $amount;
+            $momasFee = min($momasFee, $momas_cap);
+        }
+
+        $paymentCharge = min((1.5 / 100) * $amount, 2000);
+        $transactionCharge = $momasFee + $paymentCharge;
+
+        return [
+            'momasFee' => $momasFee,
+            'paymentCharge' => $paymentCharge,
+            'transactionCharge' => $transactionCharge,
+        ];
+    }
+
+}
+
 if (!function_exists('underscore_to_hyphen')) {
     function underscore_to_hyphen(string $string, bool $reverse=false) {
         if ($reverse) {
@@ -1020,7 +1061,7 @@ if (! function_exists('calculate_momas_vend_share')) {
 }
 
 if (! function_exists('payment_option_detail')) {
-    function payment_option_detail($estateId, $amount, $payment_purpose) {
+    function payment_option_detail($estateId, $amount, $payment_purpose, $trx_fee_inclusive=false) {
 
         $configured = app(ConfigManagementService::class)->getConfig('payment_gateways', $estateId) ?? [];
         $gateways = array_map('strtolower', is_array($configured) ? $configured : (array) $configured);
@@ -1035,9 +1076,19 @@ if (! function_exists('payment_option_detail')) {
         $momasFee = $transactionCharges['momasFee'] ?? 0;
 
         $gatewayFee = round($transactionFee - $momasFee, 2);
-        $totalCharge = round($amount + $transactionFee, 2);
+        $totalCharge = $trx_fee_inclusive ? round($amount, 2) : round($amount + $transactionFee, 2);
+        $walletTotalCharge = round ($amount, 2);
 
-        $paymentOptions = [];
+        $paymentOptions = [
+            [
+                'code' => 'WALLET',
+                'name' => 'Wallet',
+                'enabled' => true,
+                'transaction_fee' =>(string) round(0, 2),
+                'total_amount' => (string) $walletTotalCharge, // wallet payment does not incur trans fees
+                'momas_fee' => (string) $momasFee,
+            ]
+        ];
 
         if ($supportsPaystack) {
             $paymentOptions[] = [
@@ -1065,3 +1116,23 @@ if (! function_exists('payment_option_detail')) {
     }
 }
 
+if (! function_exists('handle_block_meter')) {
+    function handle_block_meter(string $meterNo, bool $web_platform, $log_data=[]) {
+        $meter = Meter::where('meterNo', $meterNo)->first();
+
+        if (!$meter->isActive()) {
+            Logger::info('validate_meter called on inactive meter', [
+                'meter' => $meter,
+                'context' => $log_data
+            ]);
+
+            $response = $web_platform === true ?
+                back()->with('error', 'Meter has been blocked please unblock to proceed') :
+                StandardResponse::error(403, 'Meter has been blocked reach out to estate facility managers for resolution');
+
+            return $response;
+        }
+
+        return null;
+    }
+}

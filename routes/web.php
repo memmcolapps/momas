@@ -192,6 +192,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::post('estate-update-vat', [EstateServiceController::class, 'estate_update_vat']);
     Route::post('estate-update-minpur', [EstateServiceController::class, 'estate_update_minpur']);
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
+    Route::post('estate-update-transaction-fee', [EstateServiceController::class, 'estate_update_transaction_fee']);
     Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
 
     // Logged & Resolved Issues for Estate Admin
@@ -267,6 +268,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::get('meter-list', [MeterController::class, 'list_meter']);
     Route::match(['get', 'post'],'filter-meter', [MeterController::class, 'filter_by_estate']);
     Route::post('update-meter-info', [MeterController::class, 'update_meter_info']);
+    Route::post('migrate-meter-estate', [MeterController::class, 'migrate_meter_estate']);
     Route::post('update-meter', [MeterController::class, 'update_meter']);
     Route::get('new-meter', [MeterController::class, 'new_meter']);
     Route::post('add-new-meter', [MeterController::class, 'add_new_meter']);
@@ -407,6 +409,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::get('postpaid-accumulation-due/{estate}', [TokenController::class, 'accumulation_due'])->name('postpaid.accumulation-due');
     Route::post('postpaid-accumulation-pay', [TokenController::class, 'init_accumulation_payment'])->name('postpaid.accumulation-pay');
     Route::get('postpaid-accumulation-callback', [TokenController::class, 'accumulation_callback'])->name('postpaid.accumulation-callback');
+    Route::post('postpaid-accumulation-clear', [TokenController::class, 'clear_accumulation'])->name('postpaid.accumulation-clear');
 
 
     Route::any('paystack-check-web', [TokenController::class, 'paystack_verify_web']);

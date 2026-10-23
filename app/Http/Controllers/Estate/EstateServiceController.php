@@ -188,9 +188,17 @@ class EstateServiceController extends Controller
 
     public function estate_update_minpur(request $request)
     {
+        $request->validate([
+            'emergency_token_max' => 'required|integer|min:1',
+        ]);
+
         // Estate::where('id', $request->estate_id)->update(['min_pur' => $request->min_pur,  'max_pur' => $request->max_pur, 'vend_duration' => $request->vend_duration]);
         // Note: vend_duration commented out - column doesn't exist in DB and no form input for it
-        $update = ['min_pur' => $request->min_pur,  'max_pur' => $request->max_pur];
+        $update = [
+            'min_pur' => $request->min_pur,
+            'max_pur' => $request->max_pur,
+            'emergency_token_max' => $request->emergency_token_max,
+        ];
 
         if ($request->has('minimum_vend_per_transaction')) {
             $update['minimum_vend_per_transaction'] = (bool)$request->minimum_vend_per_transaction;
@@ -209,6 +217,25 @@ class EstateServiceController extends Controller
         ]);
 
         return back()->with('message', "Estate Fee Accumulation Period updated successfully");
+    }
+
+    public function estate_update_transaction_fee(request $request)
+    {
+        $request->validate([
+            'estate_id' => 'required|exists:estates,id',
+            'transaction_fee_type' => 'required|in:' . implode(',', [
+                \App\Constants\TransactionFeeType::FLAT,
+                \App\Constants\TransactionFeeType::PERCENTAGE,
+            ]),
+            'transaction_fee' => 'required|numeric|min:0',
+        ]);
+
+        Estate::where('id', $request->estate_id)->update([
+            'transaction_fee_type' => $request->transaction_fee_type,
+            'transaction_fee' => $request->transaction_fee,
+        ]);
+
+        return back()->with('message', "Estate Transaction Fee updated successfully");
     }
 
     public function estate_update_payment_gateways(Request $request)

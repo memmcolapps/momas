@@ -22,7 +22,7 @@ class StandardResponse
 
         // dd($isValidationError);
 
-        if (is_array($data) && isset($data['errors'])) {
+        if (is_array($data) && isset($data['errors']) && is_array($data['errors'])) {
             $allErrors = [];
             foreach ($data['errors'] as $field => $messages) {
                 if (is_array($messages)) {
