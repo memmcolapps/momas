@@ -263,7 +263,7 @@ class TokenController extends Controller
             $data['estate'] = Estate::all();
             $data['preview'] = null;
             $data['credit_tokens'] = ClearcreditToken::latest()->paginate('50');
-            $data['amount'] = Setting::where('id', 1)->first()->clear_credit_fee;
+            $data['amount'] = Setting::where('id', 1)->first()?->clear_credit_fee ?? 0;
 
             return view('admin.token.clear-credit-token-view', $data);
 
@@ -279,7 +279,7 @@ class TokenController extends Controller
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
             $data['preview'] = null;
             $data['credit_tokens'] = ClearcreditToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
-            $data['amount'] = Setting::where('id', 1)->first()->clear_credit_fee;
+            $data['amount'] = Setting::where('id', 1)->first()?->clear_credit_fee ?? 0;
 
 
             return view('admin.token.clear-credit-token-view', $data);
@@ -346,7 +346,7 @@ class TokenController extends Controller
 
             $data['estate'] = Estate::all();
             $data['preview'] = null;
-            $data['tamper_amount'] = Setting::where('id', 1)->first()->clear_tamper_fee;
+            $data['tamper_amount'] = Setting::where('id', 1)->first()?->clear_tamper_fee ?? 0;
             $data['credit_tokens'] = TamperToken::latest()->paginate('50');
 
 
@@ -361,10 +361,10 @@ class TokenController extends Controller
 
 
             $data['estate_id'] = Auth::user()->estate_id;
-            $data['tariff'] = TarrifState::where('estate_id', user()->estate_id)->get();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
             $data['preview'] = null;
-            $data['tamper_amount'] = Setting::where('id', 1)->first()->clear_tamper_fee;
+            $data['tamper_amount'] = Setting::where('id', 1)->first()?->clear_tamper_fee ?? 0;
             $data['tamper_tokens'] = TamperToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
 
             return view('admin.token.tamper-token-view', $data);
@@ -394,7 +394,7 @@ class TokenController extends Controller
             $data['estate'] = Estate::all();
             $data['preview'] = null;
             $data['credit_tokens'] = KctToken::latest()->paginate('50');
-            $data['kct_amount'] = Setting::where('id', 1)->first()->kct_fee;
+            $data['kct_amount'] = Setting::where('id', 1)->first()?->kct_fee ?? 0;
 
 
             return view('admin.token.kct-token-view', $data);
@@ -410,8 +410,8 @@ class TokenController extends Controller
             $data['estate_id'] = Auth::user()->estate_id;
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
             $data['preview'] = null;
-            $data['tariff'] = TarrifState::where('estate_id', user()->estate_id)->get();
-            $data['kct_amount'] = Setting::where('id', 1)->first()->kct_fee;
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['kct_amount'] = Setting::where('id', 1)->first()?->kct_fee ?? 0;
             $data['credit_tokens'] = KctToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
 
             return view('admin.token.kct-token-view', $data);

@@ -180,6 +180,20 @@
                         </li>
 
                         <li>
+                            <a href="charts-mixed.html#sidebarIssuesSuper" data-bs-toggle="collapse">
+                                <i data-feather="alert-circle"></i>
+                                <span> Issues Management </span>
+                                <span class="menu-arrow"></span>
+                            </a>
+                            <div class="collapse" id="sidebarIssuesSuper">
+                                <ul class="nav-second-level">
+                                    <li><a class='tp-link' href='/admin/logged-issues'>All Logged Issues</a></li>
+                                    <li><a class='tp-link' href='/admin/resolved-issues'>Resolved Issues</a></li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li>
                             <a href="charts-mixed.html#sidebar1" data-bs-toggle="collapse">
                                 <i data-feather="zap"></i>
                                 <span> Meter Token </span>
@@ -378,6 +392,20 @@
                             </a>
                         </li>
 
+                        <li>
+                            <a href="charts-mixed.html#sidebarEstateIssues" data-bs-toggle="collapse">
+                                <i data-feather="alert-circle"></i>
+                                <span> Issues Management </span>
+                                <span class="menu-arrow"></span>
+                            </a>
+                            <div class="collapse" id="sidebarEstateIssues">
+                                <ul class="nav-second-level">
+                                    <li><a class='tp-link' href='/admin/logged-issues'>All Logged Issues</a></li>
+                                    <li><a class='tp-link' href='/admin/resolved-issues'>Resolved Issues</a></li>
+                                </ul>
+                            </div>
+                        </li>
+
                         {{-- Estate Service: only shown when status is available (1) --}}
                         @if(($mod_features['services'] ?? 0) == 1)
                             <li>
@@ -569,6 +597,16 @@
         setTimeout(function () {
             window.location.href = '/login';
         }, sessionLifetime);
+
+        // Prevent browser back button from showing cached authenticated pages after logout
+        window.addEventListener('pageshow', function (event) {
+            var perfEntries = (window.performance && window.performance.getEntriesByType) ? window.performance.getEntriesByType('navigation') : null;
+            var isBackForward = (perfEntries && perfEntries.length > 0 && perfEntries[0].type === 'back_forward') ||
+                                (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
+            if (event.persisted || isBackForward) {
+                window.location.reload();
+            }
+        });
     </script>
 
 </div>

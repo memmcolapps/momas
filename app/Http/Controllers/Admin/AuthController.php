@@ -177,8 +177,12 @@ class AuthController extends Controller
 
     public function log_out(request $request)
     {
-        User::where('id', Auth::id())->update(['can_login' => 0]);
-        Auth::logout();
+        if (Auth::check()) {
+            User::where('id', Auth::id())->update(['can_login' => 0]);
+            Auth::logout();
+        }
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
         return redirect('/');
     }
 

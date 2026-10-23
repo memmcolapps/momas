@@ -9,7 +9,20 @@
                 <div class="flex-grow-1">
                     <h4 class="fs-18 fw-semibold m-0">Add New Estate Service</h4>
                 </div>
+                <div class="flex-shrink-0">
+                    <a href="{{ url('admin/estate-service') }}" class="btn btn-secondary">Back</a>
+                </div>
             </div>
+
+            @if (isset($errors) && $errors->any())
+                <div class="alert alert-danger">
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             @if(session()->has('message'))
                 <div class="alert alert-success">
@@ -27,7 +40,7 @@
                 <div class="card">
                     <div class="card-body">
 
-                        <form action="add-new-service-list" method="post">
+                        <form action="{{ url('admin/add-new-service-list') }}" method="post">
                             @csrf
 
                             <div class="row">

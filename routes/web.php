@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\TokenController;
 use App\Http\Controllers\AuditlogController;
 use App\Http\Controllers\Estate\CustomerImportController as EstateCustomerImportController;
 use App\Http\Controllers\Estate\EstateServiceController;
+use App\Http\Controllers\Estate\LoggedIssueController;
 use App\Http\Controllers\Meter\MeterController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\Transaction\TransactionController;
@@ -81,10 +82,6 @@ Route::get('onboarding-pending', [DashboardContoller::class, 'pending_onboarding
 
 
 Route::get('/', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('route:clear');
-    Artisan::call('view:clear');
     return app(AuthController::class)->admin_login(request());
 });
 
@@ -125,7 +122,7 @@ Route::get('auth-code', [AuthController::class, 'auth_code']);
 
 
 
-Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], function () {
+Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prevent-back-history']], function () {
 
     Route::get('onboarding-email', [DashboardContoller::class, 'onboarding_email']);
     Route::post('setup_paystack', [DashboardContoller::class, 'setup_paystack']);
@@ -197,6 +194,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::post('estate-update-fee-accumulation', [EstateServiceController::class, 'estate_update_fee_accumulation']);
     Route::post('estate-update-transaction-fee', [EstateServiceController::class, 'estate_update_transaction_fee']);
     Route::post('estate-update-payment-gateways', [EstateServiceController::class, 'estate_update_payment_gateways']);
+
+    // Logged & Resolved Issues for Estate Admin
+    Route::get('logged-issues', [LoggedIssueController::class, 'index'])->name('issues.index');
+    Route::get('resolved-issues', [LoggedIssueController::class, 'resolved'])->name('issues.resolved');
+    Route::post('store-issue', [LoggedIssueController::class, 'store'])->name('issues.store');
+    Route::get('view-issue', [LoggedIssueController::class, 'show'])->name('issues.show');
+    Route::post('update-issue-status', [LoggedIssueController::class, 'updateStatus'])->name('issues.updateStatus');
+    Route::get('delete-issue', [LoggedIssueController::class, 'destroy'])->name('issues.destroy');
 
 
 
@@ -366,6 +371,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::get('utility-payment', [TransactionController::class, 'utility_payment']);
     Route::get('uncomplete-payment', [TransactionController::class, 'uncomplete_payment']);
     Route::get('complete-payment', [TransactionController::class, 'complete_payment']);
+    Route::match(['get', 'post'], 'enkpay-payment', [TransactionController::class, 'enkpay_payment']);
+    Route::post('enkpay-payment-trx', [TransactionController::class, 'search_enkpay_trx']);
 
 
 
@@ -419,7 +426,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess']], fun
     Route::any('remita-clear-credit', [TokenController::class, 'remita_clear_credit']);
     Route::get('pay-remita', [TokenController::class, 'remita_pay'])->name('remita.pay');
     Route::any('remita-payment-result', [TokenController::class, 'remita_payment_result'])->name('remita.result');
-    Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment_verify']);
+    Route::any('enkpay-payment', [TransactionController::class, 'enkpay_payment']);
 
     Route::any('recepit', [TokenController::class, 'recepit']);
     Route::any('retry-generate-tamper-token', [TokenController::class, 'retry_generate_tamper_token']);

@@ -28,4 +28,14 @@ class ClearcreditToken extends Model
         'token',
         'status',
     ];
+
+    public function estate()
+    {
+        return $this->belongsTo(Estate::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

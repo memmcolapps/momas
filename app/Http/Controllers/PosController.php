@@ -25,58 +25,23 @@ class PosController extends Controller
 
     public function index(request $request)
     {
-
         if (Auth::user()->role == 0) {
-
-
             $data['merchants'] = Merchant::all();
             $data['total_merchants'] = Merchant::count();
             return view('admin.pos.index', $data);
-
-
-        } elseif (Auth::user()->role == 1) {
-
-        } elseif (Auth::user()->role == 2) {
-
-        } elseif (Auth::user()->role == 3) {
-
-
-        } elseif (Auth::user()->role == 4) {
-
-        } elseif (Auth::user()->role == 5) {
-
-        } else {
-
         }
 
-
+        return redirect('admin/dashboard')->with('error', 'Unauthorized access');
     }
 
 
     public function new_merchant(request $request)
     {
-
         if (Auth::user()->role == 0) {
-
             return view('admin.pos.new-merchant');
-
-
-        } elseif (Auth::user()->role == 1) {
-
-        } elseif (Auth::user()->role == 2) {
-
-        } elseif (Auth::user()->role == 3) {
-
-
-        } elseif (Auth::user()->role == 4) {
-
-        } elseif (Auth::user()->role == 5) {
-
-        } else {
-
         }
 
-
+        return redirect('admin/dashboard')->with('error', 'Unauthorized access');
     }
 
     public function add_merchant(request $request)

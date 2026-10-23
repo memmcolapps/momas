@@ -78,6 +78,7 @@ class Kernel extends HttpKernel
         'acess' => \App\Http\Middleware\Acess::class,
         'blockaccess' => \App\Http\Middleware\Blockaccess::class,
         'feature_control' => \App\Http\Middleware\FeatureControlMiddleware::class,
+        'prevent-back-history' => \App\Http\Middleware\PreventBackHistory::class,
 
     ];
 }

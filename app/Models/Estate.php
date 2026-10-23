@@ -112,6 +112,11 @@ class Estate extends Model
         return true;
     }
 
+    public function isAcive()
+    {
+        return $this->isActive();
+    }
+
     protected $casts = [
         'status' => 'integer',
         'minimum_vend_per_transaction' => 'boolean',

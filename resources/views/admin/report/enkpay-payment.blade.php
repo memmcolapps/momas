@@ -277,7 +277,7 @@
                                             </td>
                                             <td>{{$data->v_account_no }}</td>
                                             <td>{{$data->v_bank_name }}</td>
-                                            <td><a href="view-user?id={{$data->user->first_name ?? "name"}}">{{$data->user->first_name ?? "name"}} {{$data->user->last_name ?? "name"}}</a></td>
+                                            <td><a href="view-user?id={{$data->user?->id ?? ''}}">{{$data->user?->first_name ?? 'N/A'}} {{$data->user?->last_name ?? ''}}</a></td>
                                             <td>{{number_format($data->amount, 2)}}</td>
                                             <td>
                                                 @if($data->status == 2)
@@ -323,9 +323,7 @@
 
         </div>
 
-    @elseif(Auth::user()->role == 1)
-    @elseif(Auth::user()->role == 2)
-    @elseif(Auth::user()->role == 3)
+    @elseif(in_array(Auth::user()->role, [1, 2, 3]))
         <div class="content">
 
             <!-- Start Content-->
@@ -530,7 +528,7 @@
 
                                             <tr>
                                                 <td>{{$data->trx_id}}</td>
-                                                <td><a href="view-user?id={{$data->user->first_name ?? "Name"}}">{{$data->user->last_name ?? "Name"}}</a></td>
+                                                <td><a href="view-user?id={{$data->user?->id ?? ''}}">{{$data->user?->first_name ?? ''}} {{$data->user?->last_name ?? 'N/A'}}</a></td>
                                                 <td>{{number_format($data->amount, 2)}}</td>
                                                 <td>{{$data->service}}</td>
                                                 <td>
@@ -572,9 +570,12 @@
             </div> <!-- container-fluid -->
 
         </div>
-    @elseif(Auth::user()->role == 4)
-    @elseif(Auth::user()->role == 5)
     @else
+        <div class="content">
+            <div class="container-fluid py-4">
+                <div class="alert alert-info">No payment report available for this user role.</div>
+            </div>
+        </div>
     @endif
 
 

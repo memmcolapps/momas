@@ -112,17 +112,16 @@ if (!function_exists('get_balance')) {
         $var = curl_exec($curl);
         curl_close($curl);
         $var = json_decode($var);
-        $status = $var->status ?? null;
 
-
-        if ($status == false) {
-            return $var->data->main_wallet;
-        } else {
-
-            $message = $var;
-            send_notification($message);
-            return false;
+        if (isset($var->data->main_wallet)) {
+            return (float) $var->data->main_wallet;
         }
+
+        if (isset($var->main_wallet)) {
+            return (float) $var->main_wallet;
+        }
+
+        return 0;
     }
 
 
@@ -788,14 +787,15 @@ if (! function_exists('backfill_utility_payments')) {
                 if (!$exists) {
                     $prevMonthStart = (clone $backfillFrom)->subMonth()->startOfMonth();
                     $prevMonthEnd   = (clone $backfillFrom)->subMonth()->endOfMonth();
+                    $monthEnd = $backfillFrom->copy()->endOfMonth();
 
                     $monthUtilityAmount = Utility::where('estate_id', $estateId)
                         ->where('type', 'service_charge')
-                        ->where(function($q) use ($userId) {
+                        ->where(function ($q) use ($userId) {
                             $q->whereNull('user_id')
-                                ->orWhere('user_id', $userId);
+                            ->orWhere('user_id', $userId);
                         })
-                        ->whereBetween('created_at', [$utilityAmountStart, $now->endOfMonth()])
+                        ->where('created_at', '<=', $monthEnd)
                         ->sum('amount');
 
                     if ($monthUtilityAmount > 0) {
@@ -995,6 +995,45 @@ if (! function_exists('calculate_transaction_charge')) {
         }
 
         return min($transactionCharge, $momas_max);
+    }
+
+}
+
+if (! function_exists('calculate_transaction_charge_breakdown')) {
+
+    function calculate_transaction_charge_breakdown(float|int $amount, Estate|int|string|null $estate = null): array
+    {
+        if (! $estate instanceof Estate) {
+            $estate_id = $estate ?? (Auth::check() ? Auth::user()->estate_id : null);
+            $estate = $estate_id ? Estate::find($estate_id) : null;
+        }
+
+        $payment_purpose = app(RequestContext::class)->get('payment_purpose');
+
+        $momas_max = match ($payment_purpose) {
+            'utilities' => config('constants.momas_max_utilities_transaction_fee'),
+            default => config('constants.momas_max_transaction_fee'),
+        };
+        $momas_cap = $momas_max - 2000;
+
+        $momasFee = 0;
+
+        if ($estate) {
+            $fee_type = $estate->transaction_fee_type;
+            $fee = (float) $estate->transaction_fee;
+
+            $momasFee = $fee_type === 'flat' ? $fee : ($fee / 100) * $amount;
+            $momasFee = min($momasFee, $momas_cap);
+        }
+
+        $paymentCharge = min((1.5 / 100) * $amount, 2000);
+        $transactionCharge = $momasFee + $paymentCharge;
+
+        return [
+            'momasFee' => $momasFee,
+            'paymentCharge' => $paymentCharge,
+            'transactionCharge' => $transactionCharge,
+        ];
     }
 
 }

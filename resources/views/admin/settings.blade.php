@@ -2,8 +2,10 @@
 
     use App\Models\ModFeature;
 
-    function statusValue ($status) {
-        return ModFeature::HANDLED_STATUS[$status];
+    if (! function_exists('statusValue')) {
+        function statusValue ($status) {
+            return ModFeature::HANDLED_STATUS[$status];
+        }
     }
 ?>
 

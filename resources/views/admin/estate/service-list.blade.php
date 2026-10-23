@@ -17,7 +17,7 @@
                     </div>
                 </div>
 
-                @if ($errors->any())
+                @if (isset($errors) && $errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -84,7 +84,7 @@
                             <div class="card-header">
                                 <div class="d-flex justify-content-between">
                                     <h5 class="card-title text-black mb-0">Estates Service List</h5>
-                                    <a href="new-service"
+                                    <a href="{{ url('admin/new-service') }}"
                                        class="btn btn-primary text-white justify-content-end">Add new</a>
                                 </div>
 
@@ -119,10 +119,10 @@
                                               $rowClass = $isDisabled ? 'table-secondary' : '';
                                           @endphp
                                           <tr class="{{ $rowClass }}">
-                                              <td><a href="view-service?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->service_title}}</a></td>
-                                              <td>{{$data->estate->title}} </td>
+                                              <td><a href="{{ url('admin/view-service?id='.$data->id) }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->service_title}}</a></td>
+                                              <td>{{$data->estate->title ?? '-'}} </td>
                                               <td>{{$data->professional_name}} </td>
-                                              <td><a href="tel:{{$data->phone}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}> {{$data->professional_phone}}</a></td>
+                                              <td><a href="tel:{{$data->professional_phone}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}> {{$data->professional_phone}}</a></td>
                                               <td>{{$data->professional_email}}</td>
                                               <td>
                                                   @if($data->status == 2)
@@ -136,14 +136,14 @@
                                               </td>
                                               <td>
                                                   @if($data->status == 2)
-                                                      <a href="service-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                      <a href="{{ url('admin/service-deactivate?id='.$data->id) }}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
                                                       <script>
                                                           function confirmDeactivate() {
                                                               return confirm('Are you sure you want to deactivate this item?');
                                                           }
                                                       </script>
                                                   @else
-                                                      <a href="service-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                      <a href="{{ url('admin/service-activate?id='.$data->id) }}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
                                                       <script>
                                                           function confirmActivate() {
                                                               return confirm('Are you sure you want to activate this item?');
@@ -198,7 +198,7 @@
                     </div>
                 </div>
 
-                @if ($errors->any())
+                @if (isset($errors) && $errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -276,7 +276,7 @@
                                                             aria-label="Close"></button>
                                                 </div>
 
-                                                <form action="add-new-service-list" method="POST"
+                                                <form action="{{ url('admin/add-new-service-list') }}" method="POST"
                                                       enctype="multipart/form-data">
                                                     @csrf
 
@@ -379,30 +379,30 @@
                                              $rowClass = $isDisabled ? 'table-secondary' : '';
                                          @endphp
                                          <tr class="{{ $rowClass }}">
-                                             <td><a href="view-service?id={{$data->id}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->service_title}}</a></td>
+                                             <td><a href="{{ url('admin/view-service?id='.$data->id) }}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}>{{$data->service_title}}</a></td>
                                              <td>{{$data->professional_name}} </td>
-                                             <td><a href="tel:{{$data->phone}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}> {{$data->professional_phone}}</a></td>
+                                             <td><a href="tel:{{$data->professional_phone}}" {{ $isDisabled ? 'style="pointer-events: none; opacity: 0.65;"' : '' }}> {{$data->professional_phone}}</a></td>
                                              <td>{{$data->professional_email}}</td>
                                              <td>
                                                  @if($data->status == 2)
                                                      <span class="badge text-bg-primary">Active</span>
                                                  @elseif($data->status == 0)
-                                                     <span class="badge text-bg-warning">Inactive</span>
+                                                      <span class="badge text-bg-warning">Inactive</span>
                                                  @elseif($data->status == 3)
-                                                     <span class="badge text-bg-danger">Blocked</span>
+                                                      <span class="badge text-bg-danger">Blocked</span>
                                                  @endif
 
                                              </td>
                                              <td>
                                                   @if($data->status == 2)
-                                                      <a href="service-deactivate?id={{$data->id}}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
+                                                      <a href="{{ url('admin/service-deactivate?id='.$data->id) }}" onclick="return confirmDeactivate();" class="btn btn-warning">Deactivate</a>
                                                       <script>
                                                           function confirmDeactivate() {
                                                               return confirm('Are you sure you want to deactivate this item?');
                                                           }
                                                       </script>
                                                   @else
-                                                      <a href="service-activate?id={{$data->id}}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
+                                                      <a href="{{ url('admin/service-activate?id='.$data->id) }}" onclick="return confirmActivate();" class="btn btn-primary">Activate</a>
                                                       <script>
                                                           function confirmActivate() {
                                                               return confirm('Are you sure you want to activate this item?');

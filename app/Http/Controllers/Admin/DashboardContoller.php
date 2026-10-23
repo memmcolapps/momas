@@ -28,6 +28,7 @@ use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardContoller extends Controller
 {
@@ -591,7 +592,7 @@ class DashboardContoller extends Controller
 
         if (Auth::user()->isSuperAdmin()) {
 
-            $data['fea'] = Feature::where('id', 1)->first();
+            $data['fea'] = Schema::hasTable('features') ? Feature::where('id', 1)->first() : null;
 
             $data['set'] = Setting::where('id', 1)->first();
 
@@ -605,7 +606,7 @@ class DashboardContoller extends Controller
             return view('admin/settings', $data);
         } elseif (Auth::user()->role == 1) {
 
-            $data['fea'] = Feature::where('id', 1)->first();
+            $data['fea'] = Schema::hasTable('features') ? Feature::where('id', 1)->first() : null;
             $data['set'] = Setting::where('id', 1)->first();
 
             return view('admin/settings', $data);

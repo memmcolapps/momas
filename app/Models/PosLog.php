@@ -16,20 +16,10 @@ class PosLog extends Model
         'status' => 'integer',
     ];
 
-    protected $fillable = [
+    protected $guarded = [];
 
-        'token',
-        'vending_amount',
-        'vat_amount',
-        'vend_amount_kw_per_naira',
-        'meter_no',
-        'status',
-        'address',
-        'name',
-        'merchant_id',
-
-    ];
-
-
-
+    public function merchant()
+    {
+        return $this->belongsTo(Merchant::class, 'merchant_id');
+    }
 }
