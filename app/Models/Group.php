@@ -15,12 +15,16 @@ class Group extends Model
     protected $fillable = [
         'alert_id',
         'all_users',
+        'estates',
         'users',
+        'meter_numbers',
     ];
 
     protected $casts = [
         'all_users' => 'boolean',
+        'estates' => 'array',
         'users' => 'array',
+        'meter_numbers' => 'array',
     ];
 
     public function alert(): BelongsTo

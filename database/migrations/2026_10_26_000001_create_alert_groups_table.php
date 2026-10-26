@@ -12,7 +12,9 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('alert_id')->unique();
             $table->boolean('all_users')->default(false);
+            $table->json('estates')->nullable();
             $table->json('users')->nullable();
+            $table->json('meter_numbers')->nullable();
             $table->timestamps();
         });
     }

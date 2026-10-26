@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('alerts', function (Blueprint $table) {
             $table->id();
+            $table->string('title');
             $table->string('image_url')->nullable();
             $table->string('priority')->default('medium')->index();
             $table->timestamp('displays_at')->nullable()->index();

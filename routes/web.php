@@ -5,6 +5,7 @@ use App\Exports\Meter\Export;
 use App\Exports\MeterExport;
 use App\Exports\UtilitiesPaymentsExport;;
 use App\Http\Controllers\AccessToken\AccessTokenConroller;
+use App\Http\Controllers\Admin\AlertController;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BeneficiaryController;
@@ -202,6 +203,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::get('view-issue', [LoggedIssueController::class, 'show'])->name('issues.show');
     Route::post('update-issue-status', [LoggedIssueController::class, 'updateStatus'])->name('issues.updateStatus');
     Route::get('delete-issue', [LoggedIssueController::class, 'destroy'])->name('issues.destroy');
+
+    // Alerts
+    Route::get('alerts', [AlertController::class, 'index'])->name('alerts.index');
+    Route::get('new-alert', [AlertController::class, 'create'])->name('alerts.create');
+    Route::post('alert-store', [AlertController::class, 'store'])->name('alerts.store');
+    Route::get('alert-stats', [AlertController::class, 'stats'])->name('alerts.stats');
+    Route::get('view-alert', [AlertController::class, 'show'])->name('alerts.show');
 
 
 

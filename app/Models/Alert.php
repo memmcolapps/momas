@@ -12,6 +12,7 @@ class Alert extends Model
     use HasFactory;
 
     protected $fillable = [
+        'title',
         'image_url',
         'priority',
         'displays_at',
@@ -48,5 +49,50 @@ class Alert extends Model
     public function alertUsers(): HasMany
     {
         return $this->hasMany(AlertUser::class);
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    public function isActive(): bool
+    {
+        $now = now();
+
+        return ($this->displays_at === null || $this->displays_at->lessThanOrEqualTo($now))
+            && ($this->expires_at === null || $this->expires_at->greaterThanOrEqualTo($now));
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        if ($this->isExpired()) {
+            return 'Expired';
+        }
+
+        if ($this->displays_at !== null && $this->displays_at->isFuture()) {
+            return 'Upcoming';
+        }
+
+        return 'Active';
+    }
+
+    public function getStatusBadgeAttribute(): string
+    {
+        return match ($this->status_label) {
+            'Expired' => 'secondary',
+            'Upcoming' => 'warning',
+            default => 'success',
+        };
+    }
+
+    public function getPriorityBadgeAttribute(): string
+    {
+        return match (strtolower($this->priority)) {
+            self::PRIORITY_URGENT => 'danger',
+            self::PRIORITY_HIGH => 'warning',
+            self::PRIORITY_MEDIUM => 'info',
+            default => 'secondary',
+        };
     }
 }
