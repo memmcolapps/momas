@@ -36,10 +36,34 @@ class LoggedIssue extends Model
         'resolved_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'status_label',
+        'status_badge',
+        'priority_badge',
+        'attachment_url',
+    ];
+
     const STATUS_OPEN = 0;
     const STATUS_IN_PROGRESS = 1;
     const STATUS_RESOLVED = 2;
     const STATUS_CLOSED = 3;
+
+    public const CATEGORIES = [
+        'Power / Meter',
+        'Token Generation',
+        'Billing / Tariff',
+        'Water / Utility',
+        'Security / Gate',
+        'Facility Maintenance',
+        'General',
+    ];
+
+    public const PRIORITIES = [
+        'low',
+        'medium',
+        'high',
+        'urgent',
+    ];
 
     public function estate()
     {
@@ -92,6 +116,19 @@ class LoggedIssue extends Model
             'low' => 'secondary',
             default => 'primary',
         };
+    }
+
+    public function getAttachmentUrlAttribute()
+    {
+        if (!$this->attachment) {
+            return null;
+        }
+
+        if (str_starts_with($this->attachment, 'http://') || str_starts_with($this->attachment, 'https://')) {
+            return $this->attachment;
+        }
+
+        return url($this->attachment);
     }
 
     public static function generateTicketId()

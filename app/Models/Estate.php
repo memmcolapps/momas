@@ -139,4 +139,9 @@ class Estate extends Model
     public function getBank() {
         return Bank::firstWhere('id', $this->bank_id);
     }
+
+    public function getEstateNameAttribute()
+    {
+        return $this->title;
+    }
 }
