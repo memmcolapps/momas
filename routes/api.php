@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\MeterImportController;
 use App\Http\Controllers\Admin\TokenController;
+use App\Http\Controllers\Alert\UserAlertController;
 use App\Http\Controllers\AnalyticController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -62,6 +63,11 @@ Route::any('pos/eod', [PosController::class, 'get_all_transaction']);
 Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], function () {
 
     Route::post('update-password', [RegisterController::class, 'update_password']);
+
+    Route::get('alerts', [UserAlertController::class, 'index']);
+    Route::get('alerts/active', [UserAlertController::class, 'active']);
+    Route::post('alerts/{alert}/acknowledge', [UserAlertController::class, 'acknowledge'])
+        ->whereNumber('alert');
 
     Route::post('balance', [ProfileController::class, 'balance']);
     Route::get('features', [FeatureController::class, 'features']);
