@@ -35,6 +35,13 @@ class AlertController extends Controller
     {
         $this->ensureSuperAdmin();
 
+        $ctaButtons = collect(is_array($request->input('buttons')) ? $request->input('buttons') : [])
+            ->filter(fn ($button) => is_array($button) && (filled($button['text'] ?? null) || filled($button['cta_url'] ?? null)))
+            ->values()
+            ->all();
+
+        $request->merge(['buttons' => $ctaButtons]);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'image_url' => 'nullable|url|max:2048',
@@ -51,6 +58,9 @@ class AlertController extends Controller
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::CUSTOMER)),
             ],
             'meter_numbers' => 'nullable|string',
+            'buttons' => 'nullable|array',
+            'buttons.*.text' => 'required|string|max:255',
+            'buttons.*.cta_url' => 'required|string|max:2048',
         ]);
 
         $allUsers = $request->boolean('all_users');
@@ -89,6 +99,10 @@ class AlertController extends Controller
                 'is_urgent' => $isUrgent,
                 'expires_at' => $validated['expires_at'] ?? null,
             ]);
+
+            if (! empty($validated['buttons'])) {
+                $alert->buttons()->createMany($validated['buttons']);
+            }
 
             $group = Group::create([
                 'alert_id' => $alert->id,
@@ -136,7 +150,7 @@ class AlertController extends Controller
             'id' => 'required|integer|exists:alerts,id',
         ]);
 
-        $alert = Alert::with('group')->findOrFail($request->input('id'));
+        $alert = Alert::with('group', 'buttons')->findOrFail($request->input('id'));
         $group = $alert->group;
 
         $estateNames = $group

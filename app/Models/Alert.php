@@ -51,6 +51,10 @@ class Alert extends Model
         return $this->hasMany(AlertUser::class);
     }
 
+    public function buttons() {
+        return $this->hasMany(AlertButton::class, 'alert_id');
+    }
+
     public function isExpired(): bool
     {
         return $this->expires_at !== null && $this->expires_at->isPast();

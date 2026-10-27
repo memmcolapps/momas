@@ -145,6 +145,7 @@ class AlertUserService
     private function fetchAlerts(int $userId, bool $activeOnly): Collection
     {
         $query = Alert::query()
+            ->with('buttons')
             ->join('alert_users', 'alert_users.alert_id', '=', 'alerts.id')
             ->where('alert_users.user_id', $userId)
             ->select('alerts.*', 'alert_users.acknowledged_at')

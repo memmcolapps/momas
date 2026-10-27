@@ -68,6 +68,19 @@
                                     <p class="fs-14 text-dark mb-0">{{ $alert->created_at->format('M d, Y H:i') }}</p>
                                 </div>
                             </div>
+
+                            @if($alert->buttons->isNotEmpty())
+                                <div class="mt-2">
+                                    <label class="text-muted fs-12 text-uppercase fw-semibold d-block mb-2">Call-to-Action Buttons</label>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach($alert->buttons as $button)
+                                            <a href="{{ $button->cta_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                                                {{ $button->text }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
 
