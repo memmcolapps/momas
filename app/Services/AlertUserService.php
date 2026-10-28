@@ -145,7 +145,7 @@ class AlertUserService
     private function fetchAlerts(int $userId, bool $activeOnly): Collection
     {
         $query = Alert::query()
-            ->with('buttons')
+            ->with(['buttons', 'alertImage'])
             ->join('alert_users', 'alert_users.alert_id', '=', 'alerts.id')
             ->where('alert_users.user_id', $userId)
             ->select('alerts.*', 'alert_users.acknowledged_at')
@@ -177,6 +177,27 @@ class AlertUserService
             unset($payload['acknowledged_at']);
 
             $payload['display'] = $display;
+
+            if ($alert->relationLoaded('alertImage') && $alert->alertImage) {
+                $image = $alert->alertImage;
+                $payload['image'] = [
+                    'url' => $image->url,
+                    'width' => $image->width ?? 720,
+                    'height' => $image->height ?? 960,
+                    'fit' => $image->fit ?? 'CONTAIN',
+                ];
+            } elseif (isset($alert->image_url) && $alert->image_url) {
+                $payload['image'] = [
+                    'url' => $alert->image_url,
+                    'width' => 720,
+                    'height' => 960,
+                    'fit' => 'CONTAIN',
+                ];
+            } else {
+                $payload['image'] = null;
+            }
+
+            unset($payload['alert_image']);
 
             return $payload;
         });

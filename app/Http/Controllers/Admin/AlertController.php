@@ -8,6 +8,7 @@ use App\Models\Estate;
 use App\Models\Group;
 use App\Models\Meter;
 use App\Models\User;
+use App\Services\AlertImageService;
 use App\Services\AlertUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +45,7 @@ class AlertController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'image_url' => 'nullable|url|max:2048',
             'priority' => ['required', Rule::in(array_keys(Alert::PRIORITY_WEIGHTS))],
             'displays_at' => 'required|date',
@@ -90,7 +92,7 @@ class AlertController extends Controller
             }
         }
 
-        $alert = DB::transaction(function () use ($validated, $allUsers, $isUrgent, $estateIds, $userIds, $meterNumbers) {
+        $alert = DB::transaction(function () use ($request, $validated, $allUsers, $isUrgent, $estateIds, $userIds, $meterNumbers) {
             $alert = Alert::create([
                 'title' => $validated['title'],
                 'image_url' => $validated['image_url'] ?? null,
@@ -99,6 +101,14 @@ class AlertController extends Controller
                 'is_urgent' => $isUrgent,
                 'expires_at' => $validated['expires_at'] ?? null,
             ]);
+
+            if ($request->hasFile('image')) {
+                (new AlertImageService())->upload($request->file('image'), $alert, [
+                    'width' => 720,
+                    'height' => 960,
+                    'fit' => 'CONTAIN',
+                ]);
+            }
 
             if (! empty($validated['buttons'])) {
                 $alert->buttons()->createMany($validated['buttons']);

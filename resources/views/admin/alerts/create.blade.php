@@ -38,7 +38,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('alerts.store') }}" method="POST">
+            <form action="{{ route('alerts.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <div class="row">
@@ -54,8 +54,9 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-medium">Image URL</label>
-                                    <input type="url" name="image_url" id="image_url" value="{{ old('image_url') }}" class="form-control" placeholder="https://example.com/alert-image.jpg">
+                                    <label class="form-label fw-medium">Alert Image</label>
+                                    <input type="file" name="image" id="image" class="form-control" accept="image/*">
+                                    <div class="form-text">Upload an image (720 × 960, fit CONTAIN). JPG, JPEG, PNG, WEBP up to 5MB.</div>
                                 </div>
 
                                 <div class="mb-3 d-none" id="image_preview_wrapper">
@@ -287,24 +288,26 @@
                 });
             });
 
-            const imageUrl = document.getElementById('image_url');
+            const imageInput = document.getElementById('image');
             const imagePreview = document.getElementById('image_preview');
             const imagePreviewWrapper = document.getElementById('image_preview_wrapper');
 
-            function updateImagePreview() {
-                const value = imageUrl.value.trim();
-
-                if (value !== '' && /^https?:\/\//i.test(value)) {
-                    imagePreview.src = value;
-                    imagePreviewWrapper.classList.remove('d-none');
-                } else {
-                    imagePreview.removeAttribute('src');
-                    imagePreviewWrapper.classList.add('d-none');
-                }
+            if (imageInput) {
+                imageInput.addEventListener('change', function (e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            imagePreview.src = event.target.result;
+                            imagePreviewWrapper.classList.remove('d-none');
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        imagePreview.removeAttribute('src');
+                        imagePreviewWrapper.classList.add('d-none');
+                    }
+                });
             }
-
-            imageUrl.addEventListener('input', updateImagePreview);
-            updateImagePreview();
 
             const ctaRows = document.getElementById('cta_rows');
             const ctaEmpty = document.getElementById('cta_empty');
