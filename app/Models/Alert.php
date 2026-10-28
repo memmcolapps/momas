@@ -56,6 +56,11 @@ class Alert extends Model
         return $this->hasMany(AlertButton::class, 'alert_id');
     }
 
+    public function button(): HasOne
+    {
+        return $this->hasOne(AlertButton::class, 'alert_id');
+    }
+
     public function alertImage(): HasOne
     {
         return $this->hasOne(AlertImage::class);

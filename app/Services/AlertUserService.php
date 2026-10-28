@@ -52,6 +52,11 @@ class AlertUserService
         return $this->fetchAlerts($userId, true);
     }
 
+    public function getActiveDisplayAlert(int $userId): ?array
+    {
+        return $this->fetchAlerts($userId, true)->firstWhere('display', true);
+    }
+
     public function acknowledgeAlert(int $userId, int $alertId): AlertUser
     {
         $alertUser = AlertUser::query()
@@ -145,7 +150,7 @@ class AlertUserService
     private function fetchAlerts(int $userId, bool $activeOnly): Collection
     {
         $query = Alert::query()
-            ->with(['buttons', 'alertImage'])
+            ->with(['button', 'alertImage'])
             ->join('alert_users', 'alert_users.alert_id', '=', 'alerts.id')
             ->where('alert_users.user_id', $userId)
             ->select('alerts.*', 'alert_users.acknowledged_at')

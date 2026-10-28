@@ -8,8 +8,8 @@
         $expiresAtValue = old('expires_at')
             ? \Carbon\Carbon::parse(old('expires_at'))->format('Y-m-d\TH:i')
             : '';
-        $buttonRows = is_array(old('buttons')) ? old('buttons') : [];
-        $nextButtonIndex = empty($buttonRows) ? 0 : max(array_map('intval', array_keys($buttonRows))) + 1;
+        $buttonRows = is_array(old('buttons')) ? array_values(old('buttons')) : [];
+        $button = $buttonRows[0] ?? [];
     @endphp
 
     <div class="content">
@@ -103,35 +103,19 @@
                         </div>
 
                         <div class="card mb-4">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="card-title text-black mb-0">Call-to-Action Buttons</h5>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="add_cta_button">
-                                    <i data-feather="plus" style="width: 14px; height: 14px;"></i> Add CTA
-                                </button>
+                            <div class="card-header">
+                                <h5 class="card-title text-black mb-0">Call-to-Action Button</h5>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted fs-13">Optional. Add one or more buttons recipients can tap from the alert.</p>
+                                <p class="text-muted fs-13">Optional. Add a button recipients can tap from the alert.</p>
 
-                                <div id="cta_rows">
-                                    @foreach($buttonRows as $index => $button)
-                                        <div class="cta-row row g-2 align-items-start mb-2" data-cta-row>
-                                            <div class="col-md-5">
-                                                <input type="text" name="buttons[{{ $index }}][text]" value="{{ $button['text'] ?? '' }}" class="form-control" placeholder="Button text">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <input type="text" name="buttons[{{ $index }}][cta_url]" value="{{ $button['cta_url'] ?? '' }}" class="form-control" placeholder="https://example.com or app://link">
-                                            </div>
-                                            <div class="col-md-1 d-grid">
-                                                <button type="button" class="btn btn-outline-danger remove-cta-row" aria-label="Remove CTA">
-                                                    <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-
-                                <div id="cta_empty" class="text-muted fs-13 @if(!empty($buttonRows)) d-none @endif">
-                                    No CTA buttons added.
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <input type="text" name="buttons[0][text]" value="{{ $button['text'] ?? '' }}" class="form-control" placeholder="Button text">
+                                    </div>
+                                    <div class="col-md-7">
+                                        <input type="text" name="buttons[0][cta_url]" value="{{ $button['cta_url'] ?? '' }}" class="form-control" placeholder="https://example.com or app://link">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -226,21 +210,6 @@
                     </button>
                 </div>
 
-                <template id="cta_row_template">
-                    <div class="cta-row row g-2 align-items-start mb-2" data-cta-row>
-                        <div class="col-md-5">
-                            <input type="text" name="buttons[__INDEX__][text]" class="form-control" placeholder="Button text">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" name="buttons[__INDEX__][cta_url]" class="form-control" placeholder="https://example.com or app://link">
-                        </div>
-                        <div class="col-md-1 d-grid">
-                            <button type="button" class="btn btn-outline-danger remove-cta-row" aria-label="Remove CTA">
-                                <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
-                            </button>
-                        </div>
-                    </div>
-                </template>
             </form>
 
         </div>
@@ -308,47 +277,6 @@
                     }
                 });
             }
-
-            const ctaRows = document.getElementById('cta_rows');
-            const ctaEmpty = document.getElementById('cta_empty');
-            const ctaTemplate = document.getElementById('cta_row_template');
-            const addCtaButton = document.getElementById('add_cta_button');
-            let ctaIndex = {{ $nextButtonIndex }};
-
-            function toggleCtaEmptyState() {
-                ctaEmpty.classList.toggle('d-none', ctaRows.querySelectorAll('[data-cta-row]').length > 0);
-            }
-
-            function refreshFeatherIcons() {
-                if (window.feather && typeof window.feather.replace === 'function') {
-                    window.feather.replace();
-                }
-            }
-
-            addCtaButton.addEventListener('click', function () {
-                const html = ctaTemplate.innerHTML.replaceAll('__INDEX__', ctaIndex++);
-                ctaRows.insertAdjacentHTML('beforeend', html);
-                toggleCtaEmptyState();
-                refreshFeatherIcons();
-            });
-
-            ctaRows.addEventListener('click', function (event) {
-                const removeButton = event.target.closest('.remove-cta-row');
-
-                if (!removeButton) {
-                    return;
-                }
-
-                const row = removeButton.closest('[data-cta-row]');
-
-                if (row) {
-                    row.remove();
-                }
-
-                toggleCtaEmptyState();
-            });
-
-            toggleCtaEmptyState();
         });
     </script>
 
