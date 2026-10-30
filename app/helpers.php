@@ -990,7 +990,7 @@ if (! function_exists('calculate_transaction_charge')) {
 
             return [
                 'momasFee' => $momasFee,
-                'transactionCharge' => $transactionCharge // momas_fee included
+                'transactionCharge' => min($transactionCharge, $momas_max), // momas_fee included
             ];
         }
 

@@ -194,6 +194,21 @@
                         </li>
 
                         <li>
+                            <a href="charts-mixed.html#sidebarAlertsSuper" data-bs-toggle="collapse">
+                                <i data-feather="bell"></i>
+                                <span> Alerts </span>
+                                <span class="menu-arrow"></span>
+                            </a>
+                            <div class="collapse" id="sidebarAlertsSuper">
+                                <ul class="nav-second-level">
+                                    <li><a class='tp-link' href='/admin/new-alert'>Create Alert</a></li>
+                                    <li><a class='tp-link' href='/admin/alert-stats'>Alert Statistics</a></li>
+                                    <li><a class='tp-link' href='/admin/alerts'>All Alerts</a></li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li>
                             <a href="charts-mixed.html#sidebar1" data-bs-toggle="collapse">
                                 <i data-feather="zap"></i>
                                 <span> Meter Token </span>
