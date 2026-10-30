@@ -9,6 +9,7 @@ output_db.sh
 momas_production_backup.sql
 *.sql
 .vscode/
+/public/storage
 ./storage/app/legacy-export
 export_legacy.php
 migrate_legacy.php

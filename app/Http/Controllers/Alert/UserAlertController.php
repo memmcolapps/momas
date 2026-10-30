@@ -25,6 +25,13 @@ class UserAlertController extends Controller
         return StandardResponse::success(200, 'Active alerts fetched successfully', $alerts);
     }
 
+    public function display(Request $request)
+    {
+        $alert = (new AlertUserService())->getActiveDisplayAlert((int) Auth::id());
+
+        return StandardResponse::success(200, 'Display alert fetched successfully', $alert);
+    }
+
     public function acknowledge(int $alert)
     {
         try {

@@ -13,9 +13,7 @@
                         <h4 class="fs-18 fw-semibold m-0">{{ $alert->title }}</h4>
                         <span class="badge text-bg-{{ $alert->status_badge }}">{{ $alert->status_label }}</span>
                         <span class="badge text-bg-{{ $alert->priority_badge }} text-uppercase">{{ $alert->priority }}</span>
-                        @if($alert->is_urgent)
-                            <span class="badge text-bg-danger text-uppercase">Urgent</span>
-                        @endif
+                        <span class="badge text-bg-info text-uppercase">{{ $alert->type_label }}</span>
                     </div>
                 </div>
                 <div class="flex-shrink-0 d-flex gap-2 mt-2 mt-sm-0">
@@ -42,13 +40,17 @@
                             <h5 class="card-title text-black mb-0">Alert Details</h5>
                         </div>
                         <div class="card-body">
-                            @if($alert->image_url)
+                            @if($alert->alertImage)
                                 <div class="mb-3">
-                                    <img src="{{ $alert->image_url }}" alt="{{ $alert->title }}" class="img-fluid rounded border" style="max-height: 320px;">
+                                    <img src="{{ $alert->alertImage->url }}" alt="{{ $alert->title }}" class="img-fluid rounded border" style="max-height: 320px;">
                                 </div>
                             @endif
 
                             <h4 class="text-dark mb-3">{{ $alert->title }}</h4>
+
+                            @if($alert->text)
+                                <p class="text-dark mb-3">{{ $alert->text }}</p>
+                            @endif
 
                             <div class="row">
                                 <div class="col-md-4 mb-3">

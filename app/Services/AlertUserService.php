@@ -52,6 +52,14 @@ class AlertUserService
         return $this->fetchAlerts($userId, true);
     }
 
+    public function getActiveDisplayAlert(int $userId): ?array
+    {
+        $displayAlert = $this->fetchAlerts($userId, true)->firstWhere('display', true);
+        unset($displayAlert['display']);
+
+        return $displayAlert;
+    }
+
     public function acknowledgeAlert(int $userId, int $alertId): AlertUser
     {
         $alertUser = AlertUser::query()
@@ -145,12 +153,14 @@ class AlertUserService
     private function fetchAlerts(int $userId, bool $activeOnly): Collection
     {
         $query = Alert::query()
-            ->with('buttons')
+            ->with(['button', 'alertImage'])
             ->join('alert_users', 'alert_users.alert_id', '=', 'alerts.id')
             ->where('alert_users.user_id', $userId)
             ->select('alerts.*', 'alert_users.acknowledged_at')
-            ->orderByRaw($this->priorityOrder())
-            ->orderByDesc('alerts.created_at');
+            ->orderByDesc('alerts.created_at')
+            ->orderByRaw('CASE WHEN alerts.expires_at IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('alerts.expires_at')
+            ->orderByRaw($this->priorityOrder());
 
         if ($activeOnly) {
             $now = now();
@@ -164,22 +174,82 @@ class AlertUserService
             });
         }
 
-        $displayAssigned = false;
+        $alerts = $query->get();
+        $displayAlert = $this->selectPriority($alerts);
+        $displayAlertId = $displayAlert?->id;
 
-        return $query->get()->map(function (Alert $alert) use (&$displayAssigned) {
-            $display = ! $displayAssigned && $alert->acknowledged_at === null;
-
-            if ($display) {
-                $displayAssigned = true;
-            }
-
+        return $alerts->map(function (Alert $alert) use ($displayAlertId) {
             $payload = $alert->toArray();
             unset($payload['acknowledged_at']);
 
-            $payload['display'] = $display;
+            $payload['display'] = $displayAlertId !== null && $alert->id === $displayAlertId;
+
+            if ($alert->relationLoaded('alertImage') && $alert->alertImage) {
+                $image = $alert->alertImage;
+                $payload['image'] = [
+                    'url' => $image->url,
+                    'width' => $image->width ?? 720,
+                    'height' => $image->height ?? 960,
+                    'fit' => $image->fit ?? 'CONTAIN',
+                ];
+            } else {
+                $payload['image'] = null;
+            }
+
+            $payload['start_date'] = $payload['displays_at'];
+            $payload['end_date'] = $payload['expires_at'];
+
+            unset(
+                $payload['alert_image'],
+                $payload['displays_at'],
+                $payload['expires_at'],
+                $payload['created_at'],
+                $payload['updated_at'],
+                $payload['button']['created_at'],
+                $payload['button']['updated_at'],
+            );
 
             return $payload;
         });
+    }
+
+    public function selectPriority(Collection $alerts): ?Alert
+    {
+        return $alerts
+            ->filter(fn (Alert $alert) => $alert->acknowledged_at === null && $alert->isActive())
+            ->reduce(function (?Alert $selected, Alert $candidate) {
+                if ($selected === null) {
+                    return $candidate;
+                }
+
+                return $this->isHigherPriority($candidate, $selected) ? $candidate : $selected;
+            });
+    }
+
+    private function isHigherPriority(Alert $candidate, Alert $current): bool
+    {
+        $candidateCreated = $candidate->created_at?->getTimestamp() ?? 0;
+        $currentCreated = $current->created_at?->getTimestamp() ?? 0;
+
+        if ($candidateCreated !== $currentCreated) {
+            return $candidateCreated > $currentCreated;
+        }
+
+        $candidateExpiry = $candidate->expires_at?->getTimestamp() ?? PHP_INT_MAX;
+        $currentExpiry = $current->expires_at?->getTimestamp() ?? PHP_INT_MAX;
+
+        if ($candidateExpiry !== $currentExpiry) {
+            return $candidateExpiry < $currentExpiry;
+        }
+
+        $candidateWeight = Alert::PRIORITY_WEIGHTS[strtolower((string) $candidate->priority)] ?? 0;
+        $currentWeight = Alert::PRIORITY_WEIGHTS[strtolower((string) $current->priority)] ?? 0;
+
+        if ($candidateWeight !== $currentWeight) {
+            return $candidateWeight > $currentWeight;
+        }
+
+        return $candidate->id > $current->id;
     }
 
     private function resolveRecipients(Group $group): array

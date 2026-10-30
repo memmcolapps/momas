@@ -68,6 +68,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
 
     Route::get('alerts', [UserAlertController::class, 'index']);
     Route::get('alerts/active', [UserAlertController::class, 'active']);
+    Route::get('alerts/active/display', [UserAlertController::class, 'display']);
     Route::post('alerts/{alert}/acknowledge', [UserAlertController::class, 'acknowledge'])
         ->whereNumber('alert');
 
