@@ -10,6 +10,9 @@
             : '';
         $buttonRows = is_array(old('buttons')) ? array_values(old('buttons')) : [];
         $button = $buttonRows[0] ?? [];
+        $selectedType = old('type', \App\Models\Alert::TYPE_TEXT_NOTICE);
+        $textRequired = in_array($selectedType, [\App\Models\Alert::TYPE_TEXT_NOTICE, \App\Models\Alert::TYPE_FULL_NOTICE], true);
+        $imageRequired = in_array($selectedType, [\App\Models\Alert::TYPE_IMAGE_NOTICE, \App\Models\Alert::TYPE_FULL_NOTICE], true);
     @endphp
 
     <div class="content">
@@ -49,20 +52,43 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
+                                    <label class="form-label fw-medium">Notice Type <span class="text-danger">*</span></label>
+                                    <select name="type" id="type" class="form-select" required>
+                                        @foreach($alertTypes as $value => $label)
+                                            <option value="{{ $value }}" @selected($selectedType === $value)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
                                     <label class="form-label fw-medium">Alert Title <span class="text-danger">*</span></label>
                                     <input type="text" name="title" value="{{ old('title') }}" class="form-control" placeholder="e.g. Scheduled maintenance notice" required>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label fw-medium">Alert Image</label>
-                                    <input type="file" name="image" id="image" class="form-control" accept="image/*">
-                                    <div class="form-text">Upload an image (720 × 960, fit CONTAIN). JPG, JPEG, PNG, WEBP up to 5MB.</div>
+                                <div class="mb-3 {{ $textRequired ? '' : 'd-none' }}" id="text_section">
+                                    <label class="form-label fw-medium">Notice Text <span class="text-danger">*</span></label>
+                                    <textarea name="text" id="text" rows="4" class="form-control" placeholder="Enter the notice message" @required($textRequired)>{{ old('text') }}</textarea>
                                 </div>
 
-                                <div class="mb-3 d-none" id="image_preview_wrapper">
-                                    <label class="form-label fw-medium">Image Preview</label>
-                                    <div class="border rounded p-2 bg-light">
-                                        <img src="" id="image_preview" alt="Alert preview" class="img-fluid rounded" style="max-height: 220px;">
+                                <div id="image_section" class="{{ $imageRequired ? '' : 'd-none' }}">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium">Alert Image <span class="text-danger">*</span></label>
+                                        <input type="file" name="image" id="image" class="form-control" accept="image/*" @required($imageRequired)>
+                                        <div class="form-text" id="image_help_text">
+                                            @if($selectedType === \App\Models\Alert::TYPE_FULL_NOTICE)
+                                                Any image dimensions are accepted and will be fitted to 720 × 960. JPG, JPEG, PNG, WEBP up to 5MB.
+                                            @else
+                                                Upload an image exactly 720 × 960 pixels (fit CONTAIN). JPG, JPEG, PNG, WEBP up to 5MB.
+                                            @endif
+                                        </div>
+                                        <div class="text-danger fs-12 mt-1 d-none" id="image_dimension_error"></div>
+                                    </div>
+
+                                    <div class="mb-3 d-none" id="image_preview_wrapper">
+                                        <label class="form-label fw-medium">Image Preview</label>
+                                        <div class="border rounded p-2 bg-light">
+                                            <img src="" id="image_preview" alt="Alert preview" class="img-fluid rounded" style="max-height: 220px;">
+                                        </div>
                                     </div>
                                 </div>
 
@@ -76,14 +102,6 @@
                                                 </option>
                                             @endforeach
                                         </select>
-                                    </div>
-
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-medium d-block">Urgent Alert</label>
-                                        <div class="form-check form-switch mt-2">
-                                            <input class="form-check-input" type="checkbox" role="switch" name="is_urgent" value="1" id="is_urgent" @checked(old('is_urgent'))>
-                                            <label class="form-check-label" for="is_urgent">Mark this alert as urgent</label>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -260,23 +278,102 @@
             const imageInput = document.getElementById('image');
             const imagePreview = document.getElementById('image_preview');
             const imagePreviewWrapper = document.getElementById('image_preview_wrapper');
+            const imageDimensionError = document.getElementById('image_dimension_error');
+            const imageHelpText = document.getElementById('image_help_text');
+            const typeSelect = document.getElementById('type');
+            const textSection = document.getElementById('text_section');
+            const textInput = document.getElementById('text');
+            const imageSection = document.getElementById('image_section');
+
+            function isFullNotice() {
+                return typeSelect.value === 'full_notice';
+            }
+
+            function showImageDimensionError(message) {
+                imageInput.setCustomValidity(message);
+                imageDimensionError.textContent = message;
+                imageDimensionError.classList.remove('d-none');
+                imagePreview.removeAttribute('src');
+                imagePreviewWrapper.classList.add('d-none');
+                imageInput.reportValidity();
+            }
+
+            function clearImageDimensionError() {
+                imageInput.setCustomValidity('');
+                imageDimensionError.textContent = '';
+                imageDimensionError.classList.add('d-none');
+            }
+
+            function resetImagePreview() {
+                imagePreview.removeAttribute('src');
+                imagePreviewWrapper.classList.add('d-none');
+            }
+
+            function validateImageFile(file) {
+                clearImageDimensionError();
+
+                if (!file) {
+                    resetImagePreview();
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const image = new Image();
+
+                    image.onload = function () {
+                        if (!isFullNotice() && (image.naturalWidth !== 720 || image.naturalHeight !== 960)) {
+                            showImageDimensionError('Image must be exactly 720 × 960 pixels. Selected image is ' + image.naturalWidth + ' × ' + image.naturalHeight + '.');
+                            return;
+                        }
+
+                        imagePreview.src = event.target.result;
+                        imagePreviewWrapper.classList.remove('d-none');
+                    };
+
+                    image.onerror = function () {
+                        showImageDimensionError('The selected file could not be read as an image.');
+                    };
+
+                    image.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
 
             if (imageInput) {
                 imageInput.addEventListener('change', function (e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function (event) {
-                            imagePreview.src = event.target.result;
-                            imagePreviewWrapper.classList.remove('d-none');
-                        };
-                        reader.readAsDataURL(file);
-                    } else {
-                        imagePreview.removeAttribute('src');
-                        imagePreviewWrapper.classList.add('d-none');
-                    }
+                    validateImageFile(e.target.files[0]);
                 });
             }
+
+            function toggleNoticeFields() {
+                const type = typeSelect.value;
+                const requiresText = type === 'text_notice' || type === 'full_notice';
+                const requiresImage = type === 'image_notice' || type === 'full_notice';
+
+                textSection.classList.toggle('d-none', !requiresText);
+                textInput.required = requiresText;
+                textInput.disabled = !requiresText;
+
+                imageSection.classList.toggle('d-none', !requiresImage);
+                imageInput.required = requiresImage;
+                imageInput.disabled = !requiresImage;
+
+                imageHelpText.textContent = isFullNotice()
+                    ? 'Any image dimensions are accepted and will be fitted to 720 × 960. JPG, JPEG, PNG, WEBP up to 5MB.'
+                    : 'Upload an image exactly 720 × 960 pixels (fit CONTAIN). JPG, JPEG, PNG, WEBP up to 5MB.';
+
+                if (!requiresImage) {
+                    clearImageDimensionError();
+                    imageInput.value = '';
+                    resetImagePreview();
+                } else if (imageInput.files[0]) {
+                    validateImageFile(imageInput.files[0]);
+                }
+            }
+
+            typeSelect.addEventListener('change', toggleNoticeFields);
+            toggleNoticeFields();
         });
     </script>
 
