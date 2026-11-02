@@ -76,22 +76,35 @@
 
                                     <div class="element-box">
 
-                                        <h6 class="element-header ">Search</h6>
+                                        <h6 class="element-header ">Filter</h6>
 
                                         <form action="filter-customer" method="GET">
-                                            @csrf
 
                                             <div class="row">
-
-                                                <div class="col-6">
-                                                    <input type="text" name="search" placeholder="Enter value"
-                                                        id="payment-account-search" class="form-control"
-                                                        value="{{ request('search') }}">
+                                                <div class="col-3">
+                                                    <label>Choose Estate</label>
+                                                    <select class="form-control" name="estate_id">
+                                                        <option value="" {{ request('estate_id') == '' || request('estate_id') === null ? 'selected' : '' }}>All Estate</option>
+                                                        @foreach($estate as $data)
+                                                            <option value="{{$data->id}}" {{ request('estate_id') == $data->id ? 'selected' : '' }}>{{$data->title}}</option>
+                                                        @endforeach
+                                                    </select>
                                                 </div>
 
+                                                <div class="col-3">
+                                                    <label>Enter Meter No</label>
+                                                    <input type="number" class="form-control" name="meterNo" value="{{ request('meterNo') }}">
+                                                </div>
 
-                                                <div class="col-2">
-                                                    <button type="submit" class="btn btn-primary w-100">Search
+                                                <div class="col-3">
+                                                    <label>Search</label>
+                                                    <input type="text" class="form-control" name="search"
+                                                        id="payment-account-search" value="{{ request('search') }}"
+                                                        placeholder="Search by name, email or phone">
+                                                </div>
+
+                                                <div class="col-2 mt-3">
+                                                    <button type="submit" class="btn btn-primary w-100">Filter
                                                     </button>
                                                 </div>
 
@@ -307,6 +320,63 @@
                     </div>
 
 
+                </div>
+
+
+                <div class="row">
+                    <div class="col-md-12 col-xl-12">
+
+                        <div class="card">
+                            <div class="card-body">
+
+                                <div class="row">
+
+                                    <div class="element-box">
+
+                                        <h6 class="element-header ">Filter</h6>
+
+                                        <form action="filter-customer" method="GET">
+
+                                            <div class="row">
+                                                <div class="col-3">
+                                                    <label>Choose Estate</label>
+                                                    <select class="form-control" disabled>
+                                                        @foreach($estate as $data)
+                                                            <option value="{{$data->id}}" selected>{{$data->title}}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <input type="hidden" name="estate_id" value="{{ Auth::user()->estate_id }}">
+                                                </div>
+
+                                                <div class="col-3">
+                                                    <label>Enter Meter No</label>
+                                                    <input type="number" class="form-control" name="meterNo" value="{{ request('meterNo') }}">
+                                                </div>
+
+                                                <div class="col-3">
+                                                    <label>Search</label>
+                                                    <input type="text" class="form-control" name="search"
+                                                        value="{{ request('search') }}"
+                                                        placeholder="Search by name, email or phone">
+                                                </div>
+
+                                                <div class="col-2 mt-3">
+                                                    <button type="submit" class="btn btn-primary w-100">Filter
+                                                    </button>
+                                                </div>
+
+                                            </div>
+
+                                        </form>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
 

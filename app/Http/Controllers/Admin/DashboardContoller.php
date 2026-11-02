@@ -307,7 +307,7 @@ class DashboardContoller extends Controller
 
             $data['users'] = User::latest()->where('estate_id', Auth::user()->estate_id)->where('role', 2)->count();
             $data['users_lists'] = User::latest()->where('estate_id', Auth::user()->estate_id)->where('role', 2)->paginate('20');
-            $data['estate'] = Estate::latest()->where('status', 2)->get();
+            $data['estate'] = Estate::where('id', Auth::user()->estate_id)->get();
 
             return view('admin/user/customer-list', $data);
         } elseif (Auth::user()->isEstateStaff()) {
@@ -1430,6 +1430,14 @@ class DashboardContoller extends Controller
             $query->where('estate_id', Auth::user()->estate_id);
         }
 
+        if (Auth::user()->isSuperAdmin() && $request->filled('estate_id')) {
+            $query->where('estate_id', $request->estate_id);
+        }
+
+        if ($request->filled('meterNo')) {
+            $query->where('meterNo', $request->meterNo);
+        }
+
         if ($request->has('search') && $request->search != '') {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
@@ -1442,7 +1450,9 @@ class DashboardContoller extends Controller
 
         $data['users_lists'] = $query->paginate(20)->withQueryString(); // final filtered, paginated users
         $data['inactive_count'] = User::where('status', 2)->where('role', 2)->count();
-        $data['estate'] = Estate::latest()->where('status', 2)->get();
+        $data['estate'] = Auth::user()->isEstateAdmin()
+            ? Estate::where('id', Auth::user()->estate_id)->get()
+            : Estate::latest()->where('status', 2)->get();
         $data['users'] = User::latest()->where('status', 2)->where('role', 2)->count();
 
         return view('admin/user/customer-list', $data);
