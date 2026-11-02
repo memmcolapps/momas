@@ -252,7 +252,13 @@
                                                  {{strtoupper($data->meterModel)}}
                                              </td>
                                              <td>{{$data->estate->title ?? "Name"}}</td>
-                                             <td>{{$data->user->first_name ?? "No user"}} {{$data->user->last_name ?? "attached"}}</td>
+                                             <td>
+                                                 @if($data->user)
+                                                     <a href="view-user?id={{ $data->user->id }}">{{ $data->user->first_name }} {{ $data->user->last_name }}</a>
+                                                 @else
+                                                     No user attached
+                                                 @endif
+                                             </td>
 
                                              <td>
                                                  @if($data->status == 2)
@@ -539,7 +545,13 @@
                                                  {{strtoupper($data->meterModel)}}
                                              </td>
                                              <td>{{$data->estate->title ?? "Name"}}</td>
-                                             <td>{{$data->user->first_name ?? "No user"}} {{$data->user->last_name ?? "attached"}}</td>
+                                             <td>
+                                                 @if($data->user)
+                                                     <a href="view-user?id={{ $data->user->id }}">{{ $data->user->first_name }} {{ $data->user->last_name }}</a>
+                                                 @else
+                                                     No user attached
+                                                 @endif
+                                             </td>
 
                                              <td>
                                                  @if($data->status == 2)
