@@ -10,6 +10,7 @@ momas_production_backup.sql
 *.sql
 .vscode/
 /public/storage
+/public/uploads
 ./storage/app/legacy-export
 export_legacy.php
 migrate_legacy.php
