@@ -8,6 +8,7 @@ use App\Models\Estate;
 use App\Models\Group;
 use App\Models\Meter;
 use App\Models\User;
+use App\Services\AlertImageService;
 use App\Services\AlertUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,7 @@ class AlertController extends Controller
                 ->orderBy('last_name')
                 ->get(['id', 'first_name', 'last_name', 'email', 'phone', 'estate_id']),
             'priorities' => Alert::PRIORITY_WEIGHTS,
+            'alertTypes' => Alert::TYPES,
         ]);
     }
 
@@ -44,10 +46,25 @@ class AlertController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'image_url' => 'nullable|url|max:2048',
+            'type' => ['required', Rule::in(array_keys(Alert::TYPES))],
+            'text' => [
+                'nullable',
+                'string',
+                Rule::requiredIf(fn () => in_array($request->input('type'), [Alert::TYPE_TEXT_NOTICE, Alert::TYPE_FULL_NOTICE], true)),
+            ],
+            'image' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+                Rule::when(
+                    $request->input('type') !== Alert::TYPE_FULL_NOTICE,
+                    ['dimensions:width=720,height=960']
+                ),
+                Rule::requiredIf(fn () => in_array($request->input('type'), [Alert::TYPE_IMAGE_NOTICE, Alert::TYPE_FULL_NOTICE], true)),
+            ],
             'priority' => ['required', Rule::in(array_keys(Alert::PRIORITY_WEIGHTS))],
             'displays_at' => 'required|date',
-            'is_urgent' => 'nullable|boolean',
             'expires_at' => 'nullable|date|after:displays_at',
             'all_users' => 'nullable|boolean',
             'estates' => 'nullable|array',
@@ -61,10 +78,11 @@ class AlertController extends Controller
             'buttons' => 'nullable|array',
             'buttons.*.text' => 'required|string|max:255',
             'buttons.*.cta_url' => 'required|string|max:2048',
+        ], [
+            'image.dimensions' => 'The alert image must be exactly 720 × 960 pixels.',
         ]);
 
         $allUsers = $request->boolean('all_users');
-        $isUrgent = $request->boolean('is_urgent');
         $estateIds = $allUsers ? [] : $this->integerValues($validated['estates'] ?? []);
         $userIds = $allUsers ? [] : $this->integerValues($validated['users'] ?? []);
         $meterNumbers = $allUsers ? [] : $this->parseMeterNumbers($validated['meter_numbers'] ?? '');
@@ -90,15 +108,28 @@ class AlertController extends Controller
             }
         }
 
-        $alert = DB::transaction(function () use ($validated, $allUsers, $isUrgent, $estateIds, $userIds, $meterNumbers) {
+        $alert = DB::transaction(function () use ($request, $validated, $allUsers, $estateIds, $userIds, $meterNumbers) {
+            $type = $validated['type'];
+            $text = in_array($type, [Alert::TYPE_TEXT_NOTICE, Alert::TYPE_FULL_NOTICE], true)
+                ? ($validated['text'] ?? null)
+                : null;
+
             $alert = Alert::create([
                 'title' => $validated['title'],
-                'image_url' => $validated['image_url'] ?? null,
+                'type' => $type,
+                'text' => $text,
                 'priority' => $validated['priority'],
                 'displays_at' => $validated['displays_at'],
-                'is_urgent' => $isUrgent,
                 'expires_at' => $validated['expires_at'] ?? null,
             ]);
+
+            if (in_array($type, [Alert::TYPE_IMAGE_NOTICE, Alert::TYPE_FULL_NOTICE], true) && $request->hasFile('image')) {
+                (new AlertImageService())->upload($request->file('image'), $alert, [
+                    'width' => 720,
+                    'height' => 960,
+                    'fit' => 'CONTAIN',
+                ]);
+            }
 
             if (! empty($validated['buttons'])) {
                 $alert->buttons()->createMany($validated['buttons']);
@@ -150,7 +181,7 @@ class AlertController extends Controller
             'id' => 'required|integer|exists:alerts,id',
         ]);
 
-        $alert = Alert::with('group', 'buttons')->findOrFail($request->input('id'));
+        $alert = Alert::with('group', 'buttons', 'alertImage')->findOrFail($request->input('id'));
         $group = $alert->group;
 
         $estateNames = $group

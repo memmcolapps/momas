@@ -13,17 +13,28 @@ class Alert extends Model
 
     protected $fillable = [
         'title',
-        'image_url',
+        'type',
+        'text',
         'priority',
         'displays_at',
-        'is_urgent',
         'expires_at',
     ];
 
     protected $casts = [
         'displays_at' => 'datetime',
-        'is_urgent' => 'boolean',
         'expires_at' => 'datetime',
+    ];
+
+    public const TYPE_TEXT_NOTICE = 'text_notice';
+
+    public const TYPE_IMAGE_NOTICE = 'image_notice';
+
+    public const TYPE_FULL_NOTICE = 'full_notice';
+
+    public const TYPES = [
+        self::TYPE_TEXT_NOTICE => 'Text Notice',
+        self::TYPE_IMAGE_NOTICE => 'Image Notice',
+        self::TYPE_FULL_NOTICE => 'Full Notice',
     ];
 
     public const PRIORITY_LOW = 'low';
@@ -51,8 +62,24 @@ class Alert extends Model
         return $this->hasMany(AlertUser::class);
     }
 
-    public function buttons() {
+    public function buttons()
+    {
         return $this->hasMany(AlertButton::class, 'alert_id');
+    }
+
+    public function button(): HasOne
+    {
+        return $this->hasOne(AlertButton::class, 'alert_id');
+    }
+
+    public function alertImage(): HasOne
+    {
+        return $this->hasOne(AlertImage::class);
+    }
+
+    public function image(): HasOne
+    {
+        return $this->hasOne(AlertImage::class);
     }
 
     public function isExpired(): bool
@@ -88,6 +115,11 @@ class Alert extends Model
             'Upcoming' => 'warning',
             default => 'success',
         };
+    }
+
+    public function getTypeLabelAttribute(): string
+    {
+        return self::TYPES[$this->type] ?? ucfirst(str_replace('_', ' ', (string) $this->type));
     }
 
     public function getPriorityBadgeAttribute(): string

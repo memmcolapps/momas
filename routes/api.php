@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Bills\BillsController;
 use App\Http\Controllers\EmergencyTokenController;
 use App\Http\Controllers\Estate\EstateController;
+use App\Http\Controllers\Estate\IssueApiController;
 use App\Http\Controllers\Feature\FeatureController;
 use App\Http\Controllers\Meter\MeterController;
 use App\Http\Controllers\AppSettingController;
@@ -46,6 +47,7 @@ Route::any('e-fund', [TransactionController::class, 'enkpay_webhook']);
 Route::post('enkpay_webhook', [TransactionController::class, 'enkpay_webhook']);
 
 Route::get('support', [LoginController::class, 'support']);
+Route::match(['get', 'post'], 'track-issue', [IssueApiController::class, 'track']);
 
 // ─────────────────────────────────────────────
 // POS Routes
@@ -66,6 +68,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
 
     Route::get('alerts', [UserAlertController::class, 'index']);
     Route::get('alerts/active', [UserAlertController::class, 'active']);
+    Route::get('alerts/active/display', [UserAlertController::class, 'display']);
     Route::post('alerts/{alert}/acknowledge', [UserAlertController::class, 'acknowledge'])
         ->whereNumber('alert');
 
@@ -152,6 +155,21 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::get('get-analysis-summary', [AnalyticController::class, 'getAnalyticsSummary']);
         Route::get('get-utility-metrics', [AnalyticController::class, 'filterUtilityMetrics']);
         Route::get('get-token-report', [AnalyticController::class, 'filterAccessTokens']);
+    });
+
+    // ── Logged Issues for Mobile Developers ──
+    Route::get('issue-categories', [IssueApiController::class, 'categories']);
+    Route::post('log-issue', [IssueApiController::class, 'store']);
+    Route::get('my-issues', [IssueApiController::class, 'myIssues']);
+    Route::get('issue-details', [IssueApiController::class, 'show']);
+    Route::post('close-issue', [IssueApiController::class, 'close']);
+
+    Route::prefix('issues')->group(function () {
+        Route::get('categories', [IssueApiController::class, 'categories']);
+        Route::get('/', [IssueApiController::class, 'myIssues']);
+        Route::post('/', [IssueApiController::class, 'store']);
+        Route::get('{id}', [IssueApiController::class, 'show']);
+        Route::post('{id}/close', [IssueApiController::class, 'close']);
     });
 
     Route::post('app-version', [AppSettingController::class, 'updateAppVersion']);

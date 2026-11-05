@@ -55,9 +55,7 @@
                                 <tr style="cursor: pointer;" onclick="window.location='{{ $showUrl }}'">
                                     <td>
                                         <div class="fw-semibold text-primary">{{ $alert->title }}</div>
-                                        @if($alert->is_urgent)
-                                            <span class="badge text-bg-danger text-uppercase fs-11">Urgent</span>
-                                        @endif
+                                        <span class="badge text-bg-info text-uppercase fs-11">{{ $alert->type_label }}</span>
                                     </td>
                                     <td>
                                         <span class="badge text-bg-{{ $alert->priority_badge }} text-uppercase fs-11">

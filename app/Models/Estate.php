@@ -162,5 +162,11 @@ class Estate extends Model
 
         return (int) (app(ConfigManagementService::class)
             ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+
+    }
+
+    public function getEstateNameAttribute()
+    {
+        return $this->title;
     }
 }

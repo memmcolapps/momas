@@ -8,8 +8,11 @@
         $expiresAtValue = old('expires_at')
             ? \Carbon\Carbon::parse(old('expires_at'))->format('Y-m-d\TH:i')
             : '';
-        $buttonRows = is_array(old('buttons')) ? old('buttons') : [];
-        $nextButtonIndex = empty($buttonRows) ? 0 : max(array_map('intval', array_keys($buttonRows))) + 1;
+        $buttonRows = is_array(old('buttons')) ? array_values(old('buttons')) : [];
+        $button = $buttonRows[0] ?? [];
+        $selectedType = old('type', \App\Models\Alert::TYPE_TEXT_NOTICE);
+        $textRequired = in_array($selectedType, [\App\Models\Alert::TYPE_TEXT_NOTICE, \App\Models\Alert::TYPE_FULL_NOTICE], true);
+        $imageRequired = in_array($selectedType, [\App\Models\Alert::TYPE_IMAGE_NOTICE, \App\Models\Alert::TYPE_FULL_NOTICE], true);
     @endphp
 
     <div class="content">
@@ -38,7 +41,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('alerts.store') }}" method="POST">
+            <form action="{{ route('alerts.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <div class="row">
@@ -49,19 +52,43 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
+                                    <label class="form-label fw-medium">Notice Type <span class="text-danger">*</span></label>
+                                    <select name="type" id="type" class="form-select" required>
+                                        @foreach($alertTypes as $value => $label)
+                                            <option value="{{ $value }}" @selected($selectedType === $value)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
                                     <label class="form-label fw-medium">Alert Title <span class="text-danger">*</span></label>
                                     <input type="text" name="title" value="{{ old('title') }}" class="form-control" placeholder="e.g. Scheduled maintenance notice" required>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label fw-medium">Image URL</label>
-                                    <input type="url" name="image_url" id="image_url" value="{{ old('image_url') }}" class="form-control" placeholder="https://example.com/alert-image.jpg">
+                                <div class="mb-3 {{ $textRequired ? '' : 'd-none' }}" id="text_section">
+                                    <label class="form-label fw-medium">Notice Text <span class="text-danger">*</span></label>
+                                    <textarea name="text" id="text" rows="4" class="form-control" placeholder="Enter the notice message" @required($textRequired)>{{ old('text') }}</textarea>
                                 </div>
 
-                                <div class="mb-3 d-none" id="image_preview_wrapper">
-                                    <label class="form-label fw-medium">Image Preview</label>
-                                    <div class="border rounded p-2 bg-light">
-                                        <img src="" id="image_preview" alt="Alert preview" class="img-fluid rounded" style="max-height: 220px;">
+                                <div id="image_section" class="{{ $imageRequired ? '' : 'd-none' }}">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium">Alert Image <span class="text-danger">*</span></label>
+                                        <input type="file" name="image" id="image" class="form-control" accept="image/*" @required($imageRequired)>
+                                        <div class="form-text" id="image_help_text">
+                                            @if($selectedType === \App\Models\Alert::TYPE_FULL_NOTICE)
+                                                Any image dimensions are accepted and will be fitted to 720 × 960. JPG, JPEG, PNG, WEBP up to 5MB.
+                                            @else
+                                                Upload an image exactly 720 × 960 pixels (fit CONTAIN). JPG, JPEG, PNG, WEBP up to 5MB.
+                                            @endif
+                                        </div>
+                                        <div class="text-danger fs-12 mt-1 d-none" id="image_dimension_error"></div>
+                                    </div>
+
+                                    <div class="mb-3 d-none" id="image_preview_wrapper">
+                                        <label class="form-label fw-medium">Image Preview</label>
+                                        <div class="border rounded p-2 bg-light">
+                                            <img src="" id="image_preview" alt="Alert preview" class="img-fluid rounded" style="max-height: 220px;">
+                                        </div>
                                     </div>
                                 </div>
 
@@ -75,14 +102,6 @@
                                                 </option>
                                             @endforeach
                                         </select>
-                                    </div>
-
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-medium d-block">Urgent Alert</label>
-                                        <div class="form-check form-switch mt-2">
-                                            <input class="form-check-input" type="checkbox" role="switch" name="is_urgent" value="1" id="is_urgent" @checked(old('is_urgent'))>
-                                            <label class="form-check-label" for="is_urgent">Mark this alert as urgent</label>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -102,35 +121,19 @@
                         </div>
 
                         <div class="card mb-4">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="card-title text-black mb-0">Call-to-Action Buttons</h5>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="add_cta_button">
-                                    <i data-feather="plus" style="width: 14px; height: 14px;"></i> Add CTA
-                                </button>
+                            <div class="card-header">
+                                <h5 class="card-title text-black mb-0">Call-to-Action Button</h5>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted fs-13">Optional. Add one or more buttons recipients can tap from the alert.</p>
+                                <p class="text-muted fs-13">Optional. Add a button recipients can tap from the alert.</p>
 
-                                <div id="cta_rows">
-                                    @foreach($buttonRows as $index => $button)
-                                        <div class="cta-row row g-2 align-items-start mb-2" data-cta-row>
-                                            <div class="col-md-5">
-                                                <input type="text" name="buttons[{{ $index }}][text]" value="{{ $button['text'] ?? '' }}" class="form-control" placeholder="Button text">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <input type="text" name="buttons[{{ $index }}][cta_url]" value="{{ $button['cta_url'] ?? '' }}" class="form-control" placeholder="https://example.com or app://link">
-                                            </div>
-                                            <div class="col-md-1 d-grid">
-                                                <button type="button" class="btn btn-outline-danger remove-cta-row" aria-label="Remove CTA">
-                                                    <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-
-                                <div id="cta_empty" class="text-muted fs-13 @if(!empty($buttonRows)) d-none @endif">
-                                    No CTA buttons added.
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <input type="text" name="buttons[0][text]" value="{{ $button['text'] ?? '' }}" class="form-control" placeholder="Button text">
+                                    </div>
+                                    <div class="col-md-7">
+                                        <input type="text" name="buttons[0][cta_url]" value="{{ $button['cta_url'] ?? '' }}" class="form-control" placeholder="https://example.com or app://link">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -225,21 +228,6 @@
                     </button>
                 </div>
 
-                <template id="cta_row_template">
-                    <div class="cta-row row g-2 align-items-start mb-2" data-cta-row>
-                        <div class="col-md-5">
-                            <input type="text" name="buttons[__INDEX__][text]" class="form-control" placeholder="Button text">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" name="buttons[__INDEX__][cta_url]" class="form-control" placeholder="https://example.com or app://link">
-                        </div>
-                        <div class="col-md-1 d-grid">
-                            <button type="button" class="btn btn-outline-danger remove-cta-row" aria-label="Remove CTA">
-                                <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
-                            </button>
-                        </div>
-                    </div>
-                </template>
             </form>
 
         </div>
@@ -287,65 +275,105 @@
                 });
             });
 
-            const imageUrl = document.getElementById('image_url');
+            const imageInput = document.getElementById('image');
             const imagePreview = document.getElementById('image_preview');
             const imagePreviewWrapper = document.getElementById('image_preview_wrapper');
+            const imageDimensionError = document.getElementById('image_dimension_error');
+            const imageHelpText = document.getElementById('image_help_text');
+            const typeSelect = document.getElementById('type');
+            const textSection = document.getElementById('text_section');
+            const textInput = document.getElementById('text');
+            const imageSection = document.getElementById('image_section');
 
-            function updateImagePreview() {
-                const value = imageUrl.value.trim();
-
-                if (value !== '' && /^https?:\/\//i.test(value)) {
-                    imagePreview.src = value;
-                    imagePreviewWrapper.classList.remove('d-none');
-                } else {
-                    imagePreview.removeAttribute('src');
-                    imagePreviewWrapper.classList.add('d-none');
-                }
+            function isFullNotice() {
+                return typeSelect.value === 'full_notice';
             }
 
-            imageUrl.addEventListener('input', updateImagePreview);
-            updateImagePreview();
-
-            const ctaRows = document.getElementById('cta_rows');
-            const ctaEmpty = document.getElementById('cta_empty');
-            const ctaTemplate = document.getElementById('cta_row_template');
-            const addCtaButton = document.getElementById('add_cta_button');
-            let ctaIndex = {{ $nextButtonIndex }};
-
-            function toggleCtaEmptyState() {
-                ctaEmpty.classList.toggle('d-none', ctaRows.querySelectorAll('[data-cta-row]').length > 0);
+            function showImageDimensionError(message) {
+                imageInput.setCustomValidity(message);
+                imageDimensionError.textContent = message;
+                imageDimensionError.classList.remove('d-none');
+                imagePreview.removeAttribute('src');
+                imagePreviewWrapper.classList.add('d-none');
+                imageInput.reportValidity();
             }
 
-            function refreshFeatherIcons() {
-                if (window.feather && typeof window.feather.replace === 'function') {
-                    window.feather.replace();
-                }
+            function clearImageDimensionError() {
+                imageInput.setCustomValidity('');
+                imageDimensionError.textContent = '';
+                imageDimensionError.classList.add('d-none');
             }
 
-            addCtaButton.addEventListener('click', function () {
-                const html = ctaTemplate.innerHTML.replaceAll('__INDEX__', ctaIndex++);
-                ctaRows.insertAdjacentHTML('beforeend', html);
-                toggleCtaEmptyState();
-                refreshFeatherIcons();
-            });
+            function resetImagePreview() {
+                imagePreview.removeAttribute('src');
+                imagePreviewWrapper.classList.add('d-none');
+            }
 
-            ctaRows.addEventListener('click', function (event) {
-                const removeButton = event.target.closest('.remove-cta-row');
+            function validateImageFile(file) {
+                clearImageDimensionError();
 
-                if (!removeButton) {
+                if (!file) {
+                    resetImagePreview();
                     return;
                 }
 
-                const row = removeButton.closest('[data-cta-row]');
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const image = new Image();
 
-                if (row) {
-                    row.remove();
+                    image.onload = function () {
+                        if (!isFullNotice() && (image.naturalWidth !== 720 || image.naturalHeight !== 960)) {
+                            showImageDimensionError('Image must be exactly 720 × 960 pixels. Selected image is ' + image.naturalWidth + ' × ' + image.naturalHeight + '.');
+                            return;
+                        }
+
+                        imagePreview.src = event.target.result;
+                        imagePreviewWrapper.classList.remove('d-none');
+                    };
+
+                    image.onerror = function () {
+                        showImageDimensionError('The selected file could not be read as an image.');
+                    };
+
+                    image.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            if (imageInput) {
+                imageInput.addEventListener('change', function (e) {
+                    validateImageFile(e.target.files[0]);
+                });
+            }
+
+            function toggleNoticeFields() {
+                const type = typeSelect.value;
+                const requiresText = type === 'text_notice' || type === 'full_notice';
+                const requiresImage = type === 'image_notice' || type === 'full_notice';
+
+                textSection.classList.toggle('d-none', !requiresText);
+                textInput.required = requiresText;
+                textInput.disabled = !requiresText;
+
+                imageSection.classList.toggle('d-none', !requiresImage);
+                imageInput.required = requiresImage;
+                imageInput.disabled = !requiresImage;
+
+                imageHelpText.textContent = isFullNotice()
+                    ? 'Any image dimensions are accepted and will be fitted to 720 × 960. JPG, JPEG, PNG, WEBP up to 5MB.'
+                    : 'Upload an image exactly 720 × 960 pixels (fit CONTAIN). JPG, JPEG, PNG, WEBP up to 5MB.';
+
+                if (!requiresImage) {
+                    clearImageDimensionError();
+                    imageInput.value = '';
+                    resetImagePreview();
+                } else if (imageInput.files[0]) {
+                    validateImageFile(imageInput.files[0]);
                 }
+            }
 
-                toggleCtaEmptyState();
-            });
-
-            toggleCtaEmptyState();
+            typeSelect.addEventListener('change', toggleNoticeFields);
+            toggleNoticeFields();
         });
     </script>
 
