@@ -41,6 +41,7 @@ class LoggedIssue extends Model
         'status_badge',
         'priority_badge',
         'attachment_url',
+        'resolver_message',
     ];
 
     const STATUS_OPEN = 0;
@@ -147,5 +148,9 @@ class LoggedIssue extends Model
         }
 
         return $prefix . '-' . $nextNum;
+    }
+
+    public function getResolverMessageAttribute() {
+        return $this->resolution_notes ?? '';
     }
 }
