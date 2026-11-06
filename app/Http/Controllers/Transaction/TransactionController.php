@@ -676,7 +676,7 @@ class TransactionController extends Controller
 
         $action_payload = json_decode($trx->action_payload, true) ?? [];
         $tariff_id = $trx->tariff_id ?? ($action_payload['tariff_id'] ?? null);
-        $receiver_meterNo = $action_payload['receiver_meterNo'] ?? '';
+        $receiver_meterNo = $action_payload['reciever_meterNo'] ?? '';
 
         if (! $tariff_id) {
             $isDualTariff = ($meter->isDualTariff === 'on'
