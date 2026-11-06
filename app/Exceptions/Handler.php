@@ -55,7 +55,7 @@ class Handler extends ExceptionHandler
         try {
             $adminEmail = config('mail.admin_email'); // Ensure this is set in your .env or config/mail.php
             if ($adminEmail) {
-                Mail::to($adminEmail)->send(new ExceptionOccured($exception));
+                // Mail::to($adminEmail)->send(new ExceptionOccured($exception));
             }
         } catch (Throwable $mailException) {
             Logger::error('Error sending exception email: ' . $mailException->getMessage());
