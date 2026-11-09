@@ -60,6 +60,25 @@ class AlertUserService
         return $displayAlert;
     }
 
+    public function getUnacknowledgedCount(int $userId): int
+    {
+        $now = now();
+
+        return AlertUser::query()
+            ->where('user_id', $userId)
+            ->whereNull('acknowledged_at')
+            ->whereHas('alert', function (Builder $query) use ($now) {
+                $query->where(function (Builder $query) use ($now) {
+                    $query->whereNull('displays_at')
+                        ->orWhere('displays_at', '<=', $now);
+                })->where(function (Builder $query) use ($now) {
+                    $query->whereNull('expires_at')
+                        ->orWhere('expires_at', '>=', $now);
+                });
+            })
+            ->count();
+    }
+
     public function acknowledgeAlert(int $userId, int $alertId): AlertUser
     {
         $alertUser = AlertUser::query()

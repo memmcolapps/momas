@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AlertMode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,7 @@ class Alert extends Model
     protected $fillable = [
         'title',
         'type',
+        'mode',
         'text',
         'priority',
         'displays_at',
@@ -21,6 +23,7 @@ class Alert extends Model
     ];
 
     protected $casts = [
+        'mode' => AlertMode::class,
         'displays_at' => 'datetime',
         'expires_at' => 'datetime',
     ];
@@ -120,6 +123,11 @@ class Alert extends Model
     public function getTypeLabelAttribute(): string
     {
         return self::TYPES[$this->type] ?? ucfirst(str_replace('_', ' ', (string) $this->type));
+    }
+
+    public function getModeLabelAttribute(): string
+    {
+        return $this->mode?->label() ?? ucfirst((string) $this->mode);
     }
 
     public function getPriorityBadgeAttribute(): string

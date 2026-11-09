@@ -32,6 +32,13 @@ class UserAlertController extends Controller
         return StandardResponse::success(200, 'Display alert fetched successfully', $alert);
     }
 
+    public function unacknowledgedCount(Request $request)
+    {
+        $count = (new AlertUserService())->getUnacknowledgedCount((int) Auth::id());
+
+        return StandardResponse::success(200, 'Unacknowledged alerts count fetched successfully', ['count' => $count]);
+    }
+
     public function acknowledge(int $alert)
     {
         try {

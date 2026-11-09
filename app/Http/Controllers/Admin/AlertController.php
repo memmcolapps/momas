@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\AlertMode;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\Estate;
@@ -30,6 +31,7 @@ class AlertController extends Controller
                 ->get(['id', 'first_name', 'last_name', 'email', 'phone', 'estate_id']),
             'priorities' => Alert::PRIORITY_WEIGHTS,
             'alertTypes' => Alert::TYPES,
+            'modes' => AlertMode::options(),
         ]);
     }
 
@@ -47,6 +49,7 @@ class AlertController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'type' => ['required', Rule::in(array_keys(Alert::TYPES))],
+            'mode' => ['required', Rule::in(array_keys(AlertMode::options()))],
             'text' => [
                 'nullable',
                 'string',
@@ -117,6 +120,7 @@ class AlertController extends Controller
             $alert = Alert::create([
                 'title' => $validated['title'],
                 'type' => $type,
+                'mode' => $validated['mode'],
                 'text' => $text,
                 'priority' => $validated['priority'],
                 'displays_at' => $validated['displays_at'],
