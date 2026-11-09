@@ -168,7 +168,7 @@ class LoggedIssueController extends Controller
     public function show(Request $request)
     {
         $id = $request->id;
-        $issue = LoggedIssue::with(['estate', 'user', 'resolver'])->findOrFail($id);
+        $issue = LoggedIssue::with(['estate', 'user', 'resolver', 'issueMessages.sender'])->findOrFail($id);
 
         // Security check for estate admin
         if (!Auth::user()->isSuperAdmin() && $issue->estate_id != Auth::user()->estate_id) {

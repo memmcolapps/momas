@@ -152,6 +152,31 @@
                                 </div>
                             @endif
 
+                            <div class="mb-3">
+                                <label class="text-muted fs-12 text-uppercase fw-semibold mb-2 d-block">Message History</label>
+                                @forelse($issue->issueMessages->sortBy('created_at') as $message)
+                                    @php($isMine = (int) $message->sender_id === (int) auth()->id())
+                                    <div class="d-flex mb-2 {{ $isMine ? 'justify-content-end' : 'justify-content-start' }}">
+                                        <div class="d-inline-block fs-14 text-dark"
+                                             style="max-width: 75%; width: fit-content; white-space: pre-wrap; line-height: 1.2;
+                                                    padding: 2px 8px;
+                                                    background-color: {{ $isMine ? '#d9fdd3' : '#ffffff' }};
+                                                    border: 1px solid rgba(0,0,0,.08);
+                                                    border-radius: {{ $isMine ? '12px 12px 2px 12px' : '12px 12px 12px 2px' }};
+                                                    box-shadow: 0 1px 1px rgba(0,0,0,.08);">
+                                            <div>{{ trim($message->message) }}</div>
+                                            <div class="text-end fs-11 text-uppercase fw-semibold lh-1" style="color: #667781; margin-top: 2px;">
+                                                {{ trim(($message->sender->first_name ?? '') . ' ' . ($message->sender->last_name ?? '')) ?: 'System' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="p-3 bg-light rounded-3 border text-muted fs-13">No messages yet.</div>
+                                @endforelse
+                            </div>
+
+                            <hr class="my-3">
+
                             <form action="/admin/update-issue-status" method="POST">
                                 @csrf
                                 <input type="hidden" name="id" value="{{ $issue->id }}">
