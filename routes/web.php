@@ -463,6 +463,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     //Audit
     Route::get('tariff_audit', [AuditlogController::class, 'tariff_audit']);
     Route::get('utility_pay_audit', [AuditlogController::class, 'utility_payment_audit']);
+    Route::get('general_audit', [AuditlogController::class, 'general_audit']);
 
 
 

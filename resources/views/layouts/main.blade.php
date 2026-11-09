@@ -347,6 +347,7 @@
                                 <ul class="nav-second-level">
                                     <li><a class='tp-link' href='/admin/tariff_audit'>Tariff</a></li>
                                     <li><a class='tp-link' href='/admin/utility_pay_audit'>Utility Payment</a></li>
+                                    <li><a class='tp-link' href='/admin/general_audit'>General</a></li>
                                 </ul>
                             </div>
                         </li>
