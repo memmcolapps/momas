@@ -153,4 +153,25 @@ class LoggedIssue extends Model
     public function getResolverMessageAttribute() {
         return $this->resolution_notes ?? '';
     }
+
+    public function issueMessages() {
+        return $this->hasMany(IssueMessage::class, 'issue_id');
+    }
+
+    public function getRefinedMessages() {
+        $issue_messages = $this->issueMessages;
+
+        return $issue_messages->map(function ($message) {
+            $sender = User::where('id', $message->sender_id)->first();
+            $sender_name = $sender?->first_name . ' ' . $sender?->last_name;
+
+            return [
+                'message' => $message->message,
+                'sender_name' => $sender_name,
+                'sent_at' => $message->created_at,
+                'id' => $message->id,
+                'sender_id' => $sender->id,
+            ];
+        });
+    }
 }

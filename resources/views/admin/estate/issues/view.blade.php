@@ -129,6 +129,29 @@
                             <span class="badge text-bg-{{ $issue->status_badge }}">{{ $issue->status_label }}</span>
                         </div>
                         <div class="card-body">
+                            @if(in_array((int) $issue->status, [\App\Models\LoggedIssue::STATUS_OPEN, \App\Models\LoggedIssue::STATUS_IN_PROGRESS]))
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 mb-3 bg-light rounded border">
+                                    <div>
+                                        <div class="fw-semibold text-dark">Assign Resolver</div>
+                                        <div class="fs-13 text-muted">
+                                            @if($issue->resolver)
+                                                Currently assigned to
+                                                <span class="fw-semibold text-dark">{{ $issue->resolver->first_name }} {{ $issue->resolver->last_name }}</span>
+                                            @else
+                                                No resolver has been assigned to this issue yet.
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <form action="/admin/select-issue-resolver" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="id" value="{{ $issue->id }}">
+                                        <button type="submit" class="btn btn-warning">
+                                            <i data-feather="user-check" class="me-1"></i> Select for Resolution
+                                        </button>
+                                    </form>
+                                </div>
+                            @endif
+
                             <form action="/admin/update-issue-status" method="POST">
                                 @csrf
                                 <input type="hidden" name="id" value="{{ $issue->id }}">
@@ -250,6 +273,19 @@
                             <div class="d-flex justify-content-between py-1 border-bottom">
                                 <span class="text-muted fs-13">Ticket ID</span>
                                 <span class="fw-semibold text-dark fs-13">{{ $issue->ticket_id }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 border-bottom">
+                                <span class="text-muted fs-13">Assigned Resolver</span>
+                                <span class="text-dark fs-13 text-end">
+                                    @if($issue->resolver)
+                                        <span class="fw-semibold">{{ $issue->resolver->first_name }} {{ $issue->resolver->last_name }}</span>
+                                        @if($issue->resolver->email)
+                                            <br><span class="text-muted fs-12">{{ $issue->resolver->email }}</span>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">Unassigned</span>
+                                    @endif
+                                </span>
                             </div>
                             <div class="d-flex justify-content-between py-1 border-bottom">
                                 <span class="text-muted fs-13">Created At</span>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
 use App\Models\Estate;
+use App\Models\IssueMessage;
 use App\Models\LoggedIssue;
 use App\Models\Meter;
 use App\Models\User;
@@ -178,6 +179,38 @@ class LoggedIssueController extends Controller
     }
 
     /**
+     * Assign the current admin as the resolver for the specified issue.
+     */
+    public function selectForResolution(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:logged_issues,id',
+        ]);
+
+        $issue = LoggedIssue::findOrFail($request->id);
+
+        if (!Auth::user()->isSuperAdmin() && $issue->estate_id != Auth::user()->estate_id) {
+            return redirect('admin/logged-issues')->with('error', 'Unauthorized access.');
+        }
+
+        if (in_array((int) $issue->status, [LoggedIssue::STATUS_RESOLVED, LoggedIssue::STATUS_CLOSED])) {
+            return redirect()->back()->with('error', 'Resolved or closed issues cannot be selected for resolution.');
+        }
+
+        $issue->resolved_by = Auth::id();
+        $issue->status = LoggedIssue::STATUS_IN_PROGRESS;
+        $issue->save();
+
+        $resolver = Auth::user();
+        $resolverName = trim(($resolver->first_name ?? '') . ' ' . ($resolver->last_name ?? ''));
+
+        return redirect()->back()->with(
+            'message',
+            "Issue [{$issue->ticket_id}] selected for resolution by {$resolverName}."
+        );
+    }
+
+    /**
      * Update the status and resolution notes of the issue.
      */
     public function updateStatus(Request $request)
@@ -194,11 +227,20 @@ class LoggedIssueController extends Controller
             return redirect('admin/logged-issues')->with('error', 'Unauthorized access.');
         }
 
+        $auth_user = Auth::user();
+
         $newStatus = (int) $request->status;
         $issue->status = $newStatus;
 
         if ($request->filled('resolution_notes')) {
             $issue->resolution_notes = $request->resolution_notes;
+
+            IssueMessage::create([
+                'sender_id' => $auth_user->id,
+                'receiver_id' => $issue->user_id,
+                'message' => $issue->resolver_message,
+                'issue_id' => $issue->id,
+            ]);
         }
 
         if ($newStatus === LoggedIssue::STATUS_RESOLVED) {

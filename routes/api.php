@@ -170,6 +170,8 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::post('/', [IssueApiController::class, 'store']);
         Route::get('{id}', [IssueApiController::class, 'show']);
         Route::post('{id}/close', [IssueApiController::class, 'close']);
+        Route::post('{id}/messages', [IssueApiController::class, 'storeMessage'])
+            ->whereNumber('id');
     });
 
     Route::post('app-version', [AppSettingController::class, 'updateAppVersion']);
