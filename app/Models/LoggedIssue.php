@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class LoggedIssue extends Model
 {
@@ -171,6 +172,7 @@ class LoggedIssue extends Model
                 'sent_at' => $message->created_at,
                 'id' => $message->id,
                 'sender_id' => $sender->id,
+                'is_sender' => $sender->id == Auth::user()->id
             ];
         });
     }
