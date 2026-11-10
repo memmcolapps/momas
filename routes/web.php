@@ -201,6 +201,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::get('resolved-issues', [LoggedIssueController::class, 'resolved'])->name('issues.resolved');
     Route::post('store-issue', [LoggedIssueController::class, 'store'])->name('issues.store');
     Route::get('view-issue', [LoggedIssueController::class, 'show'])->name('issues.show');
+    Route::post('select-issue-resolver', [LoggedIssueController::class, 'selectForResolution'])->name('issues.selectResolver');
     Route::post('update-issue-status', [LoggedIssueController::class, 'updateStatus'])->name('issues.updateStatus');
     Route::get('delete-issue', [LoggedIssueController::class, 'destroy'])->name('issues.destroy');
 
@@ -462,6 +463,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     //Audit
     Route::get('tariff_audit', [AuditlogController::class, 'tariff_audit']);
     Route::get('utility_pay_audit', [AuditlogController::class, 'utility_payment_audit']);
+    Route::get('general_audit', [AuditlogController::class, 'general_audit']);
 
 
 

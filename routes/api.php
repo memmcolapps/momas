@@ -69,6 +69,7 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
     Route::get('alerts', [UserAlertController::class, 'index']);
     Route::get('alerts/active', [UserAlertController::class, 'active']);
     Route::get('alerts/active/display', [UserAlertController::class, 'display']);
+    Route::get('alerts/unacknowledged/count', [UserAlertController::class, 'unacknowledgedCount']);
     Route::post('alerts/{alert}/acknowledge', [UserAlertController::class, 'acknowledge'])
         ->whereNumber('alert');
 
@@ -170,6 +171,8 @@ Route::group(['middleware' => ['feature_control', 'auth:api', 'acess']], functio
         Route::post('/', [IssueApiController::class, 'store']);
         Route::get('{id}', [IssueApiController::class, 'show']);
         Route::post('{id}/close', [IssueApiController::class, 'close']);
+        Route::post('{id}/messages', [IssueApiController::class, 'storeMessage'])
+            ->whereNumber('id');
     });
 
     Route::post('app-version', [AppSettingController::class, 'updateAppVersion']);

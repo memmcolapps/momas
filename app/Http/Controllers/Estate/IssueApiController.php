@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
 use App\Models\Estate;
+use App\Models\IssueMessage;
 use App\Models\Logger;
 use App\Models\LoggedIssue;
 use App\Models\Meter;
@@ -311,6 +312,10 @@ class IssueApiController extends Controller
                 return StandardResponse::error(403, 'Unauthorized access to this issue ticket');
             }
 
+            $issue->message_history = $issue->getRefinedMessages();
+            $issue = $issue->toArray();
+            unset($issue['issue_messages']);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Issue details retrieved successfully',
@@ -380,6 +385,75 @@ class IssueApiController extends Controller
         } catch (Exception $e) {
             Logger::error('IssueApiController close error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return StandardResponse::error(500, 'Unable to close issue', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Add a customer message to an existing issue thread.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeMessage(Request $request, $id)
+    {
+        try {
+            $user = Auth::user();
+
+            $validator = Validator::make($request->all(), [
+                'message' => 'required|string|max:5000',
+            ]);
+
+            if ($validator->fails()) {
+                return StandardResponse::error(422, 'Validation Error', [
+                    'validation_error' => $validator->errors(),
+                ]);
+            }
+
+            $issue = LoggedIssue::find($id);
+
+            if (!$issue) {
+                return StandardResponse::error(404, 'Issue ticket not found');
+            }
+
+            // Security authorization: Ensure user owns the ticket or is an admin
+            $isOwner = ($issue->user_id && $issue->user_id == $user->id)
+                || ($user->phone && $issue->customer_phone == $user->phone)
+                || ($user->meterNo && $issue->meter_no == $user->meterNo);
+
+            $isAdmin = in_array((int) $user->role, [0, 3, 4]);
+
+            if (!$isOwner && !$isAdmin) {
+                return StandardResponse::error(403, 'Unauthorized access to this issue ticket');
+            }
+
+            if ((int) $issue->status === LoggedIssue::STATUS_CLOSED) {
+                return StandardResponse::error(400, 'Cannot send a message on a closed issue');
+            }
+
+            $issueMessage = IssueMessage::create([
+                'sender_id'   => $user->id,
+                'receiver_id' => $issue->resolved_by ?: null,
+                'issue_id'    => $issue->id,
+                'message'     => $request->message,
+            ]);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Message sent successfully',
+                'data'    => [
+                    'id'          => $issueMessage->id,
+                    'issue_id'    => $issueMessage->issue_id,
+                    'sender_id'   => $issueMessage->sender_id,
+                    'receiver_id' => $issueMessage->receiver_id,
+                    'message'     => $issueMessage->message,
+                    'sender_name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
+                    'sent_at'     => $issueMessage->created_at,
+                ],
+            ], 201);
+        } catch (Exception $e) {
+            Logger::error('IssueApiController storeMessage error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return StandardResponse::error(500, 'Unable to send message', ['error' => $e->getMessage()]);
         }
     }
 

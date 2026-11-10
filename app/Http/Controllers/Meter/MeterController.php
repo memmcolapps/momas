@@ -405,10 +405,10 @@ class MeterController extends Controller
 
         $validator = Validator::make($request->all(), [
             'tariff_id' => ['required', 'numeric', Rule::exists('tarrif_states', 'tariff_id')
-                                                            ->where('estate_id', $auth_user->estate_id)
                                                             ->where('status', 2)],
             'amount' => 'required|numeric|min:1',
-            'receiver_meterNo' => 'nullable|string',
+            'meterNo' => 'required|string',
+            'type' => 'required|string|in:self,others'
         ]);
 
         if ($validator->fails()) {
@@ -417,7 +417,28 @@ class MeterController extends Controller
             ]);
         }
 
-        $meter = meter();
+        if ($request->type === 'self' && (string) $auth_user->meterNo !== (string) $request->meterNo) {
+
+            // Log here
+
+            return StandardResponse::error(
+                422,
+                'Validation Error: for self mode you must pass your meter number',
+                ['meterNo' => $request->meterNo]
+            );
+        } else if ($request->type === 'others' && (string) $auth_user->meterNo === (string) $request->meterNo) {
+            // Log here
+
+            return StandardResponse::error(
+                422,
+                'Validation Error: for others mode you must pass meter numbers other than yours',
+                ['meterNo' => $request->meterNo]
+            );
+        }
+
+        $meter = Meter::where('meterNo', $request->meterNo)
+            ->where('estate_id', $auth_user->estate_id)
+            ->first();
 
         if (!$meter) {
             Logger::error("User $auth_user->id failed to calculate token fees by amount meter not found", [

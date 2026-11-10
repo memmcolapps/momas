@@ -59,12 +59,23 @@
                             @endif
 
                             @if($totalDue > 0)
-                                <div class="mt-4">
+                                <div class="mt-4 d-flex flex-wrap gap-2">
                                     <button type="button" class="btn btn-success btn-lg" id="payAccumulationBtn" data-estate="{{ $estate->id }}">
                                         <i class="feather-icon icon-credit-card"></i> Pay ₦{{ number_format($totalDue, 2) }} Now
                                     </button>
-                                    <p class="text-muted mt-2 small">Payment via Paystack. Upon successful payment, all unpaid ledger fees will be marked as paid.</p>
+
+                                    @if(Auth::user()->isSuperAdmin())
+                                        <form action="{{ route('postpaid.accumulation-clear') }}" method="post"
+                                              onsubmit="return confirm('Mark all unpaid transactions for this estate as paid? This action cannot be undone.');">
+                                            @csrf
+                                            <input type="hidden" name="estate_id" value="{{ $estate->id }}">
+                                            <button type="submit" class="btn btn-warning btn-lg">
+                                                <i class="feather-icon icon-check-circle"></i> Mark ₦{{ number_format($totalDue, 2) }} as Paid
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
+                                <p class="text-muted mt-2 small">Payment via Paystack. Upon successful payment, all unpaid ledger fees will be marked as paid.</p>
                             @else
                                 <div class="alert alert-success mt-4">
                                     <strong>All clear!</strong> You have no outstanding accumulation fees. You can now vend postpaid tokens.

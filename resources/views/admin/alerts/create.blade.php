@@ -11,6 +11,7 @@
         $buttonRows = is_array(old('buttons')) ? array_values(old('buttons')) : [];
         $button = $buttonRows[0] ?? [];
         $selectedType = old('type', \App\Models\Alert::TYPE_TEXT_NOTICE);
+        $selectedMode = old('mode', \App\Enums\AlertMode::NOTICE->value);
         $textRequired = in_array($selectedType, [\App\Models\Alert::TYPE_TEXT_NOTICE, \App\Models\Alert::TYPE_FULL_NOTICE], true);
         $imageRequired = in_array($selectedType, [\App\Models\Alert::TYPE_IMAGE_NOTICE, \App\Models\Alert::TYPE_FULL_NOTICE], true);
     @endphp
@@ -58,6 +59,16 @@
                                             <option value="{{ $value }}" @selected($selectedType === $value)>{{ $label }}</option>
                                         @endforeach
                                     </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-medium">Alert Mode <span class="text-danger">*</span></label>
+                                    <select name="mode" id="mode" class="form-select" required>
+                                        @foreach($modes as $value => $label)
+                                            <option value="{{ $value }}" @selected($selectedMode === $value)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="form-text">Informational only. The selected mode is included in the customer alert.</div>
                                 </div>
 
                                 <div class="mb-3">
