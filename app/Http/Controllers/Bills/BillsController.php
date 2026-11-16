@@ -11,6 +11,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\PaybetaService;
 use App\Services\StandardResponse;
+use App\Services\VTUService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -21,9 +22,9 @@ use Illuminate\Validation\Rule;
 
 class BillsController extends Controller
 {
-    protected PaybetaService $paybetaService;
+    protected VTUService $paybetaService;
 
-    public function __construct(PaybetaService $paybetaService)
+    public function __construct(VTUService $paybetaService)
     {
         $this->paybetaService = $paybetaService;
     }
@@ -217,7 +218,7 @@ class BillsController extends Controller
             $dataBundles = $this->paybetaService->getDataBundles($request->service_id);
 
             return StandardResponse::success(200, 'Fetch Data Plan', [
-                'data_bundle' => $dataBundles['data']['packages'],
+                'data_bundle' => $dataBundles['data'],
                 'service_id' => $request->service_id
             ]);
 
@@ -263,7 +264,7 @@ class BillsController extends Controller
         $cableBouquets = $this->paybetaService->getCableBouquets($request->service_id);
 
         return StandardResponse::success(200, 'Fetch Data Plan', [
-            'cable_plans' => $cableBouquets['data']['packages'],
+            'cable_plans' => $cableBouquets['data'],
             'service_id' => $request->service_id
         ]);
     }

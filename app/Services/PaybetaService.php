@@ -150,7 +150,7 @@ class PaybetaService
                 throw new Exception('Failed to fetch data bundles');
             }
 
-            return $response;
+            return $response['packages'];
         });
     }
 
@@ -224,7 +224,7 @@ class PaybetaService
             }
         }
 
-        return $results;
+        return $results['packages'];
     }
 
     // --- VALIDATION METHODS ---
