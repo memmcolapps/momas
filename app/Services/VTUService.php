@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DTO\CableBouquetDTO;
 use App\DTO\DataPlanDTO;
 use Exception;
 use Illuminate\Support\Facades\Cache;
@@ -264,7 +265,7 @@ class VTUService
                 throw new Exception('Failed to fetch service bouquets: ' . ($response['message'] ?? 'Unknown provider error'));
             }
 
-            return $this->normalizePackages($response);
+            return $this->transformCableBouquets($response);
         });
     }
 
@@ -414,31 +415,21 @@ class VTUService
     }
 
     /**
-     * Adapt VTU.ng variation_code fields to the legacy package "code" key,
-     * while retaining the original provider response and all original fields.
+     * Transform VTU.ng cable bouquets into the Paybeta-compatible response shape.
      */
-    protected function normalizePackages(array $response)
+    protected function transformCableBouquets(array $response): array
     {
         $packages = $response['data']['packages']
             ?? $response['data']['plans']
             ?? $response['packages']
             ?? $response['plans']
-            ?? null;
+            ?? (isset($response['data']) && is_array($response['data']) && array_is_list($response['data']) ? $response['data'] : []);
 
-        if (is_array($packages)) {
-            foreach ($packages as $index => $package) {
-                if (is_array($package) && !isset($package['code']) && isset($package['variation_code'])) {
-                    $packages[$index]['code'] = $package['variation_code'];
-                }
-            }
+        $transformed = array_map(
+            fn ($package) => CableBouquetDTO::fromVtuPackage($package)->toArray(),
+            is_array($packages) ? $packages : []
+        );
 
-            if (isset($response['data']) && is_array($response['data'])) {
-                $response['data']['packages'] = $packages;
-            } else {
-                $response['data'] = ['packages' => $packages];
-            }
-        }
-
-        return $response;
+        return ['data' => ['packages' => $transformed]];
     }
 }
