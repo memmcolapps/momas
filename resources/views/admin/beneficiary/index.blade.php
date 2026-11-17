@@ -12,7 +12,7 @@
                 </div>
             </div>
 
-            @if ($errors->any())
+            @if (isset($errors) && $errors->any())
                 <div class="alert alert-danger">
                     <ul>
                         @foreach ($errors->all() as $error)
@@ -70,7 +70,7 @@
                         <div class="card-header">
                             <div class="d-flex justify-content-between">
                                 <h5 class="card-title text-black mb-0">Beneficiaries List</h5>
-                                <a href="new-beneficiary" class="btn btn-primary text-white justify-content-end">Add new</a>
+                                <a href="{{ url('admin/new-beneficiary') }}" class="btn btn-primary text-white justify-content-end">Add new</a>
                             </div>
                         </div>
 
@@ -99,7 +99,7 @@
                                     <tr>
                                         <td>{{$data->id}}</td>
                                         <td>{{$data->line_items_id}}</td>
-                                        <td><a href="view-beneficiary?id={{$data->id}}">{{$data->beneficiary_name ?: '-'}}</a></td>
+                                        <td><a href="{{ url('admin/view-beneficiary?id='.$data->id) }}">{{$data->beneficiary_name ?: '-'}}</a></td>
                                         <td>{{$data->beneficiary_account}}</td>
                                         <td>{{$data->bank->name ?? $data->bank_code}}</td>
                                         <td>
@@ -122,12 +122,12 @@
                                         @if(Auth::user()->role == 0)
                                         <td>
                                             @if($data->status == 2)
-                                                <a href="beneficiary-deactivate?id={{$data->id}}" class="btn btn-warning btn-sm">Deactivate</a>
+                                                <a href="{{ url('admin/beneficiary-deactivate?id='.$data->id) }}" class="btn btn-warning btn-sm">Deactivate</a>
                                             @else
-                                                <a href="beneficiary-activate?id={{$data->id}}" class="btn btn-success btn-sm">Activate</a>
+                                                <a href="{{ url('admin/beneficiary-activate?id='.$data->id) }}" class="btn btn-success btn-sm">Activate</a>
                                             @endif
-                                            <a href="view-beneficiary?id={{$data->id}}" class="btn btn-primary btn-sm">View</a>
-                                            <a href="beneficiary-delete?id={{$data->id}}" onclick="return confirmDelete();" class="btn btn-danger btn-sm">Delete</a>
+                                            <a href="{{ url('admin/view-beneficiary?id='.$data->id) }}" class="btn btn-primary btn-sm">View</a>
+                                            <a href="{{ url('admin/beneficiary-delete?id='.$data->id) }}" onclick="return confirmDelete();" class="btn btn-danger btn-sm">Delete</a>
                                         </td>
 
                                         <script>

@@ -110,11 +110,13 @@
                                                 <input class="form-control" name="email" type="email" value="{{$email}}" hidden>
                                             </div>
 
+                                            <div class="alert alert-info py-1 text-center fs-13 mb-3">
+                                                OTP Code: <strong>{{$code ?? ''}}</strong>
+                                            </div>
                                             <div class="form-group mb-3">
-                                                <label for="password" class="form-label">Code</label>
-                                                <input class="form-control mb-3" name="code" type="text" required="" id="code" placeholder="Enter OTP Code">
+                                                <label for="code" class="form-label">Code</label>
+                                                <input class="form-control mb-3" name="code" type="text" required="" id="code" value="{{$code ?? ''}}" placeholder="Enter OTP Code">
                                                 <span class="mt-4">Didn't Receive code ? <a href="resend_email_code">Resend</a> </span>
-
                                             </div>
 
 

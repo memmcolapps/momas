@@ -405,10 +405,10 @@ class MeterController extends Controller
 
         $validator = Validator::make($request->all(), [
             'tariff_id' => ['required', 'numeric', Rule::exists('tarrif_states', 'tariff_id')
-                                                            ->where('estate_id', $auth_user->estate_id)
                                                             ->where('status', 2)],
             'amount' => 'required|numeric|min:1',
-            'receiver_meterNo' => 'nullable|string',
+            'meterNo' => 'required|string',
+            'type' => 'required|string|in:self,others'
         ]);
 
         if ($validator->fails()) {
@@ -417,7 +417,28 @@ class MeterController extends Controller
             ]);
         }
 
-        $meter = meter();
+        if ($request->type === 'self' && (string) $auth_user->meterNo !== (string) $request->meterNo) {
+
+            // Log here
+
+            return StandardResponse::error(
+                422,
+                'Validation Error: for self mode you must pass your meter number',
+                ['meterNo' => $request->meterNo]
+            );
+        } else if ($request->type === 'others' && (string) $auth_user->meterNo === (string) $request->meterNo) {
+            // Log here
+
+            return StandardResponse::error(
+                422,
+                'Validation Error: for others mode you must pass meter numbers other than yours',
+                ['meterNo' => $request->meterNo]
+            );
+        }
+
+        $meter = Meter::where('meterNo', $request->meterNo)
+            ->where('estate_id', $auth_user->estate_id)
+            ->first();
 
         if (!$meter) {
             Logger::error("User $auth_user->id failed to calculate token fees by amount meter not found", [
@@ -613,8 +634,13 @@ class MeterController extends Controller
             return StandardResponse::error(403, 'Unauthorized: Only super admins can generate emergency tokens');
         }
 
-        $maxAmount = (int) (app(\App\Services\ConfigManagementService::class)
-            ->getConfig('momas-max-emergency-token') ?? config('constants.momas_max_emergency_token'));
+        $meter = Meter::where('meterNo', $request->meterNo)->first();
+
+        if (! $meter) {
+            return StandardResponse::error(404, 'Meter not found');
+        }
+
+        $maxAmount = $meter->getEmergencyTokenMax();
 
         $validator = Validator::make($request->all(), [
             'meterNo' => ['required', 'integer', Rule::exists('meters', 'meterNo')],
@@ -626,16 +652,6 @@ class MeterController extends Controller
             return StandardResponse::error(422, 'Validation Error', [
                 'validation_error' => $validator->errors(),
             ]);
-        }
-
-        if ((float) $request->amount > $maxAmount) {
-            return StandardResponse::error(422, 'Amount cannot exceed NGN ' . number_format($maxAmount, 2));
-        }
-
-        $meter = Meter::where('meterNo', $request->meterNo)->first();
-
-        if (! $meter) {
-            return StandardResponse::error(404, 'Meter not found');
         }
 
         try {
@@ -1964,12 +1980,12 @@ class MeterController extends Controller
 
         $tariffs = Tariff::where('estate_id', $user_info->estate_id)
             ->where(function ($q) use ($meter) {
-                $q->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
-                    ->orWhereIn('tariff_index', [$meter->NewTariffID, $meter->NewTariffDual]);
+                $q->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDualID])
+                    ->orWhereIn('tariff_index', [$meter->NewTariffID, $meter->NewTariffDualID]);
             })
             ->get(['id', 'title', 'type']);
 
-        return response()->json(['tariffs' => $tariffs]);
+        return response()->json(['tariffs' => $tariffs, 'meter' => [$meter->NewTariffID, $meter->NewTariffDualID]]);
     }
 
 

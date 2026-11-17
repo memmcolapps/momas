@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Transaction\TransactionController;
+use App\Models\Auditlog;
 use App\Models\ClearcreditToken;
 use App\Models\CompensationToken;
 use App\Models\CreditToken;
@@ -29,6 +30,7 @@ use App\Services\VatCalculator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use App\Models\Logger;
 use Illuminate\Support\Str;
@@ -263,7 +265,7 @@ class TokenController extends Controller
             $data['estate'] = Estate::all();
             $data['preview'] = null;
             $data['credit_tokens'] = ClearcreditToken::latest()->paginate('50');
-            $data['amount'] = Setting::where('id', 1)->first()->clear_credit_fee;
+            $data['amount'] = Setting::where('id', 1)->first()?->clear_credit_fee ?? 0;
 
             return view('admin.token.clear-credit-token-view', $data);
 
@@ -279,7 +281,7 @@ class TokenController extends Controller
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
             $data['preview'] = null;
             $data['credit_tokens'] = ClearcreditToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
-            $data['amount'] = Setting::where('id', 1)->first()->clear_credit_fee;
+            $data['amount'] = Setting::where('id', 1)->first()?->clear_credit_fee ?? 0;
 
 
             return view('admin.token.clear-credit-token-view', $data);
@@ -346,7 +348,7 @@ class TokenController extends Controller
 
             $data['estate'] = Estate::all();
             $data['preview'] = null;
-            $data['tamper_amount'] = Setting::where('id', 1)->first()->clear_tamper_fee;
+            $data['tamper_amount'] = Setting::where('id', 1)->first()?->clear_tamper_fee ?? 0;
             $data['credit_tokens'] = TamperToken::latest()->paginate('50');
 
 
@@ -361,10 +363,10 @@ class TokenController extends Controller
 
 
             $data['estate_id'] = Auth::user()->estate_id;
-            $data['tariff'] = TarrifState::where('estate_id', user()->estate_id)->get();
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
             $data['preview'] = null;
-            $data['tamper_amount'] = Setting::where('id', 1)->first()->clear_tamper_fee;
+            $data['tamper_amount'] = Setting::where('id', 1)->first()?->clear_tamper_fee ?? 0;
             $data['tamper_tokens'] = TamperToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
 
             return view('admin.token.tamper-token-view', $data);
@@ -394,7 +396,7 @@ class TokenController extends Controller
             $data['estate'] = Estate::all();
             $data['preview'] = null;
             $data['credit_tokens'] = KctToken::latest()->paginate('50');
-            $data['kct_amount'] = Setting::where('id', 1)->first()->kct_fee;
+            $data['kct_amount'] = Setting::where('id', 1)->first()?->kct_fee ?? 0;
 
 
             return view('admin.token.kct-token-view', $data);
@@ -410,8 +412,8 @@ class TokenController extends Controller
             $data['estate_id'] = Auth::user()->estate_id;
             $data['title'] = Estate::where('id', Auth::user()->estate_id)->first()->title;
             $data['preview'] = null;
-            $data['tariff'] = TarrifState::where('estate_id', user()->estate_id)->get();
-            $data['kct_amount'] = Setting::where('id', 1)->first()->kct_fee;
+            $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
+            $data['kct_amount'] = Setting::where('id', 1)->first()?->kct_fee ?? 0;
             $data['credit_tokens'] = KctToken::latest()->where('estate_id', Auth::user()->estate_id)->paginate('50');
 
             return view('admin.token.kct-token-view', $data);
@@ -2009,7 +2011,7 @@ class TokenController extends Controller
                     "email" => strtolower(trim($email)),
                     // 'callback_url' => url('') . "/admin/paystack-check-web-tamper",
                     // 'subaccount' => $est->paystack_subaccount,
-                    'subaccount' => 'ACCT_nd2zcvugcv5zfqp',   //Hardcoded MEMMCOL subaccount for tamper payments
+                    'sub_account' => 'ACCT_nd2zcvugcv5zfqp',   //Hardcoded MEMMCOL subaccount for tamper payments
                     'metadata' => [],
                 );
 
@@ -3287,7 +3289,7 @@ class TokenController extends Controller
                 $databody = [
                     "amount" => $request->amount * 100,
                     "email" => strtolower(trim($email)),
-                    "sub_account" => $est->paystack_subaccount ?? 'ACCT_nd2zcvugcv5zfqp',
+                    "sub_account" => 'ACCT_nd2zcvugcv5zfqp',
                     "metadata" => [],
                 ];
 
@@ -6703,6 +6705,92 @@ class TokenController extends Controller
         ];
 
         return view('admin.token.postpaid-accumulation-due', $data);
+    }
+
+    public function clear_accumulation(Request $request)
+    {
+        if (!Auth::user()->isSuperAdmin()) {
+            abort(403, 'Only a superadmin can manually clear postpaid accumulation fees.');
+        }
+
+        $request->validate([
+            'estate_id' => 'required|exists:estates,id',
+        ]);
+
+        try {
+            $estate = Estate::findOrFail($request->estate_id);
+            $totalDue = LedgerService::computeEstateFee($estate);
+            $unpaidCount = TokenLedger::where('estate_id', $estate->id)
+                ->whereNull('paid_at')
+                ->count();
+
+            if ($totalDue <= 0 || $unpaidCount === 0) {
+                return redirect()->route('postpaid.accumulation-due', $estate->id)
+                    ->with('error', 'No outstanding accumulation fees for this estate.');
+            }
+
+            $oldValues = [
+                'estate_id' => $estate->id,
+                'estate_title' => $estate->title,
+                'total_due' => $totalDue,
+                'unpaid_count' => $unpaidCount,
+                'accumulation_period' => $estate->fee_accumulation_period ?? 1,
+            ];
+
+            $trxRef = generate_unique_string('MANUAL');
+            $paidAt = Carbon::now();
+            $clearedCount = 0;
+
+            DB::transaction(function () use ($estate, $totalDue, $trxRef, $paidAt, $oldValues, &$clearedCount) {
+                $clearedCount = LedgerService::markEstatePostpaidLedgersAsPaid($estate->id, $trxRef);
+
+                PostpaidAccumulationPayment::create([
+                    'estate_id' => $estate->id,
+                    'user_id' => Auth::id(),
+                    'amount' => $totalDue,
+                    'trx_ref' => $trxRef,
+                    'status' => 1,
+                    'paid_at' => $paidAt,
+                ]);
+
+                $aud = new Auditlog();
+                $aud->user_id = Auth::id();
+                $aud->name = Auth::user()->first_name . ' ' . Auth::user()->last_name;
+                $aud->old_values = json_encode($oldValues);
+                $aud->new_values = json_encode([
+                    'estate_id' => $estate->id,
+                    'estate_title' => $estate->title,
+                    'reference' => $trxRef,
+                    'amount_cleared' => $totalDue,
+                    'ledgers_marked_paid' => $clearedCount,
+                    'paid_at' => $paidAt->toIso8601String(),
+                    'superadmin_id' => Auth::id(),
+                    'superadmin_email' => Auth::user()->email,
+                ]);
+                $aud->action = 'Postpaid Accumulation Manual Clear';
+                $aud->save();
+            });
+
+            Logger::info('Postpaid accumulation manually cleared by superadmin', [
+                'estate_id' => $estate->id,
+                'superadmin_id' => Auth::id(),
+                'amount_cleared' => $totalDue,
+                'ledgers_marked_paid' => $clearedCount,
+                'reference' => $trxRef,
+            ]);
+
+            return redirect()->route('postpaid.accumulation-due', $estate->id)
+                ->with('message', 'All unpaid postpaid ledger fees (₦' . number_format($totalDue, 2) . ') have been marked as paid. Reference: ' . $trxRef);
+        } catch (\Exception $e) {
+            Logger::error('clear_accumulation failed', [
+                'estate_id' => $request->estate_id,
+                'superadmin_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('postpaid.accumulation-due', $request->estate_id)
+                ->with('error', 'Failed to clear accumulation fees: ' . $e->getMessage());
+        }
     }
 
     public function init_accumulation_payment(Request $request)

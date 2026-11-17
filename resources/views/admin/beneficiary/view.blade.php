@@ -11,11 +11,11 @@
                     <h4 class="fs-18 fw-semibold m-0">View Beneficiary</h4>
                 </div>
                 <div class="flex-shrink-0">
-                    <a href="beneficiary" class="btn btn-secondary">Back</a>
+                    <a href="{{ url('admin/beneficiary') }}" class="btn btn-secondary">Back</a>
                 </div>
             </div>
 
-            @if ($errors->any())
+            @if (isset($errors) && $errors->any())
                 <div class="alert alert-danger">
                     <ul>
                         @foreach ($errors->all() as $error)
@@ -36,7 +36,7 @@
 
                     <div class="card-body">
 
-                        <form action="beneficiary-update" method="post">
+                        <form action="{{ url('admin/beneficiary-update') }}" method="post">
                             @csrf
                             <input type="hidden" name="id" value="{{$beneficiary->id}}">
 

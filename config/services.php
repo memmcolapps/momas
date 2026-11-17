@@ -46,4 +46,8 @@ return [
         'payment_page_url' => env('REMITA_PAYMENT_PAGE_URL', 'https://demo.remita.net/remita/onepage/api/v1/so.spa'),
     ],
 
+    'vtu' => [
+        'key' => env('MOMAS_VTU_SECRET_KEY'),
+        'base_url' => env('MOMAS_VTU_BASE_URL', 'https://sandbox.vtu.ng/v1'),
+    ]
 ];

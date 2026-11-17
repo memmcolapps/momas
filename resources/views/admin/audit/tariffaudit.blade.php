@@ -140,12 +140,12 @@
 
 
 
-                                        {{ $tariff_logs->links() }}
-
-                                        @endforeach
+                                    @endforeach
 
                                     </tbody>
-
+                                    <tfoot>
+                                        {{ $tariff_logs->links() }}
+                                    </tfoot>
 
                                 </table><!-- end table -->
                             </div>
@@ -162,9 +162,7 @@
 
         </div>
 
-    @elseif(Auth::user()->role == 1)
-    @elseif(Auth::user()->role == 2)
-    @elseif(Auth::user()->role == 3)
+    @elseif(in_array(Auth::user()->role, [1, 2, 3]))
         <div class="content">
 
             <!-- Start Content-->
@@ -369,7 +367,7 @@
 
                                             <tr>
                                                 <td>{{$data->trx_id}}</td>
-                                                <td><a href="view-user?id={{$data->user->first_name ?? "Name"}}">{{$data->user->last_name ?? "Name"}}</a></td>
+                                                <td><a href="view-user?id={{$data->user?->id ?? ''}}">{{$data->user?->first_name ?? ''}} {{$data->user?->last_name ?? 'N/A'}}</a></td>
                                                 <td>{{number_format($data->amount, 2)}}</td>
                                                 <td>{{$data->service}}</td>
                                                 <td>
@@ -411,9 +409,12 @@
             </div> <!-- container-fluid -->
 
         </div>
-    @elseif(Auth::user()->role == 4)
-    @elseif(Auth::user()->role == 5)
     @else
+        <div class="content">
+            <div class="container-fluid py-4">
+                <div class="alert alert-info">No audit logs available for your user role.</div>
+            </div>
+        </div>
     @endif
 
 

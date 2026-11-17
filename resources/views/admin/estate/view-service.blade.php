@@ -6,7 +6,7 @@
         <div class="content">
             <div class="container-fluid">
 
-                @if ($errors->any())
+                @if (isset($errors) && $errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -29,7 +29,10 @@
 
                 <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
                     <div class="flex-grow-1">
-                        <h4 class="fs-18 fw-semibold m-0">Add New Estate</h4>
+                        <h4 class="fs-18 fw-semibold m-0">View Estate Service</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <a href="{{ url('admin/estate-service') }}" class="btn btn-secondary">Back</a>
                     </div>
                 </div>
 
@@ -40,7 +43,7 @@
 
                         <div class="card-body">
 
-                            <form action="service-update" method="post">
+                            <form action="{{ url('admin/service-update') }}" method="post">
                                 @csrf
 
                                 <div class="row">
@@ -130,10 +133,10 @@
 
                                 @foreach($comment as $data)
                                     <tr>
-                                        <td>{{$data->user->first_name}} {{$data->user->last_name}}</td>
+                                        <td>{{$data->user->first_name ?? ($data->user_name ?? 'User')}} {{$data->user->last_name ?? ''}}</td>
                                         <td>{{$data->comment}}</td>
                                         <td>{{$data->created_at}}</td>
-                                        <td><a href="delete-comment?id={{$data->id}}" onclick="return confirmDelete();"
+                                        <td><a href="{{ url('admin/delete-comment?id='.$data->id) }}" onclick="return confirmDelete();"
                                                class="btn btn-danger">Delete</a></td>
                                         <script>
                                             function confirmDelete() {
@@ -172,7 +175,7 @@
         <div class="content">
             <div class="container-fluid">
 
-                @if ($errors->any())
+                @if (isset($errors) && $errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -195,7 +198,10 @@
 
                 <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
                     <div class="flex-grow-1">
-                        <h4 class="fs-18 fw-semibold m-0">Add New Estate</h4>
+                        <h4 class="fs-18 fw-semibold m-0">View Estate Service</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <a href="{{ url('admin/estate-service') }}" class="btn btn-secondary">Back</a>
                     </div>
                 </div>
 
@@ -206,7 +212,7 @@
 
                         <div class="card-body">
 
-                            <form action="service-update" method="post">
+                            <form action="{{ url('admin/service-update') }}" method="post">
                                 @csrf
 
                                 <div class="row">
@@ -296,10 +302,10 @@
 
                                     @foreach($comment as $data)
                                         <tr>
-                                        <td>{{$data->user->first_name}} {{$data->user->last_name}}</td>
+                                        <td>{{$data->user->first_name ?? ($data->user_name ?? 'User')}} {{$data->user->last_name ?? ''}}</td>
                                         <td>{{$data->comment}}</td>
                                         <td>{{$data->created_at}}</td>
-                                        <td><a href="delete-comment?id={{$data->id}}" onclick="return confirmDelete();"
+                                        <td><a href="{{ url('admin/delete-comment?id='.$data->id) }}" onclick="return confirmDelete();"
                                                class="btn btn-danger">Delete</a></td>
                                         <script>
                                             function confirmDelete() {
