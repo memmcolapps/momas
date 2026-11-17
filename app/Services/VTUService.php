@@ -411,7 +411,7 @@ class VTUService
             is_array($packages) ? $packages : []
         );
 
-        return ['data' => ['packages' => $transformed]];
+        return ['data' => $transformed];
     }
 
     /**
