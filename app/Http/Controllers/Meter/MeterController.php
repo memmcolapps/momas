@@ -1980,12 +1980,12 @@ class MeterController extends Controller
 
         $tariffs = Tariff::where('estate_id', $user_info->estate_id)
             ->where(function ($q) use ($meter) {
-                $q->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDual])
-                    ->orWhereIn('tariff_index', [$meter->NewTariffID, $meter->NewTariffDual]);
+                $q->whereIn('id', [$meter->NewTariffID, $meter->NewTariffDualID])
+                    ->orWhereIn('tariff_index', [$meter->NewTariffID, $meter->NewTariffDualID]);
             })
             ->get(['id', 'title', 'type']);
 
-        return response()->json(['tariffs' => $tariffs]);
+        return response()->json(['tariffs' => $tariffs, 'meter' => [$meter->NewTariffID, $meter->NewTariffDualID]]);
     }
 
 
