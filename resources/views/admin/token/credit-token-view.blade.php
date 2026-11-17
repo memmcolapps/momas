@@ -510,6 +510,7 @@
                                                                                 }
 
                                                                                 if (response && response.tariffs) {
+                                                                                    // console.log(response.tariffs, response.meter);
                                                                                     populateTariffOptions(response.tariffs, response.meter);
                                                                                 } else {
                                                                                     $('#tariff_id').prop('disabled', true).empty();
@@ -538,6 +539,7 @@
                                                             var isDualTariff = meter.isDualTariff === 'on' || meter.isDualTariff === '1' || meter.isDualTariff === 1 || meter.isDualTariff === true;
 
                                                             // Separate tariffs by type
+                                                            console.log(tariffs);
                                                             var nepaTariffs = tariffs.filter(t => t.type === 'nepa' || t.type === 'Grid');
                                                             var genTariffs = tariffs.filter(t => t.type === 'gen' || t.type === 'Off Grid');
 
