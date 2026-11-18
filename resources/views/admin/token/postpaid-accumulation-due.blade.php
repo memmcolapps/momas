@@ -75,13 +75,14 @@
                             @endif
 
                             @if($totalDue > 0)
-                                <div class="mt-4 d-flex flex-wrap gap-2">
-                                    <button type="button" class="btn btn-success btn-lg" id="payAccumulationBtn" data-estate="{{ $estate->id }}">
+                                <div class="mt-4 d-flex flex-wrap flex-xl-nowrap align-items-end gap-3">
+                                    <button type="button" class="btn btn-success btn-lg flex-shrink-0" id="payAccumulationBtn" data-estate="{{ $estate->id }}">
                                         <i class="feather-icon icon-credit-card"></i> Pay ₦{{ number_format($totalDue, 2) }} Now
                                     </button>
 
                                     @if(Auth::user()->isSuperAdmin())
                                         <form action="{{ route('postpaid.accumulation-clear') }}" method="post"
+                                              class="m-0 flex-shrink-0"
                                               onsubmit="return confirm('Mark all unpaid transactions for this estate as paid? This action cannot be undone.');">
                                             @csrf
                                             <input type="hidden" name="estate_id" value="{{ $estate->id }}">
@@ -91,16 +92,16 @@
                                         </form>
 
                                         <form action="{{ route('postpaid.accumulation-clear-partial') }}" method="post"
-                                              class="d-flex align-items-end gap-2"
+                                              class="d-flex align-items-end gap-2 flex-grow-1 m-0"
                                               onsubmit="return confirm('Clear postpaid ledgers from oldest to newest using this balance? Any remainder will be carried forward.');">
                                             @csrf
                                             <input type="hidden" name="estate_id" value="{{ $estate->id }}">
-                                            <div>
+                                            <div class="flex-grow-1">
                                                 <label for="partialAmount" class="form-label mb-1 small text-muted">Balance to clear (₦)</label>
-                                                <input type="number" name="amount" id="partialAmount" class="form-control"
-                                                       min="0.01" step="0.01" required style="min-width: 180px;">
+                                                <input type="number" name="amount" id="partialAmount" class="form-control w-100"
+                                                       min="0.01" step="0.01" required>
                                             </div>
-                                            <button type="submit" class="btn btn-info btn-lg">
+                                            <button type="submit" class="btn btn-info btn-lg flex-shrink-0">
                                                 <i class="feather-icon icon-dollar-sign"></i> Clear Partial Balance
                                             </button>
                                         </form>
