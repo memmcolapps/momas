@@ -6702,6 +6702,7 @@ class TokenController extends Controller
             'oldestUnpaid' => $oldestUnpaid,
             'accumulationPeriod' => $accumulationPeriod,
             'paymentHistory' => $paymentHistory,
+            'clearBalance' => (float) $estate->postpaid_clear_balance,
         ];
 
         return view('admin.token.postpaid-accumulation-due', $data);
@@ -6790,6 +6791,116 @@ class TokenController extends Controller
 
             return redirect()->route('postpaid.accumulation-due', $request->estate_id)
                 ->with('error', 'Failed to clear accumulation fees: ' . $e->getMessage());
+        }
+    }
+
+    public function clear_accumulation_partial(Request $request)
+    {
+        if (!Auth::user()->isSuperAdmin()) {
+            abort(403, 'Only a superadmin can partially clear postpaid accumulation fees.');
+        }
+
+        $request->validate([
+            'estate_id' => 'required|exists:estates,id',
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        $estate = Estate::findOrFail($request->estate_id);
+        $totalDue = LedgerService::computeEstateFee($estate);
+
+        if ($totalDue <= 0) {
+            return redirect()->route('postpaid.accumulation-due', $estate->id)
+                ->with('error', 'No outstanding accumulation fees for this estate.');
+        }
+
+        $amount = round((float) $request->amount, 2);
+        $result = null;
+
+        try {
+            DB::transaction(function () use ($estate, $amount, &$result) {
+                $lockedEstate = Estate::whereKey($estate->id)->lockForUpdate()->firstOrFail();
+                $carryBefore = (float) $lockedEstate->postpaid_clear_balance;
+                $totalDueBefore = LedgerService::computeEstateFee($lockedEstate);
+
+                if ($totalDueBefore <= 0) {
+                    throw new \RuntimeException('No outstanding accumulation fees for this estate.');
+                }
+
+                $trxRef = generate_unique_string('MANUAL');
+                $paidAt = Carbon::now();
+
+                $result = LedgerService::clearEstatePostpaidLedgersWithBalance($lockedEstate, $amount);
+
+                PostpaidAccumulationPayment::create([
+                    'estate_id' => $lockedEstate->id,
+                    'user_id' => Auth::id(),
+                    'amount' => $amount,
+                    'trx_ref' => $trxRef,
+                    'status' => 1,
+                    'paid_at' => $paidAt,
+                ]);
+
+                $aud = new Auditlog();
+                $aud->user_id = Auth::id();
+                $aud->name = Auth::user()->first_name . ' ' . Auth::user()->last_name;
+                $aud->old_values = json_encode([
+                    'estate_id' => $lockedEstate->id,
+                    'estate_title' => $lockedEstate->title,
+                    'carry_balance' => $carryBefore,
+                    'total_due' => $totalDueBefore,
+                ]);
+                $aud->new_values = json_encode([
+                    'estate_id' => $lockedEstate->id,
+                    'estate_title' => $lockedEstate->title,
+                    'reference' => $trxRef,
+                    'amount_paid' => $amount,
+                    'amount_applied' => $result['amount_applied'],
+                    'ledgers_marked_paid' => $result['cleared_count'],
+                    'carry_balance_before' => $carryBefore,
+                    'carry_balance_after' => $result['remaining_balance'],
+                    'remaining_due' => $result['remaining_due'],
+                    'paid_at' => $paidAt->toIso8601String(),
+                    'superadmin_id' => Auth::id(),
+                    'superadmin_email' => Auth::user()->email,
+                ]);
+                $aud->action = 'Postpaid Accumulation Partial Clear';
+                $aud->save();
+
+                $result['trx_ref'] = $trxRef;
+                $result['carry_before'] = $carryBefore;
+            });
+
+            Logger::info('Postpaid accumulation partially cleared by superadmin', [
+                'estate_id' => $estate->id,
+                'superadmin_id' => Auth::id(),
+                'amount_paid' => $amount,
+                'amount_applied' => $result['amount_applied'],
+                'ledgers_marked_paid' => $result['cleared_count'],
+                'carry_balance' => $result['remaining_balance'],
+                'reference' => $result['trx_ref'],
+            ]);
+
+            $message = '₦' . number_format($result['amount_applied'], 2) . ' applied to '
+                . $result['cleared_count'] . ' ledger(s). Remaining debt: ₦'
+                . number_format($result['remaining_due'], 2) . '.';
+
+            if ($result['remaining_balance'] > 0) {
+                $message .= ' Carried balance: ₦' . number_format($result['remaining_balance'], 2) . '.';
+            }
+
+            $message .= ' Reference: ' . $result['trx_ref'];
+
+            return redirect()->route('postpaid.accumulation-due', $estate->id)
+                ->with('message', $message);
+        } catch (\Exception $e) {
+            Logger::error('clear_accumulation_partial failed', [
+                'estate_id' => $request->estate_id,
+                'superadmin_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('postpaid.accumulation-due', $request->estate_id)
+                ->with('error', 'Failed to partially clear accumulation fees: ' . $e->getMessage());
         }
     }
 
