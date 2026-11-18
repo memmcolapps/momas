@@ -91,6 +91,52 @@ class LedgerService
             ->update(['paid_at' => Carbon::now()]);
     }
 
+    public static function clearEstatePostpaidLedgersWithBalance(Estate $estate, float $amount): array
+    {
+        $available = round((float) $estate->postpaid_clear_balance + $amount, 2);
+
+        $estate->postpaid_clear_balance = 0;
+
+        $ledgers = TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        $paidAt = Carbon::now();
+        $clearedCount = 0;
+        $amountApplied = 0.0;
+
+        foreach ($ledgers as $ledger) {
+            $fee = (float) $ledger->expected_fee;
+
+            if ($available + 0.00001 < $fee) {
+                break;
+            }
+
+            $ledger->paid_at = $paidAt;
+            $ledger->save();
+
+            $available = round($available - $fee, 2);
+            $amountApplied = round($amountApplied + $fee, 2);
+            $clearedCount++;
+        }
+
+        $estate->postpaid_clear_balance = $available;
+        $estate->save();
+
+        $remainingDue = (float) TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->sum('expected_fee');
+
+        return [
+            'cleared_count' => $clearedCount,
+            'amount_applied' => $amountApplied,
+            'remaining_balance' => $available,
+            'remaining_due' => round($remainingDue, 2),
+        ];
+    }
+
     public static function getAccumulationPaymentHistory(Estate|int $estate): \Illuminate\Database\Eloquent\Collection
     {
         $estateId = $estate instanceof Estate ? $estate->id : $estate;

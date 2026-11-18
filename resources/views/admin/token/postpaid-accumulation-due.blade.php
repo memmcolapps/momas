@@ -21,6 +21,15 @@
                     {{ session()->get('error') }}
                 </div>
             @endif
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <div class="row">
                 <div class="col-xl-8">
@@ -51,6 +60,13 @@
                                 </div>
                             </div>
 
+                            @if(($clearBalance ?? 0) > 0)
+                                <div class="alert alert-info">
+                                    <strong>Carried Balance:</strong> ₦{{ number_format($clearBalance, 2) }} from a previous partial clear.
+                                    This will be applied first on the next partial clear.
+                                </div>
+                            @endif
+
                             @if($oldestUnpaid)
                                 <div class="alert alert-warning">
                                     <strong>Note:</strong> Your oldest unpaid ledger entry dates back to <strong>{{ $oldestUnpaid->created_at->format('d M Y') }}</strong>.
@@ -71,6 +87,21 @@
                                             <input type="hidden" name="estate_id" value="{{ $estate->id }}">
                                             <button type="submit" class="btn btn-warning btn-lg">
                                                 <i class="feather-icon icon-check-circle"></i> Mark ₦{{ number_format($totalDue, 2) }} as Paid
+                                            </button>
+                                        </form>
+
+                                        <form action="{{ route('postpaid.accumulation-clear-partial') }}" method="post"
+                                              class="d-flex align-items-end gap-2"
+                                              onsubmit="return confirm('Clear postpaid ledgers from oldest to newest using this balance? Any remainder will be carried forward.');">
+                                            @csrf
+                                            <input type="hidden" name="estate_id" value="{{ $estate->id }}">
+                                            <div>
+                                                <label for="partialAmount" class="form-label mb-1 small text-muted">Balance to clear (₦)</label>
+                                                <input type="number" name="amount" id="partialAmount" class="form-control"
+                                                       min="0.01" step="0.01" required style="min-width: 180px;">
+                                            </div>
+                                            <button type="submit" class="btn btn-info btn-lg">
+                                                <i class="feather-icon icon-dollar-sign"></i> Clear Partial Balance
                                             </button>
                                         </form>
                                     @endif
