@@ -6428,8 +6428,23 @@ class TokenController extends Controller
         return Str::lower(Str::random(10));
     }
 
+    private function postpaidTokenTypes(): array
+    {
+        return [
+            TokenLedger::TYPE_CREDIT_TOKEN => 'Credit Token',
+            TokenLedger::TYPE_TAMPER_TOKEN => 'Clear Tamper',
+            TokenLedger::TYPE_CLEAR_CREDIT_TOKEN => 'Clear Credit Token',
+            TokenLedger::TYPE_KCT_TOKEN => 'KCT Token',
+        ];
+    }
+
     public function postpaid_token_index()
     {
+        $setting = Setting::where('id', 1)->first();
+        $data['clear_tamper_fee'] = $setting->clear_tamper_fee ?? 0;
+        $data['kct_fee'] = $setting->kct_fee ?? 0;
+        $data['token_types'] = $this->postpaidTokenTypes();
+
         if (Auth::user()->role == 0) {
             $data['estate'] = Estate::all();
             $data['tariff'] = TarrifState::where('estate_id', Auth::user()->estate_id)->get();
@@ -6465,6 +6480,10 @@ class TokenController extends Controller
     public function search_postpaid_token(Request $request)
     {
         $search = $request->search;
+        $setting = Setting::where('id', 1)->first();
+        $data['clear_tamper_fee'] = $setting->clear_tamper_fee ?? 0;
+        $data['kct_fee'] = $setting->kct_fee ?? 0;
+        $data['token_types'] = $this->postpaidTokenTypes();
 
         if (Auth::user()->role == 0) {
             $data['estate'] = Estate::all();
@@ -6497,12 +6516,48 @@ class TokenController extends Controller
         return view('admin.token.postpaid-token-view', $data);
     }
 
+    private function resolvePostpaidTokenType(Request $request): string
+    {
+        $tokenType = $request->input('token_type', TokenLedger::TYPE_CREDIT_TOKEN);
+
+        if (!array_key_exists($tokenType, $this->postpaidTokenTypes())) {
+            throw new \Exception('Invalid token type selected');
+        }
+
+        return $tokenType;
+    }
+
+    private function resolvePostpaidTokenAmount(Request $request, string $tokenType): float
+    {
+        if ($tokenType === TokenLedger::TYPE_TAMPER_TOKEN) {
+            return (float) (Setting::where('id', 1)->value('clear_tamper_fee') ?? 0);
+        }
+
+        if ($tokenType === TokenLedger::TYPE_KCT_TOKEN) {
+            return (float) (Setting::where('id', 1)->value('kct_fee') ?? 0);
+        }
+
+        return (float) $request->amount;
+    }
+
     public function postpaid_validate_meter(Request $request)
     {
         Logger::info('postpaid_validate_meter called', [
             'user_id' => Auth::id(),
             'request' => $request->all(),
         ]);
+
+        try {
+            $tokenType = $this->resolvePostpaidTokenType($request);
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $postpaidAmount = $this->resolvePostpaidTokenAmount($request, $tokenType);
+
+        if (in_array($tokenType, [TokenLedger::TYPE_TAMPER_TOKEN, TokenLedger::TYPE_KCT_TOKEN], true) && $postpaidAmount <= 0) {
+            return back()->with('error', 'The selected token fee has not been configured');
+        }
 
         $momas_min_vend = config('constants.momas_minimum_vend');
 
@@ -6523,7 +6578,7 @@ class TokenController extends Controller
 
             backfill_utility_payments($user->id, $estate_id);
 
-            if ($request->amount < $momas_min_vend) {
+            if (in_array($tokenType, [TokenLedger::TYPE_CREDIT_TOKEN, TokenLedger::TYPE_CLEAR_CREDIT_TOKEN], true) && $postpaidAmount < $momas_min_vend) {
                 return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
             }
 
@@ -6535,7 +6590,11 @@ class TokenController extends Controller
                 return redirect("/admin/postpaid-accumulation-due/{$estate->id}");
             }
 
-            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount, null, false);
+            if ($tokenType === TokenLedger::TYPE_KCT_TOKEN && !$meter->NeedKCT) {
+                return back()->with('error', 'NeedKCT is not activated for meter');
+            }
+
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $postpaidAmount, null, false);
 
             $data['vatAmount'] = $calculatedValues['vatAmount'];
             $data['costOfUnit'] = $calculatedValues['vendingAmount'];
@@ -6544,7 +6603,7 @@ class TokenController extends Controller
             $data['meter'] = $meter;
             $data['estate'] = $estate;
             $data['preview'] = "on";
-            $data['amount'] = $request->amount;
+            $data['amount'] = $postpaidAmount;
             $data['vat'] = $calculatedValues['vat'];
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $request->estate_id;
@@ -6554,6 +6613,8 @@ class TokenController extends Controller
             $data['serviceFee'] = $calculatedValues['serviceFee'];
             $data['estateFee'] = $calculatedValues['estateFee'];
             $data['fixedCharge'] = $calculatedValues['fixedCharge'];
+            $data['token_type'] = $tokenType;
+            $data['token_type_label'] = $this->postpaidTokenTypes()[$tokenType];
 
             $tariff = Tariff::find($request->tariff_id);
             $data['tarrif_index'] = $tariff ? $tariff->tariff_index : null;
@@ -6589,7 +6650,7 @@ class TokenController extends Controller
                 return back()->with('error', 'Meter does not belong to estate selected');
             }
 
-            if ($request->amount < $momas_min_vend) {
+            if (in_array($tokenType, [TokenLedger::TYPE_CREDIT_TOKEN, TokenLedger::TYPE_CLEAR_CREDIT_TOKEN], true) && $postpaidAmount < $momas_min_vend) {
                 return back()->with('error', 'Amount can not be less than NGN ' . $momas_min_vend);
             }
 
@@ -6607,7 +6668,11 @@ class TokenController extends Controller
                 return redirect()->route('postpaid.accumulation-due', $estate->id);
             }
 
-            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $request->amount, null, false);
+            if ($tokenType === TokenLedger::TYPE_KCT_TOKEN && !$meter->NeedKCT) {
+                return back()->with('error', 'NeedKCT is not activated for meter');
+            }
+
+            $calculatedValues = $meter->calculateTokenValuesByAmount($request->tariff_id, (int) $postpaidAmount, null, false);
 
             $data['vatAmount'] = $calculatedValues['vatAmount'];
             $data['costOfUnit'] = $calculatedValues['vendingAmount'];
@@ -6616,7 +6681,7 @@ class TokenController extends Controller
             $data['meter'] = $meter;
             $data['estate'] = $estate;
             $data['preview'] = "on";
-            $data['amount'] = $request->amount;
+            $data['amount'] = $postpaidAmount;
             $data['vat'] = $calculatedValues['vat'];
             $data['estate_id'] = $estate_id;
             $data['estate_name'] = $estate_id;
@@ -6626,6 +6691,8 @@ class TokenController extends Controller
             $data['serviceFee'] = $calculatedValues['serviceFee'];
             $data['estateFee'] = $calculatedValues['estateFee'];
             $data['fixedCharge'] = $calculatedValues['fixedCharge'];
+            $data['token_type'] = $tokenType;
+            $data['token_type_label'] = $this->postpaidTokenTypes()[$tokenType];
 
             $tariff = Tariff::find($request->tariff_id);
             $data['tarrif_index'] = $tariff ? $tariff->tariff_index : null;
@@ -6652,15 +6719,51 @@ class TokenController extends Controller
         ]);
 
         try {
+            $tokenType = $this->resolvePostpaidTokenType($request);
             $meter = Meter::where('meterNo', $request->meterNo)->firstOrFail();
             $email = $request->email ?? null;
-            $result = $meter->getNewPostpaidToken(
-                (int) $request->tariff_id,
-                (float) $request->amount,
-                null,
-                $email
-            );
-            $type = 'credit_token';
+            $amount = $this->resolvePostpaidTokenAmount($request, $tokenType);
+
+            switch ($tokenType) {
+                case TokenLedger::TYPE_TAMPER_TOKEN:
+                    $result = $meter->getNewPostpaidTamperToken(
+                        (int) $request->tariff_id,
+                        $amount,
+                        $email
+                    );
+                    $type = 'tamper';
+                    break;
+
+                case TokenLedger::TYPE_CLEAR_CREDIT_TOKEN:
+                    $result = $meter->getNewPostpaidClearCreditToken(
+                        (int) $request->tariff_id,
+                        $amount,
+                        $email
+                    );
+                    $type = 'clear_credit';
+                    break;
+
+                case TokenLedger::TYPE_KCT_TOKEN:
+                    $result = $meter->getNewPostpaidKctToken(
+                        $request->meterNo,
+                        (int) $request->tariff_id,
+                        $amount,
+                        $email
+                    );
+                    $type = 'kct_token';
+                    break;
+
+                default:
+                    $result = $meter->getNewPostpaidToken(
+                        (int) $request->tariff_id,
+                        $amount,
+                        null,
+                        $email
+                    );
+                    $type = 'credit_token';
+                    break;
+            }
+
             $trx_id = $result['trx_id'] ?? null;
 
             // return redirect('/admin/postpaid-token')->with('message', 'Token generated successfully. Token: ' . $result['token']);

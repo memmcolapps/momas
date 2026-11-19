@@ -147,6 +147,11 @@
                                                                             </div>
 
                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Token Type</label>
+                                                                                <h6>{{ $token_type_label }}</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Customer</label>
                                                                                 <input required name="user_id"
                                                                                        value="{{$user->id}}"
@@ -221,6 +226,8 @@
                                                                                     value="{{$estate_name}}"
                                                                                     hidden="">
                                                                              <input required name="amount" value="{{$amount}}"
+                                                                                    hidden="">
+                                                                             <input required name="token_type" value="{{$token_type}}"
                                                                                     hidden="">
                                                                              <input required name="tariff_amount"
                                                                                     value="{{$tarrif_amount}}" hidden="">
@@ -490,6 +497,11 @@
                                                                             </div>
 
                                                                             <div class="col-xl-4 my-2 col-sm-12">
+                                                                                <label class="my-2">Token Type</label>
+                                                                                <h6>{{ $token_type_label }}</h6>
+                                                                            </div>
+
+                                                                            <div class="col-xl-4 my-2 col-sm-12">
                                                                                 <label class="my-2">Customer</label>
                                                                                 <input required name="user_id"
                                                                                        value="{{$user->id}}"
@@ -564,6 +576,8 @@
                                                                                     value="{{$estate_name}}"
                                                                                     hidden="">
                                                                              <input required name="amount" value="{{$amount}}"
+                                                                                    hidden="">
+                                                                             <input required name="token_type" value="{{$token_type}}"
                                                                                     hidden="">
                                                                              <input required name="tariff_amount"
                                                                                     value="{{$tarrif_amount}}" hidden="">

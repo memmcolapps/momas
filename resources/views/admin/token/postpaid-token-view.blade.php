@@ -95,8 +95,17 @@
 
 
                                                             <div class="col-xl-6 my-2 col-sm-12">
+                                                                <label class="my-2">Token Type</label>
+                                                                <select class="form-control mb-3" name="token_type" id="token_type" required>
+                                                                    @foreach($token_types as $tokenTypeValue => $tokenTypeLabel)
+                                                                        <option value="{{ $tokenTypeValue }}">{{ $tokenTypeLabel }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+
+                                                            <div class="col-xl-6 my-2 col-sm-12">
                                                                 <label class="my-2">Amount</label>
-                                                                <input type="number" class="form-control mb-3" name="amount"
+                                                                <input type="number" class="form-control mb-3" name="amount" id="postpaid_amount"
                                                                        required>
                                                             </div>
 
@@ -107,6 +116,28 @@
 
                                                         <script>
                                                             $(document).ready(function () {
+                                                                $('#token_type').on('change', function () {
+                                                                    applyPostpaidTokenAmount();
+                                                                });
+                                                                applyPostpaidTokenAmount();
+
+                                                                function applyPostpaidTokenAmount() {
+                                                                    var tokenType = $('#token_type').val();
+                                                                    var fixedAmount = null;
+
+                                                                    if (tokenType === 'tamper_token') {
+                                                                        fixedAmount = '{{ $clear_tamper_fee ?? 0 }}';
+                                                                    } else if (tokenType === 'kct_token') {
+                                                                        fixedAmount = '{{ $kct_fee ?? 0 }}';
+                                                                    }
+
+                                                                    if (fixedAmount !== null) {
+                                                                        $('#postpaid_amount').val(fixedAmount).prop('readonly', true);
+                                                                    } else {
+                                                                        $('#postpaid_amount').prop('readonly', false);
+                                                                    }
+                                                                }
+
                                                                 $('#estate_id, #meterNo').on('change input', function () {
                                                                     var estate_id = $('#estate_id').val();
                                                                     var meterNo = $('#meterNo').val();
@@ -229,6 +260,7 @@
                                                 <th scope="col" class="cursor-pointer">Customer Name</th>
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
+                                                <th scope="col" class="cursor-pointer">Token Type</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
                                                 <th scope="col" class="cursor-pointer">Expected Fee</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
@@ -246,6 +278,7 @@
                                                     </td>
                                                     <td>{{$data->meterNo}}</td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
+                                                    <td>{{ str_replace('_', ' ', ucfirst($data->token_type ?? 'credit_token')) }}</td>
                                                     <td>{{number_format($data->trx_amount, 2)}}</td>
                                                     <td>{{number_format($data->expected_fee, 2)}}</td>
                                                     <td>
@@ -257,7 +290,7 @@
                                                     </td>
                                                     <td>{{$data->created_at}}</td>
                                                     <td>
-                                                        <a href="recepit?trx_id={{$data->trx_id}}&type=credit_token"
+                                                        <a href="recepit?trx_id={{$data->trx_id}}&type={{ $data->receipt_type }}"
                                                            onclick="return confirmreprint();"
                                                            class="btn btn-primary">View Receipt</a>
                                                         <script>
@@ -387,8 +420,17 @@
 
 
                                                             <div class="col-xl-6 my-2 col-sm-12">
+                                                                <label class="my-2">Token Type</label>
+                                                                <select class="form-control mb-3" name="token_type" id="token_type" required>
+                                                                    @foreach($token_types as $tokenTypeValue => $tokenTypeLabel)
+                                                                        <option value="{{ $tokenTypeValue }}">{{ $tokenTypeLabel }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+
+                                                            <div class="col-xl-6 my-2 col-sm-12">
                                                                 <label class="my-2">Amount</label>
-                                                                <input type="number" class="form-control mb-3" name="amount"
+                                                                <input type="number" class="form-control mb-3" name="amount" id="postpaid_amount"
                                                                        required>
                                                             </div>
 
@@ -399,6 +441,28 @@
 
                                                         <script>
                                                             $(document).ready(function () {
+                                                                $('#token_type').on('change', function () {
+                                                                    applyPostpaidTokenAmount();
+                                                                });
+                                                                applyPostpaidTokenAmount();
+
+                                                                function applyPostpaidTokenAmount() {
+                                                                    var tokenType = $('#token_type').val();
+                                                                    var fixedAmount = null;
+
+                                                                    if (tokenType === 'tamper_token') {
+                                                                        fixedAmount = '{{ $clear_tamper_fee ?? 0 }}';
+                                                                    } else if (tokenType === 'kct_token') {
+                                                                        fixedAmount = '{{ $kct_fee ?? 0 }}';
+                                                                    }
+
+                                                                    if (fixedAmount !== null) {
+                                                                        $('#postpaid_amount').val(fixedAmount).prop('readonly', true);
+                                                                    } else {
+                                                                        $('#postpaid_amount').prop('readonly', false);
+                                                                    }
+                                                                }
+
                                                                 $('#estate_id, #meterNo').on('change input', function () {
                                                                     var estate_id = $('#estate_id').val();
                                                                     var meterNo = $('#meterNo').val();
@@ -580,6 +644,7 @@
                                                 <th scope="col" class="cursor-pointer">Customer Name</th>
                                                 <th scope="col" class="cursor-pointer">Meter Number</th>
                                                 <th scope="col" class="cursor-pointer">Estate</th>
+                                                <th scope="col" class="cursor-pointer">Token Type</th>
                                                 <th scope="col" class="cursor-pointer">Amount</th>
                                                 <th scope="col" class="cursor-pointer">Expected Fee</th>
                                                 <th scope="col" class="cursor-pointer desc">Status</th>
@@ -597,6 +662,7 @@
                                                     </td>
                                                     <td>{{$data->meterNo}}</td>
                                                     <td>{{$data->estate->title ?? "name"}}</td>
+                                                    <td>{{ str_replace('_', ' ', ucfirst($data->token_type ?? 'credit_token')) }}</td>
                                                     <td>{{number_format($data->trx_amount, 2)}}</td>
                                                     <td>{{number_format($data->expected_fee, 2)}}</td>
                                                     <td>
@@ -608,7 +674,7 @@
                                                     </td>
                                                     <td>{{$data->created_at}}</td>
                                                     <td>
-                                                        <a href="recepit?trx_id={{$data->trx_id}}&type=credit_token"
+                                                        <a href="recepit?trx_id={{$data->trx_id}}&type={{ $data->receipt_type }}"
                                                            onclick="return confirmreprint();"
                                                            class="btn btn-primary">View Receipt</a>
                                                         <script>
