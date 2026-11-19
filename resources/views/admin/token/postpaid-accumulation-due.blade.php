@@ -21,6 +21,15 @@
                     {{ session()->get('error') }}
                 </div>
             @endif
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <div class="row">
                 <div class="col-xl-8">
@@ -51,6 +60,13 @@
                                 </div>
                             </div>
 
+                            @if(($clearBalance ?? 0) > 0)
+                                <div class="alert alert-info">
+                                    <strong>Carried Balance:</strong> ₦{{ number_format($clearBalance, 2) }} from a previous partial clear.
+                                    This will be applied first on the next partial clear.
+                                </div>
+                            @endif
+
                             @if($oldestUnpaid)
                                 <div class="alert alert-warning">
                                     <strong>Note:</strong> Your oldest unpaid ledger entry dates back to <strong>{{ $oldestUnpaid->created_at->format('d M Y') }}</strong>.
@@ -59,18 +75,34 @@
                             @endif
 
                             @if($totalDue > 0)
-                                <div class="mt-4 d-flex flex-wrap gap-2">
-                                    <button type="button" class="btn btn-success btn-lg" id="payAccumulationBtn" data-estate="{{ $estate->id }}">
+                                <div class="mt-4 d-flex flex-wrap flex-xl-nowrap align-items-end gap-3">
+                                    <button type="button" class="btn btn-success btn-lg flex-shrink-0" id="payAccumulationBtn" data-estate="{{ $estate->id }}">
                                         <i class="feather-icon icon-credit-card"></i> Pay ₦{{ number_format($totalDue, 2) }} Now
                                     </button>
 
                                     @if(Auth::user()->isSuperAdmin())
                                         <form action="{{ route('postpaid.accumulation-clear') }}" method="post"
+                                              class="m-0 flex-shrink-0"
                                               onsubmit="return confirm('Mark all unpaid transactions for this estate as paid? This action cannot be undone.');">
                                             @csrf
                                             <input type="hidden" name="estate_id" value="{{ $estate->id }}">
                                             <button type="submit" class="btn btn-warning btn-lg">
                                                 <i class="feather-icon icon-check-circle"></i> Mark ₦{{ number_format($totalDue, 2) }} as Paid
+                                            </button>
+                                        </form>
+
+                                        <form action="{{ route('postpaid.accumulation-clear-partial') }}" method="post"
+                                              class="d-flex align-items-end gap-2 flex-grow-1 m-0"
+                                              onsubmit="return confirm('Clear postpaid ledgers from oldest to newest using this balance? Any remainder will be carried forward.');">
+                                            @csrf
+                                            <input type="hidden" name="estate_id" value="{{ $estate->id }}">
+                                            <div class="flex-grow-1">
+                                                <label for="partialAmount" class="form-label mb-1 small text-muted">Balance to clear (₦)</label>
+                                                <input type="number" name="amount" id="partialAmount" class="form-control w-100"
+                                                       min="0.01" step="0.01" required>
+                                            </div>
+                                            <button type="submit" class="btn btn-info btn-lg flex-shrink-0">
+                                                <i class="feather-icon icon-dollar-sign"></i> Clear Partial Balance
                                             </button>
                                         </form>
                                     @endif

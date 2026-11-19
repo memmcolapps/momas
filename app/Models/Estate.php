@@ -26,6 +26,7 @@ class Estate extends Model
         'estate_meter_vending_type',
         'transaction_fee_type',
         'transaction_fee',
+        'postpaid_clear_balance',
         'emergency_token_max',
         'created_at',
         'updated_at',
@@ -122,6 +123,7 @@ class Estate extends Model
         'minimum_vend_per_transaction' => 'boolean',
         'estate_meter_vending_type' => 'integer',
         'transaction_fee' => 'decimal:2',
+        'postpaid_clear_balance' => 'decimal:2',
         'emergency_token_max' => 'integer',
     ];
 
