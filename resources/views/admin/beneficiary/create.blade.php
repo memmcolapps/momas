@@ -64,13 +64,8 @@
                                 </div>
 
                                 <div class="col-4">
-                                    <label class="my-2">Choose Bank</label>
-                                    <select type="text" name="bank_code" class="form-control" required>
-                                        <option value="">Set Bank</option>
-                                        @foreach($bank as $data)
-                                            <option value="{{$data->remita_code}}">{{$data->name}}</option>
-                                        @endforeach
-                                    </select>
+                                    <label class="my-2">Bank Code</label>
+                                    <input type="text" name="bank_code" class="form-control" value="{{ old('bank_code') }}" placeholder="Enter bank code" required>
                                 </div>
 
                                 <div class="col-4">

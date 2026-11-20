@@ -849,7 +849,7 @@ class TransactionController extends Controller
                     'status' => (string) $status_map[(int) $trx->status],
                     'meterNo' => (string) $credit
                         ? ($credit->receiver_meterNo ?: $credit->meterNo)
-                        : ($payload['receiver_meterNo'] ?? Auth::user()->meterNo),
+                        : ($payload['receiver_meterNo'] ?? $payload['reciever_meterNo'] ?? Auth::user()->meterNo),
                     'token' => (string) $credit?->token,
                     'unitkwh' => (string) $credit?->unitkwh,
                     'vatAmount' => (string) $credit?->vatAmount,
