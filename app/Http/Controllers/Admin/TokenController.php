@@ -68,6 +68,7 @@ class TokenController extends Controller
     public function search_credit_token(Request $request)
     {
         $search = $request->search;
+        $trxId = $request->trx_id;
 
         if (Auth::user()->role == 0) {
             $data['estate'] = Estate::all();
@@ -95,6 +96,10 @@ class TokenController extends Controller
             });
         }
 
+        if ($trxId) {
+            $query->where('trx_id', $trxId);
+        }
+
         $data['credit_tokens'] = $query->latest()->paginate(20)->withQueryString();
 
         return view('admin.token.credit-token-view', $data);
@@ -117,6 +122,7 @@ class TokenController extends Controller
         ]);
 
         $search = $request->search;
+        $trxId = $request->trx_id;
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('trx_id', 'like', '%' . $search . '%')
@@ -130,9 +136,14 @@ class TokenController extends Controller
             });
         }
 
+        if ($trxId) {
+            $query->where('trx_id', $trxId);
+        }
+
         $data['transactions'] = $query->with(['creditToken', 'user', 'estate'])
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.token.retry-token-view', $data);
     }
