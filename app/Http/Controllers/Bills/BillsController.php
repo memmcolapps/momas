@@ -535,7 +535,7 @@ User::where('id', $auth_user->id)->first()->creditWallet($amount);
                 $request->variation_code,
             );
 
-            $bundle_price = (double) $package['price'];
+            // $bundle_price = (double) $package['price'];
 
             if (! $package['search_success']) {
 

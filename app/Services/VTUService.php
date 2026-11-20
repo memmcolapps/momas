@@ -330,7 +330,7 @@ class VTUService
             throw new InvalidArgumentException('Invalid network passed');
         }
 
-        $packages = $this->getDataBundles($network)['data']['packages'] ?? [];
+        $packages = $this->getDataBundles($network)['data'] ?? [];
 
         foreach ($packages as $package) {
             if (($package['code'] ?? null) == $variation_code) {

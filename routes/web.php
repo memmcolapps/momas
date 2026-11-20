@@ -419,6 +419,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::post('postpaid-accumulation-pay', [TokenController::class, 'init_accumulation_payment'])->name('postpaid.accumulation-pay');
     Route::get('postpaid-accumulation-callback', [TokenController::class, 'accumulation_callback'])->name('postpaid.accumulation-callback');
     Route::post('postpaid-accumulation-clear', [TokenController::class, 'clear_accumulation'])->name('postpaid.accumulation-clear');
+    Route::post('postpaid-accumulation-clear-partial', [TokenController::class, 'clear_accumulation_partial'])->name('postpaid.accumulation-clear-partial');
 
 
     Route::any('paystack-check-web', [TokenController::class, 'paystack_verify_web']);

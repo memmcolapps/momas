@@ -46,7 +46,8 @@ class LedgerService
         $transaction,
         string $meterNo,
         int $creditTokenId,
-        ?int $receiverId = null
+        ?int $receiverId = null,
+        string $tokenType = TokenLedger::TYPE_CREDIT_TOKEN
     ): TokenLedger {
         $fee = self::computeTransactionFee($transaction);
         $amount = (float) ($transaction->vending_amount ?? $transaction->amount);
@@ -60,6 +61,32 @@ class LedgerService
                 'credit_token_id' => $creditTokenId,
                 'trx_amount'      => $amount,
                 'expected_fee'    => $fee,
+                'token_type'      => $tokenType,
+                'receiver_id'     => $receiverId ?? $transaction->user_id,
+                'paid_at'         => null,
+            ]
+        );
+    }
+
+    public static function recordPostpaidTokenLedger(
+        $transaction,
+        string $meterNo,
+        int $tokenRecordId,
+        string $tokenType,
+        ?int $receiverId = null
+    ): TokenLedger {
+        $amount = (float) $transaction->amount;
+
+        return TokenLedger::firstOrCreate(
+            ['trx_id' => $transaction->trx_id],
+            [
+                'user_id'         => $transaction->user_id,
+                'estate_id'       => $transaction->estate_id,
+                'meterNo'         => $meterNo,
+                'credit_token_id' => $tokenRecordId,
+                'trx_amount'      => $amount,
+                'expected_fee'    => $amount,
+                'token_type'      => $tokenType,
                 'receiver_id'     => $receiverId ?? $transaction->user_id,
                 'paid_at'         => null,
             ]
@@ -89,6 +116,52 @@ class LedgerService
         return TokenLedger::where('estate_id', $estateId)
             ->whereNull('paid_at')
             ->update(['paid_at' => Carbon::now()]);
+    }
+
+    public static function clearEstatePostpaidLedgersWithBalance(Estate $estate, float $amount): array
+    {
+        $available = round((float) $estate->postpaid_clear_balance + $amount, 2);
+
+        $estate->postpaid_clear_balance = 0;
+
+        $ledgers = TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        $paidAt = Carbon::now();
+        $clearedCount = 0;
+        $amountApplied = 0.0;
+
+        foreach ($ledgers as $ledger) {
+            $fee = (float) $ledger->expected_fee;
+
+            if ($available + 0.00001 < $fee) {
+                break;
+            }
+
+            $ledger->paid_at = $paidAt;
+            $ledger->save();
+
+            $available = round($available - $fee, 2);
+            $amountApplied = round($amountApplied + $fee, 2);
+            $clearedCount++;
+        }
+
+        $estate->postpaid_clear_balance = $available;
+        $estate->save();
+
+        $remainingDue = (float) TokenLedger::where('estate_id', $estate->id)
+            ->whereNull('paid_at')
+            ->sum('expected_fee');
+
+        return [
+            'cleared_count' => $clearedCount,
+            'amount_applied' => $amountApplied,
+            'remaining_balance' => $available,
+            'remaining_due' => round($remainingDue, 2),
+        ];
     }
 
     public static function getAccumulationPaymentHistory(Estate|int $estate): \Illuminate\Database\Eloquent\Collection
