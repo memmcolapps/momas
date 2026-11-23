@@ -22,17 +22,56 @@ class AlertController extends Controller
     {
         $this->ensureSuperAdmin();
 
-        return view('admin.alerts.create', [
-            'estates' => Estate::query()->orderBy('title')->get(['id', 'title']),
-            'customers' => User::query()
+        $customerColumns = ['id', 'first_name', 'last_name', 'email', 'phone'];
+        $selectedCustomerIds = $this->integerValues((array) old('users', []));
+
+        $customers = User::query()
+            ->where('role', User::CUSTOMER)
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->limit(20)
+            ->get($customerColumns);
+
+        $selectedCustomers = empty($selectedCustomerIds)
+            ? collect()
+            : User::query()
                 ->where('role', User::CUSTOMER)
+                ->whereIn('id', $selectedCustomerIds)
                 ->orderBy('first_name')
                 ->orderBy('last_name')
-                ->get(['id', 'first_name', 'last_name', 'email', 'phone', 'estate_id']),
+                ->get($customerColumns);
+
+        return view('admin.alerts.create', [
+            'estates' => Estate::query()->orderBy('title')->get(['id', 'title']),
+            'customers' => $customers,
+            'selectedCustomers' => $selectedCustomers,
             'priorities' => Alert::PRIORITY_WEIGHTS,
             'alertTypes' => Alert::TYPES,
             'modes' => AlertMode::options(),
         ]);
+    }
+
+    public function searchCustomers(Request $request)
+    {
+        $this->ensureSuperAdmin();
+
+        $search = trim((string) $request->query('q', ''));
+
+        $customers = User::query()
+            ->where('role', User::CUSTOMER)
+            ->when($search !== '', fn ($query) => $query->where('email', 'like', '%'.$search.'%'))
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->limit(20)
+            ->get(['id', 'first_name', 'last_name', 'email']);
+
+        return response()->json(
+            $customers->map(fn (User $customer) => [
+                'id' => $customer->id,
+                'name' => trim($customer->first_name.' '.$customer->last_name),
+                'email' => $customer->email,
+            ])->values()
+        );
     }
 
     public function store(Request $request)
