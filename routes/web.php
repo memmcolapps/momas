@@ -208,6 +208,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     // Alerts
     Route::get('alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::get('new-alert', [AlertController::class, 'create'])->name('alerts.create');
+    Route::get('search-alert-customers', [AlertController::class, 'searchCustomers'])->name('alerts.customers.search');
     Route::post('alert-store', [AlertController::class, 'store'])->name('alerts.store');
     Route::get('alert-stats', [AlertController::class, 'stats'])->name('alerts.stats');
     Route::get('view-alert', [AlertController::class, 'show'])->name('alerts.show');
