@@ -190,35 +190,22 @@
                                             <span class="text-muted fs-12 fw-normal" id="customer_selected_count">0 selected</span>
                                         </label>
 
-                                        <div class="dropdown">
-                                            <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" type="button"
-                                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                                Select customers
-                                            </button>
-                                            <div class="dropdown-menu w-100 p-2" style="max-height: 280px; overflow-y: auto;">
-                                                <input type="text" id="customer_search" class="form-control form-control-sm mb-2" placeholder="Search by name, email or phone...">
-                                                <div id="customer_list">
-                                                    @forelse($customers as $customer)
-                                                        @php
-                                                            $customerName = trim($customer->first_name.' '.$customer->last_name);
-                                                            $customerSearch = strtolower($customerName.' '.$customer->email.' '.$customer->phone);
-                                                        @endphp
-                                                        <div class="form-check customer-option" data-search="{{ $customerSearch }}">
-                                                            <input class="form-check-input customer-checkbox target-input" type="checkbox"
-                                                                   name="users[]" value="{{ $customer->id }}"
-                                                                   id="customer-{{ $customer->id }}"
-                                                                   @checked(in_array($customer->id, old('users', [])))>
-                                                            <label class="form-check-label" for="customer-{{ $customer->id }}">
-                                                                <span class="fw-medium">{{ $customerName }}</span>
-                                                                <span class="d-block text-muted fs-12">{{ $customer->email }}{{ $customer->phone ? ' | '.$customer->phone : '' }}</span>
-                                                            </label>
-                                                        </div>
-                                                    @empty
-                                                        <p class="text-muted mb-0 fs-13">No customers available.</p>
-                                                    @endforelse
-                                                </div>
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text bg-light">
+                                                <i data-feather="search" style="width: 14px; height: 14px;"></i>
+                                            </span>
+                                            <input type="text" id="customer_search" class="form-control" placeholder="Search customers by email...">
+                                        </div>
+
+                                        <div id="customer_hidden_inputs"></div>
+                                        <div id="customer_pills" class="d-flex flex-wrap gap-2 mb-2"></div>
+
+                                        <div class="border rounded p-2" style="max-height: 280px; overflow-y: auto;">
+                                            <div id="customer_list">
+                                                <p class="text-muted mb-0 fs-13">Loading customers...</p>
                                             </div>
                                         </div>
+                                        <div class="form-text" id="customer_list_hint">Showing the first 20 customers. Search by email to find more.</div>
                                     </div>
 
                                     <div class="mb-3">
@@ -248,43 +235,207 @@
         document.addEventListener('DOMContentLoaded', function () {
             const allUsersSwitch = document.getElementById('all_users_switch');
             const targetFieldset = document.getElementById('target-fieldset');
-            const targetInputs = targetFieldset.querySelectorAll('input, select, textarea, button');
 
-            function toggleTargetFields() {
+            function applyTargetState() {
                 const disabled = allUsersSwitch.checked;
 
-                targetInputs.forEach(function (input) {
+                targetFieldset.querySelectorAll('input, select, textarea, button').forEach(function (input) {
                     input.disabled = disabled;
                 });
 
                 targetFieldset.classList.toggle('opacity-50', disabled);
             }
 
-            allUsersSwitch.addEventListener('change', toggleTargetFields);
-            toggleTargetFields();
+            allUsersSwitch.addEventListener('change', applyTargetState);
+            applyTargetState();
 
-            const customerSearch = document.getElementById('customer_search');
-            const customerOptions = document.querySelectorAll('.customer-option');
-            const customerCheckboxes = document.querySelectorAll('.customer-checkbox');
-            const customerSelectedCount = document.getElementById('customer_selected_count');
+            const defaultCustomers = @json($customers);
+            const selectedCustomers = new Map();
 
-            function updateCustomerCount() {
-                const selected = document.querySelectorAll('.customer-checkbox:checked').length;
-                customerSelectedCount.textContent = selected + ' selected';
-            }
-
-            customerCheckboxes.forEach(function (checkbox) {
-                checkbox.addEventListener('change', updateCustomerCount);
-            });
-            updateCustomerCount();
-
-            customerSearch.addEventListener('input', function () {
-                const search = this.value.toLowerCase().trim();
-
-                customerOptions.forEach(function (option) {
-                    option.classList.toggle('d-none', search !== '' && !option.dataset.search.includes(search));
+            @json($selectedCustomers).forEach(function (customer) {
+                selectedCustomers.set(String(customer.id), {
+                    id: customer.id,
+                    name: ((customer.first_name || '') + ' ' + (customer.last_name || '')).trim(),
+                    email: customer.email || ''
                 });
             });
+
+            const customerSearch = document.getElementById('customer_search');
+            const customerList = document.getElementById('customer_list');
+            const customerPills = document.getElementById('customer_pills');
+            const customerHiddenInputs = document.getElementById('customer_hidden_inputs');
+            const customerListHint = document.getElementById('customer_list_hint');
+            const customerSelectedCount = document.getElementById('customer_selected_count');
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function updateCustomerCount() {
+                customerSelectedCount.textContent = selectedCustomers.size + ' selected';
+            }
+
+            function renderSelectedInputs() {
+                customerHiddenInputs.innerHTML = '';
+
+                selectedCustomers.forEach(function (customer) {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'users[]';
+                    hidden.value = customer.id;
+                    customerHiddenInputs.appendChild(hidden);
+                });
+            }
+
+            function renderPills() {
+                customerPills.innerHTML = '';
+
+                selectedCustomers.forEach(function (customer) {
+                    const pill = document.createElement('span');
+                    pill.className = 'badge rounded-pill bg-primary-subtle text-primary-emphasis border d-inline-flex align-items-center gap-2 py-2 px-3 fw-normal';
+                    pill.innerHTML = '<span>' + escapeHtml(customer.name) +
+                        ' <span class="opacity-75">&middot; ' + escapeHtml(customer.email) + '</span></span>';
+
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'btn-close';
+                    remove.style.fontSize = '0.55rem';
+                    remove.setAttribute('aria-label', 'Remove ' + customer.name);
+                    remove.addEventListener('click', function () {
+                        selectedCustomers.delete(String(customer.id));
+
+                        const checkbox = customerList.querySelector('.customer-checkbox[value="' + customer.id + '"]');
+                        if (checkbox) {
+                            checkbox.checked = false;
+                        }
+
+                        renderSelectedInputs();
+                        renderPills();
+                        updateCustomerCount();
+                    });
+
+                    pill.appendChild(remove);
+                    customerPills.appendChild(pill);
+                });
+
+                customerPills.classList.toggle('d-none', selectedCustomers.size === 0);
+            }
+
+            function renderCustomerList(list, emptyMessage) {
+                customerList.innerHTML = '';
+
+                if (!list.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'text-muted mb-0 fs-13';
+                    empty.textContent = emptyMessage || 'No customers found.';
+                    customerList.appendChild(empty);
+                    return;
+                }
+
+                list.forEach(function (customer) {
+                    const name = customer.name || ((customer.first_name || '') + ' ' + (customer.last_name || '')).trim();
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'form-check py-1';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.className = 'form-check-input customer-checkbox target-input';
+                    checkbox.type = 'checkbox';
+                    checkbox.value = customer.id;
+                    checkbox.id = 'customer-' + customer.id;
+                    checkbox.checked = selectedCustomers.has(String(customer.id));
+                    checkbox.addEventListener('change', function () {
+                        if (checkbox.checked) {
+                            selectedCustomers.set(String(customer.id), {
+                                id: customer.id,
+                                name: name,
+                                email: customer.email || ''
+                            });
+                        } else {
+                            selectedCustomers.delete(String(customer.id));
+                        }
+
+                        renderSelectedInputs();
+                        renderPills();
+                        updateCustomerCount();
+                    });
+
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.htmlFor = checkbox.id;
+                    label.innerHTML = '<span class="fw-medium">' + escapeHtml(name) + '</span>' +
+                        '<span class="d-block text-muted fs-12">' + escapeHtml(customer.email || '') + '</span>';
+
+                    wrapper.appendChild(checkbox);
+                    wrapper.appendChild(label);
+                    customerList.appendChild(wrapper);
+                });
+
+                applyTargetState();
+            }
+
+            function resetCustomerList() {
+                renderCustomerList(defaultCustomers);
+                customerListHint.textContent = 'Showing the first 20 customers. Search by email to find more.';
+            }
+
+            let searchTimeout = null;
+            let searchController = null;
+
+            function runCustomerSearch(query) {
+                if (searchController) {
+                    searchController.abort();
+                }
+
+                if (query === '') {
+                    resetCustomerList();
+                    return;
+                }
+
+                searchController = new AbortController();
+                customerList.innerHTML = '<p class="text-muted mb-0 fs-13">Searching...</p>';
+
+                fetch('{{ route('alerts.customers.search') }}?q=' + encodeURIComponent(query), {
+                    headers: { 'Accept': 'application/json' },
+                    signal: searchController.signal
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Search failed');
+                        }
+                        return response.json();
+                    })
+                    .then(function (results) {
+                        renderCustomerList(results, 'No customers match that email.');
+                        customerListHint.textContent = 'Showing up to 20 matches for "' + query + '".';
+                    })
+                    .catch(function (error) {
+                        if (error.name === 'AbortError') {
+                            return;
+                        }
+
+                        renderCustomerList([], 'Unable to search customers. Please try again.');
+                        customerListHint.textContent = '';
+                    });
+            }
+
+            customerSearch.addEventListener('input', function () {
+                const query = this.value.trim();
+
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function () {
+                    runCustomerSearch(query);
+                }, 300);
+            });
+
+            renderSelectedInputs();
+            renderPills();
+            resetCustomerList();
+            updateCustomerCount();
 
             const imageInput = document.getElementById('image');
             const imagePreview = document.getElementById('image_preview');
