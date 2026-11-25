@@ -1694,11 +1694,15 @@ class MeterController extends Controller
         ];
 
         $aud = new Auditlog();
+        $aud->estate_id = $new_estate->id;
         $aud->user_id = Auth::id();
-        $aud->name = Auth::user()->first_name . ' ' . Auth::user()->last_name;
-        $aud->old_values = json_encode($old_values);
-        $aud->new_values = json_encode($new_values);
+        $aud->user_type = Auth::user() ? get_class(Auth::user()) : null;
+        $aud->user_name = trim(Auth::user()->first_name . ' ' . Auth::user()->last_name);
+        $aud->old_values = $old_values;
+        $aud->new_values = $new_values;
         $aud->action = 'Meter Estate Migration';
+        $aud->action_identifier = 'meter.estate_migrated';
+        $aud->description = 'Meter Estate Migration';
         $aud->save();
 
         return back()->with('message', "Meter and its customer migrated to " . strtoupper($new_estate->title) . " successfully");

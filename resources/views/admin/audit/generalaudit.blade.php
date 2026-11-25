@@ -66,10 +66,6 @@
                                     </thead>
                                     <tbody>
                                     @forelse($audit_logs as $data)
-                                        @php
-                                            $oldValues = json_decode($data->old_values ?? '', true);
-                                            $newValues = json_decode($data->new_values ?? '', true);
-                                        @endphp
                                         <tr>
                                             <td>{{ $data->id }}</td>
                                             <td>
@@ -80,13 +76,13 @@
                                                     {{ $data->user_id ?? '-' }}
                                                 @endif
                                             </td>
-                                            <td>{{ $data->name ?? '-' }}</td>
+                                            <td>{{ $data->user_name ?? '-' }}</td>
                                             <td>{{ $data->action ?? '-' }}</td>
                                             <td>
-                                                <pre class="mb-0 small text-wrap" style="max-width: 320px; white-space: pre-wrap; word-break: break-word;">{{ $oldValues !== null ? json_encode($oldValues, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : ($data->old_values ?? '-') }}</pre>
+                                                <pre class="mb-0 small text-wrap" style="max-width: 320px; white-space: pre-wrap; word-break: break-word;">{{ !empty($data->old_values) ? json_encode($data->old_values, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '-' }}</pre>
                                             </td>
                                             <td>
-                                                <pre class="mb-0 small text-wrap" style="max-width: 320px; white-space: pre-wrap; word-break: break-word;">{{ $newValues !== null ? json_encode($newValues, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : ($data->new_values ?? '-') }}</pre>
+                                                <pre class="mb-0 small text-wrap" style="max-width: 320px; white-space: pre-wrap; word-break: break-word;">{{ !empty($data->new_values) ? json_encode($data->new_values, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '-' }}</pre>
                                             </td>
                                             <td>{{ $data->created_at ? $data->created_at->format('d M Y, h:i A') : '-' }}</td>
                                         </tr>

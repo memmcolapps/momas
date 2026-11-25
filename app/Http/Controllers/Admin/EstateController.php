@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Models\Tariff;
 use App\Models\User;
 use App\Models\Utility;
+use App\Services\Audit;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -115,6 +116,8 @@ class EstateController extends Controller
         $org->admin_fee = $request->estate_admin_fee;
         $org->save();
 
+        Audit::action('estate.created', $org);
+
         $estateId = $org->id;
         $features = ModFeature::all();
 
@@ -208,6 +211,10 @@ class EstateController extends Controller
 
         }
 
+        if (! empty($data['org'])) {
+            Audit::action('estate.viewed', $data['org']);
+        }
+
         return view('admin/estate/view', $data);
     }
 
@@ -219,7 +226,8 @@ class EstateController extends Controller
         }
 
         $auth_user = Auth::user();
-        $old_data = Estate::firstWhere('id', $request->id);
+        $estate = Estate::firstWhere('id', $request->id);
+        $old_data = $estate ? clone $estate : null;
 
         if (! $old_data) {
             return back()->with('error', 'Error: Invalid estate_id');
@@ -234,7 +242,7 @@ class EstateController extends Controller
             $bank_id = $bank->id ?? null;
         }
 
-        Estate::where('id', $request->id)->update([
+        $estate->update([
             'title' => $request->title,
             'status' => $request->status,
             'state' => $request->state,
@@ -260,18 +268,27 @@ class EstateController extends Controller
             'new_data' => Estate::firstWhere('id', $request->id),
         ]);
 
+        Audit::action('estate.updated', $estate);
+
         return redirect('admin/estate')->with('message', 'Estate updated successfully');
     }
 
     public function estate_delete(request $request)
     {
-        Estate::where('id', $request->id)->delete();
+        $estate = Estate::find($request->id);
+
+        if ($estate) {
+            $estate->delete();
+            Audit::action('estate.deleted', $estate);
+        }
 
         return redirect('admin/estate')->with('message', 'Estate deleted successfully');
     }
 
     public function estate_update_tariff(request $request)
     {
+        $estate = Estate::find($request->id);
+
         Tariff::where('estate_id', $request->id)->update([
             'estate_tariff_cost' => $request->amount,
             'vat' => $request->vat,
@@ -279,6 +296,10 @@ class EstateController extends Controller
             'max_pur' => $request->max_pur,
 
         ]);
+
+        if ($estate) {
+            Audit::action('estate.tariff_updated', $estate);
+        }
 
         return back()->with('message', 'Tariff updated successfully');
     }
@@ -290,6 +311,8 @@ class EstateController extends Controller
             if (! is_array($utilitiesData) || empty($utilitiesData)) {
                 return back()->with('error', 'No utility data provided');
             }
+
+            $estate = Estate::find($request->estate_id);
 
             foreach ($utilitiesData as $index => $utility) {
                 $pos = $index + 1;
@@ -349,6 +372,10 @@ class EstateController extends Controller
             $utility_amount = Utility::where('estate_id', $request->estate_id)->serviceCharge()->sum('amount');
             Estate::where('id', $request->estate_id)->update(['total_utility_amount' => $utility_amount]);
 
+            if ($estate) {
+                Audit::action('estate.utilities_updated', $estate);
+            }
+
             return back()->with('message', 'Utilities Saved successfully');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -358,9 +385,15 @@ class EstateController extends Controller
     public function update_duration(request $request)
     {
 
-        Estate::where('id', $request->id)->update([
-            'duration' => $request->duration,
-        ]);
+        $estate = Estate::find($request->id);
+
+        if ($estate) {
+            $estate->update([
+                'duration' => $request->duration,
+            ]);
+
+            Audit::action('estate.duration_updated', $estate, ['duration' => $request->duration]);
+        }
 
         return redirect()->back()->with('success', 'Duration updated successfully');
 
@@ -369,7 +402,12 @@ class EstateController extends Controller
     public function estate_deactivate(request $request)
     {
 
-        Estate::where('id', $request->id)->update(['status' => 0]);
+        $estate = Estate::find($request->id);
+
+        if ($estate) {
+            $estate->update(['status' => 0]);
+            Audit::action('estate.deactivated', $estate);
+        }
 
         return back()->with('message', 'Estate Deactivated successfully');
 
@@ -378,7 +416,12 @@ class EstateController extends Controller
     public function estate_activate(request $request)
     {
 
-        Estate::where('id', $request->id)->update(['status' => 2]);
+        $estate = Estate::find($request->id);
+
+        if ($estate) {
+            $estate->update(['status' => 2]);
+            Audit::action('estate.activated', $estate);
+        }
 
         return back()->with('message', 'Estate Activated successfully');
 
@@ -387,6 +430,7 @@ class EstateController extends Controller
     public function estate_feature_update(Request $request)
     {
         $estateId = $request->input('id');
+        $estate = Estate::find($estateId);
         $features = ModFeature::all();
 
         foreach ($features as $feature) {
@@ -403,6 +447,10 @@ class EstateController extends Controller
             }
         }
 
+        if ($estate) {
+            Audit::action('estate.features_updated', $estate);
+        }
+
         return back()->with('message', 'Features updated successfully');
     }
 
@@ -416,6 +464,12 @@ class EstateController extends Controller
                 $status = $request->input($slug);
                 ModFeature::where('id', $feature->id)->update(['status' => $status]);
             }
+        }
+
+        $feature = ModFeature::first();
+
+        if ($feature) {
+            Audit::action('feature.updated', $feature, ['section' => 'estate_features']);
         }
 
         return back()->with('message', 'Features updated successfully');
@@ -459,7 +513,7 @@ class EstateController extends Controller
 
             $startDate = $type === 'debt' ? \Carbon\Carbon::parse($request->start_date) : now();
 
-            Utility::create([
+            $utility = Utility::create([
                 'user_id' => $request->user_id,
                 'estate_id' => $request->estate_id,
                 'type' => $type,
@@ -474,6 +528,8 @@ class EstateController extends Controller
                 'payment_months' => $request->payment_months,
                 'monthly_end_date' => $monthlyEndDate,
             ]);
+
+            Audit::action('utility.created', $utility);
 
             return back()->with('message', 'Customer Utility Saved successfully');
         } catch (\Exception $e) {
