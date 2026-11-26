@@ -102,7 +102,7 @@ class AuthController extends Controller
 
             app(\App\Support\RequestContext::class)->put('login_otp_email', true);
             send_login_code($email, $code);
-            return view('auth.code', compact('code', 'email'));
+            return view('auth.code', compact('email'));
 
         }
 

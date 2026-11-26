@@ -385,6 +385,13 @@ class DashboardContoller extends Controller
     public function add_new_customer(request $request)
     {
 
+        $actingUser = Auth::user();
+        $isEstateAdmin = $actingUser->role == 3;
+
+        if ($isEstateAdmin && ! in_array((int) $request->role, [2, 4], true)) {
+            return redirect('admin/customers')->with('error', 'You can only create customers or estate staff');
+        }
+
         if ($request->password != $request->password_confirmation) {
 
             return redirect('admin/customers')->with('error', 'Password  does not match ');
@@ -399,14 +406,15 @@ class DashboardContoller extends Controller
 
         if (! $existing_user) {
 
-            $estate_name = Estate::where('id', $request->estate_id)->first()->title;
+            $estateId = $isEstateAdmin ? $actingUser->estate_id : $request->estate_id;
+            $estate_name = Estate::where('id', $estateId)->first()->title;
             $usr = new User();
             $usr->first_name = $request->first_name;
             $usr->last_name = $request->last_name;
             $usr->phone = $request->phone;
             $usr->email = $request->email;
             $usr->role = $request->role;
-            $usr->estate_id = $request->estate_id;
+            $usr->estate_id = $estateId;
             $usr->estate_name = $estate_name;
             // $usr->meterNo = $request->meterNo;
             $usr->meterType = $request->meterType;
@@ -421,8 +429,8 @@ class DashboardContoller extends Controller
 
             $meter = null;
 
-            // Handle meter assignment BEFORE creating user
-            if ($request->meterid && $request->meterid !== '') {
+            // Handle meter assignment BEFORE creating user (estate staff don't get meters)
+            if ((int) $request->role !== 4 && $request->meterid && $request->meterid !== '') {
                 $meter = Meter::find($request->meterid);
                 if ($meter && ! $meter->user_id) { // Ensure meter is unassigned
                     $usr->meterNo = $meter->meterNo;
@@ -443,6 +451,10 @@ class DashboardContoller extends Controller
             //     User::where('id', $usr->id)->update(['meterNo' => $request->meterNo, 'meterid' => $m_id]);
             //     Meter::where('meterNo', $request->meterNo)->update(['user_id' => $usr->id]);
             // }
+
+            if ((int) $request->role === 4) {
+                return redirect('admin/users-list')->with('message', 'Estate staff created successfully');
+            }
 
             return redirect('admin/customers')->with('message', 'Customer created successfully');
         } else {
@@ -922,12 +934,15 @@ class DashboardContoller extends Controller
         $new_values = $feature->refresh()->toArray();
 
         $aud = new Auditlog();
+        $aud->estate_id = Auth::user()->estate_id ?? null;
         $aud->user_id = Auth::id();
-        $aud->name = Auth::user()->first_name.' '.Auth::user()->_name;
-        $aud->user_id = Auth::id();
-        $aud->old_values = json_encode($old_values);
-        $aud->new_values = json_encode($new_values);
+        $aud->user_type = Auth::user() ? get_class(Auth::user()) : null;
+        $aud->user_name = trim(Auth::user()->first_name . ' ' . Auth::user()->last_name);
+        $aud->old_values = $old_values;
+        $aud->new_values = $new_values;
         $aud->action = 'Feature Update';
+        $aud->action_identifier = 'feature.updated';
+        $aud->description = 'Feature Update';
         $aud->save();
 
         return redirect('admin/settings')->with('message', 'Features updated successfully');

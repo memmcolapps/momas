@@ -6869,10 +6869,12 @@ class TokenController extends Controller
                 ]);
 
                 $aud = new Auditlog();
+                $aud->estate_id = $estate->id;
                 $aud->user_id = Auth::id();
-                $aud->name = Auth::user()->first_name . ' ' . Auth::user()->last_name;
-                $aud->old_values = json_encode($oldValues);
-                $aud->new_values = json_encode([
+                $aud->user_type = Auth::user() ? get_class(Auth::user()) : null;
+                $aud->user_name = trim(Auth::user()->first_name . ' ' . Auth::user()->last_name);
+                $aud->old_values = $oldValues;
+                $aud->new_values = [
                     'estate_id' => $estate->id,
                     'estate_title' => $estate->title,
                     'reference' => $trxRef,
@@ -6881,8 +6883,10 @@ class TokenController extends Controller
                     'paid_at' => $paidAt->toIso8601String(),
                     'superadmin_id' => Auth::id(),
                     'superadmin_email' => Auth::user()->email,
-                ]);
+                ];
                 $aud->action = 'Postpaid Accumulation Manual Clear';
+                $aud->action_identifier = 'utility.accumulation_cleared';
+                $aud->description = 'Postpaid Accumulation Manual Clear';
                 $aud->save();
             });
 
@@ -6955,15 +6959,17 @@ class TokenController extends Controller
                 ]);
 
                 $aud = new Auditlog();
+                $aud->estate_id = $lockedEstate->id;
                 $aud->user_id = Auth::id();
-                $aud->name = Auth::user()->first_name . ' ' . Auth::user()->last_name;
-                $aud->old_values = json_encode([
+                $aud->user_type = Auth::user() ? get_class(Auth::user()) : null;
+                $aud->user_name = trim(Auth::user()->first_name . ' ' . Auth::user()->last_name);
+                $aud->old_values = [
                     'estate_id' => $lockedEstate->id,
                     'estate_title' => $lockedEstate->title,
                     'carry_balance' => $carryBefore,
                     'total_due' => $totalDueBefore,
-                ]);
-                $aud->new_values = json_encode([
+                ];
+                $aud->new_values = [
                     'estate_id' => $lockedEstate->id,
                     'estate_title' => $lockedEstate->title,
                     'reference' => $trxRef,
@@ -6976,8 +6982,10 @@ class TokenController extends Controller
                     'paid_at' => $paidAt->toIso8601String(),
                     'superadmin_id' => Auth::id(),
                     'superadmin_email' => Auth::user()->email,
-                ]);
+                ];
                 $aud->action = 'Postpaid Accumulation Partial Clear';
+                $aud->action_identifier = 'utility.accumulation_partially_cleared';
+                $aud->description = 'Postpaid Accumulation Partial Clear';
                 $aud->save();
 
                 $result['trx_ref'] = $trxRef;
