@@ -41,6 +41,9 @@ class LoggedIssue extends Model
         'status_badge',
         'priority_badge',
         'attachment_url',
+        'ticket_id_number',
+        'first_name',
+        'last_name',
     ];
 
     const STATUS_OPEN = 0;
@@ -129,6 +132,111 @@ class LoggedIssue extends Model
         }
 
         return url($this->attachment);
+    }
+
+    public function getTicketIdNumberAttribute(): string
+    {
+        if (preg_match('/(\d{5,8})/', $this->ticket_id, $matches)) {
+            return $matches[1];
+        }
+        return str_pad($this->id, 6, '133', STR_PAD_LEFT);
+    }
+
+    public function getFirstNameAttribute(): string
+    {
+        if ($this->user && $this->user->first_name) {
+            return $this->user->first_name;
+        }
+        $parts = explode(' ', trim($this->customer_name ?? ''));
+        return $parts[0] ?? '';
+    }
+
+    public function getLastNameAttribute(): string
+    {
+        if ($this->user && $this->user->last_name) {
+            return $this->user->last_name;
+        }
+        $parts = explode(' ', trim($this->customer_name ?? ''));
+        array_shift($parts);
+        return implode(' ', $parts);
+    }
+
+    public function getConversationAttribute(): array
+    {
+        $messages = [];
+
+        // First message is the initial resident ticket description
+        $messages[] = [
+            'sender'    => $this->customer_name ?: 'Resident',
+            'role'      => 'customer',
+            'ticket_id' => $this->ticket_id_number,
+            'message'   => $this->description,
+            'time'      => $this->created_at ? $this->created_at->format('h:i A') : '',
+            'created_at'=> $this->created_at ? $this->created_at->toDateTimeString() : '',
+            'attachment'=> $this->attachment,
+        ];
+
+        // Decoded replies from resolution_notes
+        if ($this->resolution_notes) {
+            $decoded = json_decode($this->resolution_notes, true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $reply) {
+                    $messages[] = [
+                        'sender'    => $reply['sender'] ?? 'Admin',
+                        'role'      => $reply['role'] ?? 'admin',
+                        'ticket_id' => $reply['ticket_id'] ?? $this->ticket_id_number,
+                        'message'   => $reply['message'] ?? '',
+                        'time'      => !empty($reply['time']) ? date('h:i A', strtotime($reply['time'])) : '',
+                        'created_at'=> $reply['time'] ?? '',
+                        'attachment'=> $reply['attachment'] ?? null,
+                    ];
+                }
+            } else {
+                $messages[] = [
+                    'sender'    => $this->resolver ? ($this->resolver->first_name . ' ' . $this->resolver->last_name) : 'Admin',
+                    'role'      => 'admin',
+                    'ticket_id' => $this->ticket_id_number,
+                    'message'   => $this->resolution_notes,
+                    'time'      => $this->resolved_at ? $this->resolved_at->format('h:i A') : ($this->updated_at ? $this->updated_at->format('h:i A') : ''),
+                    'created_at'=> $this->resolved_at ? $this->resolved_at->toDateTimeString() : '',
+                    'attachment'=> null,
+                ];
+            }
+        }
+
+        return $messages;
+    }
+
+    public function addReply(string $message, string $sender = 'Admin', string $role = 'admin', ?string $attachment = null): void
+    {
+        $replies = [];
+        if ($this->resolution_notes) {
+            $decoded = json_decode($this->resolution_notes, true);
+            if (is_array($decoded)) {
+                $replies = $decoded;
+            } else {
+                $replies[] = [
+                    'sender'    => 'Admin',
+                    'role'      => 'admin',
+                    'ticket_id' => $this->ticket_id_number,
+                    'message'   => $this->resolution_notes,
+                    'time'      => $this->resolved_at ? $this->resolved_at->toDateTimeString() : now()->toDateTimeString(),
+                    'attachment'=> null,
+                ];
+            }
+        }
+
+        $replies[] = [
+            'sender'    => $sender,
+            'role'      => $role,
+            'ticket_id' => $this->ticket_id_number,
+            'message'   => $message,
+            'time'      => now()->toDateTimeString(),
+            'attachment'=> $attachment,
+        ];
+
+        $this->resolution_notes = json_encode($replies);
+        $this->save();
     }
 
     public static function generateTicketId()

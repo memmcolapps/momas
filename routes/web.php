@@ -199,6 +199,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'blockaccess', 'prev
     Route::get('resolved-issues', [LoggedIssueController::class, 'resolved'])->name('issues.resolved');
     Route::post('store-issue', [LoggedIssueController::class, 'store'])->name('issues.store');
     Route::get('view-issue', [LoggedIssueController::class, 'show'])->name('issues.show');
+    Route::post('reply-issue', [LoggedIssueController::class, 'reply'])->name('issues.reply');
+    Route::post('close-issue', [LoggedIssueController::class, 'closeTicket'])->name('issues.closeTicket');
     Route::post('update-issue-status', [LoggedIssueController::class, 'updateStatus'])->name('issues.updateStatus');
     Route::get('delete-issue', [LoggedIssueController::class, 'destroy'])->name('issues.destroy');
 

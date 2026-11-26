@@ -94,9 +94,12 @@ class LoggedIssueController extends Controller
 
         $estates = $isSuperAdmin ? Estate::all() : collect([$user->estate]);
 
+        $totalLoggedIssue = $stats['total'];
+
         return view('admin.estate.issues.index', compact(
             'issues',
             'stats',
+            'totalLoggedIssue',
             'customers',
             'meters',
             'estates',
@@ -174,7 +177,75 @@ class LoggedIssueController extends Controller
             return redirect('admin/logged-issues')->with('error', 'Unauthorized access to this issue.');
         }
 
-        return view('admin.estate.issues.view', compact('issue'));
+        $user = Auth::user();
+        $isSuperAdmin = $user->isSuperAdmin();
+        $totalLoggedIssue = LoggedIssue::query()
+            ->when(!$isSuperAdmin, fn($q) => $q->where('estate_id', $user->estate_id))
+            ->count();
+
+        return view('admin.estate.issues.view', compact('issue', 'totalLoggedIssue'));
+    }
+
+    /**
+     * Reply to the issue ticket conversation.
+     */
+    public function reply(Request $request)
+    {
+        $request->validate([
+            'id'      => 'required|exists:logged_issues,id',
+            'message' => 'required|string',
+        ]);
+
+        $issue = LoggedIssue::findOrFail($request->id);
+
+        if (!Auth::user()->isSuperAdmin() && $issue->estate_id != Auth::user()->estate_id) {
+            return redirect('admin/logged-issues')->with('error', 'Unauthorized access.');
+        }
+
+        if ($issue->status === LoggedIssue::STATUS_CLOSED) {
+            return redirect()->back()->with('error', 'This ticket is closed. Chat is disabled.');
+        }
+
+        $senderName = 'Admin';
+        $issue->addReply($request->message, $senderName, 'admin');
+
+        // If open, advance to in progress
+        if ($issue->status === LoggedIssue::STATUS_OPEN) {
+            $issue->status = LoggedIssue::STATUS_IN_PROGRESS;
+            $issue->save();
+        }
+
+        return redirect()->back()->with('message', 'Reply sent successfully.');
+    }
+
+    /**
+     * Close the issue ticket.
+     */
+    public function closeTicket(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:logged_issues,id',
+        ]);
+
+        $issue = LoggedIssue::findOrFail($request->id);
+
+        if (!Auth::user()->isSuperAdmin() && $issue->estate_id != Auth::user()->estate_id) {
+            return redirect('admin/logged-issues')->with('error', 'Unauthorized access.');
+        }
+
+        // Add closing statement as shown in Figma
+        $closingMsg = $request->filled('message')
+            ? $request->message
+            : 'Issue has been resoled. I will be closing this ticket now.';
+
+        $issue->addReply($closingMsg, 'Admin', 'admin');
+
+        $issue->status = LoggedIssue::STATUS_CLOSED;
+        $issue->resolved_by = Auth::id();
+        $issue->resolved_at = now();
+        $issue->save();
+
+        return redirect()->back()->with('message', 'Ticket #' . $issue->ticket_id_number . ' has been closed.');
     }
 
     /**

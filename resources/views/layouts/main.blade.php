@@ -179,18 +179,13 @@
                             </a>
                         </li>
 
-                        <li>
-                            <a href="charts-mixed.html#sidebarIssuesSuper" data-bs-toggle="collapse">
-                                <i data-feather="alert-circle"></i>
-                                <span> Issues Management </span>
-                                <span class="menu-arrow"></span>
+                        <li class="{{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'menuitem-active' : '' }}">
+                            <a class="tp-link {{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'active' : '' }}" 
+                               href="/admin/logged-issues" 
+                               style="{{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'background-color: #E8F8EE !important; color: #1E7E34 !important; border-radius: 6px; font-weight: 600;' : '' }}">
+                                <i data-feather="target" style="{{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'color: #1E7E34 !important;' : '' }}"></i>
+                                <span> Logged Issues </span>
                             </a>
-                            <div class="collapse" id="sidebarIssuesSuper">
-                                <ul class="nav-second-level">
-                                    <li><a class='tp-link' href='/admin/logged-issues'>All Logged Issues</a></li>
-                                    <li><a class='tp-link' href='/admin/resolved-issues'>Resolved Issues</a></li>
-                                </ul>
-                            </div>
                         </li>
 
                         <li>
@@ -392,18 +387,13 @@
                             </a>
                         </li>
 
-                        <li>
-                            <a href="charts-mixed.html#sidebarEstateIssues" data-bs-toggle="collapse">
-                                <i data-feather="alert-circle"></i>
-                                <span> Issues Management </span>
-                                <span class="menu-arrow"></span>
+                        <li class="{{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'menuitem-active' : '' }}">
+                            <a class="tp-link {{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'active' : '' }}" 
+                               href="/admin/logged-issues" 
+                               style="{{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'background-color: #E8F8EE !important; color: #1E7E34 !important; border-radius: 6px; font-weight: 600;' : '' }}">
+                                <i data-feather="target" style="{{ request()->is('admin/logged-issues*') || request()->is('admin/view-issue*') || request()->is('admin/resolved-issues*') ? 'color: #1E7E34 !important;' : '' }}"></i>
+                                <span> Logged Issues </span>
                             </a>
-                            <div class="collapse" id="sidebarEstateIssues">
-                                <ul class="nav-second-level">
-                                    <li><a class='tp-link' href='/admin/logged-issues'>All Logged Issues</a></li>
-                                    <li><a class='tp-link' href='/admin/resolved-issues'>Resolved Issues</a></li>
-                                </ul>
-                            </div>
                         </li>
 
                         {{-- Estate Service: only shown when status is available (1) --}}
