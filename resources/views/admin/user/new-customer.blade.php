@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </select>
                                     </div> -->
 
-                                    <div class="col-xl-6 col-sm-12" style="position: relative;">
+                                    <div class="col-xl-6 col-sm-12" id="attachMeterSection" style="position: relative;">
                                         <label class="my-2">Choose Meter</label>
                                         <input type="text" 
                                                name="meter_search" 
@@ -562,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                autocomplete="off">
 
                                         <!-- Hidden input to store selected meter ID -->
-                                        <input type="hidden" name="meterid" id="selectedMeterId" required>
+                                        <input type="hidden" name="meterid" id="selectedMeterId">
 
                                         <!-- Search results dropdown -->
                                         <div id="meterSearchResults" class="search-dropdown" style="display: none;"></div>
@@ -680,9 +680,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <h6 class="d-flex justify-content-start my-2">Login Information</h6>
 
                                     <div class="col-4">
-                                        <label class="my-2">Customer Role</label>
-                                        <select type="text" name="role" class="form-control" required>
+                                        <label class="my-2">User Role</label>
+                                        <select type="text" name="role" id="customerRoleSelect" class="form-control" required>
                                             <option value="2">Customer</option>
+                                            <option value="4">Estate Staff</option>
                                         </select>
 
                                     </div>
@@ -735,6 +736,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const meterSearchResults = document.getElementById('meterSearchResults');
             const selectedMeterId = document.getElementById('selectedMeterId');
             const selectedMeterDisplay = document.getElementById('selectedMeterDisplay');
+            const roleSelect = document.getElementById('customerRoleSelect');
+            const attachMeterSection = document.getElementById('attachMeterSection');
 
             let searchTimeout;
             let currentEstateId = '{{Auth::user()->estate_id ?? ""}}'; // Estate Admin always has their estate ID
@@ -840,6 +843,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedMeterDisplay.style.display = 'none';
                 meterSearchInput.value = '';
                 hideSearchResults();
+            }
+
+            // Estate staff don't need a meter; hide and unrequire it for them
+            function toggleMeterForRole() {
+                const isStaff = roleSelect.value === '4';
+
+                attachMeterSection.style.display = isStaff ? 'none' : '';
+                selectedMeterId.required = !isStaff;
+
+                if (isStaff) {
+                    window.clearMeterSelection();
+                }
+            }
+
+            if (roleSelect) {
+                roleSelect.addEventListener('change', toggleMeterForRole);
+                toggleMeterForRole();
             }
         });
     </script>

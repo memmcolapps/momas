@@ -46,7 +46,8 @@ class LedgerService
         $transaction,
         string $meterNo,
         int $creditTokenId,
-        ?int $receiverId = null
+        ?int $receiverId = null,
+        string $tokenType = TokenLedger::TYPE_CREDIT_TOKEN
     ): TokenLedger {
         $fee = self::computeTransactionFee($transaction);
         $amount = (float) ($transaction->vending_amount ?? $transaction->amount);
@@ -60,6 +61,32 @@ class LedgerService
                 'credit_token_id' => $creditTokenId,
                 'trx_amount'      => $amount,
                 'expected_fee'    => $fee,
+                'token_type'      => $tokenType,
+                'receiver_id'     => $receiverId ?? $transaction->user_id,
+                'paid_at'         => null,
+            ]
+        );
+    }
+
+    public static function recordPostpaidTokenLedger(
+        $transaction,
+        string $meterNo,
+        int $tokenRecordId,
+        string $tokenType,
+        ?int $receiverId = null
+    ): TokenLedger {
+        $amount = (float) $transaction->amount;
+
+        return TokenLedger::firstOrCreate(
+            ['trx_id' => $transaction->trx_id],
+            [
+                'user_id'         => $transaction->user_id,
+                'estate_id'       => $transaction->estate_id,
+                'meterNo'         => $meterNo,
+                'credit_token_id' => $tokenRecordId,
+                'trx_amount'      => $amount,
+                'expected_fee'    => $amount,
+                'token_type'      => $tokenType,
                 'receiver_id'     => $receiverId ?? $transaction->user_id,
                 'paid_at'         => null,
             ]

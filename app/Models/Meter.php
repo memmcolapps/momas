@@ -873,7 +873,10 @@ class Meter extends Model
                 $trx,
                 $this->meterNo,
                 $cdt->id,
-                $other_meter ? $other_meter->user_id : null
+                $other_meter ? $other_meter->user_id : null,
+                $other_meter
+                    ? TokenLedger::TYPE_CREDIT_TOKEN_OTHERS
+                    : TokenLedger::TYPE_CREDIT_TOKEN
             );
 
             MeterTokenGenerated::dispatch(
@@ -889,6 +892,293 @@ class Meter extends Model
         });
 
         return $postpaid_token;
+    }
+
+    private function ensurePostpaidVendingAllowed(): Estate
+    {
+        $estate = Estate::where('id', $this->estate_id)->firstOrFail();
+
+        if (!LedgerService::estateSupportsPostpaid($estate) && !(Auth::user() && Auth::user()->isSuperAdmin())) {
+            throw new Exception('This estate only supports prepaid metering. Postpaid vending is not enabled for this estate.');
+        }
+
+        if (!LedgerService::estateCanVendPostpaid($estate)) {
+            throw new Exception('Estate cannot vend postpaid — unpaid fees have exceeded the accumulation period');
+        }
+
+        if (!$this->isActive()) {
+            throw new Exception('Meter is unable to carry out operations');
+        }
+
+        return $estate;
+    }
+
+    private function resolveTariffIndex($tariffId): int
+    {
+        $tariff = $tariffId ? Tariff::find($tariffId) : null;
+
+        if (!$tariff) {
+            throw new Exception('Tariff not found');
+        }
+
+        if ($tariff->tariff_index === null || $tariff->tariff_index === '') {
+            throw new Exception('Tariff index is not set for the selected tariff');
+        }
+
+        return (int) $tariff->tariff_index;
+    }
+
+    public function getNewPostpaidTamperToken(
+        int $tariff_id,
+        float $amount,
+        ?string $email = null,
+        ?int $userId = null
+    ): array {
+        $this->ensurePostpaidVendingAllowed();
+
+        $payerUserId = $userId ?? $this->user_id;
+        $tariff_index = $this->resolveTariffIndex($tariff_id);
+
+        return DB::transaction(function () use ($tariff_id, $amount, $payerUserId, $tariff_index) {
+            $trx_id = generate_unique_string('MOMAS');
+
+            $trx = Transaction::create([
+                'trx_id'       => $trx_id,
+                'user_id'      => $payerUserId,
+                'estate_id'    => $this->estate_id,
+                'amount'       => $amount,
+                'service'      => 'TAMPER TOKEN PURCHASE',
+                'service_type' => TokenLedger::TYPE_TAMPER_TOKEN,
+                'tariff_id'    => $tariff_id,
+                'status'       => 2,
+            ]);
+
+            $result = TokenGenerationService::generateTamperToken($this, $tariff_index);
+
+            if (!$result['success']) {
+                $trx->update([
+                    'note' => 'Tamper token generation failed: ' . ($result['error'] ?? 'Unknown error'),
+                    'status' => 3,
+                ]);
+
+                throw new Exception($result['error'] ?? 'Tamper token generation failed');
+            }
+
+            $token = $result['data']['token'];
+
+            $tamperToken = TamperToken::updateOrCreate(
+                [
+                    'trx_id'  => $trx_id,
+                    'user_id' => $payerUserId,
+                    'meterNo' => $this->meterNo,
+                ],
+                [
+                    'amount'    => $amount,
+                    'estate_id' => $this->estate_id,
+                    'token'     => $token,
+                    'status'    => 2,
+                ]
+            );
+
+            LedgerService::recordPostpaidTokenLedger(
+                $trx,
+                $this->meterNo,
+                $tamperToken->id,
+                TokenLedger::TYPE_TAMPER_TOKEN,
+                $payerUserId
+            );
+
+            return [
+                'token' => $token,
+                'trx_id' => $trx_id,
+                'token_record' => $tamperToken,
+            ];
+        });
+    }
+
+    public function getNewPostpaidClearCreditToken(
+        int $tariff_id,
+        float $amount,
+        ?string $email = null,
+        ?int $userId = null
+    ): array {
+        $this->ensurePostpaidVendingAllowed();
+
+        $payerUserId = $userId ?? $this->user_id;
+        $user = User::where('id', $payerUserId)->firstOrFail();
+        $tariff_index = $this->resolveTariffIndex($tariff_id);
+
+        return DB::transaction(function () use ($tariff_id, $amount, $payerUserId, $tariff_index, $user) {
+            $trx_id = generate_unique_string('MOMAS');
+
+            $trx = Transaction::create([
+                'trx_id'       => $trx_id,
+                'user_id'      => $payerUserId,
+                'estate_id'    => $this->estate_id,
+                'amount'       => $amount,
+                'service'      => 'CLEAR CREDIT TOKEN PURCHASE',
+                'service_type' => TokenLedger::TYPE_CLEAR_CREDIT_TOKEN,
+                'tariff_id'    => $tariff_id,
+                'status'       => 2,
+            ]);
+
+            $result = TokenGenerationService::generateClearCreditToken($this, $tariff_index);
+
+            if (!$result['success']) {
+                $trx->update([
+                    'note' => 'Clear credit token generation failed: ' . ($result['error'] ?? 'Unknown error'),
+                    'status' => 3,
+                ]);
+
+                throw new Exception($result['error'] ?? 'Clear credit token generation failed');
+            }
+
+            $token = $result['data']['token'];
+
+            $clearToken = ClearcreditToken::updateOrCreate(
+                [
+                    'trx_id'  => $trx_id,
+                    'user_id' => $payerUserId,
+                    'meterNo' => $this->meterNo,
+                ],
+                [
+                    'amount'         => $amount,
+                    'amount_charged' => $amount,
+                    'vat'            => 0,
+                    'estate_id'      => $this->estate_id,
+                    'estate_name'    => $user->estate_name,
+                    'tariff_id'      => $tariff_id,
+                    'token'          => $token,
+                    'status'         => 2,
+                ]
+            );
+
+            LedgerService::recordPostpaidTokenLedger(
+                $trx,
+                $this->meterNo,
+                $clearToken->id,
+                TokenLedger::TYPE_CLEAR_CREDIT_TOKEN,
+                $payerUserId
+            );
+
+            return [
+                'token' => $token,
+                'trx_id' => $trx_id,
+                'token_record' => $clearToken,
+            ];
+        });
+    }
+
+    public function getNewPostpaidKctToken(
+        string $meterNo,
+        int $tariff_id,
+        float $amount,
+        ?string $email = null,
+        ?int $userId = null
+    ): array {
+        $this->ensurePostpaidVendingAllowed();
+
+        if (!$this->NeedKCT) {
+            throw new Exception('NeedKCT is not activated for meter');
+        }
+
+        $payerUserId = $userId ?? $this->user_id;
+        $user = User::where('id', $payerUserId)->firstOrFail();
+
+        $isDualTariff = in_array($this->isDualTariff, ['on', '1', 1, true], true);
+        $isGenTariff = $isDualTariff && (
+            (int) $tariff_id === (int) $this->NewTariffDualID ||
+            (int) $tariff_id === (int) $this->OldTariffDualID
+        );
+
+        if ($isGenTariff) {
+            $ti = $this->resolveTariffIndex($this->OldTariffDualID);
+            $toti = $this->resolveTariffIndex($this->NewTariffDualID);
+            $sgc = (int) $this->OldSGCDual;
+            $tosgc = (int) $this->NewSGCDual;
+        } else {
+            $ti = $this->resolveTariffIndex($this->OldTariffID);
+            $toti = $this->resolveTariffIndex($this->NewTariffID);
+            $sgc = (int) $this->OldSGC;
+            $tosgc = (int) $this->NewSGC;
+        }
+
+        return DB::transaction(function () use ($meterNo, $tariff_id, $amount, $payerUserId, $sgc, $tosgc, $ti, $toti, $user) {
+            $trx_id = generate_unique_string('MOMAS');
+
+            $trx = Transaction::create([
+                'trx_id'       => $trx_id,
+                'user_id'      => $payerUserId,
+                'estate_id'    => $this->estate_id,
+                'amount'       => $amount,
+                'service'      => 'KCT TOKEN PURCHASE',
+                'service_type' => TokenLedger::TYPE_KCT_TOKEN,
+                'tariff_id'    => $tariff_id,
+                'status'       => 2,
+            ]);
+
+            $result = TokenGenerationService::generateKctToken(
+                $this,
+                $meterNo,
+                $sgc,
+                $tosgc,
+                $ti,
+                $toti
+            );
+
+            if (!$result['success']) {
+                $trx->update([
+                    'note' => 'KCT token generation failed: ' . ($result['error'] ?? 'Unknown error'),
+                    'status' => 3,
+                ]);
+
+                throw new Exception($result['error'] ?? 'KCT token generation failed');
+            }
+
+            $kctToken1 = $result['data']['kct_token1'];
+            $kctToken2 = $result['data']['kct_token2'];
+            $kctTokens = $kctToken1 . ',' . $kctToken2;
+
+            $kctToken = KctToken::updateOrCreate(
+                [
+                    'trx_id'  => $trx_id,
+                    'user_id' => $payerUserId,
+                    'meterNo' => $meterNo,
+                ],
+                [
+                    'amount'         => $amount,
+                    'amount_charged' => $amount,
+                    'fee'            => 0,
+                    'vat'            => 0,
+                    'estate_name'    => $user->estate_name,
+                    'estate_id'      => $this->estate_id,
+                    'tariff_id'      => $tariff_id,
+                    'tariff_amount'  => 0,
+                    'vatAmount'      => 0,
+                    'costOfUnit'     => 0,
+                    'unitkwh'        => 0,
+                    'tariffPerKWatt' => 0,
+                    'kct_token1'     => $kctToken1,
+                    'kct_token2'     => $kctToken2,
+                    'kct_tokens'     => $kctTokens,
+                    'status'         => 2,
+                ]
+            );
+
+            LedgerService::recordPostpaidTokenLedger(
+                $trx,
+                $meterNo,
+                $kctToken->id,
+                TokenLedger::TYPE_KCT_TOKEN,
+                $payerUserId
+            );
+
+            return [
+                'token' => $kctTokens,
+                'trx_id' => $trx_id,
+                'token_record' => $kctToken,
+            ];
+        });
     }
 
     /**

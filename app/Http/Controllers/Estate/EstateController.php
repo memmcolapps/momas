@@ -7,6 +7,7 @@ use App\Models\Estate;
 use App\Models\Meter;
 use App\Models\Token;
 use App\Models\User;
+use App\Services\Audit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +40,12 @@ class EstateController extends Controller
         $valid_date = $currentTime->addHours(24);
 
         $tok = generate_token($user_id, $visitor, $email, $valid_date, $estate_id);
+
+        $createdToken = Token::where('token', $tok)->where('user_id', $user_id)->latest('id')->first();
+        if ($createdToken) {
+            Audit::action('access_token.created', $createdToken);
+        }
+
         if($can_send == 1){
 
             $request->validate([
@@ -86,7 +93,8 @@ class EstateController extends Controller
 
     public function approve_token(request $request){
 
-        $ck = Token::where('id', $request->token_id)->first()->status ?? null;
+        $token = Token::where('id', $request->token_id)->first();
+        $ck = $token->status ?? null;
         if($ck == "2"){
             return response()->json([
                 'status' => false,
@@ -94,7 +102,11 @@ class EstateController extends Controller
             ]);
         }else{
 
-            Token::where('id', $request->token_id)->update(['status' => "2"]);
+            if ($token) {
+                $token->update(['status' => "2"]);
+                Audit::action('access_token.activated', $token);
+            }
+
             return response()->json([
                 'status' => true,
                 'message' => "token Successfully Validated"
@@ -119,7 +131,13 @@ class EstateController extends Controller
 
     public function disapprove_token(request $request){
 
-        Token::where('id', $request->token_id)->update(['status' => 3]);
+        $token = Token::where('id', $request->token_id)->first();
+
+        if ($token) {
+            $token->update(['status' => 3]);
+            Audit::action('access_token.deactivated', $token);
+        }
+
         return response()->json([
             'status' => true,
             'message' => "token Successfully Disapproved"
@@ -131,7 +149,13 @@ class EstateController extends Controller
 
     public function delete_token(request $request){
 
-        Token::where('id', $request->token_id)->delete();
+        $token = Token::where('id', $request->token_id)->first();
+
+        if ($token) {
+            $token->delete();
+            Audit::action('access_token.revoked', $token);
+        }
+
         return response()->json([
             'status' => true,
             'message' => "token Successfully Deleted"
@@ -144,7 +168,8 @@ class EstateController extends Controller
     public function set_default_estate(request $request){
 
 
-        $name = Estate::where('id', $request->estate_id)->first()->title;
+        $estate = Estate::where('id', $request->estate_id)->first();
+        $name = $estate->title ?? null;
         User::where('id', Auth::id())->update([
             'estate_id' => $request->estate_id,
             'address' => $request->address,
@@ -153,6 +178,10 @@ class EstateController extends Controller
 
 
         ]);
+
+        if ($estate) {
+            Audit::action('estate.default_set', $estate);
+        }
 
         return response()->json([
             'status' => true,
@@ -166,7 +195,12 @@ class EstateController extends Controller
     public function estate_deactivate(request $request)
     {
 
-        Estate::where('id', $request->id)->update(['status' => 0]);
+        $estate = Estate::find($request->id);
+
+        if ($estate) {
+            $estate->update(['status' => 0]);
+            Audit::action('estate.deactivated', $estate);
+        }
 
         return back()->with('message', "Estate Deactivated successfully");
 
@@ -177,7 +211,12 @@ class EstateController extends Controller
     public function estate_activate(request $request)
     {
 
-        Estate::where('id', $request->id)->update(['status' => 2]);
+        $estate = Estate::find($request->id);
+
+        if ($estate) {
+            $estate->update(['status' => 2]);
+            Audit::action('estate.activated', $estate);
+        }
 
         return back()->with('message', "Estate Activated successfully");
 

@@ -218,6 +218,9 @@
                                                 <div class="col-6">
                                                     <input type="text" name="search" placeholder="Search by meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
                                                 </div>
+                                                <div class="col-3">
+                                                    <input type="text" name="trx_id" placeholder="Filter by Trx ID (exact)" class="form-control" value="{{ request('trx_id') }}">
+                                                </div>
                                                 <div class="col-2">
                                                     <button type="submit" class="btn btn-primary w-100">Search</button>
                                                 </div>
@@ -657,6 +660,9 @@
                                             <div class="row mb-3">
                                                 <div class="col-6">
                                                     <input type="text" name="search" placeholder="Search by meter no, trx id or customer name" class="form-control" value="{{ request('search') }}">
+                                                </div>
+                                                <div class="col-3">
+                                                    <input type="text" name="trx_id" placeholder="Filter by Trx ID (exact)" class="form-control" value="{{ request('trx_id') }}">
                                                 </div>
                                                 <div class="col-2">
                                                     <button type="submit" class="btn btn-primary w-100">Search</button>
